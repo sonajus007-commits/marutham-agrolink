@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Marutham Agrolink — Consumer</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="toast" class="toast"></div>
+
+<!-- APP HEADER -->
+<div class="apphdr">
+  <div class="hbrand">
+    <div class="hring"><img src="img/logo-sm.jpg" alt="MA"></div>
+    <div><div class="hname">Marutham <span>Agrolink</span></div><div class="htag">Farm to Home</div></div>
+  </div>
+  <div class="hdrr">
+    <span id="liveClock" class="liveclk">--</span>
+    <div class="ubadge" id="userBadge">Consumer</div>
+    <button class="hbtn" onclick="doLogout()">Logout</button>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hring" style="width:44px;height:44px;font-size:20px;flex-shrink:0">🌿</div>
+  <div class="htxt"><h2 id="heroName">Welcome!</h2><p>Fresh vegetables · Same morning harvest</p></div>
+</div>
+
+<!-- TAB NAV -->
+<div class="pnav">
+  <button class="ptab on" id="tab-home"    onclick="openTab('home',this)">🏠 Home</button>
+  <button class="ptab"    id="tab-shop"    onclick="openTab('shop',this)">🛒 Shop</button>
+  <button class="ptab"    id="tab-cart"    onclick="openTab('cart',this)">🛍️ Cart <span id="cartBadge" style="display:none;background:#c0392b;color:#fff;font-size:9px;font-weight:800;padding:1px 5px;border-radius:50px;vertical-align:middle;margin-left:3px;"></span></button>
+  <button class="ptab"    id="tab-orders"  onclick="openTab('orders',this)">📦 My Orders</button>
+  <button class="ptab"    id="tab-profile" onclick="openTab('profile',this)">👤 My Profile</button>
+</div>
+
+<!-- ── HOME ──────────────────────────────────────────────────────────────── -->
+<div class="panel on" id="panel-home">
+  <div id="home-body">
+    <div class="spinner"><div class="spin"></div></div>
+  </div>
+</div>
+
+<!-- ── SHOP ──────────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-shop">
+  <!-- Location hero -->
+  <div class="ov-hero" style="margin-bottom:12px;">
+    <div class="ov-hero-label">Fresh From Farms Near You</div>
+    <div class="ov-hero-scope" id="shopLocation">—</div>
+    <div class="ov-hero-sub">Order before 8 AM for same-day delivery</div>
+  </div>
+  <!-- Sticky cart bar -->
+  <div id="cartBar" style="display:none;position:sticky;top:8px;z-index:50;
+    background:linear-gradient(135deg,#1a3d2b,#2d6a4f);border-radius:12px;
+    padding:12px 16px;margin-bottom:14px;box-shadow:0 8px 24px rgba(26,61,43,.3);cursor:pointer;"
+    onclick="openTab('cart',document.getElementById('tab-cart'))">
+    <div style="display:flex;align-items:center;justify-content:space-between;color:#fff">
+      <div><span style="font-size:18px">🛒</span> <span id="cartBarCount" style="font-weight:700;font-size:13px"></span></div>
+      <div style="font-weight:800;font-size:15px" id="cartBarTotal"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="filt-label">Filter by Group</div>
+    <div id="groupFilter" class="filt-row"></div>
+    <div id="productList"></div>
+  </div>
+</div>
+
+<!-- ── CART ──────────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-cart">
+  <div class="card">
+    <div class="sec-head"><span class="sh-icon" style="background:#e6f7ed">🛒</span> Your Cart</div>
+    <div id="cartItems"></div>
+    <div id="cartSummary"></div>
+  </div>
+</div>
+
+<!-- ── ORDERS ─────────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-orders">
+  <div id="orderList">
+    <div class="spinner"><div class="spin"></div></div>
+  </div>
+</div>
+
+<!-- ── PROFILE ────────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-profile">
+  <div class="card">
+    <h3>👤 My Profile</h3>
+    <div class="lid-box">
+      <div class="lid-lbl">Your Login ID</div>
+      <div class="lid-val" id="p-lid">—</div>
+      <div class="lid-note">Use this ID or phone number to login</div>
+    </div>
+    <div class="irow"><span class="ilbl">Full Name</span><span class="ival" id="p-name">—</span></div>
+    <div class="irow"><span class="ilbl">Phone</span><span class="ival mono" id="p-phone">—</span></div>
+    <div class="irow"><span class="ilbl">Email</span><span class="ival" id="p-email">—</span></div>
+    <div class="irow"><span class="ilbl">District</span><span class="ival" id="p-district">—</span></div>
+    <div class="irow"><span class="ilbl">Address</span><span class="ival" id="p-addr" style="font-size:11px;line-height:1.5">—</span></div>
+    <button class="bedit" onclick="toggleEditForm()">✏️ Edit Profile</button>
+    <div class="editform" id="profileEditForm">
+      <div class="fsec" style="padding-top:0;border-top:none">Editable Fields</div>
+      <div class="fg"><label class="fl">Email</label>
+        <input class="fi" id="edit-email" type="email" placeholder="your@email.com"></div>
+      <div class="fg"><label class="fl">Street Line 1</label>
+        <input class="fi" id="edit-street1" type="text"></div>
+      <div class="fg"><label class="fl">Street Line 2</label>
+        <input class="fi" id="edit-street2" type="text"></div>
+      <div class="fg"><label class="fl">Village / Town</label>
+        <input class="fi" id="edit-village" type="text"></div>
+      <div class="fg"><label class="fl">City</label>
+        <input class="fi" id="edit-city" type="text"></div>
+      <div class="fg"><label class="fl">Pincode</label>
+        <input class="fi" id="edit-pincode" type="text" maxlength="6" oninput="numOnly(this)"></div>
+      <div class="ea">
+        <button class="bsave" onclick="saveProfile()">Save Changes</button>
+        <button class="bcanc" onclick="toggleEditForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ ORDER DETAIL OVERLAY ══════ -->
+<div class="overlay" id="orderOverlay">
+  <div class="overlay-hdr">
+    <button class="overlay-back" onclick="closeOrderOverlay()">←</button>
+    <div class="overlay-title" id="overlayOrderCode">Order Details</div>
+  </div>
+  <div class="overlay-body" id="overlayBody"></div>
+</div>
+
+<!-- ══════ CANCEL MODAL ══════ -->
+<div class="modal-bg" id="cancelModal">
+  <div class="modal">
+    <h3>Cancel Order?</h3>
+    <p style="font-size:13px;color:var(--gray);margin-bottom:12px;">
+      This action cannot be undone. Orders cannot be cancelled once picked up.
+    </p>
+    <div class="fg">
+      <label class="fl">Reason <span class="op">(optional)</span></label>
+      <textarea class="fi" id="cancelReason" placeholder="Why are you cancelling?"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-danger" onclick="confirmCancel()">Cancel Order</button>
+      <button class="btn-outline" onclick="closeCancelModal()">Keep Order</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/shared.js"></script>
+<script src="js/api.js"></script>
+<script>
+// ── Init ──────────────────────────────────────────────────────────────────────
+var user = requireAuth('consumer');
+if (!user) throw new Error('redirect');
+
+startClock('liveClock');
+document.getElementById('userBadge').textContent = user.fname;
+document.getElementById('heroName').textContent  = 'Welcome, ' + user.fname + '!';
+
+var _cart         = JSON.parse(localStorage.getItem('ma_cart') || '[]');
+var _allProducts  = [];
+var _activeGroup  = 'All';
+var _cancelOrderId = null;
+
+// ── Tab management ────────────────────────────────────────────────────────────
+function openTab(name, tabEl) {
+  document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('on'); });
+  document.querySelectorAll('.ptab').forEach(function(t) { t.classList.remove('on'); });
+  document.getElementById('panel-' + name).classList.add('on');
+  if (tabEl) tabEl.classList.add('on');
+  if (name === 'home')    renderHome();
+  if (name === 'shop')    renderShop();
+  if (name === 'cart')    renderCart();
+  if (name === 'orders')  renderOrders();
+  if (name === 'profile') renderProfile();
+}
+
+// ── HOME ──────────────────────────────────────────────────────────────────────
+async function renderHome() {
+  var el = document.getElementById('home-body');
+  el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res = await API.getOrders();
+    var orders = res.orders || [];
+    var active = orders.filter(function(o) { return !o.cancelled && o.status !== 'Delivered'; });
+    var delivered = orders.filter(function(o) { return o.status === 'Delivered'; });
+    var html = '';
+
+    // Stats
+    html += '<div class="sgrid">';
+    html += '<div class="sc"><div class="slbl">Active Orders</div><div class="sval">' + active.length + '</div><div class="ssub">In progress</div></div>';
+    html += '<div class="sc"><div class="slbl">Completed</div><div class="sval">' + delivered.length + '</div><div class="ssub">Delivered</div></div>';
+    html += '</div>';
+
+    // Recent orders
+    if (orders.length === 0) {
+      html += '<div class="empty-state"><div class="es-icon">🌿</div><p>No orders yet.<br>Browse the shop and place your first order!</p>';
+      html += '<button class="sbtn" style="margin-top:16px;width:auto;padding:12px 24px" onclick="openTab(\'shop\',document.getElementById(\'tab-shop\'))">Shop Now →</button></div>';
+    } else {
+      html += '<div class="card"><h3>📦 Recent Orders</h3>';
+      orders.slice(0, 5).forEach(function(o) {
+        html += '<div class="ord-item" onclick="openOrderDetail(\'' + o.id + '\')">';
+        html += '<div class="ord-statusbar" style="background:' + statusColor(o.status) + '"></div>';
+        html += '<div style="flex:1"><div class="ord-id">' + (o.code || o.id.slice(0,8).toUpperCase()) + '</div>';
+        html += '<div class="ord-loc">' + (o.status || '—') + ' · ' + fmtDateShort(o.created_at) + '</div></div>';
+        html += '<div class="ord-amt">' + fmt(o.total) + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p>Could not load dashboard.<br>' + e.message + '</p></div>';
+  }
+}
+
+// ── SHOP ──────────────────────────────────────────────────────────────────────
+async function renderShop() {
+  document.getElementById('shopLocation').textContent = (user.district || '—') + ', ' + (user.state || 'Tamil Nadu');
+  updateCartBar();
+
+  if (_allProducts.length === 0) {
+    document.getElementById('productList').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+    try {
+      var res = await API.getProducts({ available: true });
+      _allProducts = res.products || [];
+    } catch(e) {
+      document.getElementById('productList').innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+      return;
+    }
+  }
+  renderGroupFilter();
+  renderProducts();
+}
+
+function renderGroupFilter() {
+  var groups = ['All'];
+  _allProducts.forEach(function(p) { if (p.group && !groups.includes(p.group)) groups.push(p.group); });
+  var html = '';
+  groups.forEach(function(g) {
+    html += '<button class="chip' + (g === _activeGroup ? ' on' : '') + '" onclick="setGroup(\'' + g.replace(/'/g, '') + '\')">' + g + '</button>';
+  });
+  document.getElementById('groupFilter').innerHTML = html;
+}
+
+function setGroup(g) {
+  _activeGroup = g;
+  renderGroupFilter();
+  renderProducts();
+}
+
+function renderProducts() {
+  var filtered = _activeGroup === 'All' ? _allProducts : _allProducts.filter(function(p) { return p.group === _activeGroup; });
+  if (filtered.length === 0) {
+    document.getElementById('productList').innerHTML = '<div class="empty-state"><p>No products in this category.</p></div>';
+    return;
+  }
+  var html = '';
+  filtered.forEach(function(p) {
+    var cartQty = getCartQty(p.id);
+    html += '<div class="prod-card">';
+    html += '<div class="prod-top">';
+    html += '<div><div class="prod-name">' + p.name + '</div>';
+    if (p.group) html += '<div class="prod-path"><span class="prod-chip">' + p.group + '</span></div>';
+    html += '</div>';
+    html += '<div class="prod-price-box">';
+    if (p.district_price) {
+      html += '<div class="prod-price">₹' + parseFloat(p.district_price).toFixed(0) + '</div>';
+    } else {
+      html += '<div class="prod-price" style="font-size:13px;color:var(--gray)">—</div>';
+    }
+    html += '<div class="prod-unit">/ ' + (p.unit || 'unit') + '</div></div>';
+    html += '</div>';
+    html += '<div class="prod-meta-row">';
+    if (p.available) {
+      html += '<span class="prod-badge" style="background:#e6f7ed;color:#1a7a4a">✓ Available</span>';
+    }
+    if (p.avg_rating) {
+      html += '<span style="font-size:11px;color:var(--gold)">★ ' + parseFloat(p.avg_rating).toFixed(1) + '</span>';
+    }
+    html += '<div class="prod-actions">';
+    if (cartQty === 0) {
+      html += '<button class="sbtn" style="margin:0;padding:8px 18px;font-size:12px;width:auto" onclick="addToCart(\'' + p.id + '\')">Add +</button>';
+    } else {
+      html += '<div class="qty-ctrl">';
+      html += '<button class="qty-btn" onclick="changeQty(\'' + p.id + '\',-1)">−</button>';
+      html += '<span class="qty-num">' + cartQty + '</span>';
+      html += '<button class="qty-btn" onclick="changeQty(\'' + p.id + '\',1)">+</button>';
+      html += '</div>';
+    }
+    html += '</div>';
+    html += '</div></div>';
+  });
+  document.getElementById('productList').innerHTML = html;
+}
+
+// ── CART ──────────────────────────────────────────────────────────────────────
+function getCartQty(productId) {
+  var item = _cart.find(function(i) { return i.product_id === productId; });
+  return item ? item.qty : 0;
+}
+
+function addToCart(productId) {
+  var product = _allProducts.find(function(p) { return p.id === productId; });
+  if (!product) return;
+
+  // Need a farmer listing — for now pick the first available one
+  // We store product info and resolve farmer at checkout
+  var existing = _cart.find(function(i) { return i.product_id === productId; });
+  if (existing) { existing.qty++; }
+  else {
+    _cart.push({
+      product_id:   product.id,
+      product_name: product.name,
+      unit:         product.unit,
+      price:        product.district_price || 0,
+      qty:          1,
+      farmer_id:    null  // resolved at checkout from listings
+    });
+  }
+  saveCart();
+  renderProducts();
+  updateCartBar();
+}
+
+function changeQty(productId, delta) {
+  var idx = _cart.findIndex(function(i) { return i.product_id === productId; });
+  if (idx === -1) return;
+  _cart[idx].qty += delta;
+  if (_cart[idx].qty <= 0) _cart.splice(idx, 1);
+  saveCart();
+  renderProducts();
+  updateCartBar();
+}
+
+function saveCart() {
+  localStorage.setItem('ma_cart', JSON.stringify(_cart));
+}
+
+function updateCartBar() {
+  var total = _cart.reduce(function(s, i) { return s + parseFloat(i.price || 0) * i.qty; }, 0);
+  var count = _cart.reduce(function(s, i) { return s + i.qty; }, 0);
+  var bar  = document.getElementById('cartBar');
+  var badge = document.getElementById('cartBadge');
+  if (bar)   bar.style.display = count > 0 ? 'block' : 'none';
+  if (badge) { badge.style.display = count > 0 ? 'inline' : 'none'; badge.textContent = count; }
+  var cnt = document.getElementById('cartBarCount');
+  var tot = document.getElementById('cartBarTotal');
+  if (cnt) cnt.textContent = count + ' item' + (count === 1 ? '' : 's') + ' in cart';
+  if (tot) tot.textContent = '₹' + total.toFixed(2);
+}
+
+async function renderCart() {
+  var el = document.getElementById('cartItems');
+  var sumEl = document.getElementById('cartSummary');
+  updateCartBar();
+
+  if (_cart.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="es-icon">🛒</div><p>Your cart is empty.<br>Browse the shop to add items.</p></div>';
+    sumEl.innerHTML = '';
+    return;
+  }
+
+  // Resolve farmer IDs from listings if not yet set
+  await resolveCartFarmers();
+
+  var html = '';
+  _cart.forEach(function(item, idx) {
+    html += '<div class="irow">';
+    html += '<div style="flex:1"><div style="font-weight:700;font-size:13px">' + item.product_name + '</div>';
+    html += '<div style="font-size:11px;color:var(--gray)">₹' + parseFloat(item.price).toFixed(2) + ' / ' + item.unit + '</div></div>';
+    html += '<div style="display:flex;align-items:center;gap:10px">';
+    html += '<div class="qty-ctrl">';
+    html += '<button class="qty-btn" onclick="changeQtyCart(' + idx + ',-1)">−</button>';
+    html += '<span class="qty-num">' + item.qty + '</span>';
+    html += '<button class="qty-btn" onclick="changeQtyCart(' + idx + ',1)">+</button>';
+    html += '</div>';
+    html += '<div style="font-weight:700;font-size:13px;min-width:60px;text-align:right">₹' + (parseFloat(item.price) * item.qty).toFixed(2) + '</div>';
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+
+  var subtotal = _cart.reduce(function(s, i) { return s + parseFloat(i.price || 0) * i.qty; }, 0);
+  var sumHtml = '<div style="border-top:1px solid #eef4ee;padding-top:14px;margin-top:4px">';
+  sumHtml += '<div class="irow"><span class="ilbl">Subtotal</span><span class="ival">₹' + subtotal.toFixed(2) + '</span></div>';
+  sumHtml += '</div>';
+  sumHtml += '<div class="fg" style="margin-top:16px;"><label class="fl">Payment Method <span class="rq">*</span></label>';
+  sumHtml += '<select class="fi" id="payMethod">';
+  sumHtml += '<option value="Cash on Delivery">Cash on Delivery</option>';
+  sumHtml += '<option value="UPI">UPI</option>';
+  sumHtml += '<option value="Card">Card</option>';
+  sumHtml += '</select></div>';
+  sumHtml += '<button class="sbtn" onclick="placeOrder()">Place Order →</button>';
+  sumEl.innerHTML = sumHtml;
+}
+
+function changeQtyCart(idx, delta) {
+  _cart[idx].qty += delta;
+  if (_cart[idx].qty <= 0) _cart.splice(idx, 1);
+  saveCart();
+  renderCart();
+  renderProducts();
+  updateCartBar();
+}
+
+async function resolveCartFarmers() {
+  var needsResolve = _cart.filter(function(i) { return !i.farmer_id; });
+  if (needsResolve.length === 0) return;
+  try {
+    for (var i = 0; i < _cart.length; i++) {
+      if (_cart[i].farmer_id) continue;
+      var res = await API.getListings({ product: _cart[i].product_id });
+      var listings = res.listings || [];
+      var avail = listings.filter(function(l) { return l.listed; });
+      if (avail.length > 0) {
+        _cart[i].farmer_id    = avail[0].farmer_id;
+        _cart[i].farmer_price = avail[0].farmer_price;
+      }
+    }
+    saveCart();
+  } catch(e) { /* non-fatal */ }
+}
+
+async function placeOrder() {
+  var unresolved = _cart.filter(function(i) { return !i.farmer_id; });
+  if (unresolved.length > 0) {
+    showToast('Some items have no available farmers. Please remove them.', 'er'); return;
+  }
+  var payMethod = document.getElementById('payMethod').value;
+  var items = _cart.map(function(i) {
+    return { product_id: i.product_id, farmer_id: i.farmer_id, qty: i.qty };
+  });
+  var btn = document.querySelector('#panel-cart .sbtn');
+  btn.disabled = true; btn.textContent = 'Placing order…';
+  try {
+    var res = await API.placeOrder({ items: items, pay_method: payMethod });
+    _cart = [];
+    saveCart();
+    updateCartBar();
+    showToast('Order placed! ' + res.order.code, 'ok');
+    setTimeout(function() { openTab('orders', document.getElementById('tab-orders')); }, 800);
+  } catch(e) {
+    showToast(e.message, 'er');
+    btn.disabled = false; btn.textContent = 'Place Order →';
+  }
+}
+
+// ── ORDERS ────────────────────────────────────────────────────────────────────
+async function renderOrders() {
+  var el = document.getElementById('orderList');
+  el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res = await API.getOrders();
+    var orders = res.orders || [];
+    if (orders.length === 0) {
+      el.innerHTML = '<div class="empty-state"><div class="es-icon">📦</div><p>No orders yet.</p></div>'; return;
+    }
+    var html = '';
+    orders.forEach(function(o) {
+      html += '<div class="ord-item" onclick="openOrderDetail(\'' + o.id + '\')">';
+      html += '<div class="ord-statusbar" style="background:' + statusColor(o.status) + '"></div>';
+      html += '<div style="flex:1">';
+      html += '<div class="ord-id">' + (o.code || o.id.slice(0,8).toUpperCase()) + '</div>';
+      html += '<div class="ord-loc">' + (o.status || '—') + ' · ' + fmtDateShort(o.created_at) + '</div>';
+      html += '</div>';
+      html += '<div style="text-align:right"><div class="ord-amt">' + fmt(o.total) + '</div>';
+      html += '<div style="font-size:10px;color:var(--gray)">' + (o.pay_method || '') + '</div></div>';
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p>Could not load orders: ' + e.message + '</p></div>';
+  }
+}
+
+async function openOrderDetail(orderId) {
+  var overlay = document.getElementById('orderOverlay');
+  var body    = document.getElementById('overlayBody');
+  overlay.classList.add('active');
+  body.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res   = await API.getOrder(orderId);
+    var o     = res.order;
+    var items = res.items || [];
+    var hist  = res.history || [];
+    document.getElementById('overlayOrderCode').textContent = o.code || 'Order Details';
+
+    var html = '';
+    // Status badge
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">';
+    html += '<span style="display:inline-block;padding:6px 14px;border-radius:50px;font-size:12px;font-weight:700;background:' + statusColor(o.status) + ';color:#fff;">' + o.status + '</span>';
+    if (!o.cancelled && ['Order Placed','Packaged'].includes(o.status)) {
+      html += '<button class="req-change-btn" style="font-size:11px;padding:5px 12px" onclick="openCancelModal(\'' + o.id + '\')">Cancel Order</button>';
+    }
+    html += '</div>';
+
+    // Order info
+    html += '<div class="card">';
+    html += '<h3>📋 Order Info</h3>';
+    html += '<div class="irow"><span class="ilbl">Order Code</span><span class="ival mono">' + (o.code || '—') + '</span></div>';
+    html += '<div class="irow"><span class="ilbl">Placed On</span><span class="ival">' + fmtDate(o.created_at) + '</span></div>';
+    html += '<div class="irow"><span class="ilbl">Payment</span><span class="ival">' + o.pay_method + ' · <span style="color:' + (o.pay_status==='paid'?'#1a7a4a':'#f4a261') + '">' + o.pay_status + '</span></span></div>';
+    if (o.delivered_at) html += '<div class="irow"><span class="ilbl">Delivered</span><span class="ival">' + fmtDate(o.delivered_at) + '</span></div>';
+    html += '</div>';
+
+    // Items
+    html += '<div class="card"><h3>🌿 Items</h3>';
+    items.forEach(function(item) {
+      html += '<div class="irow"><span class="ilbl">' + item.name + '<br><span style="font-size:10px;color:var(--gray)">' + item.qty + ' ' + item.unit + ' × ' + fmt(item.price) + '</span></span>';
+      html += '<span class="ival">' + fmt(parseFloat(item.price) * item.qty) + '</span></div>';
+    });
+    html += '</div>';
+
+    // Price breakdown
+    html += '<div class="card"><h3>💰 Price Breakdown</h3>';
+    html += '<div class="irow"><span class="ilbl">Item Total</span><span class="ival">' + fmt(o.item_total) + '</span></div>';
+    if (parseFloat(o.handling) > 0) html += '<div class="irow"><span class="ilbl">Handling</span><span class="ival">' + fmt(o.handling) + '</span></div>';
+    if (parseFloat(o.delivery) > 0) html += '<div class="irow"><span class="ilbl">Delivery</span><span class="ival">' + fmt(o.delivery) + '</span></div>';
+    html += '<div class="irow"><span class="ilbl" style="font-weight:700">Total</span><span class="ival" style="font-size:15px;color:var(--forest)">' + fmt(o.total) + '</span></div>';
+    if (o.saved && parseFloat(o.saved) > 0) html += '<div class="irow"><span class="ilbl" style="color:var(--green)">💚 You Saved</span><span class="ival" style="color:var(--green)">' + fmt(o.saved) + '</span></div>';
+    html += '</div>';
+
+    // Timeline
+    if (hist.length > 0) {
+      html += '<div class="card"><h3>📍 Status Timeline</h3><ul class="timeline">';
+      hist.forEach(function(h, idx) {
+        html += '<li class="tl-item' + (idx === hist.length-1 ? ' active' : '') + '">';
+        html += '<div class="tl-dot"></div>';
+        html += '<div><div class="tl-label">' + h.label + '</div>';
+        html += '<div class="tl-time">' + fmtDate(h.ts) + '</div>';
+        if (h.note) html += '<div class="tl-note">' + h.note + '</div>';
+        html += '</div></li>';
+      });
+      html += '</ul></div>';
+    }
+
+    body.innerHTML = html;
+  } catch(e) {
+    body.innerHTML = '<div class="empty-state"><p>Could not load order: ' + e.message + '</p></div>';
+  }
+}
+
+function closeOrderOverlay() {
+  document.getElementById('orderOverlay').classList.remove('active');
+}
+
+// ── CANCEL ────────────────────────────────────────────────────────────────────
+function openCancelModal(orderId) {
+  _cancelOrderId = orderId;
+  document.getElementById('cancelReason').value = '';
+  document.getElementById('cancelModal').classList.add('active');
+}
+function closeCancelModal() {
+  document.getElementById('cancelModal').classList.remove('active');
+  _cancelOrderId = null;
+}
+async function confirmCancel() {
+  if (!_cancelOrderId) return;
+  var reason = document.getElementById('cancelReason').value.trim();
+  try {
+    await API.cancelOrder(_cancelOrderId, reason);
+    closeCancelModal();
+    closeOrderOverlay();
+    showToast('Order cancelled.', 'ok');
+    renderOrders();
+  } catch(e) {
+    showToast(e.message, 'er');
+  }
+}
+
+// ── PROFILE ───────────────────────────────────────────────────────────────────
+function renderProfile() {
+  document.getElementById('p-lid').textContent      = user.login_id || '—';
+  document.getElementById('p-name').textContent     = user.fname + (user.lname ? ' ' + user.lname : '');
+  document.getElementById('p-phone').textContent    = (user.country_code || '+91') + ' ' + user.phone;
+  document.getElementById('p-email').textContent    = user.email || '—';
+  document.getElementById('p-district').textContent = user.district || '—';
+  document.getElementById('p-addr').textContent     = buildAddress(user);
+}
+
+function toggleEditForm() {
+  var form = document.getElementById('profileEditForm');
+  form.classList.toggle('on');
+  if (form.classList.contains('on')) {
+    sv('edit-email',   user.email   || '');
+    sv('edit-street1', user.street1 || '');
+    sv('edit-street2', user.street2 || '');
+    sv('edit-village', user.village_town || '');
+    sv('edit-city',    user.city    || '');
+    sv('edit-pincode', user.pincode || '');
+  }
+}
+
+async function saveProfile() {
+  var data = {
+    email:        gv('edit-email')   || undefined,
+    street1:      gv('edit-street1') || undefined,
+    street2:      gv('edit-street2') || undefined,
+    village_town: gv('edit-village') || undefined,
+    city:         gv('edit-city')    || undefined,
+    pincode:      gv('edit-pincode') || undefined,
+  };
+  try {
+    var res = await API.patchMe(data);
+    user = res.user;
+    setSession(getToken(), user);
+    renderProfile();
+    document.getElementById('profileEditForm').classList.remove('on');
+    showToast('Profile updated.', 'ok');
+  } catch(e) {
+    showToast(e.message, 'er');
+  }
+}
+
+// ── Initial load ──────────────────────────────────────────────────────────────
+renderHome();
+updateCartBar();
+</script>
+</body>
+</html>

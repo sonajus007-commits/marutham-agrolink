@@ -1,11 +1,73 @@
-// ── District code lookup ───────────────────────────────────────────────────────
+// ── District code lookup (3-letter) ───────────────────────────────────────────
 // Add new districts here as the platform expands.
 const DISTRICT_CODES = {
-  'Pudukkottai': 'PDK',
+  // Tamil Nadu
+  'Pudukkottai':     'PDK',
+  'Chennai':         'CHN',
+  'Tiruchirappalli': 'TRY',
+  'Thanjavur':       'TNJ',
+  'Madurai':         'MDU',
+  'Sivaganga':       'SVG',
+  'Coimbatore':      'CBE',
+  'Salem':           'SLM',
+  'Tirunelveli':     'TNV',
+  'Vellore':         'VLR',
+  'Erode':           'ERD',
+  'Tiruppur':        'TPR',
+  'Dindigul':        'DDL',
+  'Kanchipuram':     'KPM',
+  'Villupuram':      'VPM',
+  'Cuddalore':       'CDL',
+  'Nagapattinam':    'NGP',
+  'Karur':           'KRR',
+  'Namakkal':        'NMK',
+  'Dharmapuri':      'DPR',
+  'Krishnagiri':     'KRG',
+  'Perambalur':      'PBR',
+  'Ariyalur':        'ARL',
+  'Theni':           'THN',
+  'Virudhunagar':    'VDN',
+  'Ramanathapuram':  'RMD',
+  'Thoothukudi':     'TUT',
+  'Tiruvarur':       'TVR',
+  'Nilgiris':        'NLG',
+  'Kallakurichi':    'KLK',
+  'Tenkasi':         'TKS',
+  'Ranipet':         'RNP',
+  'Tirupattur':      'TPT',
+  'Chengalpattu':    'CPT',
+  'Mayiladuthurai':  'MYD',
+  // Karnataka
+  'Bengaluru':       'BLR',
+  'Mysuru':          'MYS',
+  'Mangaluru':       'MNG',
+  // Kerala
+  'Thiruvananthapuram': 'TVM',
+  'Kochi':           'KCH',
+  'Kozhikode':       'KZD',
+  // Andhra Pradesh
+  'Visakhapatnam':   'VSP',
+  'Vijayawada':      'VJW',
+};
+
+// ── State code lookup (2-letter) ───────────────────────────────────────────────
+const STATE_CODES = {
+  'Tamil Nadu':      'TN',
+  'Karnataka':       'KA',
+  'Kerala':          'KL',
+  'Andhra Pradesh':  'AP',
+  'Telangana':       'TS',
+  'Maharashtra':     'MH',
+  'Delhi':           'DL',
+  'Puducherry':      'PY',
 };
 
 function distCode(district) {
   return DISTRICT_CODES[district] || district.replace(/\s+/g, '').slice(0, 3).toUpperCase();
+}
+
+function stateCode(state) {
+  return STATE_CODES[state] || (state || 'XX').replace(/\s+/g, '').slice(0, 2).toUpperCase();
 }
 
 // IST date string in YYMMDD — orders are placed in India so the daily counter
@@ -57,4 +119,4 @@ async function generateReturnCode(supabase, parentOrderCode) {
   return `RET${dc}${date}${String(seq).padStart(6, '0')}`;
 }
 
-module.exports = { generateOrderCode, generateReturnCode };
+module.exports = { generateOrderCode, generateReturnCode, distCode, stateCode };

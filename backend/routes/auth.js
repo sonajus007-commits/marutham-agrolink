@@ -3,16 +3,76 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { distCode, stateCode } = require('../utils/codeGen');
 
 const router = express.Router();
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Login ID generation ───────────────────────────────────────────────────────
+//
+// District-level roles  → [rolePrefix][stateCode][distCode]_[name3][counter]
+//   e.g. CNTNPDK_KAVA01  (Consumer, Tamil Nadu, Pudukkottai, Kavitha, 1st)
+//
+// State-level roles     → [rolePrefix][stateCode]_[name3][counter]
+//   e.g. RMTN_DEEA01     (Regional Manager, Tamil Nadu, Deepa, 1st)
+//
+// rolePrefix (2 chars):
+const ROLE_PREFIXES = {
+  consumer:           'CN',
+  farmer:             'FR',
+  'Delivery Agent':   'DA',
+  'VCO':              'VC',
+  'District Manager': 'DM',
+  'Hub Incharge':     'HI',
+  'Regional Manager': 'RM',
+  'State Head':       'SH',
+  'Head Office':      'HO',
+};
 
-function generateLoginId(role, district) {
-  const roleCode = { consumer: 'CNT', farmer: 'FRM', admin: 'ADM' }[role] || 'USR';
-  const distCode = (district || 'GEN').replace(/\s+/g, '').slice(0, 4).toUpperCase();
-  const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `${roleCode}${distCode}_${suffix}`;
+// State-level roles have no district segment in their login ID.
+const STATE_LEVEL_ROLES = new Set(['Regional Manager', 'State Head', 'Head Office']);
+
+// Counter format: [A-Z][01-99] — always visually alphanumeric.
+// Sequence: A01, A02 … A99, B01 … Z99  (2,574 slots per name prefix).
+function toAlphaCounter(n) {
+  const letter = String.fromCharCode(64 + Math.ceil(n / 99)); // A=1..Z=26
+  const num    = ((n - 1) % 99) + 1;
+  return letter + String(num).padStart(2, '0');
+}
+
+function fromAlphaCounter(s) {
+  if (!/^[A-Z]\d{2}$/.test(s)) return 0;
+  return (s.charCodeAt(0) - 64 - 1) * 99 + parseInt(s.slice(1));
+}
+
+// Generate a unique login ID by querying the DB for the highest existing counter
+// on the same base prefix, then issuing the next one.
+async function generateLoginId(role, adminRole, state, district, fname) {
+  const rp     = (role === 'admin' ? ROLE_PREFIXES[adminRole] : ROLE_PREFIXES[role]) || 'US';
+  const sc     = stateCode(state);
+  const dc     = distCode(district);
+  const name3  = (fname || 'USR').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase().padEnd(3, 'X');
+  const isStateLevel = role === 'admin' && STATE_LEVEL_ROLES.has(adminRole);
+
+  // State-level: RMTN_DEE  |  District-level: CNTNPDK_KAV
+  const base = isStateLevel
+    ? `${rp}${sc}_${name3}`
+    : `${rp}${sc}${dc}_${name3}`;
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('login_id')
+    .like('login_id', `${base}%`);
+
+  if (error) throw new Error(`Login ID lookup failed: ${error.message}`);
+
+  let maxN = 0;
+  (data || []).forEach(row => {
+    const tail = row.login_id.slice(base.length); // e.g. "A01"
+    const n    = fromAlphaCounter(tail);
+    if (n > maxN) maxN = n;
+  });
+
+  return `${base}${toAlphaCounter(maxN + 1)}`;
 }
 
 function signToken(userId) {
@@ -59,7 +119,7 @@ router.post('/register', async (req, res) => {
   }
 
   const password_hash = await bcrypt.hash(password, 12);
-  const login_id = generateLoginId(role, district);
+  const login_id = await generateLoginId(role, req.body.admin_role, state, district, fname);
 
   const newUser = {
     login_id, phone, password_hash, role,

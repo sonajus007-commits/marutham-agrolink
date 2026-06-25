@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Marutham Agrolink — Login</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="toast" class="toast"></div>
+
+<div class="auth-bg">
+  <div class="brand">
+    <div class="logo-ring"><img src="img/logo.jpg" alt="Marutham Agrolink"></div>
+    <div class="logo-name">Marutham <span>Agrolink</span></div>
+    <div class="logo-tag">மருதம் அக்ரோலிங்க் · Farm to Home</div>
+  </div>
+  <div class="auth-support">
+    <span>📞 <a href="tel:+914322123456">+91 4322 123456</a></span>
+    <span>✉️ <a href="mailto:support@maruthamagrolink.in">support@maruthamagrolink.in</a></span>
+  </div>
+
+  <div class="auth-card">
+    <!-- Login / Register tabs -->
+    <div class="atabs">
+      <button class="atab on" id="tab-login" onclick="swTab('login')">Login</button>
+      <button class="atab"    id="tab-reg"   onclick="swTab('reg')">Register</button>
+    </div>
+
+    <!-- Role selector (shown on both tabs) -->
+    <div class="rrow">
+      <div class="rbtn on" id="rb-consumer" onclick="setRole('consumer')"><span class="ri">🛒</span>Consumer</div>
+      <div class="rbtn"    id="rb-farmer"   onclick="setRole('farmer')"><span class="ri">👨‍🌾</span>Farmer</div>
+      <div class="rbtn"    id="rb-admin"    onclick="setRole('admin')"><span class="ri">⚙️</span>Admin</div>
+    </div>
+
+    <!-- ══════ LOGIN FORM ══════ -->
+    <div id="fLogin">
+      <div class="lmeth">
+        <button class="lmbtn on" id="lm-pw"  onclick="setLoginMethod('pw')">🔐 Password</button>
+        <button class="lmbtn"    id="lm-otp" onclick="setLoginMethod('otp')">📱 OTP Login</button>
+      </div>
+
+      <div class="fg">
+        <label class="fl">Phone Number <span class="rq">*</span></label>
+        <input class="fi" id="l-phone" type="tel" placeholder="10-digit phone number" maxlength="10" oninput="numOnly(this)">
+        <div class="em" id="l-phone-e">Enter your phone number</div>
+      </div>
+
+      <div id="lm-pw-fields">
+        <div class="fg">
+          <label class="fl">Password <span class="rq">*</span></label>
+          <div class="pww">
+            <input class="fi" id="l-pw" type="password" placeholder="Your password">
+            <button class="peye" onclick="togglePw('l-pw',this)">👁</button>
+          </div>
+          <div class="em" id="l-pw-e">Invalid credentials</div>
+        </div>
+        <div class="forgotlnk"><a onclick="showForgot()">Forgot Password?</a></div>
+      </div>
+
+      <div id="lm-otp-fields" style="display:none">
+        <div class="fg">
+          <div class="otprow">
+            <input class="fi" id="l-otp" type="text" placeholder="Enter OTP" maxlength="6" oninput="numOnly(this)">
+            <button class="otpbtn" id="l-sotpb" onclick="sendLoginOTP()">Send OTP</button>
+          </div>
+          <div class="otptmr" id="l-otpt"></div>
+          <div class="em" id="l-otp-e">Incorrect OTP</div>
+        </div>
+      </div>
+
+      <button class="sbtn" id="login-btn" onclick="doLogin()">Login →</button>
+      <div class="asw">New user? <span class="alnk" onclick="swTab('reg')">Register here</span></div>
+    </div>
+
+    <!-- ══════ FORGOT PASSWORD ══════ -->
+    <div id="fForgot" style="display:none">
+      <div style="text-align:center;margin-bottom:18px;">
+        <div style="font-size:32px;margin-bottom:8px;">🔑</div>
+        <div style="font-size:16px;font-weight:700;color:var(--forest);">Reset Password</div>
+        <div style="font-size:12px;color:var(--gray);margin-top:4px;">Enter your registered phone number</div>
+      </div>
+      <div class="fg">
+        <label class="fl">Registered Phone Number <span class="rq">*</span></label>
+        <div class="phrow">
+          <select class="ccsel" id="fp-cc"><option value="+91">🇮🇳 +91</option></select>
+          <input class="fi" id="fp-ph" type="tel" placeholder="10-digit number" maxlength="10" oninput="numOnly(this)">
+        </div>
+        <div class="em" id="fp-ph-e">Enter registered phone number</div>
+      </div>
+      <div class="fg" id="fp-otp-fg" style="display:none">
+        <div class="otprow">
+          <input class="fi" id="fp-otp" type="text" placeholder="Enter OTP" maxlength="6" oninput="numOnly(this)">
+          <button class="otpbtn" id="fp-sotpb" onclick="doForgotStep()">Send OTP</button>
+        </div>
+        <div class="otptmr" id="fp-otpt"></div>
+      </div>
+      <div class="fg" id="fp-np-fg" style="display:none">
+        <label class="fl">New Password <span class="rq">*</span></label>
+        <div class="pww">
+          <input class="fi" id="fp-np" type="password" placeholder="New strong password"
+            oninput="checkPw('fp-np')" onfocus="document.getElementById('fp-pwr').classList.add('on')">
+          <button class="peye" onclick="togglePw('fp-np',this)">👁</button>
+        </div>
+        <div class="pwrules" id="fp-pwr">
+          <div class="pwr" id="fp-r1"><div class="dot"></div>Min 8 characters</div>
+          <div class="pwr" id="fp-r2"><div class="dot"></div>At least 1 uppercase (A-Z)</div>
+          <div class="pwr" id="fp-r3"><div class="dot"></div>At least 1 number (0-9)</div>
+          <div class="pwr" id="fp-r4"><div class="dot"></div>At least 1 special (@#$!%*)</div>
+        </div>
+        <div class="em" id="fp-np-e">Does not meet requirements</div>
+      </div>
+      <button class="sbtn" id="fp-btn" onclick="doForgotStep()">Send OTP to Phone</button>
+      <div class="asw"><span class="alnk" onclick="showLogin()">← Back to Login</span></div>
+    </div>
+
+    <!-- ══════ REGISTER FORMS ══════ -->
+    <div id="fReg" style="display:none">
+
+      <!-- CONSUMER -->
+      <div id="fd-consumer">
+        <div class="fsec">Personal Information</div>
+        <div class="tc2">
+          <div class="fg"><label class="fl">First Name <span class="rq">*</span></label>
+            <input class="fi" id="c-fn" type="text" placeholder="First name" oninput="alphaOnly(this)">
+            <div class="em" id="c-fn-e">Required</div></div>
+          <div class="fg"><label class="fl">Last Name <span class="op">(optional)</span></label>
+            <input class="fi" id="c-ln" type="text" placeholder="Last name" oninput="alphaOnly(this)"></div>
+        </div>
+        <div class="fg"><label class="fl">Phone Number <span class="rq">*</span></label>
+          <div class="phrow">
+            <select class="ccsel" id="c-cc">
+              <option value="+91">🇮🇳 +91</option><option value="+1">🇺🇸 +1</option>
+              <option value="+44">🇬🇧 +44</option><option value="+65">🇸🇬 +65</option>
+            </select>
+            <input class="fi" id="c-ph" type="tel" placeholder="10-digit number" maxlength="10" oninput="numOnly(this)">
+          </div><div class="em" id="c-ph-e">Enter valid 10-digit number</div>
+        </div>
+        <div class="fg"><label class="fl">Email Address <span class="op">(optional)</span></label>
+          <input class="fi" id="c-em" type="email" placeholder="your@email.com">
+          <div class="em" id="c-em-e">Enter valid email</div>
+        </div>
+        <div class="fsec">Delivery Address</div>
+        <div class="fg"><label class="fl">House / Door Number <span class="op">(optional)</span></label>
+          <input class="fi" id="c-hn" type="text" placeholder="Door No / Flat No"></div>
+        <div class="fg"><label class="fl">Street Line 1 <span class="rq">*</span></label>
+          <input class="fi" id="c-s1" type="text" placeholder="Street name">
+          <div class="em" id="c-s1-e">Required</div></div>
+        <div class="fg"><label class="fl">Street Line 2 <span class="op">(optional)</span></label>
+          <input class="fi" id="c-s2" type="text" placeholder="Area, Colony"></div>
+        <div class="fg"><label class="fl">Village / Town <span class="op">(optional)</span></label>
+          <input class="fi" id="c-vt" type="text" placeholder="Village or Town name"></div>
+        <div class="tc2">
+          <div class="fg"><label class="fl">City <span class="rq">*</span></label>
+            <input class="fi" id="c-cy" type="text" placeholder="City">
+            <div class="em" id="c-cy-e">Required</div></div>
+          <div class="fg"><label class="fl">District <span class="rq">*</span></label>
+            <select class="fi" id="c-di">
+              <option value="Pudukkottai" selected>Pudukkottai</option>
+              <option value="Tiruchirappalli">Tiruchirappalli</option>
+              <option value="Thanjavur">Thanjavur</option>
+              <option value="Madurai">Madurai</option>
+              <option value="Sivaganga">Sivaganga</option>
+              <option value="Chennai">Chennai</option>
+            </select></div>
+        </div>
+        <div class="tc2">
+          <div class="fg"><label class="fl">Pincode <span class="rq">*</span></label>
+            <input class="fi" id="c-pn" type="text" placeholder="6-digit PIN" maxlength="6" oninput="numOnly(this)">
+            <div class="em" id="c-pn-e">Enter 6-digit pincode</div></div>
+          <div class="fg"><label class="fl">State <span class="rq">*</span></label>
+            <select class="fi" id="c-st">
+              <option value="Tamil Nadu" selected>Tamil Nadu</option>
+              <option value="Karnataka">Karnataka</option>
+              <option value="Kerala">Kerala</option>
+              <option value="Andhra Pradesh">Andhra Pradesh</option>
+            </select></div>
+        </div>
+        <div class="fsec">Security</div>
+        <div class="fg"><label class="fl">Password <span class="rq">*</span></label>
+          <div class="pww">
+            <input class="fi" id="c-pw" type="password" placeholder="Create strong password"
+              oninput="checkPw('c-pw')" onfocus="document.getElementById('c-pwr').classList.add('on')"
+              onblur="setTimeout(()=>document.getElementById('c-pwr').classList.remove('on'),200)">
+            <button class="peye" onclick="togglePw('c-pw',this)">👁</button>
+          </div>
+          <div class="em" id="c-pw-e">Does not meet requirements</div>
+          <div class="pwrules" id="c-pwr">
+            <div class="pwr" id="c-r1"><div class="dot"></div>Min 8 characters</div>
+            <div class="pwr" id="c-r2"><div class="dot"></div>At least 1 uppercase letter</div>
+            <div class="pwr" id="c-r3"><div class="dot"></div>At least 1 number (0-9)</div>
+            <div class="pwr" id="c-r4"><div class="dot"></div>At least 1 special character (@#$!%*)</div>
+          </div>
+        </div>
+        <div class="fg"><label class="fl">Confirm Password <span class="rq">*</span></label>
+          <div class="pww">
+            <input class="fi" id="c-cpw" type="password" placeholder="Re-enter password">
+            <button class="peye" onclick="togglePw('c-cpw',this)">👁</button>
+          </div>
+          <div class="em" id="c-cpw-e">Passwords do not match</div>
+        </div>
+        <button class="sbtn" onclick="doRegister('consumer')">✅ Create Consumer Account</button>
+      </div>
+
+      <!-- FARMER -->
+      <div id="fd-farmer" style="display:none">
+        <div class="fsec">Personal Information</div>
+        <div class="tc2">
+          <div class="fg"><label class="fl">First Name <span class="rq">*</span></label>
+            <input class="fi" id="f-fn" type="text" placeholder="First name" oninput="alphaOnly(this)">
+            <div class="em" id="f-fn-e">Required</div></div>
+          <div class="fg"><label class="fl">Last Name <span class="op">(optional)</span></label>
+            <input class="fi" id="f-ln" type="text" placeholder="Last name" oninput="alphaOnly(this)"></div>
+        </div>
+        <div class="fg"><label class="fl">Phone Number <span class="rq">*</span></label>
+          <div class="phrow">
+            <select class="ccsel" id="f-cc"><option value="+91">🇮🇳 +91</option></select>
+            <input class="fi" id="f-ph" type="tel" placeholder="10-digit number" maxlength="10" oninput="numOnly(this)">
+          </div><div class="em" id="f-ph-e">Enter valid 10-digit number</div>
+        </div>
+        <div class="fg"><label class="fl">Email Address <span class="op">(optional)</span></label>
+          <input class="fi" id="f-em" type="email" placeholder="your@email.com">
+          <div class="em" id="f-em-e">Enter valid email</div>
+        </div>
+        <div class="fsec">Farm Address</div>
+        <div class="fg"><label class="fl">House / Survey Number <span class="op">(optional)</span></label>
+          <input class="fi" id="f-hn" type="text" placeholder="House / Survey No"></div>
+        <div class="fg"><label class="fl">Street Line 1 <span class="rq">*</span></label>
+          <input class="fi" id="f-s1" type="text" placeholder="Street name">
+          <div class="em" id="f-s1-e">Required</div></div>
+        <div class="fg"><label class="fl">Village / Town <span class="rq">*</span></label>
+          <input class="fi" id="f-vt" type="text" placeholder="Village or Town">
+          <div class="em" id="f-vt-e">Required for farmers</div></div>
+        <div class="tc2">
+          <div class="fg"><label class="fl">City <span class="rq">*</span></label>
+            <input class="fi" id="f-cy" type="text" placeholder="City">
+            <div class="em" id="f-cy-e">Required</div></div>
+          <div class="fg"><label class="fl">District <span class="rq">*</span></label>
+            <select class="fi" id="f-di">
+              <option value="Pudukkottai" selected>Pudukkottai</option>
+              <option value="Tiruchirappalli">Tiruchirappalli</option>
+              <option value="Thanjavur">Thanjavur</option>
+              <option value="Madurai">Madurai</option>
+            </select></div>
+        </div>
+        <div class="tc2">
+          <div class="fg"><label class="fl">Pincode <span class="rq">*</span></label>
+            <input class="fi" id="f-pn" type="text" placeholder="6-digit PIN" maxlength="6" oninput="numOnly(this)">
+            <div class="em" id="f-pn-e">Enter 6-digit pincode</div></div>
+          <div class="fg"><label class="fl">State <span class="rq">*</span></label>
+            <select class="fi" id="f-st">
+              <option value="Tamil Nadu" selected>Tamil Nadu</option>
+              <option value="Karnataka">Karnataka</option>
+              <option value="Kerala">Kerala</option>
+            </select></div>
+        </div>
+        <div class="fsec">Bank & KYC Details</div>
+        <div class="fg"><label class="fl">Aadhaar Number <span class="rq">*</span></label>
+          <input class="fi" id="f-aad" type="text" placeholder="12-digit Aadhaar" maxlength="12" oninput="numOnly(this)">
+          <div class="em" id="f-aad-e">Enter valid 12-digit Aadhaar</div></div>
+        <div class="fg"><label class="fl">Bank Name <span class="rq">*</span></label>
+          <input class="fi" id="f-bn" type="text" placeholder="Bank name">
+          <div class="em" id="f-bn-e">Required</div></div>
+        <div class="fg"><label class="fl">Account Number <span class="rq">*</span></label>
+          <input class="fi" id="f-bac" type="text" placeholder="Account number" oninput="numOnly(this)">
+          <div class="em" id="f-bac-e">Enter valid account number (9–18 digits)</div></div>
+        <div class="fg"><label class="fl">Confirm Account Number <span class="rq">*</span></label>
+          <input class="fi" id="f-bac2" type="text" placeholder="Re-enter account number" oninput="numOnly(this)">
+          <div class="em" id="f-bac2-e">Account numbers do not match</div></div>
+        <div class="fg"><label class="fl">IFSC Code <span class="op">(optional)</span></label>
+          <input class="fi" id="f-ifsc" type="text" placeholder="e.g. SBIN0001234" style="text-transform:uppercase">
+          <div class="em" id="f-ifsc-e">Enter valid IFSC</div></div>
+        <div class="fsec">Security</div>
+        <div class="fg"><label class="fl">Password <span class="rq">*</span></label>
+          <div class="pww">
+            <input class="fi" id="f-pw" type="password" placeholder="Create strong password"
+              oninput="checkPw('f-pw')" onfocus="document.getElementById('f-pwr').classList.add('on')"
+              onblur="setTimeout(()=>document.getElementById('f-pwr').classList.remove('on'),200)">
+            <button class="peye" onclick="togglePw('f-pw',this)">👁</button>
+          </div>
+          <div class="em" id="f-pw-e">Does not meet requirements</div>
+          <div class="pwrules" id="f-pwr">
+            <div class="pwr" id="f-r1"><div class="dot"></div>Min 8 characters</div>
+            <div class="pwr" id="f-r2"><div class="dot"></div>At least 1 uppercase letter</div>
+            <div class="pwr" id="f-r3"><div class="dot"></div>At least 1 number (0-9)</div>
+            <div class="pwr" id="f-r4"><div class="dot"></div>At least 1 special character (@#$!%*)</div>
+          </div>
+        </div>
+        <div class="fg"><label class="fl">Confirm Password <span class="rq">*</span></label>
+          <div class="pww">
+            <input class="fi" id="f-cpw" type="password" placeholder="Re-enter password">
+            <button class="peye" onclick="togglePw('f-cpw',this)">👁</button>
+          </div>
+          <div class="em" id="f-cpw-e">Passwords do not match</div>
+        </div>
+        <button class="sbtn" onclick="doRegister('farmer')">✅ Create Farmer Account</button>
+      </div>
+
+      <!-- ADMIN (view-only notice) -->
+      <div id="fd-admin" style="display:none">
+        <div class="info-box" style="margin-top:8px;">
+          <strong>Admin accounts</strong> are created by the Head Office and assigned by system administrators. Please contact <a href="mailto:support@maruthamagrolink.in" style="color:var(--leaf)">support@maruthamagrolink.in</a> if you need access.
+        </div>
+        <div class="asw" style="margin-top:18px;"><span class="alnk" onclick="swTab('login');setRole('admin')">Already have an account? Login →</span></div>
+      </div>
+
+    </div><!-- /fReg -->
+  </div><!-- /auth-card -->
+</div><!-- /auth-bg -->
+
+<!-- Registration success overlay -->
+<div class="overlay" id="regSuccessOverlay">
+  <div style="min-height:100vh;background:radial-gradient(ellipse at 20% 50%,#0f2d1c 0%,#1a3d2b 40%,#0a1f12 100%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;">
+    <div style="font-size:56px;margin-bottom:16px;">🎉</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--gold2);font-weight:700;text-align:center;margin-bottom:8px;">
+      Account Created!
+    </div>
+    <div style="font-size:13px;color:var(--mint);text-align:center;margin-bottom:24px;">Your Login ID has been generated</div>
+    <div class="lid-box" style="width:100%;max-width:340px;">
+      <div class="lid-lbl">Your Login ID</div>
+      <div class="lid-val" id="success-lid">—</div>
+      <div class="lid-note">Use your phone number or this ID to login</div>
+    </div>
+    <button class="sbtn" style="max-width:340px;margin-top:20px;" onclick="goToDashboard()">
+      Continue to Dashboard →
+    </button>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/shared.js"></script>
+<script src="js/api.js"></script>
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+registerPwRules('c-pw',  ['c-r1','c-r2','c-r3','c-r4']);
+registerPwRules('f-pw',  ['f-r1','f-r2','f-r3','f-r4']);
+registerPwRules('fp-np', ['fp-r1','fp-r2','fp-r3','fp-r4']);
+
+var aRole       = 'consumer';
+var aTab        = 'login';
+var loginMethod = 'pw';
+var forgotStep  = 1;
+var _otpStore   = {};
+var _otpTimers  = {};
+var _pendingUser = null; // set after register before redirect
+
+// Redirect if already logged in
+(function() {
+  var u = getUser();
+  if (u && getToken()) redirectUser(u);
+})();
+
+// ── Tab / role UI ─────────────────────────────────────────────────────────────
+function swTab(tab) {
+  aTab = tab;
+  document.getElementById('fLogin').style.display  = tab === 'login' ? 'block' : 'none';
+  document.getElementById('fReg').style.display    = tab === 'reg'   ? 'block' : 'none';
+  document.getElementById('fForgot').style.display = 'none';
+  document.getElementById('tab-login').classList.toggle('on', tab === 'login');
+  document.getElementById('tab-reg').classList.toggle('on',   tab === 'reg');
+  if (tab === 'reg') setRole(aRole);
+}
+function setRole(role) {
+  aRole = role;
+  ['consumer','farmer','admin'].forEach(function(r) {
+    document.getElementById('rb-' + r).classList.toggle('on', r === role);
+    var fd = document.getElementById('fd-' + r);
+    if (fd) fd.style.display = r === role ? 'block' : 'none';
+  });
+}
+function setLoginMethod(m) {
+  loginMethod = m;
+  document.getElementById('lm-pw').classList.toggle('on',  m === 'pw');
+  document.getElementById('lm-otp').classList.toggle('on', m === 'otp');
+  document.getElementById('lm-pw-fields').style.display  = m === 'pw'  ? 'block' : 'none';
+  document.getElementById('lm-otp-fields').style.display = m === 'otp' ? 'block' : 'none';
+}
+function showForgot() {
+  document.getElementById('fLogin').style.display  = 'none';
+  document.getElementById('fForgot').style.display = 'block';
+  forgotStep = 1;
+  document.getElementById('fp-otp-fg').style.display = 'none';
+  document.getElementById('fp-np-fg').style.display  = 'none';
+  document.getElementById('fp-btn').textContent = 'Send OTP to Phone';
+}
+function showLogin() {
+  document.getElementById('fForgot').style.display = 'none';
+  document.getElementById('fLogin').style.display  = 'block';
+}
+
+// ── OTP (mock — backend OTP not wired yet) ────────────────────────────────────
+function sendLoginOTP() {
+  var ph = document.getElementById('l-phone').value.trim();
+  if (!/^\d{10}$/.test(ph)) { showToast('Enter your 10-digit phone number first', 'er'); return; }
+  var otp = String(Math.floor(100000 + Math.random() * 900000));
+  _otpStore['l-otp'] = otp;
+  showToast('Demo OTP: ' + otp, 'nfo');
+  startOtpTimer('l-sotpb', 'l-otpt');
+}
+function startOtpTimer(btnId, timerId) {
+  var btn = document.getElementById(btnId), tmr = document.getElementById(timerId);
+  btn.disabled = true; tmr.classList.add('on');
+  var sec = 30; tmr.textContent = 'Resend in ' + sec + 's';
+  if (_otpTimers[btnId]) clearInterval(_otpTimers[btnId]);
+  _otpTimers[btnId] = setInterval(function() {
+    sec--;
+    if (sec <= 0) { clearInterval(_otpTimers[btnId]); btn.disabled = false; tmr.textContent = 'Resend OTP'; }
+    else tmr.textContent = 'Resend in ' + sec + 's';
+  }, 1000);
+}
+
+// ── Forgot password ───────────────────────────────────────────────────────────
+function doForgotStep() {
+  if (forgotStep === 1) {
+    var ph = document.getElementById('fp-ph').value.trim();
+    if (!/^\d{10}$/.test(ph)) { showErr('fp-ph-e', 'Enter registered phone number'); return; }
+    hideErr('fp-ph-e');
+    var otp = String(Math.floor(100000 + Math.random() * 900000));
+    _otpStore['fp-otp'] = otp;
+    showToast('Demo OTP sent: ' + otp, 'nfo');
+    document.getElementById('fp-otp-fg').style.display = 'block';
+    document.getElementById('fp-btn').textContent = 'Verify OTP';
+    forgotStep = 2;
+  } else if (forgotStep === 2) {
+    var entered = document.getElementById('fp-otp').value.trim();
+    if (entered !== _otpStore['fp-otp']) { showToast('Incorrect OTP', 'er'); return; }
+    document.getElementById('fp-np-fg').style.display = 'block';
+    document.getElementById('fp-btn').textContent = 'Reset Password';
+    forgotStep = 3;
+  } else if (forgotStep === 3) {
+    var np = document.getElementById('fp-np').value;
+    if (!isStrongPw(np)) { showErr('fp-np-e', 'Password does not meet requirements'); return; }
+    // TODO: wire to PATCH /auth/reset-password when backend supports it
+    showToast('Password reset — please login with your new password', 'ok');
+    setTimeout(showLogin, 1500);
+  }
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  var phone = document.getElementById('l-phone').value.trim();
+  if (!phone) { showErr('l-phone-e', 'Enter your phone number'); return; }
+  if (!/^\d{10}$/.test(phone)) { showErr('l-phone-e', 'Enter valid 10-digit number'); return; }
+  hideErr('l-phone-e');
+
+  if (loginMethod === 'otp') {
+    var otp = document.getElementById('l-otp').value.trim();
+    if (otp !== _otpStore['l-otp']) { showErr('l-otp-e', 'Incorrect OTP'); return; }
+    hideErr('l-otp-e');
+  } else {
+    var pw = document.getElementById('l-pw').value;
+    if (!pw) { showErr('l-pw-e', 'Password required'); return; }
+    hideErr('l-pw-e');
+  }
+
+  var btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Logging in…';
+  try {
+    var pw = document.getElementById('l-pw').value;
+    var res = await API.login(phone, pw);
+    setSession(res.token, res.user);
+    showToast('Welcome back, ' + res.user.fname + '!', 'ok');
+    setTimeout(function() { redirectUser(res.user); }, 600);
+  } catch(e) {
+    showToast(e.message, 'er');
+    showErr('l-pw-e', e.message);
+    btn.disabled = false; btn.textContent = 'Login →';
+  }
+}
+
+function redirectUser(u) {
+  if (u.role === 'consumer') { window.location.href = 'consumer.html'; return; }
+  if (u.role === 'farmer')   { window.location.href = 'farmer.html';   return; }
+  if (u.role === 'admin' && u.admin_role === 'Delivery Agent') {
+    window.location.href = 'agent.html'; return;
+  }
+  if (u.role === 'admin')    { window.location.href = 'admin.html';    return; }
+  showToast('Unknown role — contact support', 'er');
+}
+
+// ── REGISTER ──────────────────────────────────────────────────────────────────
+async function doRegister(role) {
+  var p = role.charAt(0);
+  var ok = true;
+
+  var fn  = gv(p + '-fn');
+  var ph  = gv(p + '-ph');
+  var s1  = gv(p + '-s1');
+  var cy  = gv(p + '-cy');
+  var pn  = gv(p + '-pn');
+  var pw  = gv(p + '-pw');
+  var cpw = gv(p + '-cpw');
+  var di  = document.getElementById(p + '-di').value;
+  var st  = document.getElementById(p + '-st').value;
+
+  if (!fn) { showErr(p+'-fn-e','Required'); ok=false; } else hideErr(p+'-fn-e');
+  if (!/^\d{10}$/.test(ph)) { showErr(p+'-ph-e','Enter valid 10-digit number'); ok=false; } else hideErr(p+'-ph-e');
+  if (!s1) { showErr(p+'-s1-e','Required'); ok=false; } else hideErr(p+'-s1-e');
+  if (!cy) { showErr(p+'-cy-e','Required'); ok=false; } else hideErr(p+'-cy-e');
+  if (!/^\d{6}$/.test(pn)) { showErr(p+'-pn-e','Enter 6-digit pincode'); ok=false; } else hideErr(p+'-pn-e');
+  if (!isStrongPw(pw)) { showErr(p+'-pw-e','Does not meet requirements'); ok=false; } else hideErr(p+'-pw-e');
+  if (pw !== cpw) { showErr(p+'-cpw-e','Passwords do not match'); ok=false; } else hideErr(p+'-cpw-e');
+
+  var em = gv(p + '-em');
+  if (em && !isValidEmail(em)) { showErr(p+'-em-e','Enter valid email'); ok=false; } else hideErr(p+'-em-e');
+
+  if (role === 'farmer') {
+    var aad  = gv('f-aad'), bn = gv('f-bn'), bac = gv('f-bac'), bac2 = gv('f-bac2'), ifsc = gv('f-ifsc');
+    var fvt  = gv('f-vt');
+    if (!fvt) { showErr('f-vt-e','Required for farmers'); ok=false; } else hideErr('f-vt-e');
+    if (!/^\d{12}$/.test(aad)) { showErr('f-aad-e','Enter valid 12-digit Aadhaar'); ok=false; } else hideErr('f-aad-e');
+    if (!bn) { showErr('f-bn-e','Required'); ok=false; } else hideErr('f-bn-e');
+    if (bac.length < 9 || bac.length > 18) { showErr('f-bac-e','Enter valid account number'); ok=false; } else hideErr('f-bac-e');
+    if (bac !== bac2) { showErr('f-bac2-e','Account numbers do not match'); ok=false; } else hideErr('f-bac2-e');
+    if (ifsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc.toUpperCase())) { showErr('f-ifsc-e','Enter valid IFSC'); ok=false; } else hideErr('f-ifsc-e');
+  }
+
+  if (!ok) return;
+
+  var body = {
+    phone: ph, password: pw, role: role,
+    fname: fn, lname: gv(p+'-ln'), email: em || undefined,
+    house_no: gv(p+'-hn'), street1: s1, street2: gv(p+'-s2'),
+    landmark: gv(p+'-lm'), village_town: gv(p+'-vt'),
+    city: cy, district: di, pincode: pn, state: st, country: 'India',
+    country_code: document.getElementById(p+'-cc').value,
+  };
+  if (role === 'farmer') {
+    body.aadhar       = gv('f-aad');
+    body.bank_name    = gv('f-bn');
+    body.bank_account = gv('f-bac');
+    body.ifsc         = gv('f-ifsc') || undefined;
+  }
+
+  var btns = document.querySelectorAll('#fd-' + role + ' .sbtn');
+  btns.forEach(function(b){ b.disabled=true; b.textContent='Creating account…'; });
+
+  try {
+    var res = await API.register(body);
+    // Register doesn't return a token — login immediately
+    var loginRes = await API.login(ph, pw);
+    setSession(loginRes.token, loginRes.user);
+    _pendingUser = loginRes.user;
+    document.getElementById('success-lid').textContent = loginRes.user.login_id || '—';
+    document.getElementById('regSuccessOverlay').classList.add('active');
+  } catch(e) {
+    showToast(e.message, 'er');
+    btns.forEach(function(b){ b.disabled=false; b.textContent='✅ Create ' + (role==='consumer'?'Consumer':'Farmer') + ' Account'; });
+  }
+}
+
+function goToDashboard() {
+  if (_pendingUser) redirectUser(_pendingUser);
+}
+</script>
+</body>
+</html>

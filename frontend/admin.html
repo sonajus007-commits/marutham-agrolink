@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Marutham Agrolink — Admin</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="toast" class="toast"></div>
+
+<!-- APP HEADER -->
+<div class="apphdr">
+  <div class="hbrand">
+    <div class="hring"><img src="img/logo-sm.jpg" alt="MA"></div>
+    <div><div class="hname">Marutham <span>Agrolink</span></div><div class="htag">Admin Portal</div></div>
+  </div>
+  <div class="hdrr">
+    <span id="liveClock" class="liveclk">--</span>
+    <div class="ubadge" id="userBadge">Admin</div>
+    <button class="hbtn" onclick="doLogout()">Logout</button>
+  </div>
+</div>
+
+<!-- HERO (scope ribbon) -->
+<div class="ov-hero" style="border-radius:0;margin:0">
+  <div class="ov-hero-label" id="heroLabel">Admin Portal</div>
+  <div class="ov-hero-scope" id="heroScope">Dashboard</div>
+  <div class="ov-hero-sub" id="heroSub">Marutham Agrolink Operations</div>
+</div>
+
+<!-- TAB NAV -->
+<div class="pnav">
+  <button class="ptab on" id="tab-overview"  onclick="openTab('overview',this)">📊 Overview</button>
+  <button class="ptab"    id="tab-products"  onclick="openTab('products',this)">🌾 Products</button>
+  <button class="ptab"    id="tab-orders"    onclick="openTab('orders',this)">📦 Orders</button>
+  <button class="ptab"    id="tab-users"     onclick="openTab('users',this)">👥 Users</button>
+  <button class="ptab"    id="tab-profile"   onclick="openTab('profile',this)">👤 My Profile</button>
+</div>
+
+<!-- ── OVERVIEW ───────────────────────────────────────────────────────────── -->
+<div class="panel on" id="panel-overview">
+  <div id="overviewBody"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- ── PRODUCTS ───────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-products">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <div class="sec-head" style="margin:0"><span class="sh-icon" style="background:#f0faf4">🌾</span> Products Catalogue</div>
+    <button class="add-prod-btn" onclick="openAddProduct()">+ Add Product</button>
+  </div>
+  <div class="filt-row" id="prodCatFilter"></div>
+  <div id="adminProductList"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- ── ORDERS ─────────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-orders">
+  <div class="filt-row" id="adminOrderFilter"></div>
+  <div id="adminOrderList"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- ── USERS ──────────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-users">
+  <div class="fg" style="margin-bottom:12px">
+    <input class="fi" id="userSearch" type="text" placeholder="Search by name, phone, login ID…" oninput="filterUsers()">
+  </div>
+  <div class="filt-row" id="userRoleFilter"></div>
+  <div id="userListWrap"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- ── PROFILE ────────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-profile">
+  <div class="card">
+    <h3>👤 Admin Profile</h3>
+    <div class="irow"><span class="ilbl">Login ID</span><span class="ival mono" id="p-lid">—</span></div>
+    <div class="irow"><span class="ilbl">Full Name</span><span class="ival" id="p-name">—</span></div>
+    <div class="irow"><span class="ilbl">Phone</span><span class="ival mono" id="p-phone">—</span></div>
+    <div class="irow"><span class="ilbl">Email</span><span class="ival" id="p-email">—</span></div>
+    <div class="irow"><span class="ilbl">Admin Role</span><span class="ival" id="p-arole">—</span></div>
+    <div class="irow"><span class="ilbl">District</span><span class="ival" id="p-district">—</span></div>
+  </div>
+</div>
+
+<!-- ══════ ADD / EDIT PRODUCT OVERLAY ══════ -->
+<div class="overlay" id="productOverlay">
+  <div class="overlay-hdr">
+    <button class="overlay-back" onclick="closeProductOverlay()">←</button>
+    <div class="overlay-title" id="productOverlayTitle">Add Product</div>
+  </div>
+  <div class="overlay-body">
+    <div class="fg"><label class="fl">Product Name (Tamil/Local) <span class="rq">*</span></label>
+      <input class="fi" id="po-name" type="text" placeholder="e.g. வாழைப்பழம்">
+      <div class="em" id="po-name-e">Required</div></div>
+    <div class="fg"><label class="fl">English Name <span class="op">(optional)</span></label>
+      <input class="fi" id="po-ename" type="text" placeholder="e.g. Banana"></div>
+    <div class="fg"><label class="fl">Unit <span class="rq">*</span></label>
+      <select class="fi" id="po-unit">
+        <option value="kg">kg</option><option value="g">g</option>
+        <option value="bunch">bunch</option><option value="piece">piece</option>
+        <option value="dozen">dozen</option><option value="litre">litre</option>
+        <option value="ml">ml</option><option value="pack">pack</option>
+      </select></div>
+    <div class="fg"><label class="fl">Group / Category <span class="rq">*</span></label>
+      <input class="fi" id="po-group" type="text" placeholder="e.g. Vegetables, Fruits, Dairy">
+      <div class="em" id="po-group-e">Required</div></div>
+    <div class="fg"><label class="fl">District Retail Price (₹)</label>
+      <input class="fi" id="po-price" type="number" min="0" step="0.01" placeholder="e.g. 60.00"></div>
+    <div class="fg" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="po-avail" checked style="width:16px;height:16px">
+      <label for="po-avail" class="fl" style="margin:0;cursor:pointer">Available (show to consumers)</label>
+    </div>
+    <button class="sbtn" onclick="saveProduct()">Save Product</button>
+  </div>
+</div>
+
+<!-- ══════ ORDER DETAIL OVERLAY ══════ -->
+<div class="overlay" id="orderOverlay">
+  <div class="overlay-hdr">
+    <button class="overlay-back" onclick="closeOrderOverlay()">←</button>
+    <div class="overlay-title" id="overlayOrderCode">Order Details</div>
+  </div>
+  <div class="overlay-body" id="orderOverlayBody"></div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/shared.js"></script>
+<script src="js/api.js"></script>
+<script>
+var user = requireAuth('admin');
+if (!user) throw new Error('redirect');
+
+startClock('liveClock');
+document.getElementById('userBadge').textContent = user.fname;
+document.getElementById('heroLabel').textContent  = user.admin_role || 'Admin';
+document.getElementById('heroScope').textContent  = user.fname + ' ' + (user.lname || '');
+document.getElementById('heroSub').textContent    = (user.district ? user.district + ' · ' : '') + 'Marutham Agrolink';
+
+var _allProducts     = [];
+var _activeProdCat   = 'All';
+var _allUsers        = [];
+var _activeUserRole  = 'All';
+var _adminOrderFilter = 'All';
+var _editProductId   = null;
+var _allOrderStatuses = ['All','Order Placed','Packaged','VCO Verified','Picked Up','Out for Delivery','Delivered','Cancelled'];
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function openTab(name, tabEl) {
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.ptab').forEach(function(t){ t.classList.remove('on'); });
+  document.getElementById('panel-' + name).classList.add('on');
+  if (tabEl) tabEl.classList.add('on');
+  if (name === 'overview') renderOverview();
+  if (name === 'products') renderProducts();
+  if (name === 'orders')   renderAdminOrders();
+  if (name === 'users')    renderUsers();
+  if (name === 'profile')  renderProfile();
+}
+
+// ── OVERVIEW ──────────────────────────────────────────────────────────────────
+async function renderOverview() {
+  var el = document.getElementById('overviewBody');
+  el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res = await API.getDashboard();
+    var d   = res.dashboard || res;
+
+    var html = '<div class="kpi-grid">';
+    html += kpiCard('📦','Total Orders',  d.total_orders  || 0, '#f0faf4', '#1a3d2b');
+    html += kpiCard('💰','Total Revenue', '₹' + parseFloat(d.total_revenue || 0).toFixed(0), '#fff8e6', '#92400e');
+    html += kpiCard('👥','Consumers',     d.total_consumers || 0, '#eff6ff', '#1d4ed8');
+    html += kpiCard('👨‍🌾','Farmers',      d.total_farmers   || 0, '#f0fdf4', '#166534');
+    html += '</div>';
+
+    if (d.orders_by_status) {
+      html += '<div class="card"><h3>📊 Orders by Status</h3>';
+      Object.entries(d.orders_by_status).forEach(function(entry) {
+        html += '<div class="op-row"><div class="op-dot" style="background:' + statusColor(entry[0]) + '"></div>';
+        html += '<div class="op-label">' + entry[0] + '</div>';
+        html += '<div class="op-val">' + entry[1] + '</div></div>';
+      });
+      html += '</div>';
+    }
+
+    if (d.top_products) {
+      html += '<div class="card"><h3>🌿 Top Products</h3>';
+      var max = d.top_products[0] ? parseInt(d.top_products[0].count) : 1;
+      d.top_products.slice(0,5).forEach(function(p) {
+        var pct = Math.round(parseInt(p.count) / max * 100);
+        html += '<div class="catperf"><div class="catperf-top"><span class="catperf-name">' + p.name + '</span>';
+        html += '<span class="catperf-meta">' + p.count + ' orders</span></div>';
+        html += '<div class="catperf-track"><div class="catperf-fill" style="width:' + pct + '%"></div></div></div>';
+      });
+      html += '</div>';
+    }
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p>Could not load dashboard: ' + e.message + '</p></div>';
+  }
+}
+
+function kpiCard(icon, label, val, bg, color) {
+  return '<div class="kpi" style="border-top-color:' + color + '">' +
+    '<div class="kpi-icon" style="background:' + bg + '">' + icon + '</div>' +
+    '<div class="kpi-val" style="color:' + color + '">' + val + '</div>' +
+    '<div class="kpi-lbl">' + label + '</div></div>';
+}
+
+// ── PRODUCTS ──────────────────────────────────────────────────────────────────
+async function renderProducts() {
+  var el = document.getElementById('adminProductList');
+  el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res = await API.getProducts();
+    _allProducts = res.products || [];
+    buildProdCatFilter();
+    renderProductList();
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+function buildProdCatFilter() {
+  var cats = ['All'];
+  _allProducts.forEach(function(p) { if (p.group && !cats.includes(p.group)) cats.push(p.group); });
+  var html = '';
+  cats.forEach(function(c) {
+    html += '<button class="chip' + (c === _activeProdCat ? ' on' : '') + '" onclick="setProdCat(\'' + c.replace(/'/g,'') + '\')">' + c + '</button>';
+  });
+  document.getElementById('prodCatFilter').innerHTML = html;
+}
+
+function setProdCat(c) {
+  _activeProdCat = c;
+  buildProdCatFilter();
+  renderProductList();
+}
+
+function renderProductList() {
+  var filtered = _activeProdCat === 'All' ? _allProducts : _allProducts.filter(function(p){ return p.group === _activeProdCat; });
+  if (filtered.length === 0) {
+    document.getElementById('adminProductList').innerHTML = '<div class="empty-state"><p>No products.</p></div>'; return;
+  }
+  var html = '';
+  filtered.forEach(function(p) {
+    html += '<div class="prod-card">';
+    html += '<div class="prod-top">';
+    html += '<div><div class="prod-name">' + p.name + '</div>';
+    if (p.name_en) html += '<div class="prod-name-en">' + p.name_en + '</div>';
+    html += '<div class="prod-path"><span class="prod-chip">' + (p.group||'—') + '</span></div></div>';
+    html += '<div class="prod-price-box"><div class="prod-price">₹' + parseFloat(p.district_price||0).toFixed(2) + '</div>';
+    html += '<div class="prod-unit">/ ' + p.unit + '</div></div>';
+    html += '</div>';
+    html += '<div class="prod-meta-row">';
+    if (p.available) html += '<span class="prod-badge" style="background:#e6f7ed;color:#1a7a4a">✓ Available</span>';
+    else             html += '<span class="prod-badge" style="background:#fde8e8;color:#c0392b">✗ Unavailable</span>';
+    html += '<div class="prod-actions">';
+    html += '<a class="prod-link" style="color:var(--leaf)" onclick="openEditProduct(\'' + p.id + '\')">Edit</a>';
+    html += '<a class="prod-link" style="color:var(--red);margin-left:10px" onclick="deleteProduct(\'' + p.id + '\')">Delete</a>';
+    html += '</div></div></div>';
+  });
+  document.getElementById('adminProductList').innerHTML = html;
+}
+
+function openAddProduct() {
+  _editProductId = null;
+  document.getElementById('productOverlayTitle').textContent = 'Add Product';
+  ['po-name','po-ename','po-group','po-price'].forEach(function(id){ sv(id,''); });
+  document.getElementById('po-unit').value  = 'kg';
+  document.getElementById('po-avail').checked = true;
+  document.getElementById('productOverlay').classList.add('active');
+}
+
+function openEditProduct(id) {
+  _editProductId = id;
+  var p = _allProducts.find(function(x){ return x.id === id; });
+  if (!p) return;
+  document.getElementById('productOverlayTitle').textContent = 'Edit Product';
+  sv('po-name',  p.name    || '');
+  sv('po-ename', p.name_en || '');
+  sv('po-group', p.group   || '');
+  sv('po-price', p.district_price || '');
+  document.getElementById('po-unit').value   = p.unit   || 'kg';
+  document.getElementById('po-avail').checked = !!p.available;
+  document.getElementById('productOverlay').classList.add('active');
+}
+
+function closeProductOverlay() {
+  document.getElementById('productOverlay').classList.remove('active');
+}
+
+async function saveProduct() {
+  var name  = gv('po-name');
+  var group = gv('po-group');
+  if (!name)  { showErr('po-name-e','Required'); return; }  hideErr('po-name-e');
+  if (!group) { showErr('po-group-e','Required'); return; } hideErr('po-group-e');
+
+  var data = {
+    name: name,
+    name_en: gv('po-ename') || undefined,
+    unit: document.getElementById('po-unit').value,
+    group: group,
+    district_price: parseFloat(gv('po-price')) || undefined,
+    available: document.getElementById('po-avail').checked,
+  };
+  try {
+    if (_editProductId) {
+      await API.updateProduct(_editProductId, data);
+      showToast('Product updated.', 'ok');
+    } else {
+      await API.createProduct(data);
+      showToast('Product created.', 'ok');
+    }
+    closeProductOverlay();
+    _allProducts = [];
+    renderProducts();
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function deleteProduct(id) {
+  if (!confirm('Delete this product? This cannot be undone.')) return;
+  try {
+    await API.deleteProduct(id);
+    showToast('Product deleted.', 'ok');
+    _allProducts = [];
+    renderProducts();
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+// ── ORDERS ────────────────────────────────────────────────────────────────────
+async function renderAdminOrders() {
+  renderAdminOrderFilterBar();
+  var el = document.getElementById('adminOrderList');
+  el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var params = _adminOrderFilter !== 'All' ? { status: _adminOrderFilter } : {};
+    var res = await API.getOrders(params);
+    var orders = res.orders || [];
+    if (orders.length === 0) {
+      el.innerHTML = '<div class="empty-state"><div class="es-icon">📦</div><p>No orders.</p></div>'; return;
+    }
+    var html = '';
+    orders.forEach(function(o) {
+      html += '<div class="ord-item" onclick="openOrderDetail(\'' + o.id + '\')">';
+      html += '<div class="ord-statusbar" style="background:' + statusColor(o.status) + '"></div>';
+      html += '<div style="flex:1"><div class="ord-id">' + (o.code||o.id.slice(0,8).toUpperCase()) + '</div>';
+      html += '<div class="ord-loc">' + (o.status||'—') + ' · ' + fmtDateShort(o.created_at) + '</div>';
+      html += '<div class="ord-loc">' + (o.consumer_name||'Consumer') + '</div></div>';
+      html += '<div class="ord-amt">' + fmt(o.total) + '</div></div>';
+    });
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+function renderAdminOrderFilterBar() {
+  var html = '';
+  _allOrderStatuses.forEach(function(s) {
+    html += '<button class="chip' + (s === _adminOrderFilter ? ' on' : '') + '" onclick="setAdminOrderFilter(\'' + s.replace(/'/g,'') + '\')">' + s + '</button>';
+  });
+  document.getElementById('adminOrderFilter').innerHTML = html;
+}
+
+function setAdminOrderFilter(s) {
+  _adminOrderFilter = s;
+  renderAdminOrders();
+}
+
+async function openOrderDetail(orderId) {
+  var overlay = document.getElementById('orderOverlay');
+  var body    = document.getElementById('orderOverlayBody');
+  overlay.classList.add('active');
+  body.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res   = await API.getOrder(orderId);
+    var o     = res.order;
+    var items = res.items || [];
+    var hist  = res.history || [];
+    document.getElementById('overlayOrderCode').textContent = o.code || 'Order';
+
+    var html = '<div style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;">';
+    html += '<span style="display:inline-block;padding:6px 14px;border-radius:50px;font-size:12px;font-weight:700;background:' + statusColor(o.status) + ';color:#fff;">' + o.status + '</span>';
+
+    // Action buttons based on status (admin workflow)
+    var adminRole = user.admin_role || '';
+    if (o.status === 'Order Placed' && adminRole === 'VCO') {
+      html += '<button class="req-change-btn" onclick="packOrder(\'' + o.id + '\')">Pack Order</button>';
+    }
+    if (o.status === 'Packaged' && (adminRole === 'VCO' || adminRole === 'Hub Incharge')) {
+      html += '<button class="req-change-btn" onclick="scanOrder(\'' + o.id + '\')">Scan / Verify</button>';
+    }
+    html += '</div>';
+
+    html += '<div class="card"><h3>📋 Order Info</h3>';
+    html += '<div class="irow"><span class="ilbl">Order Code</span><span class="ival mono">' + (o.code||'—') + '</span></div>';
+    html += '<div class="irow"><span class="ilbl">Consumer</span><span class="ival">' + (o.consumer_name||'—') + '</span></div>';
+    html += '<div class="irow"><span class="ilbl">Phone</span><span class="ival mono">' + (o.consumer_phone||'—') + '</span></div>';
+    html += '<div class="irow"><span class="ilbl">Address</span><span class="ival" style="font-size:11px;line-height:1.5">' + (o.delivery_address||'—') + '</span></div>';
+    html += '<div class="irow"><span class="ilbl">Payment</span><span class="ival">' + o.pay_method + ' · ' + o.pay_status + '</span></div>';
+    html += '<div class="irow"><span class="ilbl">Total</span><span class="ival" style="font-size:15px">' + fmt(o.total) + '</span></div>';
+    html += '</div>';
+
+    html += '<div class="card"><h3>🌿 Items</h3>';
+    items.forEach(function(item) {
+      html += '<div class="irow"><span class="ilbl">' + item.name + '<br><span style="font-size:10px;color:var(--gray)">' + item.qty + ' × ' + fmt(item.price) + '</span></span>';
+      html += '<span class="ival">' + fmt(parseFloat(item.price) * item.qty) + '</span></div>';
+    });
+    html += '</div>';
+
+    if (hist.length > 0) {
+      html += '<div class="card"><h3>📍 Timeline</h3><ul class="timeline">';
+      hist.forEach(function(h, idx) {
+        html += '<li class="tl-item' + (idx === hist.length-1 ? ' active' : '') + '">';
+        html += '<div class="tl-dot"></div><div><div class="tl-label">' + h.label + '</div>';
+        html += '<div class="tl-time">' + fmtDate(h.ts) + '</div>';
+        if (h.note) html += '<div class="tl-note">' + h.note + '</div>';
+        html += '</div></li>';
+      });
+      html += '</ul></div>';
+    }
+
+    body.innerHTML = html;
+  } catch(e) {
+    body.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+function closeOrderOverlay() {
+  document.getElementById('orderOverlay').classList.remove('active');
+}
+
+async function packOrder(orderId) {
+  try {
+    await API.packOrder(orderId);
+    showToast('Order marked as Packaged.', 'ok');
+    closeOrderOverlay();
+    renderAdminOrders();
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function scanOrder(orderId) {
+  try {
+    await API.scanOrder(orderId);
+    showToast('Order scanned / verified.', 'ok');
+    closeOrderOverlay();
+    renderAdminOrders();
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+// ── USERS ─────────────────────────────────────────────────────────────────────
+var _userRoles = ['All','consumer','farmer','admin'];
+async function renderUsers() {
+  renderUserRoleFilter();
+  var el = document.getElementById('userListWrap');
+  el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    // Admin users endpoint returns users in admin's district scope
+    var res = await apiFetch('GET', '/users', null, getToken());
+    _allUsers = res.users || [];
+    renderUserTable();
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+function renderUserRoleFilter() {
+  var html = '';
+  _userRoles.forEach(function(r) {
+    html += '<button class="chip' + (r === _activeUserRole ? ' on' : '') + '" onclick="setUserRole(\'' + r + '\')">' + r.charAt(0).toUpperCase() + r.slice(1) + '</button>';
+  });
+  document.getElementById('userRoleFilter').innerHTML = html;
+}
+
+function setUserRole(r) {
+  _activeUserRole = r;
+  renderUserRoleFilter();
+  renderUserTable();
+}
+
+function filterUsers() {
+  renderUserTable();
+}
+
+function renderUserTable() {
+  var q  = (document.getElementById('userSearch').value || '').toLowerCase();
+  var list = _allUsers;
+  if (_activeUserRole !== 'All') list = list.filter(function(u){ return u.role === _activeUserRole; });
+  if (q) list = list.filter(function(u){
+    return (u.fname+' '+(u.lname||'')+u.phone+(u.login_id||'')).toLowerCase().includes(q);
+  });
+
+  if (list.length === 0) {
+    document.getElementById('userListWrap').innerHTML = '<div class="empty-state"><p>No users found.</p></div>'; return;
+  }
+
+  var html = '<div class="tbl-wrap"><table class="utbl"><thead><tr>';
+  html += '<th>Name</th><th>Login ID</th><th>Phone</th><th>Role</th><th>District</th><th>Status</th><th>Action</th>';
+  html += '</tr></thead><tbody>';
+  list.forEach(function(u) {
+    var roleClass = u.role === 'admin' ? 'rb-vc' : (u.role === 'farmer' ? 'rb-fa' : 'rb-co');
+    html += '<tr>';
+    html += '<td style="font-weight:700">' + u.fname + (u.lname ? ' ' + u.lname : '') + '</td>';
+    html += '<td class="mono">' + (u.login_id||'—') + '</td>';
+    html += '<td class="mono">' + u.phone + '</td>';
+    html += '<td><span class="rbadge ' + roleClass + '">' + (u.admin_role || u.role) + '</span></td>';
+    html += '<td>' + (u.district||'—') + '</td>';
+    html += '<td><span class="sbadge ' + (u.blocked ? 's-blk' : 's-act') + '">' + (u.blocked ? 'Blocked' : 'Active') + '</span></td>';
+    html += '<td><button class="blkbtn ' + (u.blocked ? 'b-unb' : 'b-blk') + '" onclick="toggleBlock(\'' + u.id + '\',' + !!u.blocked + ')">';
+    html += (u.blocked ? 'Unblock' : 'Block') + '</button></td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('userListWrap').innerHTML = html;
+}
+
+async function toggleBlock(userId, currentlyBlocked) {
+  var action = currentlyBlocked ? 'unblock' : 'block';
+  if (!confirm(action.charAt(0).toUpperCase() + action.slice(1) + ' this user?')) return;
+  try {
+    await apiFetch('PATCH', '/users/' + userId + '/' + action, {}, getToken());
+    showToast('User ' + action + 'ed.', 'ok');
+    renderUsers();
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+// ── PROFILE ───────────────────────────────────────────────────────────────────
+function renderProfile() {
+  document.getElementById('p-lid').textContent      = user.login_id || '—';
+  document.getElementById('p-name').textContent     = user.fname + (user.lname ? ' ' + user.lname : '');
+  document.getElementById('p-phone').textContent    = (user.country_code||'+91') + ' ' + user.phone;
+  document.getElementById('p-email').textContent    = user.email || '—';
+  document.getElementById('p-arole').textContent    = user.admin_role || '—';
+  document.getElementById('p-district').textContent = user.district || '—';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderOverview();
+</script>
+</body>
+</html>

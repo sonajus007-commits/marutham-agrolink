@@ -1,9 +1,11 @@
 require('dotenv').config();
 const express = require('express');
+const cors    = require('cors');
 const { convertTimestamps } = require('./utils/time');
 const { convertMoney } = require('./utils/money');
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 // Format all API responses:

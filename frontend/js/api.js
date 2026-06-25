@@ -1,0 +1,122 @@
+// ── Core fetch wrapper ────────────────────────────────────────────────────────
+async function apiFetch(method, path, body, token) {
+  var headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  var opts = { method: method, headers: headers };
+  if (body) opts.body = JSON.stringify(body);
+  var res = await fetch(CONFIG.API_BASE + path, opts);
+  var data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed (' + res.status + ')');
+  return data;
+}
+
+function tok() { return getToken(); }
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+var API = {
+  login: function(phone, password) {
+    return apiFetch('POST', '/auth/login', { phone, password });
+  },
+  register: function(data) {
+    return apiFetch('POST', '/auth/register', data);
+  },
+  getMe: function() {
+    return apiFetch('GET', '/auth/me', null, tok());
+  },
+  patchMe: function(data) {
+    return apiFetch('PATCH', '/auth/me', data, tok());
+  },
+
+  // ── Products ──────────────────────────────────────────────────────────────
+  getProducts: function(params) {
+    var qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiFetch('GET', '/products' + qs, null, tok());
+  },
+  getProduct: function(id) {
+    return apiFetch('GET', '/products/' + id, null, tok());
+  },
+  createProduct: function(data) {
+    return apiFetch('POST', '/products', data, tok());
+  },
+  updateProduct: function(id, data) {
+    return apiFetch('PATCH', '/products/' + id, data, tok());
+  },
+  deleteProduct: function(id) {
+    return apiFetch('DELETE', '/products/' + id, null, tok());
+  },
+
+  // ── Listings ──────────────────────────────────────────────────────────────
+  getListings: function(params) {
+    var qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiFetch('GET', '/listings' + qs, null, tok());
+  },
+  createListing: function(data) {
+    return apiFetch('POST', '/listings', data, tok());
+  },
+  updateListing: function(id, data) {
+    return apiFetch('PATCH', '/listings/' + id, data, tok());
+  },
+  deleteListing: function(id) {
+    return apiFetch('DELETE', '/listings/' + id, null, tok());
+  },
+
+  // ── Orders ────────────────────────────────────────────────────────────────
+  placeOrder: function(data) {
+    return apiFetch('POST', '/orders', data, tok());
+  },
+  getOrders: function(params) {
+    var qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiFetch('GET', '/orders' + qs, null, tok());
+  },
+  getOrder: function(id) {
+    return apiFetch('GET', '/orders/' + id, null, tok());
+  },
+  cancelOrder: function(id, reason) {
+    return apiFetch('POST', '/orders/' + id + '/cancel', { cancel_reason: reason }, tok());
+  },
+
+  // ── Delivery ──────────────────────────────────────────────────────────────
+  packOrder: function(id) {
+    return apiFetch('POST', '/orders/' + id + '/pack', {}, tok());
+  },
+  scanOrder: function(id, routeHint) {
+    var body = routeHint ? { route: routeHint } : {};
+    return apiFetch('POST', '/orders/' + id + '/scan', body, tok());
+  },
+  assignAgent: function(id, agentId) {
+    return apiFetch('POST', '/orders/' + id + '/assign', { agent_id: agentId }, tok());
+  },
+  deliverOrder: function(id) {
+    return apiFetch('POST', '/orders/' + id + '/deliver', {}, tok());
+  },
+
+  // ── Returns ───────────────────────────────────────────────────────────────
+  requestReturn: function(orderId, data) {
+    return apiFetch('POST', '/orders/' + orderId + '/return', data, tok());
+  },
+  getReturns: function() {
+    return apiFetch('GET', '/returns', null, tok());
+  },
+  decideReturn: function(id, decision) {
+    return apiFetch('PATCH', '/returns/' + id + '/decide', { decision }, tok());
+  },
+  collectReturn: function(id) {
+    return apiFetch('PATCH', '/returns/' + id + '/collect', {}, tok());
+  },
+
+  // ── Ratings ───────────────────────────────────────────────────────────────
+  rateOrder: function(orderId, ratings) {
+    return apiFetch('POST', '/orders/' + orderId + '/rate', { ratings }, tok());
+  },
+
+  // ── Dashboard ─────────────────────────────────────────────────────────────
+  getDashboard: function(params) {
+    var qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiFetch('GET', '/dashboard' + qs, null, tok());
+  },
+
+  // ── Payouts ───────────────────────────────────────────────────────────────
+  getPayouts: function() {
+    return apiFetch('GET', '/payouts', null, tok());
+  }
+};

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Marutham Agrolink — Farmer</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="toast" class="toast"></div>
+
+<!-- APP HEADER -->
+<div class="apphdr">
+  <div class="hbrand">
+    <div class="hring"><img src="img/logo-sm.jpg" alt="MA"></div>
+    <div><div class="hname">Marutham <span>Agrolink</span></div><div class="htag">Farmer Portal</div></div>
+  </div>
+  <div class="hdrr">
+    <span id="liveClock" class="liveclk">--</span>
+    <div class="ubadge" id="userBadge">Farmer</div>
+    <button class="hbtn" onclick="doLogout()">Logout</button>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hring" style="width:44px;height:44px;font-size:20px;flex-shrink:0">👨‍🌾</div>
+  <div class="htxt"><h2 id="heroName">Welcome, Farmer!</h2><p>Manage your products and orders</p></div>
+</div>
+
+<!-- TAB NAV -->
+<div class="pnav">
+  <button class="ptab on" id="tab-earnings"  onclick="openTab('earnings',this)">💰 Earnings</button>
+  <button class="ptab"    id="tab-products"  onclick="openTab('products',this)">🌾 My Products</button>
+  <button class="ptab"    id="tab-orders"    onclick="openTab('orders',this)">📦 Orders</button>
+  <button class="ptab"    id="tab-profile"   onclick="openTab('profile',this)">👤 My Profile</button>
+</div>
+
+<!-- ── EARNINGS ───────────────────────────────────────────────────────────── -->
+<div class="panel on" id="panel-earnings">
+  <div id="earnings-body"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- ── PRODUCTS ───────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-products">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <div class="sec-head" style="margin:0"><span class="sh-icon" style="background:#f0faf4">🌾</span> My Listings</div>
+    <button class="add-prod-btn" onclick="openAddListing()">+ Add Listing</button>
+  </div>
+  <div id="listingList"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- ── ORDERS ─────────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-orders">
+  <div class="filt-label" style="margin-bottom:8px">Filter by status</div>
+  <div id="orderFilter" class="filt-row"></div>
+  <div id="farmerOrderList"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- ── PROFILE ────────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-profile">
+  <div class="card">
+    <h3>👤 My Profile</h3>
+    <div class="lid-box">
+      <div class="lid-lbl">Your Login ID</div>
+      <div class="lid-val" id="p-lid">—</div>
+      <div class="lid-note">Use this ID or phone number to login</div>
+    </div>
+    <div class="irow"><span class="ilbl">Full Name</span><span class="ival" id="p-name">—</span></div>
+    <div class="irow"><span class="ilbl">Phone</span><span class="ival mono" id="p-phone">—</span></div>
+    <div class="irow"><span class="ilbl">Email</span><span class="ival" id="p-email">—</span></div>
+    <div class="irow"><span class="ilbl">District</span><span class="ival" id="p-district">—</span></div>
+    <div class="irow"><span class="ilbl">Village</span><span class="ival" id="p-village">—</span></div>
+    <div class="irow"><span class="ilbl">Address</span><span class="ival" id="p-addr" style="font-size:11px;line-height:1.5">—</span></div>
+    <button class="bedit" onclick="toggleEditForm()">✏️ Edit Profile</button>
+    <div class="editform" id="profileEditForm">
+      <div class="fsec" style="padding-top:0;border-top:none">Editable Fields</div>
+      <div class="fg"><label class="fl">Email</label><input class="fi" id="edit-email" type="email"></div>
+      <div class="fg"><label class="fl">Street Line 1</label><input class="fi" id="edit-s1" type="text"></div>
+      <div class="fg"><label class="fl">Village / Town</label><input class="fi" id="edit-vt" type="text"></div>
+      <div class="fg"><label class="fl">City</label><input class="fi" id="edit-city" type="text"></div>
+      <div class="fg"><label class="fl">Pincode</label><input class="fi" id="edit-pn" type="text" maxlength="6" oninput="numOnly(this)"></div>
+      <div class="ea">
+        <button class="bsave" onclick="saveProfile()">Save Changes</button>
+        <button class="bcanc" onclick="toggleEditForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🏦 Bank Details</h3>
+    <div class="irow"><span class="ilbl">Bank Name</span><span class="ival" id="p-bank">—</span></div>
+    <div class="irow"><span class="ilbl">Account No</span><span class="ival mono" id="p-acc">—</span></div>
+    <div class="irow"><span class="ilbl">IFSC</span><span class="ival mono" id="p-ifsc">—</span></div>
+    <div class="irow"><span class="ilbl">Aadhaar</span><span class="ival" id="p-aad">—</span></div>
+  </div>
+</div>
+
+<!-- ══════ ADD / EDIT LISTING OVERLAY ══════ -->
+<div class="overlay" id="listingOverlay">
+  <div class="overlay-hdr">
+    <button class="overlay-back" onclick="closeListingOverlay()">←</button>
+    <div class="overlay-title" id="listingOverlayTitle">Add Listing</div>
+  </div>
+  <div class="overlay-body">
+    <div class="fg">
+      <label class="fl">Product <span class="rq">*</span></label>
+      <select class="fi" id="lo-product">
+        <option value="">— Select a product —</option>
+      </select>
+      <div class="em" id="lo-product-e">Select a product</div>
+    </div>
+    <div class="fg">
+      <label class="fl">Your Selling Price (₹) <span class="rq">*</span></label>
+      <input class="fi" id="lo-price" type="number" min="0" step="0.01" placeholder="e.g. 48.00">
+      <div class="em" id="lo-price-e">Enter valid price</div>
+    </div>
+    <div class="fg">
+      <label class="fl">Stock / Available Quantity</label>
+      <input class="fi" id="lo-stock" type="number" min="0" step="1" placeholder="e.g. 100">
+    </div>
+    <div class="fg" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="lo-listed" checked style="width:16px;height:16px">
+      <label for="lo-listed" class="fl" style="margin:0;cursor:pointer">Listed (visible to consumers)</label>
+    </div>
+    <button class="sbtn" onclick="saveListing()">Save Listing</button>
+  </div>
+</div>
+
+<!-- ══════ ORDER DETAIL OVERLAY ══════ -->
+<div class="overlay" id="orderOverlay">
+  <div class="overlay-hdr">
+    <button class="overlay-back" onclick="closeOrderOverlay()">←</button>
+    <div class="overlay-title" id="overlayOrderCode">Order Details</div>
+  </div>
+  <div class="overlay-body" id="overlayBody"></div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/shared.js"></script>
+<script src="js/api.js"></script>
+<script>
+var user = requireAuth('farmer');
+if (!user) throw new Error('redirect');
+
+startClock('liveClock');
+document.getElementById('userBadge').textContent  = user.fname;
+document.getElementById('heroName').textContent   = 'Welcome, ' + user.fname + '!';
+
+var _statusFilter = 'All';
+var _allStatuses  = ['All','Order Placed','Packaged','VCO Verified','Picked Up','Out for Delivery','Delivered','Cancelled'];
+var _editListingId = null;
+var _allSystemProducts = [];
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function openTab(name, tabEl) {
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.ptab').forEach(function(t){ t.classList.remove('on'); });
+  document.getElementById('panel-' + name).classList.add('on');
+  if (tabEl) tabEl.classList.add('on');
+  if (name === 'earnings') renderEarnings();
+  if (name === 'products') renderListings();
+  if (name === 'orders')   renderOrders();
+  if (name === 'profile')  renderProfile();
+}
+
+// ── EARNINGS ──────────────────────────────────────────────────────────────────
+async function renderEarnings() {
+  var el = document.getElementById('earnings-body');
+  el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res = await API.getOrders();
+    var orders = res.orders || [];
+    var delivered = orders.filter(function(o){ return o.status === 'Delivered'; });
+    var pending   = orders.filter(function(o){ return !o.cancelled && o.status !== 'Delivered'; });
+    var totalEarned = delivered.reduce(function(s,o){ return s + parseFloat(o.farmer_payout || 0); }, 0);
+    var pendingAmt  = pending.reduce(function(s,o){ return s + parseFloat(o.farmer_payout || 0); }, 0);
+
+    var html = '<div class="sgrid">';
+    html += '<div class="sc"><div class="slbl">Total Earned</div><div class="sval mono">₹' + totalEarned.toFixed(0) + '</div><div class="ssub">From delivered orders</div></div>';
+    html += '<div class="sc"><div class="slbl">Pending</div><div class="sval mono">₹' + pendingAmt.toFixed(0) + '</div><div class="ssub">Active orders</div></div>';
+    html += '</div>';
+    html += '<div class="sgrid">';
+    html += '<div class="sc"><div class="slbl">Delivered</div><div class="sval">' + delivered.length + '</div><div class="ssub">Orders</div></div>';
+    html += '<div class="sc"><div class="slbl">In Progress</div><div class="sval">' + pending.length + '</div><div class="ssub">Orders</div></div>';
+    html += '</div>';
+
+    if (delivered.length > 0) {
+      html += '<div class="card"><h3>💰 Payout History</h3>';
+      delivered.slice(0,10).forEach(function(o) {
+        html += '<div class="irow"><div><div class="ord-id">' + (o.code||o.id.slice(0,8).toUpperCase()) + '</div>';
+        html += '<div class="ord-loc">' + fmtDateShort(o.delivered_at||o.created_at) + '</div></div>';
+        html += '<div style="font-weight:800;color:var(--green);font-size:14px">₹' + parseFloat(o.farmer_payout||0).toFixed(2) + '</div></div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div class="empty-state"><div class="es-icon">💰</div><p>No deliveries yet.<br>Earnings will appear here once orders are delivered.</p></div>';
+    }
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+// ── LISTINGS ──────────────────────────────────────────────────────────────────
+async function renderListings() {
+  var el = document.getElementById('listingList');
+  el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var [listRes, prodRes] = await Promise.all([
+      API.getListings(),
+      API.getProducts()
+    ]);
+    var listings = listRes.listings || [];
+    _allSystemProducts = prodRes.products || [];
+
+    if (listings.length === 0) {
+      el.innerHTML = '<div class="empty-state"><div class="es-icon">🌾</div><p>No listings yet.<br>Add your first product listing.</p></div>';
+      return;
+    }
+    var html = '';
+    listings.forEach(function(l) {
+      html += '<div class="prod-card">';
+      html += '<div class="prod-top">';
+      html += '<div><div class="prod-name">' + l.product_name + '</div>';
+      html += '<div class="prod-path"><span class="prod-chip">' + (l.product_group||'—') + '</span>';
+      html += '<span style="font-size:10px;color:var(--gray)">Unit: ' + (l.unit||'—') + '</span></div>';
+      html += '</div>';
+      html += '<div class="prod-price-box"><div class="prod-price">₹' + parseFloat(l.farmer_price||0).toFixed(2) + '</div>';
+      html += '<div class="prod-unit">your price</div></div>';
+      html += '</div>';
+      html += '<div class="prod-meta-row">';
+      if (l.listed) html += '<span class="prod-badge" style="background:#e6f7ed;color:#1a7a4a">✓ Listed</span>';
+      else          html += '<span class="prod-badge" style="background:#fde8e8;color:#c0392b">✗ Unlisted</span>';
+      if (l.stock_qty != null) html += '<span style="font-size:11px;color:var(--gray)">Stock: ' + l.stock_qty + '</span>';
+      html += '<div class="prod-actions">';
+      html += '<a class="prod-link" style="color:var(--leaf)" onclick="openEditListing(\'' + l.id + '\')">Edit</a>';
+      html += '<a class="prod-link" style="color:var(--red);margin-left:10px" onclick="deleteListing(\'' + l.id + '\')">Remove</a>';
+      html += '</div></div></div>';
+    });
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+async function openAddListing() {
+  _editListingId = null;
+  document.getElementById('listingOverlayTitle').textContent = 'Add Listing';
+  await populateProductSelect(null);
+  document.getElementById('lo-price').value = '';
+  document.getElementById('lo-stock').value = '';
+  document.getElementById('lo-listed').checked = true;
+  document.getElementById('listingOverlay').classList.add('active');
+}
+
+async function openEditListing(id) {
+  _editListingId = id;
+  document.getElementById('listingOverlayTitle').textContent = 'Edit Listing';
+  try {
+    var res = await API.getListings({ id: id });
+    var listing = (res.listings || [])[0] || {};
+    await populateProductSelect(listing.product_id);
+    document.getElementById('lo-price').value  = listing.farmer_price || '';
+    document.getElementById('lo-stock').value  = listing.stock_qty != null ? listing.stock_qty : '';
+    document.getElementById('lo-listed').checked = !!listing.listed;
+    document.getElementById('listingOverlay').classList.add('active');
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function populateProductSelect(selectedId) {
+  if (_allSystemProducts.length === 0) {
+    try { var r = await API.getProducts(); _allSystemProducts = r.products || []; } catch(e) {}
+  }
+  var sel = document.getElementById('lo-product');
+  sel.innerHTML = '<option value="">— Select a product —</option>';
+  _allSystemProducts.forEach(function(p) {
+    var opt = document.createElement('option');
+    opt.value = p.id; opt.textContent = p.name + ' (' + p.unit + ')';
+    if (p.id === selectedId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function closeListingOverlay() {
+  document.getElementById('listingOverlay').classList.remove('active');
+}
+
+async function saveListing() {
+  var prodId = document.getElementById('lo-product').value;
+  var price  = parseFloat(document.getElementById('lo-price').value);
+  var stock  = document.getElementById('lo-stock').value;
+  var listed = document.getElementById('lo-listed').checked;
+
+  if (!prodId) { showErr('lo-product-e','Select a product'); return; }
+  hideErr('lo-product-e');
+  if (isNaN(price) || price <= 0) { showErr('lo-price-e','Enter valid price'); return; }
+  hideErr('lo-price-e');
+
+  var data = { product_id: prodId, farmer_price: price, listed: listed };
+  if (stock !== '') data.stock_qty = parseInt(stock);
+
+  try {
+    if (_editListingId) {
+      await API.updateListing(_editListingId, data);
+      showToast('Listing updated.', 'ok');
+    } else {
+      await API.createListing(data);
+      showToast('Listing created.', 'ok');
+    }
+    closeListingOverlay();
+    renderListings();
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function deleteListing(id) {
+  if (!confirm('Remove this listing?')) return;
+  try {
+    await API.deleteListing(id);
+    showToast('Listing removed.', 'ok');
+    renderListings();
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+// ── ORDERS ────────────────────────────────────────────────────────────────────
+async function renderOrders() {
+  renderOrderFilterBar();
+  var el = document.getElementById('farmerOrderList');
+  el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var params = _statusFilter !== 'All' ? { status: _statusFilter } : {};
+    var res = await API.getOrders(params);
+    var orders = res.orders || [];
+    if (orders.length === 0) {
+      el.innerHTML = '<div class="empty-state"><div class="es-icon">📦</div><p>No orders' + (_statusFilter !== 'All' ? ' with status "' + _statusFilter + '"' : '') + '.</p></div>';
+      return;
+    }
+    var html = '';
+    orders.forEach(function(o) {
+      html += '<div class="ord-item" onclick="openOrderDetail(\'' + o.id + '\')">';
+      html += '<div class="ord-statusbar" style="background:' + statusColor(o.status) + '"></div>';
+      html += '<div style="flex:1"><div class="ord-id">' + (o.code||o.id.slice(0,8).toUpperCase()) + '</div>';
+      html += '<div class="ord-loc">' + (o.status||'—') + ' · ' + fmtDateShort(o.created_at) + '</div></div>';
+      html += '<div style="text-align:right"><div class="ord-amt">' + fmt(o.farmer_payout||0) + '</div>';
+      html += '<div style="font-size:10px;color:var(--gray)">Payout</div></div>';
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+function renderOrderFilterBar() {
+  var html = '';
+  _allStatuses.forEach(function(s) {
+    html += '<button class="chip' + (s === _statusFilter ? ' on' : '') + '" onclick="setOrderFilter(\'' + s.replace(/'/g,'') + '\')">' + s + '</button>';
+  });
+  document.getElementById('orderFilter').innerHTML = html;
+}
+
+function setOrderFilter(s) {
+  _statusFilter = s;
+  renderOrders();
+}
+
+async function openOrderDetail(orderId) {
+  var overlay = document.getElementById('orderOverlay');
+  var body    = document.getElementById('overlayBody');
+  overlay.classList.add('active');
+  body.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res   = await API.getOrder(orderId);
+    var o     = res.order;
+    var items = res.items || [];
+    document.getElementById('overlayOrderCode').textContent = o.code || 'Order';
+
+    var html = '<div style="margin-bottom:16px"><span style="display:inline-block;padding:6px 14px;border-radius:50px;font-size:12px;font-weight:700;background:' + statusColor(o.status) + ';color:#fff;">' + o.status + '</span></div>';
+    html += '<div class="card"><h3>📋 Order Info</h3>';
+    html += '<div class="irow"><span class="ilbl">Order Code</span><span class="ival mono">' + (o.code||'—') + '</span></div>';
+    html += '<div class="irow"><span class="ilbl">Placed On</span><span class="ival">' + fmtDate(o.created_at) + '</span></div>';
+    html += '<div class="irow"><span class="ilbl">Consumer</span><span class="ival">' + (o.consumer_name||'—') + '</span></div>';
+    html += '<div class="irow"><span class="ilbl">Your Payout</span><span class="ival" style="color:var(--green);font-weight:800">' + fmt(o.farmer_payout||0) + '</span></div>';
+    html += '</div>';
+
+    html += '<div class="card"><h3>🌿 Items</h3>';
+    items.forEach(function(item) {
+      html += '<div class="irow"><span class="ilbl">' + item.name + '<br><span style="font-size:10px;color:var(--gray)">' + item.qty + ' × ' + fmt(item.farmer_price||item.price) + '</span></span>';
+      html += '<span class="ival">' + fmt(parseFloat(item.farmer_price||item.price) * item.qty) + '</span></div>';
+    });
+    html += '</div>';
+
+    body.innerHTML = html;
+  } catch(e) {
+    body.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+function closeOrderOverlay() {
+  document.getElementById('orderOverlay').classList.remove('active');
+}
+
+// ── PROFILE ───────────────────────────────────────────────────────────────────
+function renderProfile() {
+  document.getElementById('p-lid').textContent      = user.login_id || '—';
+  document.getElementById('p-name').textContent     = user.fname + (user.lname ? ' ' + user.lname : '');
+  document.getElementById('p-phone').textContent    = (user.country_code||'+91') + ' ' + user.phone;
+  document.getElementById('p-email').textContent    = user.email || '—';
+  document.getElementById('p-district').textContent = user.district || '—';
+  document.getElementById('p-village').textContent  = user.village_town || '—';
+  document.getElementById('p-addr').textContent     = buildAddress(user);
+  document.getElementById('p-bank').textContent     = user.bank_name || '—';
+  document.getElementById('p-acc').textContent      = user.bank_account ? '••••' + user.bank_account.slice(-4) : '—';
+  document.getElementById('p-ifsc').textContent     = user.ifsc || '—';
+  document.getElementById('p-aad').textContent      = user.aadhar ? 'XXXX-XXXX-' + user.aadhar.slice(-4) : '—';
+}
+
+function toggleEditForm() {
+  var form = document.getElementById('profileEditForm');
+  form.classList.toggle('on');
+  if (form.classList.contains('on')) {
+    sv('edit-email', user.email || '');
+    sv('edit-s1',    user.street1 || '');
+    sv('edit-vt',    user.village_town || '');
+    sv('edit-city',  user.city || '');
+    sv('edit-pn',    user.pincode || '');
+  }
+}
+
+async function saveProfile() {
+  var data = {
+    email:        gv('edit-email') || undefined,
+    street1:      gv('edit-s1')    || undefined,
+    village_town: gv('edit-vt')    || undefined,
+    city:         gv('edit-city')  || undefined,
+    pincode:      gv('edit-pn')    || undefined,
+  };
+  try {
+    var res = await API.patchMe(data);
+    user = res.user;
+    setSession(getToken(), user);
+    renderProfile();
+    document.getElementById('profileEditForm').classList.remove('on');
+    showToast('Profile updated.', 'ok');
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderEarnings();
+</script>
+</body>
+</html>
