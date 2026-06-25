@@ -57,6 +57,8 @@ async function advanceStage(order, actorLabel, extraUpdates = {}) {
     updated_at: now,
     ...(newStatus === 'Delivered' ? { delivered_at: now } : {}),
     ...(newStatus === 'Picked Up'  ? { picked_up_at: now } : {}),
+    // COD orders collect cash at doorstep — mark paid on delivery
+    ...(newStatus === 'Delivered' && order.pay_method === 'Cash on Delivery' ? { pay_status: 'paid' } : {}),
     ...extraUpdates,
   };
 

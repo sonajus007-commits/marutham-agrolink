@@ -2,15 +2,12 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { generateOrderCode } = require('../utils/codeGen');
 
 const router = express.Router();
 router.use(requireAuth);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function generateOrderCode() {
-  return 'ORD' + Math.floor(1000 + Math.random() * 9000);
-}
 
 // Stages at which an order can still be cancelled
 const CANCELLABLE_STAGES = [0, 1]; // Order Placed, Packaged — not once picked up
@@ -138,19 +135,17 @@ router.post('/', async (req, res) => {
   const saved      = resolvedItems.reduce((s, i) => s + i._saved, 0);
   const total      = item_total + handling + delivery;
 
-  // ── 3. Generate a unique order code ──────────────────────────────────────
-  let code;
-  let codeUnique = false;
-  for (let attempt = 0; attempt < 5 && !codeUnique; attempt++) {
-    code = generateOrderCode();
-    const { data: existing } = await supabase
-      .from('orders')
-      .select('id')
-      .eq('code', code)
-      .maybeSingle();
-    if (!existing) codeUnique = true;
+  // ── 3. Generate order code (atomic via DB function) ─────────────────────
+  if (!req.user.district) {
+    return res.status(400).json({ error: 'Your profile has no district set. Update your profile before ordering.' });
   }
-  if (!codeUnique) return res.status(500).json({ error: 'Could not generate unique order code. Try again.' });
+  let code;
+  try {
+    code = await generateOrderCode(supabase, req.user.district);
+  } catch (err) {
+    console.error('generateOrderCode error:', err);
+    return res.status(500).json({ error: 'Could not generate order code. Ensure the code_counters migration has been applied.' });
+  }
 
   // ── 4. Insert order ───────────────────────────────────────────────────────
   const { data: order, error: orderErr } = await supabase

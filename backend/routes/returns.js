@@ -1,15 +1,12 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { generateReturnCode } = require('../utils/codeGen');
 
 const router = express.Router();
 router.use(requireAuth);
 
 const RETURN_WINDOW_HOURS = 24;
-
-function generateReturnCode() {
-  return 'RET' + Math.floor(100 + Math.random() * 900);
-}
 
 // ── POST /orders/:id/return  (consumer, within return window) ─────────────────
 // Body: { full_return, lines: [{product_code, name, farmer_name, qty, unit, price, reason}], photos: [url] }
@@ -57,13 +54,13 @@ router.post('/:id/return', async (req, res) => {
     return res.status(400).json({ error: 'Provide either full_return: true or at least one item in lines.' });
   }
 
-  // Generate unique return code
+  // Generate return code (inherits district code + date from parent order)
   let code;
-  let codeUnique = false;
-  for (let attempt = 0; attempt < 5 && !codeUnique; attempt++) {
-    code = generateReturnCode();
-    const { data: ex } = await supabase.from('returns').select('id').eq('code', code).maybeSingle();
-    if (!ex) codeUnique = true;
+  try {
+    code = await generateReturnCode(supabase, order.code);
+  } catch (err) {
+    console.error('generateReturnCode error:', err);
+    return res.status(500).json({ error: err.message || 'Could not generate return code.' });
   }
 
   // Calculate refund amount from lines (product value only, no delivery)
