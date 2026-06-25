@@ -50,10 +50,11 @@ router.get('/', async (req, res) => {
 
     return {
       ...p,
-      district_price: distRow || null,
+      district_price:           distRow || null,
+      // Keep full array when no district filter (admin view); drop when consumer fetches by district
+      product_district_prices:  district ? undefined : distPrices,
       avg_rating,
-      product_district_prices: undefined,
-      product_ratings: undefined,
+      product_ratings:          undefined,
     };
   });
 
@@ -155,6 +156,40 @@ router.patch('/:id', requireAuth, requireHeadOffice, async (req, res) => {
   if (error || !data) return res.status(404).json({ error: 'Product not found.' });
 
   res.json({ message: 'Product updated.', product: data });
+});
+
+// ── PUT /products/:id/prices  (Head Office only) ─────────────────────────────
+// Body: [{ district, market_price_rs, handling_rs }]
+// Converts rupees to paise and upserts into product_district_prices.
+router.put('/:id/prices', requireAuth, requireHeadOffice, async (req, res) => {
+  const prices = req.body.prices;
+  if (!Array.isArray(prices) || prices.length === 0) {
+    return res.status(400).json({ error: 'prices array is required.' });
+  }
+
+  const rows = prices
+    .filter(p => p.district && p.market_price_rs > 0)
+    .map(p => ({
+      product_id:   req.params.id,
+      district:     p.district,
+      market_price: Math.round(parseFloat(p.market_price_rs) * 100),
+      handling:     Math.round(parseFloat(p.handling_rs || 0) * 100),
+    }));
+
+  if (rows.length === 0) {
+    return res.status(400).json({ error: 'No valid price rows provided.' });
+  }
+
+  const { error } = await supabase
+    .from('product_district_prices')
+    .upsert(rows, { onConflict: 'product_id,district' });
+
+  if (error) {
+    console.error('PUT /products/:id/prices error:', error);
+    return res.status(500).json({ error: 'Could not save prices.' });
+  }
+
+  res.json({ message: `Saved ${rows.length} district price(s).` });
 });
 
 // ── DELETE /products/:id  (Head Office only) ──────────────────────────────────

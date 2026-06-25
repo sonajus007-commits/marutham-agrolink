@@ -63,8 +63,16 @@
     </div>
   </div>
   <div class="card">
-    <div class="filt-label">Filter by Group</div>
+    <div class="filt-label">Group</div>
     <div id="groupFilter" class="filt-row"></div>
+    <div id="catFilter" style="display:none">
+      <div class="filt-label">Category</div>
+      <div id="catFilterRow" class="filt-row"></div>
+    </div>
+    <div id="subFilter" style="display:none">
+      <div class="filt-label">Sub-type</div>
+      <div id="subFilterRow" class="filt-row"></div>
+    </div>
     <div id="productList"></div>
   </div>
 </div>
@@ -161,9 +169,9 @@ startClock('liveClock');
 document.getElementById('userBadge').textContent = user.fname;
 document.getElementById('heroName').textContent  = 'Welcome, ' + user.fname + '!';
 
-var _cart         = JSON.parse(localStorage.getItem('ma_cart') || '[]');
-var _allProducts  = [];
-var _activeGroup  = 'All';
+var _cart            = JSON.parse(localStorage.getItem('ma_cart') || '[]');
+var _allProducts     = [];
+var _offersByProduct = {};   // product_id → [listing, ...]
 var _cancelOrderId = null;
 
 // ── Tab management ────────────────────────────────────────────────────────────
@@ -219,6 +227,10 @@ async function renderHome() {
 }
 
 // ── SHOP ──────────────────────────────────────────────────────────────────────
+var _activeGroup   = 'All';
+var _activeCat     = 'All';
+var _activeSub     = 'All';
+
 async function renderShop() {
   document.getElementById('shopLocation').textContent = (user.district || '—') + ', ' + (user.state || 'Tamil Nadu');
   updateCartBar();
@@ -226,8 +238,13 @@ async function renderShop() {
   if (_allProducts.length === 0) {
     document.getElementById('productList').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
     try {
-      var res = await API.getProducts({ available: true });
-      _allProducts = res.products || [];
+      var dist = user.district || 'Pudukkottai';
+      var [prodRes, offerRes] = await Promise.all([
+        API.getProducts({ available: true, district: dist }),
+        API.getDistrictListings(dist)
+      ]);
+      _allProducts     = prodRes.products || [];
+      _offersByProduct = offerRes.by_product || {};
     } catch(e) {
       document.getElementById('productList').innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
       return;
@@ -239,51 +256,148 @@ async function renderShop() {
 
 function renderGroupFilter() {
   var groups = ['All'];
-  _allProducts.forEach(function(p) { if (p.group && !groups.includes(p.group)) groups.push(p.group); });
+  _allProducts.forEach(function(p) { if (p.product_group && !groups.includes(p.product_group)) groups.push(p.product_group); });
   var html = '';
   groups.forEach(function(g) {
-    html += '<button class="chip' + (g === _activeGroup ? ' on' : '') + '" onclick="setGroup(\'' + g.replace(/'/g, '') + '\')">' + g + '</button>';
+    html += '<button class="chip' + (g === _activeGroup ? ' on' : '') + '" onclick="setGroup(\'' + g.replace(/'/g,'\\\'') + '\')">' + g + '</button>';
   });
   document.getElementById('groupFilter').innerHTML = html;
+  renderCatFilter();
 }
 
 function setGroup(g) {
-  _activeGroup = g;
+  _activeGroup = g; _activeCat = 'All'; _activeSub = 'All';
   renderGroupFilter();
   renderProducts();
 }
 
+function renderCatFilter() {
+  var cats = [];
+  var inGroup = _activeGroup === 'All' ? _allProducts : _allProducts.filter(function(p){ return p.product_group === _activeGroup; });
+  inGroup.forEach(function(p){ if (p.category && !cats.includes(p.category)) cats.push(p.category); });
+  var el = document.getElementById('catFilter');
+  if (cats.length <= 1) { el.style.display='none'; document.getElementById('subFilter').style.display='none'; return; }
+  el.style.display = 'block';
+  var html = '<button class="chip' + (_activeCat==='All'?' on':'') + '" onclick="setCat(\'All\')">All</button>';
+  cats.forEach(function(c){
+    html += '<button class="chip' + (c===_activeCat?' on':'') + '" onclick="setCat(\'' + c.replace(/'/g,'\\\'') + '\')">' + c + '</button>';
+  });
+  document.getElementById('catFilterRow').innerHTML = html;
+  renderSubFilter();
+}
+
+function setCat(c) {
+  _activeCat = c; _activeSub = 'All';
+  renderCatFilter();
+  renderProducts();
+}
+
+function renderSubFilter() {
+  if (_activeCat === 'All') { document.getElementById('subFilter').style.display='none'; return; }
+  var subs = [];
+  _allProducts.filter(function(p){ return p.category === _activeCat; })
+    .forEach(function(p){ if (p.sub_type && !subs.includes(p.sub_type)) subs.push(p.sub_type); });
+  var el = document.getElementById('subFilter');
+  if (subs.length <= 1) { el.style.display='none'; return; }
+  el.style.display = 'block';
+  var html = '<button class="chip' + (_activeSub==='All'?' on':'') + '" onclick="setSub(\'All\')">All</button>';
+  subs.forEach(function(s){
+    html += '<button class="chip' + (s===_activeSub?' on':'') + '" onclick="setSub(\'' + s.replace(/'/g,'\\\'').replace(/&/g,'&amp;') + '\')">' + s + '</button>';
+  });
+  document.getElementById('subFilterRow').innerHTML = html;
+}
+
+function setSub(s) {
+  _activeSub = s;
+  renderSubFilter();
+  renderProducts();
+}
+
 function renderProducts() {
-  var filtered = _activeGroup === 'All' ? _allProducts : _allProducts.filter(function(p) { return p.group === _activeGroup; });
+  var filtered = _allProducts.filter(function(p) {
+    if (_activeGroup !== 'All' && p.product_group !== _activeGroup) return false;
+    if (_activeCat  !== 'All' && p.category      !== _activeCat)   return false;
+    if (_activeSub  !== 'All' && p.sub_type       !== _activeSub)   return false;
+    return true;
+  });
   if (filtered.length === 0) {
     document.getElementById('productList').innerHTML = '<div class="empty-state"><p>No products in this category.</p></div>';
     return;
   }
   var html = '';
   filtered.forEach(function(p) {
-    var cartQty = getCartQty(p.id);
+    var cartQty  = getCartQty(p.id);
+    var dp       = p.district_price;
+    var handling = dp ? parseFloat(dp.handling) : 0;
+    var offers   = _offersByProduct[p.id] || [];
+
+    // Best offer = lowest farmer_price among active listings
+    var bestOffer = null;
+    if (offers.length > 0) {
+      bestOffer = offers.reduce(function(best, o) {
+        return (parseFloat(o.farmer_price) < parseFloat(best.farmer_price)) ? o : best;
+      });
+    }
+
+    // Customer-facing price = farmer_price + platform_fee% + handling
+    var farmerPrice = bestOffer ? parseFloat(bestOffer.farmer_price) : null;
+    var feePct      = p.platform_fee_pct || 5;
+    var custPrice   = farmerPrice != null ? (farmerPrice * (1 + feePct / 100) + handling) : null;
+    var hasStock    = bestOffer && bestOffer.qty_available > 0;
+
     html += '<div class="prod-card">';
     html += '<div class="prod-top">';
-    html += '<div><div class="prod-name">' + p.name + '</div>';
-    if (p.group) html += '<div class="prod-path"><span class="prod-chip">' + p.group + '</span></div>';
+    html += '<div style="flex:1">';
+    html += '<div class="prod-name">' + p.name + '</div>';
+    if (p.regional_name) html += '<div style="font-size:11px;color:var(--leaf)">' + p.regional_name + '</div>';
+    html += '<div class="prod-path">';
+    if (p.product_group) html += '<span class="prod-chip">' + p.product_group + '</span>';
+    if (p.category)      html += '<span class="prod-chip" style="background:#fffaf0;color:#92400e">' + p.category + '</span>';
+    if (p.sub_type)      html += '<span style="font-size:9px;color:var(--gray)">' + p.sub_type + '</span>';
     html += '</div>';
+    // Farmer info
+    if (bestOffer && bestOffer.farmer) {
+      var f = bestOffer.farmer;
+      var initial = ((f.fname||'F')[0] + (f.lname||'')[0]).toUpperCase();
+      html += '<div style="display:flex;align-items:center;gap:6px;margin-top:5px">';
+      html += '<div style="width:22px;height:22px;border-radius:50%;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">' + initial + '</div>';
+      html += '<span style="font-size:10px;color:var(--gray)">' + f.fname + (f.lname ? ' ' + f.lname : '') + (f.village_town ? ', ' + f.village_town : '') + '</span>';
+      if (offers.length > 1) html += '<span style="font-size:9px;color:#1e40af;font-weight:700">+' + (offers.length-1) + ' more</span>';
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // Price box
     html += '<div class="prod-price-box">';
-    if (p.district_price) {
-      html += '<div class="prod-price">₹' + parseFloat(p.district_price).toFixed(0) + '</div>';
+    if (custPrice != null) {
+      html += '<div class="prod-price">₹' + custPrice.toFixed(0) + '</div>';
+      html += '<div style="font-size:9px;color:var(--gray)">farmer ₹' + farmerPrice.toFixed(0) + '</div>';
+      if (handling > 0) html += '<div style="font-size:9px;color:var(--gray)">+₹' + handling.toFixed(0) + ' hdl</div>';
+    } else if (dp) {
+      html += '<div class="prod-price" style="font-size:12px;color:var(--gray)">Mkt ₹' + parseFloat(dp.market_price).toFixed(0) + '</div>';
+      html += '<div style="font-size:9px;color:#c0392b">No offers</div>';
     } else {
-      html += '<div class="prod-price" style="font-size:13px;color:var(--gray)">—</div>';
+      html += '<div class="prod-price" style="font-size:12px;color:var(--gray)">Price TBD</div>';
     }
     html += '<div class="prod-unit">/ ' + (p.unit || 'unit') + '</div></div>';
     html += '</div>';
+
+    // Meta row
     html += '<div class="prod-meta-row">';
-    if (p.available) {
-      html += '<span class="prod-badge" style="background:#e6f7ed;color:#1a7a4a">✓ Available</span>';
+    if (p.exotic) html += '<span class="prod-badge" style="background:#fff1f2;color:#be123c">🌶 Perishable</span>';
+    if (bestOffer && bestOffer.time_available) html += '<span style="font-size:10px;color:#7c3aed">Order by ' + bestOffer.time_available + '</span>';
+    if (bestOffer && bestOffer.qty_available)  html += '<span style="font-size:10px;color:var(--gray)">' + bestOffer.qty_available + ' ' + (p.unit||'') + ' avail</span>';
+    if (bestOffer && bestOffer.bulk_qty && bestOffer.bulk_disc_pct) {
+      html += '<span style="font-size:10px;color:var(--leaf);font-weight:700">Bulk ' + bestOffer.bulk_qty + '+ → ' + bestOffer.bulk_disc_pct + '% off</span>';
     }
-    if (p.avg_rating) {
-      html += '<span style="font-size:11px;color:var(--gold)">★ ' + parseFloat(p.avg_rating).toFixed(1) + '</span>';
-    }
+    if (p.avg_rating) html += '<span style="font-size:11px;color:var(--gold)">★ ' + parseFloat(p.avg_rating).toFixed(1) + '</span>';
+
     html += '<div class="prod-actions">';
-    if (cartQty === 0) {
+    if (!custPrice && !dp) {
+      html += '<span style="font-size:10px;color:var(--gray)">Not in your area</span>';
+    } else if (!bestOffer || !hasStock) {
+      html += '<span style="font-size:10px;color:#c0392b">No offers today</span>';
+    } else if (cartQty === 0) {
       html += '<button class="sbtn" style="margin:0;padding:8px 18px;font-size:12px;width:auto" onclick="addToCart(\'' + p.id + '\')">Add +</button>';
     } else {
       html += '<div class="qty-ctrl">';
@@ -292,8 +406,7 @@ function renderProducts() {
       html += '<button class="qty-btn" onclick="changeQty(\'' + p.id + '\',1)">+</button>';
       html += '</div>';
     }
-    html += '</div>';
-    html += '</div></div>';
+    html += '</div></div></div>';
   });
   document.getElementById('productList').innerHTML = html;
 }
@@ -307,19 +420,34 @@ function getCartQty(productId) {
 function addToCart(productId) {
   var product = _allProducts.find(function(p) { return p.id === productId; });
   if (!product) return;
+  var dp      = product.district_price;
+  var handling = dp ? parseFloat(dp.handling) : 0;
+  var feePct   = product.platform_fee_pct || 5;
 
-  // Need a farmer listing — for now pick the first available one
-  // We store product info and resolve farmer at checkout
+  // Use farmer's price if available, else fall back to govt market price
+  var offers     = _offersByProduct[productId] || [];
+  var bestOffer  = null;
+  if (offers.length > 0) {
+    bestOffer = offers.reduce(function(b, o) {
+      return parseFloat(o.farmer_price) < parseFloat(b.farmer_price) ? o : b;
+    });
+  }
+  var farmerPrice = bestOffer ? parseFloat(bestOffer.farmer_price) : null;
+  var price = farmerPrice != null
+    ? (farmerPrice * (1 + feePct / 100) + handling)
+    : (dp ? parseFloat(dp.market_price) : 0);
+
   var existing = _cart.find(function(i) { return i.product_id === productId; });
   if (existing) { existing.qty++; }
   else {
     _cart.push({
-      product_id:   product.id,
-      product_name: product.name,
-      unit:         product.unit,
-      price:        product.district_price || 0,
-      qty:          1,
-      farmer_id:    null  // resolved at checkout from listings
+      product_id:    product.id,
+      product_name:  product.name,
+      unit:          product.unit,
+      price:         price,
+      qty:           1,
+      farmer_id:     bestOffer && bestOffer.farmer ? bestOffer.farmer.id : null,
+      listing_id:    bestOffer ? bestOffer.id : null
     });
   }
   saveCart();
@@ -355,7 +483,7 @@ function updateCartBar() {
 }
 
 async function renderCart() {
-  var el = document.getElementById('cartItems');
+  var el    = document.getElementById('cartItems');
   var sumEl = document.getElementById('cartSummary');
   updateCartBar();
 
@@ -365,30 +493,91 @@ async function renderCart() {
     return;
   }
 
-  // Resolve farmer IDs from listings if not yet set
   await resolveCartFarmers();
 
   var html = '';
   _cart.forEach(function(item, idx) {
-    html += '<div class="irow">';
-    html += '<div style="flex:1"><div style="font-weight:700;font-size:13px">' + item.product_name + '</div>';
-    html += '<div style="font-size:11px;color:var(--gray)">₹' + parseFloat(item.price).toFixed(2) + ' / ' + item.unit + '</div></div>';
-    html += '<div style="display:flex;align-items:center;gap:10px">';
-    html += '<div class="qty-ctrl">';
+    var p         = _allProducts.find(function(x){ return x.id === item.product_id; }) || {};
+    var feePct    = p.platform_fee_pct || 5;
+    var dp        = p.district_price;
+    var handling  = dp ? parseFloat(dp.handling) : 0;
+    // farmer_price stored in cart as rupees (from offer)
+    var farmerRs  = item.farmer_price_rs != null ? item.farmer_price_rs : (parseFloat(item.price) / (1 + feePct / 100) - handling / item.qty);
+    var unitPrice = parseFloat(item.price);
+    var lineTotal = unitPrice * item.qty;
+
+    html += '<div class="prod-card" style="padding:12px 14px;margin-bottom:10px">';
+    html += '<div class="prod-top">';
+    html += '<div style="flex:1">';
+    html += '<div style="font-weight:700;font-size:13px;color:var(--forest)">' + item.product_name + '</div>';
+    if (item.farmer_name) html += '<div style="font-size:10px;color:var(--gray);margin-top:2px">from ' + item.farmer_name + '</div>';
+    html += '<div style="font-size:11px;color:var(--gray);margin-top:2px">₹' + unitPrice.toFixed(0) + ' / ' + item.unit + '</div>';
+    html += '</div>';
+    html += '<div style="text-align:right">';
+    html += '<div class="qty-ctrl" style="margin-bottom:4px">';
     html += '<button class="qty-btn" onclick="changeQtyCart(' + idx + ',-1)">−</button>';
     html += '<span class="qty-num">' + item.qty + '</span>';
     html += '<button class="qty-btn" onclick="changeQtyCart(' + idx + ',1)">+</button>';
     html += '</div>';
-    html += '<div style="font-weight:700;font-size:13px;min-width:60px;text-align:right">₹' + (parseFloat(item.price) * item.qty).toFixed(2) + '</div>';
+    html += '<div style="font-weight:700;font-size:14px;color:var(--forest)">₹' + lineTotal.toFixed(0) + '</div>';
     html += '</div></div>';
+
+    // Per-item fee breakdown
+    var mktFeePerUnit = farmerRs > 0 ? (unitPrice - handling - farmerRs).toFixed(0) : null;
+    html += '<div style="display:flex;gap:12px;margin-top:6px;padding-top:6px;border-top:1px solid #eef4ee;font-size:10px;color:var(--gray)">';
+    html += '<span>Farmer ₹' + (farmerRs > 0 ? farmerRs.toFixed(0) : '—') + '</span>';
+    if (mktFeePerUnit && parseFloat(mktFeePerUnit) > 0) html += '<span>Mkt fee ₹' + mktFeePerUnit + '</span>';
+    if (handling > 0) html += '<span>Handling ₹' + handling.toFixed(0) + '</span>';
+    html += '</div>';
+    html += '</div>';
   });
   el.innerHTML = html;
 
-  var subtotal = _cart.reduce(function(s, i) { return s + parseFloat(i.price || 0) * i.qty; }, 0);
-  var sumHtml = '<div style="border-top:1px solid #eef4ee;padding-top:14px;margin-top:4px">';
-  sumHtml += '<div class="irow"><span class="ilbl">Subtotal</span><span class="ival">₹' + subtotal.toFixed(2) + '</span></div>';
+  // ── Bill summary ──────────────────────────────────────────────────────────
+  var itemSubtotal = _cart.reduce(function(s, i) { return s + parseFloat(i.price || 0) * i.qty; }, 0);
+
+  // Compute market fee = sum of platform fee portions (price - farmer_share)
+  var totalMarketFee = _cart.reduce(function(s, i) {
+    var p      = _allProducts.find(function(x){ return x.id === i.product_id; }) || {};
+    var feePct = p.platform_fee_pct || 5;
+    var dp     = p.district_price;
+    var hdl    = dp ? parseFloat(dp.handling) : 0;
+    var unitP  = parseFloat(i.price);
+    var farmerR = unitP / (1 + feePct / 100);
+    return s + (unitP - hdl - farmerR) * i.qty;
+  }, 0);
+
+  var totalHandling = _cart.reduce(function(s, i) {
+    var p  = _allProducts.find(function(x){ return x.id === i.product_id; }) || {};
+    var dp = p.district_price;
+    return s + (dp ? parseFloat(dp.handling) : 0);
+  }, 0);
+
+  var deliveryFee = 30; // flat ₹30 per order — same for all districts currently
+  var grandTotal  = itemSubtotal + deliveryFee;
+
+  // Savings vs govt market price
+  var savings = _cart.reduce(function(s, i) {
+    var p   = _allProducts.find(function(x){ return x.id === i.product_id; }) || {};
+    var dp  = p.district_price;
+    if (!dp) return s;
+    var mktP = parseFloat(dp.market_price);
+    var paid = parseFloat(i.price);
+    return s + Math.max(0, mktP - paid) * i.qty;
+  }, 0);
+
+  var sumHtml = '<div style="background:#f8fdf8;border-radius:14px;padding:14px;margin-bottom:14px">';
+  sumHtml += '<div style="font-size:12px;font-weight:700;color:var(--forest);margin-bottom:10px">Bill Summary</div>';
+  sumHtml += '<div class="irow"><span class="ilbl">Item Total</span><span class="ival">₹' + itemSubtotal.toFixed(0) + '</span></div>';
+  if (totalMarketFee > 0.5) sumHtml += '<div class="irow" style="font-size:11px"><span class="ilbl" style="color:var(--gray)">  incl. Market Fee</span><span class="ival" style="color:var(--gray)">₹' + totalMarketFee.toFixed(0) + '</span></div>';
+  if (totalHandling > 0) sumHtml += '<div class="irow" style="font-size:11px"><span class="ilbl" style="color:var(--gray)">  incl. Handling</span><span class="ival" style="color:var(--gray)">₹' + totalHandling.toFixed(0) + '</span></div>';
+  sumHtml += '<div class="irow"><span class="ilbl">Delivery Fee</span><span class="ival">₹' + deliveryFee.toFixed(0) + '</span></div>';
+  if (savings > 0) sumHtml += '<div class="irow" style="color:#1a7a4a;font-weight:700"><span class="ilbl">🎉 You Save</span><span class="ival">₹' + savings.toFixed(0) + ' vs Govt Rate</span></div>';
+  sumHtml += '<div style="border-top:2px solid #2d6a4f;margin:10px 0"></div>';
+  sumHtml += '<div class="irow"><span class="ilbl" style="font-size:14px;font-weight:700;color:var(--forest)">Grand Total</span><span class="ival" style="font-size:16px;font-weight:700;color:var(--forest)">₹' + grandTotal.toFixed(0) + '</span></div>';
   sumHtml += '</div>';
-  sumHtml += '<div class="fg" style="margin-top:16px;"><label class="fl">Payment Method <span class="rq">*</span></label>';
+
+  sumHtml += '<div class="fg"><label class="fl">Payment Method <span class="rq">*</span></label>';
   sumHtml += '<select class="fi" id="payMethod">';
   sumHtml += '<option value="Cash on Delivery">Cash on Delivery</option>';
   sumHtml += '<option value="UPI">UPI</option>';
@@ -437,7 +626,7 @@ async function placeOrder() {
   var btn = document.querySelector('#panel-cart .sbtn');
   btn.disabled = true; btn.textContent = 'Placing order…';
   try {
-    var res = await API.placeOrder({ items: items, pay_method: payMethod });
+    var res = await API.placeOrder({ items: items, pay_method: payMethod, delivery_fee: 30 });
     _cart = [];
     saveCart();
     updateCartBar();

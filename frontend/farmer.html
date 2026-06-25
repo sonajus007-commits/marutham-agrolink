@@ -102,27 +102,125 @@
     <div class="overlay-title" id="listingOverlayTitle">Add Listing</div>
   </div>
   <div class="overlay-body">
+
+    <!-- Product -->
     <div class="fg">
       <label class="fl">Product <span class="rq">*</span></label>
-      <select class="fi" id="lo-product">
+      <select class="fi" id="lo-product" onchange="onListingProductChange()">
         <option value="">— Select a product —</option>
       </select>
       <div class="em" id="lo-product-e">Select a product</div>
     </div>
+
+    <!-- Market price reference -->
+    <div id="lo-mkt-ref" style="display:none;background:#f0faf4;border:1px solid #d3ecdd;border-radius:9px;padding:9px 13px;font-size:11px;color:#1a3d2b;margin-bottom:12px">
+      Govt market price: <span id="lo-mkt-price" style="font-weight:800">—</span>
+    </div>
+
+    <!-- Selling Price -->
     <div class="fg">
       <label class="fl">Your Selling Price (₹) <span class="rq">*</span></label>
-      <input class="fi" id="lo-price" type="number" min="0" step="0.01" placeholder="e.g. 48.00">
-      <div class="em" id="lo-price-e">Enter valid price</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="position:relative;flex:1">
+          <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;color:#7a8492;font-weight:700">₹</span>
+          <input class="fi" id="lo-price" type="text" placeholder="e.g. 48" oninput="updatePricePreview()" style="padding-left:30px">
+        </div>
+        <span style="font-size:12px;color:#5a6472;font-weight:600" id="lo-price-unit">/ unit</span>
+      </div>
+      <div class="em" id="lo-price-e">Enter your selling price</div>
+      <div id="lo-price-preview" style="display:none;background:#f0faf4;border:1px solid #d3ecdd;border-radius:9px;padding:9px 12px;margin-top:7px;font-size:11px;color:#1a3d2b">
+        <span id="lo-price-preview-text"></span>
+      </div>
     </div>
+
+    <!-- Available Quantity -->
     <div class="fg">
-      <label class="fl">Stock / Available Quantity</label>
-      <input class="fi" id="lo-stock" type="number" min="0" step="1" placeholder="e.g. 100">
+      <label class="fl">Available Quantity from Your Farm <span class="rq">*</span></label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input class="fi" id="lo-qty" type="text" placeholder="e.g. 50" oninput="numOnly(this)" style="flex:1">
+        <span style="font-size:12px;color:#5a6472;font-weight:600" id="lo-qty-unit">unit</span>
+      </div>
+      <div class="em" id="lo-qty-e">Enter available quantity</div>
     </div>
-    <div class="fg" style="display:flex;align-items:center;gap:10px">
-      <input type="checkbox" id="lo-listed" checked style="width:16px;height:16px">
-      <label for="lo-listed" class="fl" style="margin:0;cursor:pointer">Listed (visible to consumers)</label>
+
+    <!-- Bulk Discount -->
+    <div class="fg">
+      <label class="fl">Bulk Discount <span style="color:#9aa4b2;font-weight:400;font-size:11px">(optional)</span></label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <input class="fi" id="lo-bulk-qty" type="text" placeholder="Min qty" oninput="numOnly(this);updatePricePreview()">
+          <div style="font-size:9px;color:#9aa4b2;margin-top:2px">Min qty to qualify</div>
+        </div>
+        <div style="position:relative">
+          <input class="fi" id="lo-bulk-disc" type="text" placeholder="Discount %" oninput="numOnly(this);updatePricePreview()" style="padding-right:24px">
+          <span style="position:absolute;right:11px;top:11px;font-size:13px;color:#7a8492;font-weight:700">%</span>
+          <div style="font-size:9px;color:#9aa4b2;margin-top:2px">% off your price</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:#5a6472;margin-top:4px">When a customer buys this qty or more, your price drops by the discount %. Leave blank for no bulk offer.</div>
+      <div id="lo-bulk-preview" style="display:none;font-size:10px;color:#1a7a4a;font-weight:600;margin-top:4px"></div>
     </div>
-    <button class="sbtn" onclick="saveListing()">Save Listing</button>
+
+    <!-- Order Cutoff Time -->
+    <div class="fg">
+      <label class="fl">Order Cutoff Time <span class="rq">*</span></label>
+      <select class="fi" id="lo-cutoff">
+        <optgroup label="Previous Evening">
+          <option value="8 PM">8 PM (previous evening)</option>
+          <option value="9 PM">9 PM (previous evening)</option>
+          <option value="10 PM">10 PM (previous evening)</option>
+          <option value="11 PM">11 PM (previous evening)</option>
+        </optgroup>
+        <optgroup label="Current Day">
+          <option value="12 AM">12 AM (midnight)</option>
+          <option value="4 AM">4 AM</option>
+          <option value="6 AM">6 AM</option>
+          <option value="7 AM">7 AM</option>
+          <option value="8 AM" selected>8 AM</option>
+          <option value="9 AM">9 AM</option>
+          <option value="10 AM">10 AM</option>
+          <option value="12 PM">12 PM (noon)</option>
+          <option value="2 PM">2 PM</option>
+          <option value="4 PM">4 PM</option>
+          <option value="6 PM">6 PM</option>
+          <option value="8 PM (today)">8 PM (current day)</option>
+        </optgroup>
+      </select>
+      <div style="font-size:10px;color:#5a6472;margin-top:4px">Customers can order until this time. After cutoff the listing auto-hides and unsold stock is yours.</div>
+    </div>
+
+    <!-- Order Quantity Rule -->
+    <div class="fg">
+      <label class="fl">Order Quantity Rule <span style="color:#9aa4b2;font-weight:400;font-size:11px">(optional)</span></label>
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:8px">
+        <select class="fi" id="lo-qty-type" onchange="onLQtyTypeChange()">
+          <option value="MOQ">MOQ (Minimum Order)</option>
+          <option value="SPQ">SPQ (Standard Pack)</option>
+        </select>
+        <input class="fi" id="lo-qty-value" type="text" placeholder="Value" oninput="numOnly(this)">
+      </div>
+      <div class="em" id="lo-qty-value-e">Enter a valid value</div>
+      <div style="font-size:10px;color:#5a6472;margin-top:4px" id="lo-qty-type-hint">MOQ — smallest amount a customer must order (e.g. 1 bunch minimum).</div>
+    </div>
+
+    <!-- Today's Photos -->
+    <div class="fg">
+      <label class="fl">Today's Photos <span style="color:#9aa4b2;font-weight:400;font-size:11px">(up to 3, boosts sales)</span></label>
+      <div style="display:flex;gap:8px">
+        <label id="lo-slot-0" style="flex:1;aspect-ratio:1;border:1.5px dashed #c5d9c9;border-radius:12px;background:#f8faf8;display:flex;align-items:center;justify-content:center;font-size:22px;color:#9aa4b2;cursor:pointer;overflow:hidden;position:relative">+
+          <input type="file" accept="image/*" onchange="onListingImagePick(event,0)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
+        </label>
+        <label id="lo-slot-1" style="flex:1;aspect-ratio:1;border:1.5px dashed #c5d9c9;border-radius:12px;background:#f8faf8;display:flex;align-items:center;justify-content:center;font-size:22px;color:#9aa4b2;cursor:pointer;overflow:hidden;position:relative">+
+          <input type="file" accept="image/*" onchange="onListingImagePick(event,1)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
+        </label>
+        <label id="lo-slot-2" style="flex:1;aspect-ratio:1;border:1.5px dashed #c5d9c9;border-radius:12px;background:#f8faf8;display:flex;align-items:center;justify-content:center;font-size:22px;color:#9aa4b2;cursor:pointer;overflow:hidden;position:relative">+
+          <input type="file" accept="image/*" onchange="onListingImagePick(event,2)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
+        </label>
+      </div>
+      <div style="font-size:10px;color:#5a6472;margin-top:6px">Tap a box to take or choose a photo. Photos are visible to customers during today's order window.</div>
+    </div>
+
+    <button class="sbtn" onclick="saveListing()">Save &amp; List Product</button>
   </div>
 </div>
 
@@ -202,40 +300,72 @@ async function renderEarnings() {
 }
 
 // ── LISTINGS ──────────────────────────────────────────────────────────────────
+var _listingImages = [null, null, null]; // base64 photo buffer (session only)
+
+// Product emoji map — shown as thumbnail on listing cards
+var _prodEmoji = {
+  'Tomatoes':'🍅','Brinjal':'🍆','Green Chilli':'🌶️','Onion':'🧅','Potato':'🥔',
+  'Carrot':'🥕','Banana':'🍌','Mango':'🥭','Guava':'🍐','Raw Rice':'🌾',
+  'Toor Dal':'🫘','Country Chicken':'🐓','Broiler Chicken':'🍗','Goat Mutton':'🍖',
+  'Catfish':'🐟','Prawn':'🦐','Fresh Milk':'🥛','Curd':'🥣',
+  'Coriander Leaves':'🌿','Curry Leaves':'🍃'
+};
+
 async function renderListings() {
   var el = document.getElementById('listingList');
   el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
   try {
-    var [listRes, prodRes] = await Promise.all([
-      API.getListings(),
-      API.getProducts()
-    ]);
+    var [listRes, prodRes] = await Promise.all([API.getListings(), API.getProducts()]);
     var listings = listRes.listings || [];
     _allSystemProducts = prodRes.products || [];
 
     if (listings.length === 0) {
-      el.innerHTML = '<div class="empty-state"><div class="es-icon">🌾</div><p>No listings yet.<br>Add your first product listing.</p></div>';
+      el.innerHTML = '<div class="empty-state"><div class="es-icon">🌾</div><p>No listings yet.<br>Tap "+ Add Listing" to start selling.</p></div>';
       return;
     }
     var html = '';
     listings.forEach(function(l) {
+      var p     = l.product || {};
+      var price = parseFloat(l.farmer_price || 0);
+      var emoji = _prodEmoji[p.name] || '🛒';
+
       html += '<div class="prod-card">';
+
+      // ── Top row: emoji thumb + name + price ──
       html += '<div class="prod-top">';
-      html += '<div><div class="prod-name">' + l.product_name + '</div>';
-      html += '<div class="prod-path"><span class="prod-chip">' + (l.product_group||'—') + '</span>';
-      html += '<span style="font-size:10px;color:var(--gray)">Unit: ' + (l.unit||'—') + '</span></div>';
+      html += '<div style="width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#e8f5e9,#f1f8e9);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;margin-right:12px">' + emoji + '</div>';
+      html += '<div style="flex:1">';
+      html += '<div class="prod-name">' + (p.name || '—') + '</div>';
+      if (p.regional_name) html += '<div style="font-size:11px;color:var(--leaf)">' + p.regional_name + '</div>';
+      html += '<div class="prod-path"><span class="prod-chip">' + (p.product_group||'—') + '</span>';
+      if (p.category) html += '<span style="font-size:9px;color:var(--gray)">' + p.category + '</span>';
+      html += '</div></div>';
+      html += '<div class="prod-price-box"><div class="prod-price">₹' + price.toFixed(0) + '</div>';
+      html += '<div class="prod-unit">/ ' + (p.unit||'unit') + '</div></div>';
+      html += '</div>'; // prod-top
+
+      // ── Details row ──
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px">';
+      if (l.qty_available != null) html += '<span style="font-size:10px;color:var(--gray);background:#f4f4f4;border-radius:6px;padding:2px 7px">' + l.qty_available + ' ' + (p.unit||'') + ' avail</span>';
+      if (l.time_available)        html += '<span style="font-size:10px;color:#7c3aed;background:#f5f0ff;border-radius:6px;padding:2px 7px">Order by ' + l.time_available + '</span>';
+      if (l.bulk_qty && l.bulk_disc_pct) html += '<span style="font-size:10px;color:#1a7a4a;background:#e6f7ed;border-radius:6px;padding:2px 7px">Bulk ' + l.bulk_qty + '+ → ' + l.bulk_disc_pct + '% off</span>';
+      if (!l.listed)               html += '<span style="font-size:10px;color:#c0392b;background:#fde8e8;border-radius:6px;padding:2px 7px">Unlisted</span>';
       html += '</div>';
-      html += '<div class="prod-price-box"><div class="prod-price">₹' + parseFloat(l.farmer_price||0).toFixed(2) + '</div>';
-      html += '<div class="prod-unit">your price</div></div>';
-      html += '</div>';
-      html += '<div class="prod-meta-row">';
-      if (l.listed) html += '<span class="prod-badge" style="background:#e6f7ed;color:#1a7a4a">✓ Listed</span>';
-      else          html += '<span class="prod-badge" style="background:#fde8e8;color:#c0392b">✗ Unlisted</span>';
-      if (l.stock_qty != null) html += '<span style="font-size:11px;color:var(--gray)">Stock: ' + l.stock_qty + '</span>';
+
+      // ── Action row: Edit | Confirm for Tomorrow | Remove ──
+      html += '<div class="prod-meta-row" style="border-top:1px solid #eef4ee;padding-top:8px;margin-top:4px">';
+      if (l.confirmed) {
+        html += '<span style="font-size:10px;font-weight:700;color:#1a7a4a;background:#e6f7ed;border-radius:6px;padding:3px 8px">✅ Confirmed</span>';
+      } else if (l.listed) {
+        html += '<button style="font-size:10px;font-weight:700;color:#fff;background:var(--leaf);border:none;border-radius:6px;padding:4px 10px;cursor:pointer" onclick="confirmListing(\'' + l.id + '\')">Confirm for Tomorrow</button>';
+      }
       html += '<div class="prod-actions">';
       html += '<a class="prod-link" style="color:var(--leaf)" onclick="openEditListing(\'' + l.id + '\')">Edit</a>';
+      if (l.confirmed) html += '<a class="prod-link" style="color:var(--gray);margin-left:10px" onclick="unconfirmListing(\'' + l.id + '\')">Undo Confirm</a>';
       html += '<a class="prod-link" style="color:var(--red);margin-left:10px" onclick="deleteListing(\'' + l.id + '\')">Remove</a>';
-      html += '</div></div></div>';
+      html += '</div></div>'; // prod-meta-row
+
+      html += '</div>'; // prod-card
     });
     el.innerHTML = html;
   } catch(e) {
@@ -243,42 +373,151 @@ async function renderListings() {
   }
 }
 
+function onListingProductChange() {
+  var pid = document.getElementById('lo-product').value;
+  var p   = _allSystemProducts.find(function(x){ return x.id === pid; });
+  if (!p) {
+    document.getElementById('lo-mkt-ref').style.display = 'none';
+    document.getElementById('lo-price-unit').textContent = '/ unit';
+    document.getElementById('lo-qty-unit').textContent = 'unit';
+    return;
+  }
+  document.getElementById('lo-price-unit').textContent = '/ ' + p.unit;
+  document.getElementById('lo-qty-unit').textContent   = p.unit;
+  var dp = p.district_price;
+  var mkt = dp ? '₹' + parseFloat(dp.market_price).toFixed(0) + ' / ' + p.unit : 'Not set for your district';
+  document.getElementById('lo-mkt-price').textContent = mkt;
+  document.getElementById('lo-mkt-ref').style.display = 'block';
+  if (dp && !document.getElementById('lo-price').value) {
+    document.getElementById('lo-price').value = parseFloat(dp.market_price).toFixed(0);
+  }
+  updatePricePreview();
+}
+
+function updatePricePreview() {
+  var pid    = document.getElementById('lo-product').value;
+  var p      = _allSystemProducts.find(function(x){ return x.id === pid; });
+  var price  = parseFloat(document.getElementById('lo-price').value);
+  var pv     = document.getElementById('lo-price-preview');
+  var pvText = document.getElementById('lo-price-preview-text');
+  var bv     = document.getElementById('lo-bulk-preview');
+
+  if (!p || isNaN(price) || price <= 0) {
+    pv.style.display = 'none'; bv.style.display = 'none'; return;
+  }
+  var fee     = p.platform_fee_pct || 5;
+  var dp      = p.district_price;
+  var hdl     = dp ? parseFloat(dp.handling) : 0;
+  var custPrice = price * (1 + fee / 100) + hdl;
+  pvText.textContent = 'Customer pays ₹' + custPrice.toFixed(0) + ' / ' + p.unit
+    + ' (your ₹' + price.toFixed(0) + ' + ' + fee + '% fee'
+    + (hdl > 0 ? ' + ₹' + hdl.toFixed(0) + ' handling' : '') + ')';
+  pv.style.display = 'block';
+
+  var bq = parseFloat(document.getElementById('lo-bulk-qty').value);
+  var bd = parseFloat(document.getElementById('lo-bulk-disc').value);
+  if (!isNaN(bq) && bq > 0 && !isNaN(bd) && bd > 0) {
+    var discPrice  = price * (1 - bd / 100);
+    var custBulk   = discPrice * (1 + fee / 100) + hdl;
+    bv.textContent = 'Bulk (' + bq + '+ ' + p.unit + '): your price ₹' + discPrice.toFixed(0) + ' → customer pays ₹' + custBulk.toFixed(0);
+    bv.style.display = 'block';
+  } else {
+    bv.style.display = 'none';
+  }
+}
+
+function onLQtyTypeChange() {
+  var t    = document.getElementById('lo-qty-type').value;
+  var hint = document.getElementById('lo-qty-type-hint');
+  hint.textContent = t === 'MOQ'
+    ? 'MOQ — smallest amount a customer must order (e.g. 1 bunch minimum).'
+    : 'SPQ — sold in fixed packs (e.g. 5-piece lemon pack).';
+}
+
+function onListingImagePick(event, slot) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    _listingImages[slot] = e.target.result;
+    renderListingImageSlots();
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderListingImageSlots() {
+  for (var i = 0; i < 3; i++) {
+    var el = document.getElementById('lo-slot-' + i);
+    if (!el) continue;
+    var img = el.querySelector('img');
+    if (_listingImages[i]) {
+      if (!img) {
+        img = document.createElement('img');
+        img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px';
+        el.appendChild(img);
+      }
+      img.src = _listingImages[i];
+      el.style.border = '2px solid #2d6a4f';
+    } else {
+      if (img) img.remove();
+      el.style.border = '1.5px dashed #c5d9c9';
+    }
+  }
+}
+
 async function openAddListing() {
   _editListingId = null;
+  _listingImages = [null, null, null];
   document.getElementById('listingOverlayTitle').textContent = 'Add Listing';
   await populateProductSelect(null);
-  document.getElementById('lo-price').value = '';
-  document.getElementById('lo-stock').value = '';
-  document.getElementById('lo-listed').checked = true;
+  ['lo-price','lo-qty','lo-bulk-qty','lo-bulk-disc','lo-qty-value'].forEach(function(id){ sv(id,''); });
+  document.getElementById('lo-cutoff').value   = '8 AM';
+  document.getElementById('lo-qty-type').value = 'MOQ';
+  document.getElementById('lo-mkt-ref').style.display    = 'none';
+  document.getElementById('lo-price-preview').style.display = 'none';
+  document.getElementById('lo-bulk-preview').style.display  = 'none';
+  renderListingImageSlots();
+  hideErr('lo-product-e'); hideErr('lo-price-e'); hideErr('lo-qty-e');
   document.getElementById('listingOverlay').classList.add('active');
 }
 
 async function openEditListing(id) {
   _editListingId = id;
+  _listingImages = [null, null, null];
   document.getElementById('listingOverlayTitle').textContent = 'Edit Listing';
   try {
-    var res = await API.getListings({ id: id });
-    var listing = (res.listings || [])[0] || {};
-    await populateProductSelect(listing.product_id);
-    document.getElementById('lo-price').value  = listing.farmer_price || '';
-    document.getElementById('lo-stock').value  = listing.stock_qty != null ? listing.stock_qty : '';
-    document.getElementById('lo-listed').checked = !!listing.listed;
+    var res = await API.getListings();
+    var l = (res.listings || []).find(function(x){ return x.id === id; }) || {};
+    await populateProductSelect(l.product_id || (l.product && l.product.id));
+    onListingProductChange();
+    sv('lo-price',     parseFloat(l.farmer_price||0).toFixed(0));
+    sv('lo-qty',       l.qty_available != null ? String(l.qty_available) : '');
+    sv('lo-bulk-qty',  l.bulk_qty    ? String(l.bulk_qty)     : '');
+    sv('lo-bulk-disc', l.bulk_disc_pct ? String(l.bulk_disc_pct) : '');
+    sv('lo-qty-value', l.qty_value   ? String(l.qty_value)    : '');
+    document.getElementById('lo-cutoff').value   = l.time_available || '8 AM';
+    document.getElementById('lo-qty-type').value = l.qty_type || 'MOQ';
+    onLQtyTypeChange(); updatePricePreview();
+    renderListingImageSlots();
+    hideErr('lo-product-e'); hideErr('lo-price-e'); hideErr('lo-qty-e');
     document.getElementById('listingOverlay').classList.add('active');
   } catch(e) { showToast(e.message, 'er'); }
 }
 
 async function populateProductSelect(selectedId) {
   if (_allSystemProducts.length === 0) {
-    try { var r = await API.getProducts(); _allSystemProducts = r.products || []; } catch(e) {}
+    try { var r = await API.getProducts({ district: user.district }); _allSystemProducts = r.products || []; } catch(e) {}
   }
   var sel = document.getElementById('lo-product');
   sel.innerHTML = '<option value="">— Select a product —</option>';
-  _allSystemProducts.forEach(function(p) {
+  _allSystemProducts.filter(function(p){ return p.available; }).forEach(function(p) {
     var opt = document.createElement('option');
-    opt.value = p.id; opt.textContent = p.name + ' (' + p.unit + ')';
+    opt.value = p.id;
+    opt.textContent = p.name + (p.regional_name ? ' — ' + p.regional_name : '') + ' (' + p.unit + ')';
     if (p.id === selectedId) opt.selected = true;
     sel.appendChild(opt);
   });
+  if (selectedId) onListingProductChange();
 }
 
 function closeListingOverlay() {
@@ -286,28 +525,82 @@ function closeListingOverlay() {
 }
 
 async function saveListing() {
-  var prodId = document.getElementById('lo-product').value;
-  var price  = parseFloat(document.getElementById('lo-price').value);
-  var stock  = document.getElementById('lo-stock').value;
-  var listed = document.getElementById('lo-listed').checked;
+  var prodId   = document.getElementById('lo-product').value;
+  var price    = parseFloat(document.getElementById('lo-price').value);
+  var qty      = parseFloat(document.getElementById('lo-qty').value);
+  var cutoff   = document.getElementById('lo-cutoff').value;
+  var bulkQty  = parseFloat(document.getElementById('lo-bulk-qty').value);
+  var bulkDisc = parseFloat(document.getElementById('lo-bulk-disc').value);
+  var qtyType  = document.getElementById('lo-qty-type').value;
+  var qtyValue = parseFloat(document.getElementById('lo-qty-value').value);
 
-  if (!prodId) { showErr('lo-product-e','Select a product'); return; }
-  hideErr('lo-product-e');
-  if (isNaN(price) || price <= 0) { showErr('lo-price-e','Enter valid price'); return; }
-  hideErr('lo-price-e');
+  if (!prodId) { showErr('lo-product-e','Select a product'); return; } hideErr('lo-product-e');
+  if (isNaN(price) || price <= 0) { showErr('lo-price-e','Enter your selling price'); return; } hideErr('lo-price-e');
+  if (isNaN(qty)   || qty   <= 0) { showErr('lo-qty-e','Enter available quantity');   return; } hideErr('lo-qty-e');
 
-  var data = { product_id: prodId, farmer_price: price, listed: listed };
-  if (stock !== '') data.stock_qty = parseInt(stock);
+  var hasBulk    = !isNaN(bulkQty) && bulkQty > 0 && !isNaN(bulkDisc) && bulkDisc > 0;
+  var hasQtyRule = !isNaN(qtyValue) && qtyValue > 0;
+
+  // Compute cutoff timestamp (today or previous day depending on selection)
+  var now    = new Date();
+  var cutoffTs = computeCutoffTs(cutoff);
+
+  var data = {
+    product_id:      prodId,
+    farmer_price:    Math.round(price * 100),  // store in paise
+    qty_available:   qty,
+    time_available:  cutoff,
+    cutoff_ts:       cutoffTs,
+    listed:          true,
+    bulk_qty:        hasBulk ? bulkQty    : null,
+    bulk_disc_pct:   hasBulk ? Math.min(bulkDisc, 90) : null,
+    qty_type:        hasQtyRule ? qtyType  : null,
+    qty_value:       hasQtyRule ? qtyValue : null,
+  };
 
   try {
     if (_editListingId) {
       await API.updateListing(_editListingId, data);
-      showToast('Listing updated.', 'ok');
+      showToast('Listing updated. Customers can see your offer.', 'ok');
     } else {
       await API.createListing(data);
-      showToast('Listing created.', 'ok');
+      showToast('Product listed! Customers can now order.', 'ok');
     }
     closeListingOverlay();
+    renderListings();
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+function computeCutoffTs(label) {
+  // Parse "8 AM", "10 PM", "8 PM (today)" etc. into an absolute timestamp
+  var now = new Date();
+  var clean = label.replace('(previous evening)', '').replace('(today)', '').replace('(midnight)', '').replace('(noon)', '').trim();
+  var parts = clean.split(' ');
+  var hour  = parseInt(parts[0], 10);
+  var ampm  = parts[1] ? parts[1].toUpperCase() : 'AM';
+  if (ampm === 'PM' && hour !== 12) hour += 12;
+  if (ampm === 'AM' && hour === 12) hour = 0;
+
+  var d = new Date(now);
+  d.setHours(hour, 0, 0, 0);
+
+  // If the cutoff has already passed today, move to tomorrow
+  if (d <= now) d.setDate(d.getDate() + 1);
+  return d.toISOString();
+}
+
+async function confirmListing(id) {
+  try {
+    await API.updateListing(id, { confirmed: true });
+    showToast('Listing confirmed! Consumers can now see and order.', 'ok');
+    renderListings();
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function unconfirmListing(id) {
+  try {
+    await API.updateListing(id, { confirmed: false });
+    showToast('Confirmation removed.', 'ok');
     renderListings();
   } catch(e) { showToast(e.message, 'er'); }
 }

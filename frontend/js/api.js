@@ -41,6 +41,9 @@ var API = {
   updateProduct: function(id, data) {
     return apiFetch('PATCH', '/products/' + id, data, tok());
   },
+  saveProductPrices: function(id, prices) {
+    return apiFetch('PUT', '/products/' + id + '/prices', { prices: prices }, tok());
+  },
   deleteProduct: function(id) {
     return apiFetch('DELETE', '/products/' + id, null, tok());
   },
@@ -49,6 +52,9 @@ var API = {
   getListings: function(params) {
     var qs = params ? '?' + new URLSearchParams(params).toString() : '';
     return apiFetch('GET', '/listings' + qs, null, tok());
+  },
+  getDistrictListings: function(district) {
+    return apiFetch('GET', '/listings?district=' + encodeURIComponent(district), null, tok());
   },
   createListing: function(data) {
     return apiFetch('POST', '/listings', data, tok());

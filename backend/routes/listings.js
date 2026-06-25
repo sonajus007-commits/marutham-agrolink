@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
       .from('farmer_listings')
       .select(`
         id, farmer_price, qty_available, listed, confirmed,
-        time_available, cutoff_ts, bulk_qty, bulk_disc_pct,
+        time_available, cutoff_ts, bulk_qty, bulk_disc_pct, qty_type, qty_value,
         farmer:users ( id, fname, lname, village_town, district ),
         product:products ( id, code, name, unit, platform_fee_pct )
       `)
@@ -31,6 +31,46 @@ router.get('/', async (req, res) => {
       return res.status(500).json({ error: 'Could not fetch listings.' });
     }
     return res.json({ listings: data });
+  }
+
+  // Consumer browsing: ?district=X returns all active listings from farmers in that district
+  const { district } = req.query;
+  if (district) {
+    // Step 1: find farmer IDs in this district
+    const { data: farmerRows } = await supabase
+      .from('users')
+      .select('id')
+      .eq('role', 'farmer')
+      .ilike('district', district);
+
+    const farmerIds = (farmerRows || []).map(f => f.id);
+    if (farmerIds.length === 0) {
+      return res.json({ listings: [], by_product: {} });
+    }
+
+    const { data, error } = await supabase
+      .from('farmer_listings')
+      .select(`
+        id, product_id, farmer_price, qty_available,
+        time_available, cutoff_ts, bulk_qty, bulk_disc_pct, qty_type, qty_value,
+        farmer:users ( id, fname, lname, village_town, district )
+      `)
+      .eq('listed', true)
+      .eq('confirmed', true)
+      .in('farmer_id', farmerIds);
+
+    if (error) {
+      console.error('GET /listings?district error:', error);
+      return res.status(500).json({ error: 'Could not fetch listings.' });
+    }
+    // Group by product_id so the consumer can look up offers per product quickly
+    const byProduct = {};
+    (data || []).forEach(l => {
+      if (!l.farmer) return;           // skip rows where farmer district join missed
+      if (!byProduct[l.product_id]) byProduct[l.product_id] = [];
+      byProduct[l.product_id].push(l);
+    });
+    return res.json({ listings: data, by_product: byProduct });
   }
 
   // Farmer fetches only their own listings
@@ -64,6 +104,7 @@ router.post('/', async (req, res) => {
   const {
     product_id, farmer_price, qty_available,
     time_available, cutoff_ts, bulk_qty, bulk_disc_pct,
+    qty_type, qty_value,
   } = req.body;
 
   if (!product_id || farmer_price == null || qty_available == null) {
@@ -88,6 +129,7 @@ router.post('/', async (req, res) => {
       farmer_id: req.user.id,
       product_id, farmer_price, qty_available,
       time_available, cutoff_ts, bulk_qty, bulk_disc_pct,
+      qty_type, qty_value,
       listed: true,
     })
     .select()
@@ -123,8 +165,9 @@ router.patch('/:id', async (req, res) => {
   }
 
   const ALLOWED = [
-    'farmer_price', 'qty_available', 'listed',
+    'farmer_price', 'qty_available', 'listed', 'confirmed',
     'time_available', 'cutoff_ts', 'bulk_qty', 'bulk_disc_pct',
+    'qty_type', 'qty_value',
   ];
 
   const updates = {};

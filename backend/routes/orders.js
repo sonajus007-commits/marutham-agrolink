@@ -19,7 +19,7 @@ router.post('/', async (req, res) => {
     return res.status(403).json({ error: 'Only consumers can place orders.' });
   }
 
-  const { items, pay_method } = req.body;
+  const { items, pay_method, delivery_fee: clientDeliveryFee } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'items array is required and must not be empty.' });
@@ -42,7 +42,7 @@ router.post('/', async (req, res) => {
     // Fetch farmer listing (price + availability)
     const { data: listing } = await supabase
       .from('farmer_listings')
-      .select('farmer_price, qty_available, listed, bulk_qty, bulk_disc_pct')
+      .select('farmer_price, qty_available, listed, confirmed, bulk_qty, bulk_disc_pct')
       .eq('farmer_id', farmer_id)
       .eq('product_id', product_id)
       .single();
@@ -52,6 +52,9 @@ router.post('/', async (req, res) => {
     }
     if (!listing.listed) {
       return res.status(400).json({ error: `Farmer's listing for product ${product_id} is currently unavailable.` });
+    }
+    if (!listing.confirmed) {
+      return res.status(400).json({ error: `Farmer has not confirmed availability for product ${product_id} for tomorrow.` });
     }
     if (listing.qty_available < qty) {
       return res.status(400).json({ error: `Insufficient stock for product ${product_id}. Available: ${listing.qty_available}.` });
@@ -131,7 +134,7 @@ router.post('/', async (req, res) => {
   const item_total = resolvedItems.reduce((s, i) => s + i._lineTotal, 0);
   const handling   = resolvedItems.reduce((s, i) => s + i._handling, 0);
   const market_fee = resolvedItems.reduce((s, i) => s + (i._lineTotal - i._lineFarmerTotal), 0);
-  const delivery   = 0; // set during delivery workflow
+  const delivery   = Math.round((parseFloat(clientDeliveryFee) || 30) * 100); // ₹30 default, in paise
   const saved      = resolvedItems.reduce((s, i) => s + i._saved, 0);
   const total      = item_total + handling + delivery;
 

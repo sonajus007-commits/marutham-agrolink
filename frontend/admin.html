@@ -49,7 +49,16 @@
     <div class="sec-head" style="margin:0"><span class="sh-icon" style="background:#f0faf4">🌾</span> Products Catalogue</div>
     <button class="add-prod-btn" onclick="openAddProduct()">+ Add Product</button>
   </div>
-  <div class="filt-row" id="prodCatFilter"></div>
+  <div class="filt-label" style="font-size:9px;font-weight:800;color:#7a8492;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Group</div>
+  <div class="filt-row" id="prodGroupFilter"></div>
+  <div id="prodCatSection" style="display:none">
+    <div class="filt-label" style="font-size:9px;font-weight:800;color:#7a8492;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Category</div>
+    <div class="filt-row" id="prodCatFilter"></div>
+  </div>
+  <div id="prodSubSection" style="display:none">
+    <div class="filt-label" style="font-size:9px;font-weight:800;color:#7a8492;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Sub-type</div>
+    <div class="filt-row" id="prodSubFilter"></div>
+  </div>
   <div id="adminProductList"><div class="spinner"><div class="spin"></div></div></div>
 </div>
 
@@ -88,27 +97,127 @@
     <div class="overlay-title" id="productOverlayTitle">Add Product</div>
   </div>
   <div class="overlay-body">
-    <div class="fg"><label class="fl">Product Name (Tamil/Local) <span class="rq">*</span></label>
-      <input class="fi" id="po-name" type="text" placeholder="e.g. வாழைப்பழம்">
-      <div class="em" id="po-name-e">Required</div></div>
-    <div class="fg"><label class="fl">English Name <span class="op">(optional)</span></label>
-      <input class="fi" id="po-ename" type="text" placeholder="e.g. Banana"></div>
-    <div class="fg"><label class="fl">Unit <span class="rq">*</span></label>
-      <select class="fi" id="po-unit">
-        <option value="kg">kg</option><option value="g">g</option>
-        <option value="bunch">bunch</option><option value="piece">piece</option>
-        <option value="dozen">dozen</option><option value="litre">litre</option>
-        <option value="ml">ml</option><option value="pack">pack</option>
-      </select></div>
-    <div class="fg"><label class="fl">Group / Category <span class="rq">*</span></label>
-      <input class="fi" id="po-group" type="text" placeholder="e.g. Vegetables, Fruits, Dairy">
-      <div class="em" id="po-group-e">Required</div></div>
-    <div class="fg"><label class="fl">District Retail Price (₹)</label>
-      <input class="fi" id="po-price" type="number" min="0" step="0.01" placeholder="e.g. 60.00"></div>
-    <div class="fg" style="display:flex;align-items:center;gap:10px">
-      <input type="checkbox" id="po-avail" checked style="width:16px;height:16px">
-      <label for="po-avail" class="fl" style="margin:0;cursor:pointer">Available (show to consumers)</label>
+
+    <div class="fg"><label class="fl">Product Group <span class="rq">*</span></label>
+      <select class="fi" id="po-group" onchange="onModalGroupChange()">
+        <option value="Fresh Produce">Fresh Produce</option>
+        <option value="Meat &amp; Poultry">Meat &amp; Poultry</option>
+        <option value="Groceries &amp; Pantry Staples">Groceries &amp; Pantry Staples</option>
+        <option value="Dairy &amp; Plant-Based Alternatives">Dairy &amp; Plant-Based Alternatives</option>
+      </select>
     </div>
+
+    <div class="fg"><label class="fl">Category <span class="rq">*</span></label>
+      <select class="fi" id="po-cat" onchange="onModalCatChange()"></select>
+    </div>
+
+    <div class="fg"><label class="fl">Sub-type</label>
+      <select class="fi" id="po-sub"></select>
+    </div>
+
+    <div class="fg"><label class="fl">Product Name (English) <span class="rq">*</span></label>
+      <input class="fi" id="po-name" type="text" placeholder="e.g. Tomatoes">
+      <div class="em" id="po-name-e">Required</div>
+    </div>
+
+    <div class="fg"><label class="fl">Regional Name</label>
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:8px">
+        <input class="fi" id="po-regional" type="text" placeholder="Name in local language">
+        <select class="fi" id="po-lang" onchange="onNameLangChange()">
+          <option value="ta">Tamil</option>
+          <option value="kn">Kannada</option>
+          <option value="ml">Malayalam</option>
+          <option value="te">Telugu</option>
+          <option value="hi">Hindi</option>
+        </select>
+      </div>
+      <button type="button" onclick="autoFillRegional()" style="margin-top:7px;background:#f0faf4;color:#2d6a4f;border:1.5px solid #95d5b2;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif">Auto-fill from English name</button>
+      <div id="po-autofill-note" style="font-size:10px;color:#5a6472;margin-top:4px">Type the English name above, then click Auto-fill.</div>
+    </div>
+
+    <div class="fg"><label class="fl">Unit of Measure <span class="rq">*</span></label>
+      <select class="fi" id="po-unit">
+        <optgroup label="Weight">
+          <option value="kg">Kilogram (kg)</option>
+          <option value="g">Gram (g)</option>
+          <option value="quintal">Quintal (100 kg)</option>
+          <option value="ton">Ton (1000 kg)</option>
+        </optgroup>
+        <optgroup label="Volume">
+          <option value="litre">Litre (L)</option>
+          <option value="ml">Millilitre (ml)</option>
+        </optgroup>
+        <optgroup label="Count">
+          <option value="pcs">Piece (pcs)</option>
+          <option value="dozen">Dozen (12)</option>
+          <option value="bunch">Bunch</option>
+          <option value="bundle">Bundle</option>
+          <option value="packet">Packet</option>
+          <option value="box">Box</option>
+          <option value="bag">Bag</option>
+          <option value="sack">Sack</option>
+          <option value="crate">Crate</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="fg"><label class="fl">Govt Market Price <span class="rq">*</span></label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <select class="fi" id="po-price-state" onchange="onModalPriceStateChange()"></select>
+        <select class="fi" id="po-price-district" onchange="loadModalPriceForSel()"></select>
+      </div>
+      <div style="display:flex;gap:8px;align-items:stretch">
+        <div style="position:relative;flex:1">
+          <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;color:#7a8492;font-weight:700">₹</span>
+          <input class="fi" id="po-price-val" type="text" placeholder="Price" oninput="storeModalPrice()" style="padding-left:32px">
+        </div>
+        <button type="button" onclick="syncPriceStub()" style="background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:8px;padding:0 14px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Sync API</button>
+      </div>
+      <div class="em" id="po-price-e">Enter at least one district price</div>
+      <div style="font-size:10px;color:#5a6472;margin-top:4px">Select state + district, enter price. Repeat for each district. Stored separately per district.</div>
+      <div id="po-price-saved" style="font-size:10px;color:#1a7a4a;font-weight:700;margin-top:5px"></div>
+    </div>
+
+    <div class="fg"><label class="fl">Platform Fee % <span class="rq">*</span></label>
+      <select class="fi" id="po-fee">
+        <option value="0">0%</option><option value="1">1%</option><option value="2">2%</option>
+        <option value="3">3%</option><option value="4">4%</option><option value="5" selected>5%</option>
+        <option value="6">6%</option><option value="7">7%</option><option value="8">8%</option>
+        <option value="9">9%</option><option value="10">10%</option><option value="12">12%</option>
+        <option value="15">15%</option><option value="18">18%</option><option value="20">20%</option>
+      </select>
+      <div style="font-size:10px;color:#5a6472;margin-top:4px">Applied on farmer's price to compute customer price.</div>
+    </div>
+
+    <div class="fg"><label class="fl">Special / Exotic Item?</label>
+      <select class="fi" id="po-exotic" onchange="onExoticChange()">
+        <option value="no">No — normal item (no handling charge)</option>
+        <option value="yes">Yes — exotic / perishable (handling applies)</option>
+      </select>
+      <div style="font-size:10px;color:#5a6472;margin-top:4px">Mark Yes for items needing careful handling. Handling set per district below.</div>
+    </div>
+
+    <div class="fg" id="po-handling-wrap" style="display:none">
+      <label class="fl">Handling Charge (₹ per unit, district-wise)</label>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <select class="fi" id="po-hdl-state" onchange="onHandlingStateChange()" style="flex:1"></select>
+        <select class="fi" id="po-hdl-district" onchange="loadHandlingForDistrict()" style="flex:1"></select>
+      </div>
+      <div style="position:relative">
+        <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;color:#7a8492;font-weight:700">₹</span>
+        <input class="fi" id="po-hdl-val" type="text" placeholder="e.g. 10" oninput="stashHandlingForDistrict()" style="padding-left:32px">
+      </div>
+      <div style="font-size:10px;color:#5a6472;margin-top:4px">Flat handling charge per district (shown separately to customers).</div>
+      <div id="po-hdl-summary" style="font-size:10px;color:#1a7a4a;font-weight:600;margin-top:5px"></div>
+    </div>
+
+    <div class="fg"><label class="fl">Status <span class="rq">*</span></label>
+      <select class="fi" id="po-status">
+        <option value="active">Active — visible to farmers and consumers</option>
+        <option value="inactive">Inactive — hidden from listing</option>
+      </select>
+    </div>
+
     <button class="sbtn" onclick="saveProduct()">Save Product</button>
   </div>
 </div>
@@ -136,7 +245,9 @@ document.getElementById('heroScope').textContent  = user.fname + ' ' + (user.lna
 document.getElementById('heroSub').textContent    = (user.district ? user.district + ' · ' : '') + 'Marutham Agrolink';
 
 var _allProducts     = [];
+var _activeProdGroup = 'All';
 var _activeProdCat   = 'All';
+var _activeProdSub   = 'All';
 var _allUsers        = [];
 var _activeUserRole  = 'All';
 var _adminOrderFilter = 'All';
@@ -213,47 +324,107 @@ async function renderProducts() {
   try {
     var res = await API.getProducts();
     _allProducts = res.products || [];
-    buildProdCatFilter();
+    buildProdGroupFilter();
     renderProductList();
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
   }
 }
 
-function buildProdCatFilter() {
-  var cats = ['All'];
-  _allProducts.forEach(function(p) { if (p.group && !cats.includes(p.group)) cats.push(p.group); });
+function buildProdGroupFilter() {
+  var groups = ['All'];
+  _allProducts.forEach(function(p){ if (p.product_group && !groups.includes(p.product_group)) groups.push(p.product_group); });
   var html = '';
-  cats.forEach(function(c) {
-    html += '<button class="chip' + (c === _activeProdCat ? ' on' : '') + '" onclick="setProdCat(\'' + c.replace(/'/g,'') + '\')">' + c + '</button>';
+  groups.forEach(function(g){
+    html += '<button class="chip' + (g===_activeProdGroup?' on':'') + '" onclick="setProdGroup(\'' + g.replace(/'/g,'\\\'') + '\')">' + g + '</button>';
+  });
+  document.getElementById('prodGroupFilter').innerHTML = html;
+  buildProdCatFilter();
+}
+
+function setProdGroup(g) {
+  _activeProdGroup = g; _activeProdCat = 'All'; _activeProdSub = 'All';
+  buildProdGroupFilter(); renderProductList();
+}
+
+function buildProdCatFilter() {
+  var inGroup = _activeProdGroup === 'All' ? _allProducts : _allProducts.filter(function(p){ return p.product_group === _activeProdGroup; });
+  var cats = [];
+  inGroup.forEach(function(p){ if (p.category && !cats.includes(p.category)) cats.push(p.category); });
+  var sec = document.getElementById('prodCatSection');
+  if (cats.length <= 1) { sec.style.display='none'; document.getElementById('prodSubSection').style.display='none'; return; }
+  sec.style.display = 'block';
+  var html = '<button class="chip' + (_activeProdCat==='All'?' on':'') + '" onclick="setProdCat(\'All\')">All</button>';
+  cats.forEach(function(c){
+    html += '<button class="chip' + (c===_activeProdCat?' on':'') + '" onclick="setProdCat(\'' + c.replace(/'/g,'\\\'') + '\')">' + c + '</button>';
   });
   document.getElementById('prodCatFilter').innerHTML = html;
+  buildProdSubFilter();
 }
 
 function setProdCat(c) {
-  _activeProdCat = c;
-  buildProdCatFilter();
-  renderProductList();
+  _activeProdCat = c; _activeProdSub = 'All';
+  buildProdCatFilter(); renderProductList();
+}
+
+function buildProdSubFilter() {
+  if (_activeProdCat === 'All') { document.getElementById('prodSubSection').style.display='none'; return; }
+  var subs = [];
+  _allProducts.filter(function(p){ return p.category === _activeProdCat; })
+    .forEach(function(p){ if (p.sub_type && !subs.includes(p.sub_type)) subs.push(p.sub_type); });
+  var sec = document.getElementById('prodSubSection');
+  if (subs.length <= 1) { sec.style.display='none'; return; }
+  sec.style.display = 'block';
+  var html = '<button class="chip' + (_activeProdSub==='All'?' on':'') + '" onclick="setProdSub(\'All\')">All</button>';
+  subs.forEach(function(s){
+    html += '<button class="chip' + (s===_activeProdSub?' on':'') + '" onclick="setProdSub(\'' + s.replace(/'/g,'\\\'').replace(/&/g,'&amp;') + '\')">' + s + '</button>';
+  });
+  document.getElementById('prodSubFilter').innerHTML = html;
+}
+
+function setProdSub(s) {
+  _activeProdSub = s;
+  buildProdSubFilter(); renderProductList();
 }
 
 function renderProductList() {
-  var filtered = _activeProdCat === 'All' ? _allProducts : _allProducts.filter(function(p){ return p.group === _activeProdCat; });
+  var filtered = _allProducts.filter(function(p){
+    if (_activeProdGroup !== 'All' && p.product_group !== _activeProdGroup) return false;
+    if (_activeProdCat   !== 'All' && p.category      !== _activeProdCat)   return false;
+    if (_activeProdSub   !== 'All' && p.sub_type       !== _activeProdSub)   return false;
+    return true;
+  });
   if (filtered.length === 0) {
     document.getElementById('adminProductList').innerHTML = '<div class="empty-state"><p>No products.</p></div>'; return;
   }
   var html = '';
   filtered.forEach(function(p) {
+    var prices = p.product_district_prices || [];
     html += '<div class="prod-card">';
     html += '<div class="prod-top">';
-    html += '<div><div class="prod-name">' + p.name + '</div>';
-    if (p.name_en) html += '<div class="prod-name-en">' + p.name_en + '</div>';
-    html += '<div class="prod-path"><span class="prod-chip">' + (p.group||'—') + '</span></div></div>';
-    html += '<div class="prod-price-box"><div class="prod-price">₹' + parseFloat(p.district_price||0).toFixed(2) + '</div>';
+    html += '<div style="flex:1"><div class="prod-name">' + p.name + '</div>';
+    if (p.regional_name) html += '<div class="prod-name-en" style="color:var(--leaf)">' + p.regional_name + '</div>';
+    html += '<div class="prod-path">';
+    if (p.product_group) html += '<span class="prod-chip">' + p.product_group + '</span>';
+    if (p.category)      html += '<span class="prod-chip" style="background:#fffaf0;color:#92400e">' + p.category + '</span>';
+    if (p.sub_type)      html += '<span style="font-size:9px;color:var(--gray)">' + p.sub_type + '</span>';
+    html += '</div></div>';
+    html += '<div class="prod-price-box">';
+    // Show first available district price
+    var firstPrice = prices[0];
+    if (firstPrice) {
+      html += '<div class="prod-price">₹' + parseFloat(firstPrice.market_price).toFixed(0) + '</div>';
+      html += '<div class="prod-unit">' + firstPrice.district + '</div>';
+    } else {
+      html += '<div class="prod-price" style="font-size:12px;color:var(--gray)">No price</div>';
+    }
     html += '<div class="prod-unit">/ ' + p.unit + '</div></div>';
     html += '</div>';
     html += '<div class="prod-meta-row">';
     if (p.available) html += '<span class="prod-badge" style="background:#e6f7ed;color:#1a7a4a">✓ Available</span>';
     else             html += '<span class="prod-badge" style="background:#fde8e8;color:#c0392b">✗ Unavailable</span>';
+    if (p.exotic)    html += '<span class="prod-badge" style="background:#fff1f2;color:#be123c">🌶 Perishable</span>';
+    if (p.platform_fee_pct) html += '<span style="font-size:10px;color:var(--gray)">Fee: ' + p.platform_fee_pct + '%</span>';
     html += '<div class="prod-actions">';
     html += '<a class="prod-link" style="color:var(--leaf)" onclick="openEditProduct(\'' + p.id + '\')">Edit</a>';
     html += '<a class="prod-link" style="color:var(--red);margin-left:10px" onclick="deleteProduct(\'' + p.id + '\')">Delete</a>';
@@ -262,26 +433,263 @@ function renderProductList() {
   document.getElementById('adminProductList').innerHTML = html;
 }
 
+// ── Product form data ─────────────────────────────────────────────────────────
+var _catTree = {
+  'Fresh Produce': {
+    'Vegetables': ['Root Vegetables','Nightshades & Pods','Leafy Greens','Herbs & Seasonals','Cruciferous','Squash & Gourds'],
+    'Fruits':     ['Citrus','Berries','Tropical & Exotic','Pome & Stone'],
+  },
+  'Meat & Poultry': {
+    'Poultry':  ['Chicken','Duck','Turkey'],
+    'Red Meat': ['Beef','Pork','Lamb & Mutton'],
+    'Seafood':  ['Freshwater Fish','Saltwater Fish','Shellfish'],
+  },
+  'Groceries & Pantry Staples': {
+    'Grains, Rice & Pasta':     ['Rice & Quinoa','Pasta & Noodles','Oats & Muesli'],
+    'Canned & Packaged Goods':  ['Canned Beans & Vegetables','Soups & Broths','Condiments & Sauces'],
+    'Oils, Ghee & Fats':        ['Coconut Oil','Vegetable Oil','Ghee & Butter'],
+  },
+  'Dairy & Plant-Based Alternatives': {
+    'Milk & Cream':       ['Whole Milk','Low-Fat Milk','Plant Milk'],
+    'Yogurt & Eggs':      ['Yogurt','Eggs'],
+    'Cheese & Paneer':    ['Paneer','Cheddar','Cottage Cheese'],
+  },
+};
+
+var _stateDistricts = {
+  'Tamil Nadu': ['Pudukkottai','Tiruchirappalli','Thanjavur','Madurai','Chennai','Coimbatore','Salem','Tirunelveli','Sivaganga','Dindigul','Namakkal','Erode','Vellore','Tiruppur'],
+  'Karnataka':  ['Bengaluru','Mysuru','Hubli','Mangaluru','Belagavi','Ballari','Tumkur','Shivamogga'],
+  'Kerala':     ['Thiruvananthapuram','Kochi','Kozhikode','Thrissur','Kannur','Kollam','Palakkad'],
+  'Andhra Pradesh': ['Vijayawada','Visakhapatnam','Guntur','Nellore','Kurnool','Tirupati'],
+};
+
+var _foodDict = {
+  'tomatoes':{ta:'தக்காளி',kn:'ಟೊಮೇಟೊ',ml:'തക്കാളി',te:'టమాట',hi:'टमाटर'},
+  'tomato':{ta:'தக்காளி',kn:'ಟೊಮೇಟೊ',ml:'തക്കാളി',te:'టమాట',hi:'टमाटर'},
+  'onion':{ta:'வெங்காயம்',kn:'ಈರುಳ್ಳಿ',ml:'സവാള',te:'ఉల్లిపాయ',hi:'प्याज'},
+  'potato':{ta:'உருளைக்கிழங்கு',kn:'ಆಲೂಗಡ್ಡೆ',ml:'ഉരുളക്കിഴങ്ങ്',te:'బంగాళాదుంప',hi:'आलू'},
+  'brinjal':{ta:'கத்திரிக்காய்',kn:'ಬದನೆಕಾಯಿ',ml:'വഴുതന',te:'వంకాయ',hi:'बैंगन'},
+  'carrot':{ta:'கேரட்',kn:'ಗಜ್ಜರಿ',ml:'കാരറ്റ്',te:'క్యారెట్',hi:'गाजर'},
+  'green chilli':{ta:'பச்சை மிளகாய்',kn:'ಹಸಿ ಮೆಣಸಿನಕಾಯಿ',ml:'പച്ചമുളക്',te:'పచ్చిమిర్చి',hi:'हरी मिर्च'},
+  'banana':{ta:'வாழைப்பழம்',kn:'ಬಾಳೆಹಣ್ಣು',ml:'വാഴപ്പഴം',te:'అరటిపండు',hi:'केला'},
+  'mango':{ta:'மாம்பழம்',kn:'ಮಾವಿನ ಹಣ್ಣು',ml:'മാങ്ങ',te:'మామిడిపండు',hi:'आम'},
+  'guava':{ta:'கொய்யா',kn:'ಸೀಬೆಹಣ್ಣು',ml:'പേരക്ക',te:'జామపండు',hi:'अमरूद'},
+  'raw rice':{ta:'பச்சரிசி',kn:'ಹಸಿ ಅಕ್ಕಿ',ml:'പച്ചരി',te:'ముడిబియ్యం',hi:'चावल'},
+  'toor dal':{ta:'துவரம் பருப்பு',kn:'ತೊಗರಿಬೇಳೆ',ml:'തുവരപ്പരിപ്പ്',te:'కందిపప్పు',hi:'अरहर दाल'},
+  'country chicken':{ta:'நாட்டுக் கோழி',kn:'ನಾಟಿ ಕೋಳಿ',ml:'നാടൻ കോഴി',te:'నాటు కోడి',hi:'देसी मुर्गा'},
+  'broiler chicken':{ta:'பிராய்லர் கோழி',kn:'ಬ್ರಾಯ್ಲರ್ ಕೋಳಿ',ml:'ബ്രോയ്‌ലർ കോഴി',te:'బ్రాయిలర్ కోడి',hi:'ब्रायलर मुर्गा'},
+  'goat mutton':{ta:'ஆட்டிறைச்சி',kn:'ಮೇಕೆ ಮಾಂಸ',ml:'ആട്ടിറച്ചി',te:'మేక మాంసం',hi:'बकरे का मांस'},
+  'catfish':{ta:'கெளுத்தி மீன்',kn:'ಕೆಳುತಿ ಮೀನು',ml:'കരിമീൻ',te:'జెల్ల చేప',hi:'कैटफ़िश'},
+  'prawn':{ta:'இறால்',kn:'ಸಿಗಡಿ',ml:'ചെമ്മീൻ',te:'రొయ్యలు',hi:'झींगा'},
+  'fresh milk':{ta:'பால்',kn:'ಹಾಲು',ml:'പാൽ',te:'పాలు',hi:'दूध'},
+  'curd':{ta:'தயிர்',kn:'ಮೊಸರು',ml:'തൈര്',te:'పెరుగు',hi:'दही'},
+  'coriander leaves':{ta:'கொத்தமல்லி',kn:'ಕೊತ್ತಂಬರಿ',ml:'മല്ലിയില',te:'కొత్తిమీర',hi:'धनिया'},
+  'curry leaves':{ta:'கறிவேப்பிலை',kn:'ಕರಿಬೇವು',ml:'കറിവേപ്പില',te:'కరివేపాకు',hi:'करी पत्ता'},
+};
+
+var _modalPriceBuffer   = {}; // 'State|District' -> price (₹)
+var _modalHandleBuffer  = {}; // 'State|District' -> handling (₹)
+var _autoFillCache      = null;
+
+function onModalGroupChange() {
+  var g = document.getElementById('po-group').value;
+  var catSel = document.getElementById('po-cat');
+  catSel.innerHTML = '';
+  var tree = _catTree[g] || {};
+  for (var c in tree) catSel.innerHTML += '<option value="' + c + '">' + c + '</option>';
+  onModalCatChange();
+}
+
+function onModalCatChange() {
+  var g = document.getElementById('po-group').value;
+  var c = document.getElementById('po-cat').value;
+  var subSel = document.getElementById('po-sub');
+  subSel.innerHTML = '<option value="">— None —</option>';
+  var subs = (_catTree[g] && _catTree[g][c]) ? _catTree[g][c] : [];
+  subs.forEach(function(s){ subSel.innerHTML += '<option value="' + s + '">' + s + '</option>'; });
+}
+
+function autoFillRegional() {
+  var en  = document.getElementById('po-name').value.trim().toLowerCase();
+  var note = document.getElementById('po-autofill-note');
+  if (!en) { showToast('Enter English name first', 'er'); return; }
+  var entry = _foodDict[en];
+  if (!entry) {
+    _autoFillCache = null;
+    if (note) { note.textContent = 'No dictionary match for "' + en + '". Type the regional name manually.'; note.style.color = '#c0392b'; }
+    showToast('No match — please type manually', 'er'); return;
+  }
+  _autoFillCache = Object.assign({}, entry);
+  var lang = document.getElementById('po-lang').value;
+  document.getElementById('po-regional').value = entry[lang] || entry['ta'] || '';
+  var count = Object.keys(entry).length;
+  if (note) { note.textContent = 'Auto-filled in ' + count + ' languages. Switch language to view each.'; note.style.color = '#1a7a4a'; }
+  showToast('Auto-filled (' + count + ' languages)', 'ok');
+}
+
+function onNameLangChange() {
+  if (_autoFillCache) {
+    var lang = document.getElementById('po-lang').value;
+    if (_autoFillCache[lang]) document.getElementById('po-regional').value = _autoFillCache[lang];
+  }
+}
+
+function initModalPriceSelectors() {
+  var sSel = document.getElementById('po-price-state');
+  if (!sSel) return;
+  sSel.innerHTML = '';
+  for (var st in _stateDistricts) sSel.innerHTML += '<option value="' + st + '">' + st + '</option>';
+  sSel.value = (user && user.state) ? user.state : 'Tamil Nadu';
+  onModalPriceStateChange();
+}
+
+function onModalPriceStateChange() {
+  var st   = document.getElementById('po-price-state').value;
+  var dSel = document.getElementById('po-price-district');
+  var dists = _stateDistricts[st] || [];
+  dSel.innerHTML = dists.map(function(d){ return '<option value="' + d + '">' + d + '</option>'; }).join('');
+  loadModalPriceForSel();
+}
+
+function loadModalPriceForSel() {
+  var st  = document.getElementById('po-price-state').value;
+  var dt  = document.getElementById('po-price-district').value;
+  var key = st + '|' + dt;
+  document.getElementById('po-price-val').value = (_modalPriceBuffer[key] != null) ? _modalPriceBuffer[key] : '';
+  updatePriceSavedNote();
+}
+
+function storeModalPrice() {
+  var st  = document.getElementById('po-price-state').value;
+  var dt  = document.getElementById('po-price-district').value;
+  var v   = parseFloat(document.getElementById('po-price-val').value);
+  if (!isNaN(v) && v > 0) _modalPriceBuffer[st + '|' + dt] = v;
+  updatePriceSavedNote();
+}
+
+function updatePriceSavedNote() {
+  var el = document.getElementById('po-price-saved');
+  if (!el) return;
+  var keys = Object.keys(_modalPriceBuffer);
+  el.textContent = keys.length ? 'Prices saved for ' + keys.length + ' district(s).' : '';
+}
+
+function syncPriceStub() {
+  var st   = document.getElementById('po-price-state').value;
+  var dt   = document.getElementById('po-price-district').value;
+  var base = 25 + Math.floor(Math.random() * 50);
+  document.getElementById('po-price-val').value = base;
+  _modalPriceBuffer[st + '|' + dt] = base;
+  updatePriceSavedNote();
+  showToast('Synced ' + dt + ' price: ₹' + base + ' (demo)', 'nfo');
+}
+
+function onExoticChange() {
+  var isEx = document.getElementById('po-exotic').value === 'yes';
+  document.getElementById('po-handling-wrap').style.display = isEx ? 'block' : 'none';
+  if (isEx) initHandlingSelectors();
+}
+
+function initHandlingSelectors() {
+  var stSel = document.getElementById('po-hdl-state');
+  if (!stSel || stSel.options.length > 0) { if (stSel) loadHandlingForDistrict(); return; }
+  stSel.innerHTML = '';
+  for (var st in _stateDistricts) stSel.innerHTML += '<option value="' + st + '">' + st + '</option>';
+  stSel.value = (user && user.state) ? user.state : 'Tamil Nadu';
+  onHandlingStateChange();
+}
+
+function onHandlingStateChange() {
+  var st   = document.getElementById('po-hdl-state').value;
+  var dSel = document.getElementById('po-hdl-district');
+  var dists = _stateDistricts[st] || [];
+  dSel.innerHTML = dists.map(function(d){ return '<option value="' + d + '">' + d + '</option>'; }).join('');
+  loadHandlingForDistrict();
+}
+
+function loadHandlingForDistrict() {
+  var st  = document.getElementById('po-hdl-state').value;
+  var d   = document.getElementById('po-hdl-district').value;
+  document.getElementById('po-hdl-val').value = (_modalHandleBuffer[st + '|' + d] != null) ? _modalHandleBuffer[st + '|' + d] : '';
+  renderHandlingSummary();
+}
+
+function stashHandlingForDistrict() {
+  var st  = document.getElementById('po-hdl-state').value;
+  var d   = document.getElementById('po-hdl-district').value;
+  var v   = parseFloat(document.getElementById('po-hdl-val').value);
+  if (isNaN(v) || v < 0) delete _modalHandleBuffer[st + '|' + d];
+  else _modalHandleBuffer[st + '|' + d] = v;
+  renderHandlingSummary();
+}
+
+function renderHandlingSummary() {
+  var el = document.getElementById('po-hdl-summary');
+  if (!el) return;
+  var parts = [];
+  for (var k in _modalHandleBuffer) parts.push(k.split('|')[1] + ': ₹' + _modalHandleBuffer[k]);
+  el.textContent = parts.length ? 'Set: ' + parts.join(', ') : '';
+}
+
+// ── Open / Close / Save ───────────────────────────────────────────────────────
 function openAddProduct() {
-  _editProductId = null;
+  _editProductId = null; _autoFillCache = null;
+  _modalPriceBuffer = {}; _modalHandleBuffer = {};
   document.getElementById('productOverlayTitle').textContent = 'Add Product';
-  ['po-name','po-ename','po-group','po-price'].forEach(function(id){ sv(id,''); });
-  document.getElementById('po-unit').value  = 'kg';
-  document.getElementById('po-avail').checked = true;
+  ['po-name','po-regional','po-price-val','po-hdl-val'].forEach(function(id){ sv(id,''); });
+  document.getElementById('po-group').value   = 'Fresh Produce';
+  document.getElementById('po-unit').value    = 'kg';
+  document.getElementById('po-fee').value     = '5';
+  document.getElementById('po-exotic').value  = 'no';
+  document.getElementById('po-status').value  = 'active';
+  document.getElementById('po-lang').value    = 'ta';
+  document.getElementById('po-handling-wrap').style.display = 'none';
+  document.getElementById('po-autofill-note').textContent   = 'Type the English name above, then click Auto-fill.';
+  document.getElementById('po-autofill-note').style.color   = '';
+  onModalGroupChange();
+  initModalPriceSelectors();
+  updatePriceSavedNote();
+  hideErr('po-name-e'); hideErr('po-price-e');
   document.getElementById('productOverlay').classList.add('active');
 }
 
 function openEditProduct(id) {
-  _editProductId = id;
+  _editProductId = id; _autoFillCache = null;
+  _modalPriceBuffer = {}; _modalHandleBuffer = {};
   var p = _allProducts.find(function(x){ return x.id === id; });
   if (!p) return;
   document.getElementById('productOverlayTitle').textContent = 'Edit Product';
-  sv('po-name',  p.name    || '');
-  sv('po-ename', p.name_en || '');
-  sv('po-group', p.group   || '');
-  sv('po-price', p.district_price || '');
-  document.getElementById('po-unit').value   = p.unit   || 'kg';
-  document.getElementById('po-avail').checked = !!p.available;
+
+  document.getElementById('po-group').value = p.product_group || 'Fresh Produce';
+  onModalGroupChange();
+  if (p.category) document.getElementById('po-cat').value = p.category;
+  onModalCatChange();
+  if (p.sub_type) document.getElementById('po-sub').value = p.sub_type;
+
+  sv('po-name',     p.name          || '');
+  sv('po-regional', p.regional_name || '');
+  document.getElementById('po-lang').value   = 'ta';
+  document.getElementById('po-unit').value   = p.unit || 'kg';
+  document.getElementById('po-fee').value    = String(p.platform_fee_pct != null ? p.platform_fee_pct : 5);
+  document.getElementById('po-exotic').value = p.exotic ? 'yes' : 'no';
+  document.getElementById('po-status').value = p.available ? 'active' : 'inactive';
+
+  // Load existing district prices into buffers (state is inferred from stateDistricts lookup)
+  var prices = p.product_district_prices || [];
+  prices.forEach(function(dp){
+    var inferredState = 'Tamil Nadu';
+    for (var st in _stateDistricts) {
+      if (_stateDistricts[st].indexOf(dp.district) !== -1) { inferredState = st; break; }
+    }
+    var key = inferredState + '|' + dp.district;
+    _modalPriceBuffer[key]  = parseFloat(dp.market_price);
+    if (parseFloat(dp.handling) > 0) _modalHandleBuffer[key] = parseFloat(dp.handling);
+  });
+
+  onExoticChange();
+  initModalPriceSelectors();
+  renderHandlingSummary();
+  hideErr('po-name-e'); hideErr('po-price-e');
   document.getElementById('productOverlay').classList.add('active');
 }
 
@@ -290,27 +698,58 @@ function closeProductOverlay() {
 }
 
 async function saveProduct() {
-  var name  = gv('po-name');
-  var group = gv('po-group');
-  if (!name)  { showErr('po-name-e','Required'); return; }  hideErr('po-name-e');
-  if (!group) { showErr('po-group-e','Required'); return; } hideErr('po-group-e');
+  // Stash whatever is currently in price field
+  storeModalPrice();
+  stashHandlingForDistrict();
+
+  var name = gv('po-name');
+  if (!name) { showErr('po-name-e', 'Required'); return; } hideErr('po-name-e');
+
+  var priceKeys = Object.keys(_modalPriceBuffer);
+  if (!_editProductId && priceKeys.length === 0) {
+    showErr('po-price-e', 'Enter at least one district price'); return;
+  }
+  hideErr('po-price-e');
+
+  var isExotic = document.getElementById('po-exotic').value === 'yes';
 
   var data = {
-    name: name,
-    name_en: gv('po-ename') || undefined,
-    unit: document.getElementById('po-unit').value,
-    group: group,
-    district_price: parseFloat(gv('po-price')) || undefined,
-    available: document.getElementById('po-avail').checked,
+    product_group:    document.getElementById('po-group').value,
+    category:         document.getElementById('po-cat').value  || undefined,
+    sub_type:         document.getElementById('po-sub').value  || undefined,
+    name:             name,
+    regional_name:    gv('po-regional') || undefined,
+    unit:             document.getElementById('po-unit').value,
+    platform_fee_pct: parseInt(document.getElementById('po-fee').value, 10) || 5,
+    exotic:           isExotic,
+    available:        document.getElementById('po-status').value === 'active',
   };
+
   try {
+    var productId = _editProductId;
     if (_editProductId) {
       await API.updateProduct(_editProductId, data);
       showToast('Product updated.', 'ok');
     } else {
-      await API.createProduct(data);
+      var code = 'P' + Date.now();
+      var res = await API.createProduct(Object.assign({ code: code }, data));
+      productId = res.product.id;
       showToast('Product created.', 'ok');
     }
+
+    // Save district prices
+    if (priceKeys.length > 0) {
+      var priceRows = priceKeys.map(function(k) {
+        var parts = k.split('|');
+        return {
+          district:       parts[1],
+          market_price_rs: _modalPriceBuffer[k],
+          handling_rs:    _modalHandleBuffer[k] || 0,
+        };
+      });
+      await API.saveProductPrices(productId, priceRows);
+    }
+
     closeProductOverlay();
     _allProducts = [];
     renderProducts();
