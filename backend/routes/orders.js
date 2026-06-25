@@ -28,6 +28,15 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'pay_method is required (UPI / Card / Cash on Delivery).' });
   }
 
+  // ── Ordering window: 8 PM – 8 AM IST only ────────────────────────────────
+  const nowIST  = new Date(Date.now() + 5.5 * 60 * 60 * 1000); // UTC → IST
+  const hourIST = nowIST.getUTCHours();
+  if (hourIST >= 8 && hourIST < 20) {
+    return res.status(400).json({
+      error: 'Orders can only be placed between 8 PM and 8 AM. The ordering window opens at 8 PM IST.',
+    });
+  }
+
   // ── 1. Resolve each item from the DB ─────────────────────────────────────
   const resolvedItems = [];
   let fulfilmentVillage = null;

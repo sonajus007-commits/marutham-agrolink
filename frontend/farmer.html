@@ -315,7 +315,10 @@ async function renderListings() {
   var el = document.getElementById('listingList');
   el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
   try {
-    var [listRes, prodRes] = await Promise.all([API.getListings(), API.getProducts()]);
+    var [listRes, prodRes] = await Promise.all([
+      API.getListings(),
+      API.getProducts({ district: user.district })
+    ]);
     var listings = listRes.listings || [];
     _allSystemProducts = prodRes.products || [];
 
@@ -505,9 +508,11 @@ async function openEditListing(id) {
 }
 
 async function populateProductSelect(selectedId) {
-  if (_allSystemProducts.length === 0) {
-    try { var r = await API.getProducts({ district: user.district }); _allSystemProducts = r.products || []; } catch(e) {}
-  }
+  // Always fetch with farmer's district so district_price is populated
+  try {
+    var r = await API.getProducts({ district: user.district });
+    _allSystemProducts = r.products || [];
+  } catch(e) { /* keep existing list if fetch fails */ }
   var sel = document.getElementById('lo-product');
   sel.innerHTML = '<option value="">— Select a product —</option>';
   _allSystemProducts.filter(function(p){ return p.available; }).forEach(function(p) {
@@ -623,12 +628,35 @@ async function renderOrders() {
     var params = _statusFilter !== 'All' ? { status: _statusFilter } : {};
     var res = await API.getOrders(params);
     var orders = res.orders || [];
+
     if (orders.length === 0) {
       el.innerHTML = '<div class="empty-state"><div class="es-icon">📦</div><p>No orders' + (_statusFilter !== 'All' ? ' with status "' + _statusFilter + '"' : '') + '.</p></div>';
       return;
     }
+
+    // Separate orders needing pack action
+    var toPackOrders = orders.filter(function(o){ return o.stage === 0 && !o.cancelled; });
+    var otherOrders  = orders.filter(function(o){ return o.stage !== 0 || o.cancelled; });
+
     var html = '';
-    orders.forEach(function(o) {
+
+    // ── Action required: Pack now ──────────────────────────────────────────
+    if (toPackOrders.length > 0) {
+      html += '<div style="background:#fffbeb;border:2px solid #f59e0b;border-radius:14px;padding:14px;margin-bottom:16px">';
+      html += '<div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px">📦 Pack & Hand Over — ' + toPackOrders.length + ' order' + (toPackOrders.length > 1 ? 's' : '') + ' waiting</div>';
+      toPackOrders.forEach(function(o) {
+        html += '<div class="ord-item" style="margin-bottom:8px;border-radius:10px;overflow:hidden" onclick="openOrderDetail(\'' + o.id + '\')">';
+        html += '<div class="ord-statusbar" style="background:#f59e0b"></div>';
+        html += '<div style="flex:1"><div class="ord-id">' + (o.code||o.id.slice(0,8).toUpperCase()) + '</div>';
+        html += '<div class="ord-loc">Order Placed · ' + fmtDateShort(o.created_at) + '</div></div>';
+        html += '<button class="sbtn" style="margin:0;padding:6px 12px;font-size:11px;width:auto;flex-shrink:0" onclick="event.stopPropagation();packOrder(\'' + o.id + '\')">✓ Mark Packed</button>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    // ── All other orders ───────────────────────────────────────────────────
+    otherOrders.forEach(function(o) {
       html += '<div class="ord-item" onclick="openOrderDetail(\'' + o.id + '\')">';
       html += '<div class="ord-statusbar" style="background:' + statusColor(o.status) + '"></div>';
       html += '<div style="flex:1"><div class="ord-id">' + (o.code||o.id.slice(0,8).toUpperCase()) + '</div>';
@@ -637,10 +665,19 @@ async function renderOrders() {
       html += '<div style="font-size:10px;color:var(--gray)">Payout</div></div>';
       html += '</div>';
     });
+
     el.innerHTML = html;
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
   }
+}
+
+async function packOrder(orderId) {
+  try {
+    await API.packOrder(orderId);
+    showToast('Order marked as Packed! VCO will collect shortly.', 'ok');
+    renderOrders();
+  } catch(e) { showToast(e.message, 'er'); }
 }
 
 function renderOrderFilterBar() {
@@ -667,7 +704,18 @@ async function openOrderDetail(orderId) {
     var items = res.items || [];
     document.getElementById('overlayOrderCode').textContent = o.code || 'Order';
 
-    var html = '<div style="margin-bottom:16px"><span style="display:inline-block;padding:6px 14px;border-radius:50px;font-size:12px;font-weight:700;background:' + statusColor(o.status) + ';color:#fff;">' + o.status + '</span></div>';
+    var html = '';
+
+    // Pack action banner for stage 0
+    if (o.stage === 0 && !o.cancelled) {
+      html += '<div style="background:#fffbeb;border:2px solid #f59e0b;border-radius:12px;padding:14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">';
+      html += '<div style="flex:1"><div style="font-size:13px;font-weight:700;color:#92400e">Action Required</div>';
+      html += '<div style="font-size:11px;color:#b45309;margin-top:2px">Pack the items and tap the button when ready for VCO collection</div></div>';
+      html += '<button class="sbtn" style="margin:0;padding:8px 14px;font-size:12px;width:auto" onclick="packOrder(\'' + o.id + '\');closeOrderOverlay()">📦 Mark as Packed</button>';
+      html += '</div>';
+    }
+
+    html += '<div style="margin-bottom:16px"><span style="display:inline-block;padding:6px 14px;border-radius:50px;font-size:12px;font-weight:700;background:' + statusColor(o.status) + ';color:#fff;">' + o.status + '</span></div>';
     html += '<div class="card"><h3>📋 Order Info</h3>';
     html += '<div class="irow"><span class="ilbl">Order Code</span><span class="ival mono">' + (o.code||'—') + '</span></div>';
     html += '<div class="irow"><span class="ilbl">Placed On</span><span class="ival">' + fmtDate(o.created_at) + '</span></div>';
@@ -675,9 +723,9 @@ async function openOrderDetail(orderId) {
     html += '<div class="irow"><span class="ilbl">Your Payout</span><span class="ival" style="color:var(--green);font-weight:800">' + fmt(o.farmer_payout||0) + '</span></div>';
     html += '</div>';
 
-    html += '<div class="card"><h3>🌿 Items</h3>';
+    html += '<div class="card"><h3>🌿 Items to Pack</h3>';
     items.forEach(function(item) {
-      html += '<div class="irow"><span class="ilbl">' + item.name + '<br><span style="font-size:10px;color:var(--gray)">' + item.qty + ' × ' + fmt(item.farmer_price||item.price) + '</span></span>';
+      html += '<div class="irow"><span class="ilbl">' + item.name + '<br><span style="font-size:10px;color:var(--gray)">' + item.qty + ' ' + (item.unit||'') + ' × ' + fmt(item.farmer_price||item.price) + '</span></span>';
       html += '<span class="ival">' + fmt(parseFloat(item.farmer_price||item.price) * item.qty) + '</span></div>';
     });
     html += '</div>';

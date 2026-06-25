@@ -231,8 +231,43 @@ var _activeGroup   = 'All';
 var _activeCat     = 'All';
 var _activeSub     = 'All';
 
+// ── Ordering window: 8 PM (20:00) → 8 AM (08:00) next day ───────────────────
+function orderingWindowStatus() {
+  var now  = new Date();
+  var hour = now.getHours();
+  var open = hour >= 20 || hour < 8;
+  var opensAt, closesAt;
+  if (open) {
+    closesAt = hour >= 20 ? '8 AM tomorrow' : '8 AM today';
+    return { open: true,  msg: 'Ordering open until ' + closesAt };
+  }
+  return { open: false, msg: 'Order window: 8 PM – 8 AM  ·  Opens at 8 PM today' };
+}
+
+function renderOrderingBanner() {
+  var existing = document.getElementById('orderWindowBanner');
+  var ws = orderingWindowStatus();
+  if (!existing) {
+    var div = document.createElement('div');
+    div.id = 'orderWindowBanner';
+    div.style.cssText = 'padding:8px 16px;font-size:11px;font-weight:600;text-align:center;position:sticky;top:0;z-index:10;';
+    var shopEl = document.getElementById('productList');
+    if (shopEl && shopEl.parentNode) shopEl.parentNode.insertBefore(div, shopEl);
+    existing = div;
+  }
+  if (ws.open) {
+    existing.style.background = '#e6f7ed';
+    existing.style.color = '#1a7a4a';
+  } else {
+    existing.style.background = '#fde8e8';
+    existing.style.color = '#c0392b';
+  }
+  existing.textContent = ws.open ? '✅ ' + ws.msg : '🔒 ' + ws.msg;
+}
+
 async function renderShop() {
   document.getElementById('shopLocation').textContent = (user.district || '—') + ', ' + (user.state || 'Tamil Nadu');
+  renderOrderingBanner();
   updateCartBar();
 
   if (_allProducts.length === 0) {
@@ -392,11 +427,14 @@ function renderProducts() {
     }
     if (p.avg_rating) html += '<span style="font-size:11px;color:var(--gold)">★ ' + parseFloat(p.avg_rating).toFixed(1) + '</span>';
 
+    var ws = orderingWindowStatus();
     html += '<div class="prod-actions">';
     if (!custPrice && !dp) {
       html += '<span style="font-size:10px;color:var(--gray)">Not in your area</span>';
     } else if (!bestOffer || !hasStock) {
       html += '<span style="font-size:10px;color:#c0392b">No offers today</span>';
+    } else if (!ws.open) {
+      html += '<div style="text-align:right"><div style="font-size:10px;font-weight:700;color:#c0392b">🔒 Closed</div><div style="font-size:9px;color:var(--gray)">Opens 8 PM</div></div>';
     } else if (cartQty === 0) {
       html += '<button class="sbtn" style="margin:0;padding:8px 18px;font-size:12px;width:auto" onclick="addToCart(\'' + p.id + '\')">Add +</button>';
     } else {
@@ -615,6 +653,10 @@ async function resolveCartFarmers() {
 }
 
 async function placeOrder() {
+  var ws = orderingWindowStatus();
+  if (!ws.open) {
+    showToast('Ordering is closed. ' + ws.msg, 'er'); return;
+  }
   var unresolved = _cart.filter(function(i) { return !i.farmer_id; });
   if (unresolved.length > 0) {
     showToast('Some items have no available farmers. Please remove them.', 'er'); return;

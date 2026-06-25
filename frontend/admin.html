@@ -90,6 +90,15 @@
   </div>
 </div>
 
+<!-- ══════ QUICK PRICE UPDATE OVERLAY ══════ -->
+<div class="overlay" id="quickPriceOverlay">
+  <div class="overlay-hdr">
+    <button class="overlay-back" onclick="document.getElementById('quickPriceOverlay').classList.remove('active')">←</button>
+    <div class="overlay-title" id="qpOverlayTitle">Update Market Prices</div>
+  </div>
+  <div class="overlay-body" id="qpOverlayBody"></div>
+</div>
+
 <!-- ══════ ADD / EDIT PRODUCT OVERLAY ══════ -->
 <div class="overlay" id="productOverlay">
   <div class="overlay-hdr">
@@ -410,23 +419,35 @@ function renderProductList() {
     if (p.sub_type)      html += '<span style="font-size:9px;color:var(--gray)">' + p.sub_type + '</span>';
     html += '</div></div>';
     html += '<div class="prod-price-box">';
-    // Show first available district price
-    var firstPrice = prices[0];
-    if (firstPrice) {
-      html += '<div class="prod-price">₹' + parseFloat(firstPrice.market_price).toFixed(0) + '</div>';
-      html += '<div class="prod-unit">' + firstPrice.district + '</div>';
+    if (prices.length > 0) {
+      html += '<div class="prod-price">₹' + parseFloat(prices[0].market_price).toFixed(0) + '</div>';
+      html += '<div class="prod-unit">' + prices[0].district + '</div>';
+      if (prices.length > 1) html += '<div style="font-size:9px;color:var(--gray)">+' + (prices.length-1) + ' more</div>';
     } else {
-      html += '<div class="prod-price" style="font-size:12px;color:var(--gray)">No price</div>';
+      html += '<div class="prod-price" style="font-size:11px;color:#c0392b">No price set</div>';
     }
     html += '<div class="prod-unit">/ ' + p.unit + '</div></div>';
     html += '</div>';
+
+    // District prices summary row
+    if (prices.length > 0) {
+      html += '<div style="display:flex;flex-wrap:wrap;gap:5px;margin:6px 0;padding:6px 0;border-top:1px dashed #eef4ee;border-bottom:1px dashed #eef4ee">';
+      prices.forEach(function(dp){
+        html += '<span style="font-size:10px;background:#f0faf4;border:1px solid #d3ecdd;border-radius:5px;padding:2px 7px;color:#1a3d2b">' + dp.district + ' ₹' + parseFloat(dp.market_price).toFixed(0) + (parseFloat(dp.handling||0)>0 ? '+₹'+parseFloat(dp.handling).toFixed(0) : '') + '</span>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div style="font-size:10px;color:#c0392b;background:#fde8e8;border-radius:6px;padding:4px 8px;margin:6px 0">⚠ No market price — farmers cannot see a reference and consumers see "Price TBD"</div>';
+    }
+
     html += '<div class="prod-meta-row">';
     if (p.available) html += '<span class="prod-badge" style="background:#e6f7ed;color:#1a7a4a">✓ Available</span>';
     else             html += '<span class="prod-badge" style="background:#fde8e8;color:#c0392b">✗ Unavailable</span>';
     if (p.exotic)    html += '<span class="prod-badge" style="background:#fff1f2;color:#be123c">🌶 Perishable</span>';
     if (p.platform_fee_pct) html += '<span style="font-size:10px;color:var(--gray)">Fee: ' + p.platform_fee_pct + '%</span>';
     html += '<div class="prod-actions">';
-    html += '<a class="prod-link" style="color:var(--leaf)" onclick="openEditProduct(\'' + p.id + '\')">Edit</a>';
+    html += '<a class="prod-link" style="color:#1d4ed8;font-weight:700" onclick="openUpdatePrice(\'' + p.id + '\')">Update Price</a>';
+    html += '<a class="prod-link" style="color:var(--leaf);margin-left:10px" onclick="openEditProduct(\'' + p.id + '\')">Edit</a>';
     html += '<a class="prod-link" style="color:var(--red);margin-left:10px" onclick="deleteProduct(\'' + p.id + '\')">Delete</a>';
     html += '</div></div></div>';
   });
@@ -737,20 +758,101 @@ async function saveProduct() {
       showToast('Product created.', 'ok');
     }
 
-    // Save district prices
+    // Save district prices — always attempt even on edit so price-only updates work
     if (priceKeys.length > 0) {
       var priceRows = priceKeys.map(function(k) {
         var parts = k.split('|');
         return {
-          district:       parts[1],
+          district:        parts[1],
           market_price_rs: _modalPriceBuffer[k],
-          handling_rs:    _modalHandleBuffer[k] || 0,
+          handling_rs:     _modalHandleBuffer[k] || 0,
         };
       });
-      await API.saveProductPrices(productId, priceRows);
+      var priceRes = await API.saveProductPrices(productId, priceRows);
+      showToast('Govt prices saved for ' + priceRows.length + ' district(s).', 'ok');
     }
 
     closeProductOverlay();
+    _allProducts = [];
+    renderProducts();
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+// ── Quick price update (without reopening full product form) ─────────────────
+var _quickPriceProductId = null;
+var _quickPriceBuffer    = {}; // district -> rupees
+
+function openUpdatePrice(id) {
+  _quickPriceProductId = id;
+  _quickPriceBuffer    = {};
+  var p = _allProducts.find(function(x){ return x.id === id; });
+  if (!p) return;
+
+  var prices = p.product_district_prices || [];
+  prices.forEach(function(dp){ _quickPriceBuffer[dp.district] = parseFloat(dp.market_price); });
+
+  var body = '';
+  body += '<div style="background:#f0faf4;border-radius:10px;padding:12px;margin-bottom:16px">';
+  body += '<div style="font-size:15px;font-weight:700;color:var(--forest)">' + p.name + (p.regional_name ? ' · ' + p.regional_name : '') + '</div>';
+  body += '<div style="font-size:11px;color:var(--gray);margin-top:2px">Unit: ' + p.unit + ' · Fee: ' + (p.platform_fee_pct||5) + '%</div></div>';
+  body += '<div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px">Govt Market Price per District (₹)</div>';
+
+  var knownDistricts = prices.length > 0 ? prices.map(function(dp){ return dp.district; }) : ['Pudukkottai'];
+  body += '<div id="qp-rows">';
+  knownDistricts.forEach(function(d){
+    body += quickPriceRow(d, _quickPriceBuffer[d] || '');
+  });
+  body += '</div>';
+  body += '<button type="button" style="font-size:11px;color:#1d4ed8;background:none;border:none;cursor:pointer;padding:4px 0;margin-top:4px" onclick="addQuickPriceRow()">+ Add district</button>';
+  body += '<div style="margin-top:20px;display:flex;gap:10px">';
+  body += '<button class="sbtn" style="flex:1" onclick="saveQuickPrices()">Save Prices →</button>';
+  body += '<button type="button" style="padding:10px 18px;border-radius:10px;border:1.5px solid #ddd;background:#fff;font-size:13px;cursor:pointer" onclick="document.getElementById(\'quickPriceOverlay\').classList.remove(\'active\')">Cancel</button>';
+  body += '</div>';
+
+  document.getElementById('qpOverlayTitle').textContent = 'Update Prices — ' + p.name;
+  document.getElementById('qpOverlayBody').innerHTML    = body;
+  document.getElementById('quickPriceOverlay').classList.add('active');
+}
+
+function quickPriceRow(district, value) {
+  var allDistricts = [];
+  for (var st in _stateDistricts) _stateDistricts[st].forEach(function(d){ allDistricts.push(d); });
+  var opts = allDistricts.map(function(d){
+    return '<option value="' + d + '"' + (d === district ? ' selected' : '') + '>' + d + '</option>';
+  }).join('');
+  return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
+    + '<select class="fi" style="flex:1" onchange="onQpDistrictChange(this)">' + opts + '</select>'
+    + '<div style="position:relative;flex:0 0 110px"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--gray);font-weight:700">₹</span>'
+    + '<input class="fi" type="number" min="0" step="0.01" placeholder="Price" value="' + (value||'') + '" style="padding-left:28px" oninput="onQpPriceInput(this)"></div>'
+    + '</div>';
+}
+
+function addQuickPriceRow() {
+  var el = document.getElementById('qp-rows');
+  var div = document.createElement('div');
+  div.innerHTML = quickPriceRow('Pudukkottai', '');
+  el.appendChild(div.firstChild);
+}
+
+function onQpDistrictChange(sel) { /* buffer updated on save */ }
+
+function onQpPriceInput(inp) { /* buffer updated on save */ }
+
+async function saveQuickPrices() {
+  var rows = document.querySelectorAll('#qp-rows > div');
+  var prices = [];
+  rows.forEach(function(row){
+    var sel = row.querySelector('select');
+    var inp = row.querySelector('input[type="number"]');
+    var d   = sel ? sel.value : '';
+    var v   = inp ? parseFloat(inp.value) : NaN;
+    if (d && !isNaN(v) && v > 0) prices.push({ district: d, market_price_rs: v, handling_rs: 0 });
+  });
+  if (prices.length === 0) { showToast('Enter at least one district price.', 'er'); return; }
+  try {
+    await API.saveProductPrices(_quickPriceProductId, prices);
+    showToast('✅ Govt prices saved for ' + prices.length + ' district(s). Farmers will see this now.', 'ok');
+    document.getElementById('quickPriceOverlay').classList.remove('active');
     _allProducts = [];
     renderProducts();
   } catch(e) { showToast(e.message, 'er'); }
