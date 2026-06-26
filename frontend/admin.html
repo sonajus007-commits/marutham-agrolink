@@ -66,6 +66,9 @@
 
 <!-- ── ORDERS ─────────────────────────────────────────────────────────────── -->
 <div class="panel" id="panel-orders">
+  <div class="fg" style="margin-bottom:10px">
+    <input class="fi" id="orderSearch" type="text" placeholder="Search order code, consumer name, village…" oninput="filterAdminOrders()">
+  </div>
   <div class="filt-row" id="adminOrderFilter"></div>
   <div id="adminOrderList"><div class="spinner"><div class="spin"></div></div></div>
 </div>
@@ -889,43 +892,95 @@ async function deleteProduct(id) {
 }
 
 // ── ORDERS ────────────────────────────────────────────────────────────────────
+var _allAdminOrders = [];
+var _orderSearch    = '';
+
+var _stageMapDirect = ['Order Placed','Packaged','VCO Verified','Picked Up','Out for Delivery','Delivered'];
+var _stageMapHub    = ['Order Placed','Packaged','VCO Verified','Picked Up','In Transit','At Hub','Out for Delivery','Delivered'];
+
+function nextStatusLabel(o) {
+  var map = (o.route === 'hub') ? _stageMapHub : _stageMapDirect;
+  return map[(o.stage || 0) + 1] || null;
+}
+
 async function renderAdminOrders() {
   renderAdminOrderFilterBar();
   var el = document.getElementById('adminOrderList');
   el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
   try {
-    var params = _adminOrderFilter !== 'All' ? { status: _adminOrderFilter } : {};
-    var res = await API.getOrders(params);
-    var orders = res.orders || [];
-    if (orders.length === 0) {
-      el.innerHTML = '<div class="empty-state"><div class="es-icon">📦</div><p>No orders.</p></div>'; return;
-    }
-    var html = '';
-    orders.forEach(function(o) {
-      html += '<div class="ord-item" onclick="openOrderDetail(\'' + o.id + '\')">';
-      html += '<div class="ord-statusbar" style="background:' + statusColor(o.status) + '"></div>';
-      html += '<div style="flex:1"><div class="ord-id">' + (o.code||o.id.slice(0,8).toUpperCase()) + '</div>';
-      html += '<div class="ord-loc">' + (o.status||'—') + ' · ' + fmtDateShort(o.created_at) + '</div>';
-      html += '<div class="ord-loc">' + (o.consumer_name||'Consumer') + '</div></div>';
-      html += '<div class="ord-amt">' + fmt(o.total) + '</div></div>';
-    });
-    el.innerHTML = html;
+    var res = await API.getOrders();
+    _allAdminOrders = res.orders || [];
+    renderAdminOrderList();
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
   }
 }
 
+function filterAdminOrders() {
+  _orderSearch = (document.getElementById('orderSearch').value || '').toLowerCase();
+  renderAdminOrderList();
+}
+
+function renderAdminOrderList() {
+  var list = _allAdminOrders;
+
+  // Status filter
+  if (_adminOrderFilter !== 'All') {
+    list = list.filter(function(o){ return o.status === _adminOrderFilter; });
+  }
+
+  // Search filter
+  if (_orderSearch) {
+    list = list.filter(function(o) {
+      return ((o.code||'') + (o.consumer_name||'') + (o.village||'') + (o.district||'')).toLowerCase().includes(_orderSearch);
+    });
+  }
+
+  var el = document.getElementById('adminOrderList');
+  if (list.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="es-icon">📦</div><p>No orders match.</p></div>'; return;
+  }
+
+  var html = '';
+  list.forEach(function(o) {
+    var cancelled = o.cancelled;
+    var mClass = o.pay_method === 'Cash on Delivery' ? 'color:#92400e' : 'color:#1d4ed8';
+    html += '<div class="ord-item" onclick="openOrderDetail(\'' + o.id + '\')">';
+    html += '<div class="ord-statusbar" style="background:' + (cancelled ? '#6b7280' : statusColor(o.status)) + '"></div>';
+    html += '<div style="flex:1">';
+    html += '<div style="display:flex;align-items:center;gap:6px">';
+    html += '<div class="ord-id">' + (o.code || o.id.slice(0,8).toUpperCase()) + '</div>';
+    if (cancelled) html += '<span style="font-size:9px;background:#fde8e8;color:#c0392b;border-radius:4px;padding:1px 5px;font-weight:700">CANCELLED</span>';
+    html += '</div>';
+    html += '<div class="ord-loc">' + (o.consumer_name||'Consumer') + (o.village ? ' · ' + o.village : '') + '</div>';
+    html += '<div class="ord-loc" style="display:flex;gap:6px;align-items:center">';
+    html += '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + statusColor(o.status) + ';flex-shrink:0"></span>';
+    html += (o.status||'—') + ' · ' + fmtDateShort(o.created_at);
+    html += '</div></div>';
+    html += '<div style="text-align:right">';
+    html += '<div class="ord-amt">' + fmt(o.total) + '</div>';
+    html += '<div style="font-size:9px;font-weight:700;' + mClass + '">' + (o.pay_method === 'Cash on Delivery' ? 'COD' : 'UPI') + ' · ' + (o.pay_status||'') + '</div>';
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
 function renderAdminOrderFilterBar() {
   var html = '';
   _allOrderStatuses.forEach(function(s) {
-    html += '<button class="chip' + (s === _adminOrderFilter ? ' on' : '') + '" onclick="setAdminOrderFilter(\'' + s.replace(/'/g,'') + '\')">' + s + '</button>';
+    var count = s === 'All' ? _allAdminOrders.length : _allAdminOrders.filter(function(o){ return o.status === s; }).length;
+    html += '<button class="chip' + (s === _adminOrderFilter ? ' on' : '') + '" onclick="setAdminOrderFilter(\'' + s.replace(/'/g,'') + '\')">';
+    html += s;
+    if (count > 0 && s !== 'All') html += ' <span style="font-size:9px;background:rgba(0,0,0,.1);border-radius:50px;padding:1px 5px">' + count + '</span>';
+    html += '</button>';
   });
   document.getElementById('adminOrderFilter').innerHTML = html;
 }
 
 function setAdminOrderFilter(s) {
   _adminOrderFilter = s;
-  renderAdminOrders();
+  renderAdminOrderFilterBar();
+  renderAdminOrderList();
 }
 
 async function openOrderDetail(orderId) {
@@ -940,35 +995,97 @@ async function openOrderDetail(orderId) {
     var hist  = res.history || [];
     document.getElementById('overlayOrderCode').textContent = o.code || 'Order';
 
-    var html = '<div style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;">';
-    html += '<span style="display:inline-block;padding:6px 14px;border-radius:50px;font-size:12px;font-weight:700;background:' + statusColor(o.status) + ';color:#fff;">' + o.status + '</span>';
+    var isActive   = !o.cancelled && o.status !== 'Delivered';
+    var nextStatus = nextStatusLabel(o);
+    var canCancel  = !o.cancelled && (o.stage || 0) <= 2;
 
-    // Action buttons based on status (admin workflow)
-    var adminRole = user.admin_role || '';
-    if (o.status === 'Order Placed' && adminRole === 'VCO') {
-      html += '<button class="req-change-btn" onclick="packOrder(\'' + o.id + '\')">Pack Order</button>';
-    }
-    if (o.status === 'Packaged' && (adminRole === 'VCO' || adminRole === 'Hub Incharge')) {
-      html += '<button class="req-change-btn" onclick="scanOrder(\'' + o.id + '\')">Scan / Verify</button>';
-    }
-    html += '</div>';
+    var html = '';
 
+    // ── Stage pipeline ─────────────────────────────────────────────────────
+    var stageMap = (o.route === 'hub') ? _stageMapHub : _stageMapDirect;
+    html += '<div class="card" style="padding:12px 14px;margin-bottom:14px">';
+    html += '<div style="font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Progress · ' + (o.route || 'direct') + ' route</div>';
+    html += '<div style="display:flex;gap:0;overflow-x:auto;padding-bottom:4px">';
+    stageMap.forEach(function(label, i) {
+      var done    = i < (o.stage || 0);
+      var current = i === (o.stage || 0);
+      var dot     = done ? '#1a7a4a' : current ? statusColor(o.status) : '#e5e7eb';
+      var textCol = done ? '#1a7a4a' : current ? '#1a3d2b' : '#9ca3af';
+      html += '<div style="display:flex;flex-direction:column;align-items:center;min-width:52px;position:relative">';
+      if (i > 0) html += '<div style="position:absolute;top:7px;right:50%;width:52px;height:2px;background:' + (done || current ? '#1a7a4a' : '#e5e7eb') + ';z-index:0"></div>';
+      html += '<div style="width:16px;height:16px;border-radius:50%;background:' + dot + ';z-index:1;flex-shrink:0;' + (current ? 'box-shadow:0 0 0 3px rgba(26,122,74,.2)' : '') + '"></div>';
+      html += '<div style="font-size:8px;color:' + textCol + ';font-weight:' + (current ? '800' : '500') + ';text-align:center;margin-top:3px;line-height:1.2">' + label.replace(' for ',' for\n') + '</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+
+    // ── Action buttons ──────────────────────────────────────────────────────
+    if (isActive || canCancel) {
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">';
+      if (isActive && nextStatus) {
+        html += '<button class="sbtn" style="flex:1;margin:0;padding:11px;font-size:12px" onclick="advanceOrder(\'' + o.id + '\',\'' + nextStatus + '\')">⚡ Advance → ' + nextStatus + '</button>';
+      }
+      if (canCancel) {
+        html += '<button class="sbtn" style="flex:0 0 auto;margin:0;padding:11px 16px;font-size:12px;background:#fde8e8;color:#c0392b;border:1.5px solid #f5c6c6" onclick="adminCancelOrder(\'' + o.id + '\')">✗ Cancel</button>';
+      }
+      html += '</div>';
+    }
+    if (o.cancelled) {
+      html += '<div style="background:#fde8e8;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:700;color:#c0392b;margin-bottom:14px">✗ This order was cancelled</div>';
+    }
+
+    // ── Order info ──────────────────────────────────────────────────────────
     html += '<div class="card"><h3>📋 Order Info</h3>';
     html += '<div class="irow"><span class="ilbl">Order Code</span><span class="ival mono">' + (o.code||'—') + '</span></div>';
+    html += '<div class="irow"><span class="ilbl">Placed On</span><span class="ival">' + fmtDate(o.created_at) + '</span></div>';
     html += '<div class="irow"><span class="ilbl">Consumer</span><span class="ival">' + (o.consumer_name||'—') + '</span></div>';
     html += '<div class="irow"><span class="ilbl">Phone</span><span class="ival mono">' + (o.consumer_phone||'—') + '</span></div>';
     html += '<div class="irow"><span class="ilbl">Address</span><span class="ival" style="font-size:11px;line-height:1.5">' + (o.delivery_address||'—') + '</span></div>';
-    html += '<div class="irow"><span class="ilbl">Payment</span><span class="ival">' + o.pay_method + ' · ' + o.pay_status + '</span></div>';
-    html += '<div class="irow"><span class="ilbl">Total</span><span class="ival" style="font-size:15px">' + fmt(o.total) + '</span></div>';
+    html += '<div class="irow"><span class="ilbl">Payment</span><span class="ival">' + (o.pay_method||'—') + ' · <span style="color:' + (o.pay_status==='paid'?'#1a7a4a':'#f4a261') + '">' + (o.pay_status||'—') + '</span></span></div>';
+    if (o.delivered_at) html += '<div class="irow"><span class="ilbl">Delivered</span><span class="ival">' + fmtDate(o.delivered_at) + '</span></div>';
     html += '</div>';
 
+    // ── Agent info (if assigned) ────────────────────────────────────────────
+    if (o.agent_name) {
+      html += '<div class="card"><h3>🛵 Delivery Agent</h3>';
+      html += '<div class="irow"><span class="ilbl">Agent</span><span class="ival">' + o.agent_name + '</span></div>';
+      if (o.agent_phone) html += '<div class="irow"><span class="ilbl">Phone</span><span class="ival mono">' + o.agent_phone + '</span></div>';
+      if (o.agent_vehicle) html += '<div class="irow"><span class="ilbl">Vehicle</span><span class="ival">' + o.agent_vehicle + '</span></div>';
+      if (o.eta_ts) html += '<div class="irow"><span class="ilbl">ETA</span><span class="ival">' + fmtDate(o.eta_ts) + '</span></div>';
+      html += '</div>';
+    }
+
+    // ── Items with farmer breakdown ─────────────────────────────────────────
     html += '<div class="card"><h3>🌿 Items</h3>';
+    var itemSubtotal = 0;
     items.forEach(function(item) {
-      html += '<div class="irow"><span class="ilbl">' + item.name + '<br><span style="font-size:10px;color:var(--gray)">' + item.qty + ' × ' + fmt(item.price) + '</span></span>';
-      html += '<span class="ival">' + fmt(parseFloat(item.price) * item.qty) + '</span></div>';
+      var lineTotal = parseFloat(item.price||0) * item.qty;
+      itemSubtotal += lineTotal;
+      html += '<div style="padding:8px 0;border-bottom:1px solid #f0f0f0">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+      html += '<span style="font-size:13px;font-weight:700;color:var(--forest)">' + item.name + '</span>';
+      html += '<span style="font-weight:700">' + fmt(lineTotal) + '</span>';
+      html += '</div>';
+      html += '<div style="font-size:10px;color:var(--gray);margin-top:2px">' + item.qty + ' ' + (item.unit||'') + ' × ₹' + parseFloat(item.price||0).toFixed(0) + '</div>';
+      if (item.farmer_name) {
+        html += '<div style="font-size:10px;color:#7c3aed;margin-top:3px">👨‍🌾 ' + item.farmer_name;
+        if (item.farmer_price) html += ' · Farmer earns ₹' + parseFloat(item.farmer_price||0).toFixed(0);
+        html += '</div>';
+      }
+      html += '</div>';
     });
     html += '</div>';
 
+    // ── Price breakdown ─────────────────────────────────────────────────────
+    html += '<div class="card"><h3>💰 Price Breakdown</h3>';
+    html += '<div class="irow"><span class="ilbl">Item Total</span><span class="ival">' + fmt(o.item_total||itemSubtotal) + '</span></div>';
+    if (parseFloat(o.handling||0) > 0) html += '<div class="irow"><span class="ilbl">Handling</span><span class="ival">' + fmt(o.handling) + '</span></div>';
+    if (parseFloat(o.delivery||0) > 0) html += '<div class="irow"><span class="ilbl">Delivery</span><span class="ival">' + fmt(o.delivery) + '</span></div>';
+    html += '<div class="irow"><span class="ilbl" style="font-weight:800">Total</span><span class="ival" style="font-size:15px;color:var(--forest)">' + fmt(o.total) + '</span></div>';
+    if (o.farmer_payout) html += '<div class="irow"><span class="ilbl" style="color:#7c3aed">Farmer Payout</span><span class="ival" style="color:#7c3aed">₹' + parseFloat(o.farmer_payout).toFixed(0) + '</span></div>';
+    html += '</div>';
+
+    // ── Timeline ────────────────────────────────────────────────────────────
     if (hist.length > 0) {
       html += '<div class="card"><h3>📍 Timeline</h3><ul class="timeline">';
       hist.forEach(function(h, idx) {
@@ -991,21 +1108,34 @@ function closeOrderOverlay() {
   document.getElementById('orderOverlay').classList.remove('active');
 }
 
-async function packOrder(orderId) {
+async function advanceOrder(orderId, nextStatus) {
+  var label = nextStatus ? '→ ' + nextStatus : 'the next stage';
+  if (!confirm('Advance order to ' + label + '?')) return;
   try {
-    await API.packOrder(orderId);
-    showToast('Order marked as Packaged.', 'ok');
+    var res = await apiFetch('POST', '/orders/' + orderId + '/advance', {}, getToken());
+    showToast('Advanced to: ' + res.newStatus, 'ok');
     closeOrderOverlay();
-    renderAdminOrders();
+    await renderAdminOrders();
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function adminCancelOrder(orderId) {
+  var reason = prompt('Reason for cancellation (optional):');
+  if (reason === null) return;
+  try {
+    await API.cancelOrder(orderId, reason);
+    showToast('Order cancelled.', 'ok');
+    closeOrderOverlay();
+    await renderAdminOrders();
   } catch(e) { showToast(e.message, 'er'); }
 }
 
 async function scanOrder(orderId) {
   try {
-    await API.scanOrder(orderId);
-    showToast('Order scanned / verified.', 'ok');
+    var res = await API.scanOrder(orderId);
+    showToast(res.message || 'Order scanned.', 'ok');
     closeOrderOverlay();
-    renderAdminOrders();
+    await renderAdminOrders();
   } catch(e) { showToast(e.message, 'er'); }
 }
 
