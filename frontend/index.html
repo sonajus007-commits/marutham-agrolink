@@ -27,8 +27,8 @@
       <button class="atab"    id="tab-reg"   onclick="swTab('reg')">Register</button>
     </div>
 
-    <!-- Role selector (shown on both tabs) -->
-    <div class="rrow">
+    <!-- Role selector (register tab only — login routes by role from server) -->
+    <div class="rrow" id="rrow" style="display:none">
       <div class="rbtn on" id="rb-consumer" onclick="setRole('consumer')"><span class="ri">🛒</span>Consumer</div>
       <div class="rbtn"    id="rb-farmer"   onclick="setRole('farmer')"><span class="ri">👨‍🌾</span>Farmer</div>
       <div class="rbtn"    id="rb-admin"    onclick="setRole('admin')"><span class="ri">⚙️</span>Admin</div>
@@ -363,6 +363,7 @@ function swTab(tab) {
   document.getElementById('fLogin').style.display  = tab === 'login' ? 'block' : 'none';
   document.getElementById('fReg').style.display    = tab === 'reg'   ? 'block' : 'none';
   document.getElementById('fForgot').style.display = 'none';
+  document.getElementById('rrow').style.display    = tab === 'reg'   ? 'flex'  : 'none';
   document.getElementById('tab-login').classList.toggle('on', tab === 'login');
   document.getElementById('tab-reg').classList.toggle('on',   tab === 'reg');
   if (tab === 'reg') setRole(aRole);
