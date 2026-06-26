@@ -29,6 +29,9 @@ var API = {
   resetPassword: function(phone, otp, new_password) {
     return apiFetch('POST', '/auth/reset-password', { phone, otp, new_password });
   },
+  changePassword: function(current_password, new_password) {
+    return apiFetch('POST', '/auth/change-password', { current_password, new_password }, tok());
+  },
   createStaff: function(data) {
     return apiFetch('POST', '/auth/create-staff', data, tok());
   },

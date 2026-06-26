@@ -160,12 +160,52 @@
 <div class="panel" id="panel-profile">
   <div class="card">
     <h3>👤 Admin Profile</h3>
-    <div class="irow"><span class="ilbl">Login ID</span><span class="ival mono" id="p-lid">—</span></div>
+    <div class="lid-box">
+      <div class="lid-lbl">Your Login ID</div>
+      <div class="lid-val" id="p-lid">—</div>
+      <div class="lid-note">Use this ID or phone number to login</div>
+    </div>
     <div class="irow"><span class="ilbl">Full Name</span><span class="ival" id="p-name">—</span></div>
     <div class="irow"><span class="ilbl">Phone</span><span class="ival mono" id="p-phone">—</span></div>
     <div class="irow"><span class="ilbl">Email</span><span class="ival" id="p-email">—</span></div>
     <div class="irow"><span class="ilbl">Admin Role</span><span class="ival" id="p-arole">—</span></div>
     <div class="irow"><span class="ilbl">District</span><span class="ival" id="p-district">—</span></div>
+    <button class="bedit" onclick="toggleAdminEditForm()">✏️ Edit Profile</button>
+    <div class="editform" id="adminEditForm">
+      <div class="fsec" style="padding-top:0;border-top:none">Editable Fields</div>
+      <div class="fg"><label class="fl">Email</label>
+        <input class="fi" id="adm-email" type="email" placeholder="your@email.com"></div>
+      <div class="fg"><label class="fl">Alt. Phone</label>
+        <input class="fi" id="adm-alt" type="tel" placeholder="Alternate phone" maxlength="10" oninput="numOnly(this)"></div>
+      <div class="ea">
+        <button class="bsave" onclick="saveAdminProfile()">Save Changes</button>
+        <button class="bcanc" onclick="toggleAdminEditForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🔒 Change Password</h3>
+    <button class="bedit" onclick="toggleAdminPwForm()">🔒 Change Password</button>
+    <div class="editform" id="adminPwForm">
+      <div class="fg"><label class="fl">Current Password</label>
+        <div class="pww"><input class="fi" id="adm-cpw" type="password" placeholder="Your current password">
+        <button class="peye" type="button" onclick="togglePw('adm-cpw',this)">👁</button></div></div>
+      <div class="fg"><label class="fl">New Password</label>
+        <div class="pww"><input class="fi" id="adm-npw" type="password" placeholder="New strong password"
+          oninput="checkPw('adm-npw')" onfocus="document.getElementById('adm-pwr').classList.add('on')">
+        <button class="peye" type="button" onclick="togglePw('adm-npw',this)">👁</button></div>
+        <div class="pwrules" id="adm-pwr">
+          <div class="pwr" id="adm-r1"><div class="dot"></div>Min 8 characters</div>
+          <div class="pwr" id="adm-r2"><div class="dot"></div>At least 1 uppercase (A-Z)</div>
+          <div class="pwr" id="adm-r3"><div class="dot"></div>At least 1 number (0-9)</div>
+          <div class="pwr" id="adm-r4"><div class="dot"></div>At least 1 special (@#$!%*)</div>
+        </div></div>
+      <div class="em" id="adm-pw-err" style="display:none;margin-bottom:0"></div>
+      <div class="ea">
+        <button class="bsave" onclick="doAdminChangePw()">Update Password</button>
+        <button class="bcanc" onclick="toggleAdminPwForm()">Cancel</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1554,7 +1594,61 @@ function renderProfile() {
   document.getElementById('p-district').textContent = user.district || '—';
 }
 
+function toggleAdminEditForm() {
+  var form = document.getElementById('adminEditForm');
+  form.classList.toggle('on');
+  if (form.classList.contains('on')) {
+    document.getElementById('adm-email').value = user.email || '';
+    document.getElementById('adm-alt').value   = user.alt_phone || '';
+  }
+}
+
+async function saveAdminProfile() {
+  var data = {
+    email:     document.getElementById('adm-email').value.trim() || undefined,
+    alt_phone: document.getElementById('adm-alt').value.trim()   || undefined,
+  };
+  try {
+    var res = await API.patchMe(data);
+    user = res.user;
+    setSession(getToken(), user);
+    renderProfile();
+    document.getElementById('adminEditForm').classList.remove('on');
+    showToast('Profile updated.', 'ok');
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+function toggleAdminPwForm() {
+  var form = document.getElementById('adminPwForm');
+  form.classList.toggle('on');
+  if (!form.classList.contains('on')) {
+    document.getElementById('adm-cpw').value = '';
+    document.getElementById('adm-npw').value = '';
+    document.getElementById('adm-pw-err').style.display = 'none';
+  }
+}
+
+async function doAdminChangePw() {
+  var cur = document.getElementById('adm-cpw').value;
+  var nw  = document.getElementById('adm-npw').value;
+  var err = document.getElementById('adm-pw-err');
+  err.style.display = 'none';
+  if (!cur) { err.textContent = 'Enter your current password.'; err.style.display = 'block'; return; }
+  if (!isStrongPw(nw)) { err.textContent = 'New password does not meet the requirements.'; err.style.display = 'block'; return; }
+  try {
+    await API.changePassword(cur, nw);
+    document.getElementById('adm-cpw').value = '';
+    document.getElementById('adm-npw').value = '';
+    document.getElementById('adminPwForm').classList.remove('on');
+    showToast('Password changed successfully.', 'ok');
+  } catch(e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
+registerPwRules('adm-npw', ['adm-r1','adm-r2','adm-r3','adm-r4']);
 renderOverview();
 </script>
 </body>

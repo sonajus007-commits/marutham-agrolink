@@ -92,6 +92,47 @@
     <div class="irow"><span class="ilbl">Account No</span><span class="ival mono" id="p-acc">—</span></div>
     <div class="irow"><span class="ilbl">IFSC</span><span class="ival mono" id="p-ifsc">—</span></div>
     <div class="irow"><span class="ilbl">Aadhaar</span><span class="ival" id="p-aad">—</span></div>
+    <div style="font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 11px;margin-top:10px">
+      Bank details are used for payout settlement. Keep them accurate.
+    </div>
+    <button class="bedit" onclick="toggleBankForm()">🏦 Edit Bank Details</button>
+    <div class="editform" id="bankEditForm">
+      <div class="fsec" style="padding-top:0;border-top:none">Bank & KYC Details</div>
+      <div class="fg"><label class="fl">Bank Name</label>
+        <input class="fi" id="edit-bank" type="text" placeholder="e.g. State Bank of India"></div>
+      <div class="fg"><label class="fl">Account Number</label>
+        <input class="fi" id="edit-acc" type="text" placeholder="Your account number" oninput="numOnly(this)"></div>
+      <div class="fg"><label class="fl">IFSC Code</label>
+        <input class="fi" id="edit-ifsc" type="text" placeholder="e.g. SBIN0001234" style="text-transform:uppercase"></div>
+      <div class="ea">
+        <button class="bsave" onclick="saveBankDetails()">Save Bank Details</button>
+        <button class="bcanc" onclick="toggleBankForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🔒 Change Password</h3>
+    <button class="bedit" onclick="togglePwForm('f')">🔒 Change Password</button>
+    <div class="editform" id="pwChangeForm">
+      <div class="fg"><label class="fl">Current Password</label>
+        <div class="pww"><input class="fi" id="pw-cur" type="password" placeholder="Your current password">
+        <button class="peye" type="button" onclick="togglePw('pw-cur',this)">👁</button></div></div>
+      <div class="fg"><label class="fl">New Password</label>
+        <div class="pww"><input class="fi" id="pw-new" type="password" placeholder="New strong password"
+          oninput="checkPw('pw-new')" onfocus="document.getElementById('pw-rules').classList.add('on')">
+        <button class="peye" type="button" onclick="togglePw('pw-new',this)">👁</button></div>
+        <div class="pwrules" id="pw-rules">
+          <div class="pwr" id="pw-r1"><div class="dot"></div>Min 8 characters</div>
+          <div class="pwr" id="pw-r2"><div class="dot"></div>At least 1 uppercase (A-Z)</div>
+          <div class="pwr" id="pw-r3"><div class="dot"></div>At least 1 number (0-9)</div>
+          <div class="pwr" id="pw-r4"><div class="dot"></div>At least 1 special (@#$!%*)</div>
+        </div></div>
+      <div class="em" id="pw-err" style="display:none;margin-bottom:0"></div>
+      <div class="ea">
+        <button class="bsave" onclick="doChangePassword()">Update Password</button>
+        <button class="bcanc" onclick="togglePwForm('f')">Cancel</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -843,7 +884,61 @@ async function saveProfile() {
   } catch(e) { showToast(e.message, 'er'); }
 }
 
+function toggleBankForm() {
+  var form = document.getElementById('bankEditForm');
+  form.classList.toggle('on');
+  if (form.classList.contains('on')) {
+    sv('edit-bank', user.bank_name    || '');
+    sv('edit-acc',  user.bank_account || '');
+    sv('edit-ifsc', user.ifsc         || '');
+  }
+}
+
+async function saveBankDetails() {
+  var data = {
+    bank_name:    gv('edit-bank') || undefined,
+    bank_account: gv('edit-acc')  || undefined,
+    ifsc:         (gv('edit-ifsc') || '').toUpperCase() || undefined,
+  };
+  try {
+    var res = await API.patchMe(data);
+    user = res.user;
+    setSession(getToken(), user);
+    renderProfile();
+    document.getElementById('bankEditForm').classList.remove('on');
+    showToast('Bank details updated.', 'ok');
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+function togglePwForm(prefix) {
+  var form = document.getElementById('pwChangeForm');
+  form.classList.toggle('on');
+  if (!form.classList.contains('on')) {
+    sv('pw-cur', ''); sv('pw-new', '');
+    document.getElementById('pw-err').style.display = 'none';
+  }
+}
+
+async function doChangePassword() {
+  var cur = gv('pw-cur');
+  var nw  = gv('pw-new');
+  var err = document.getElementById('pw-err');
+  err.style.display = 'none';
+  if (!cur) { err.textContent = 'Enter your current password.'; err.style.display = 'block'; return; }
+  if (!isStrongPw(nw)) { err.textContent = 'New password does not meet the requirements.'; err.style.display = 'block'; return; }
+  try {
+    await API.changePassword(cur, nw);
+    sv('pw-cur', ''); sv('pw-new', '');
+    document.getElementById('pwChangeForm').classList.remove('on');
+    showToast('Password changed successfully.', 'ok');
+  } catch(e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
+registerPwRules('pw-new', ['pw-r1','pw-r2','pw-r3','pw-r4']);
 renderEarnings();
 </script>
 </body>

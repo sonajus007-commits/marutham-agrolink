@@ -244,6 +244,36 @@ router.post('/verify-otp', async (req, res) => {
   });
 });
 
+// ── POST /auth/change-password ───────────────────────────────────────────────
+// Requires auth. Body: { current_password, new_password }
+router.post('/change-password', requireAuth, async (req, res) => {
+  const { current_password, new_password } = req.body;
+  if (!current_password || !new_password) {
+    return res.status(400).json({ error: 'current_password and new_password are required.' });
+  }
+  if (new_password.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+  }
+
+  const { data: fullUser } = await supabase
+    .from('users')
+    .select('password_hash')
+    .eq('id', req.user.id)
+    .single();
+
+  const ok = await bcrypt.compare(current_password, fullUser.password_hash);
+  if (!ok) return res.status(401).json({ error: 'Current password is incorrect.' });
+
+  const password_hash = await bcrypt.hash(new_password, 12);
+  const { error } = await supabase
+    .from('users')
+    .update({ password_hash, updated_at: new Date().toISOString() })
+    .eq('id', req.user.id);
+
+  if (error) return res.status(500).json({ error: 'Could not update password.' });
+  res.json({ message: 'Password changed successfully.' });
+});
+
 // ── POST /auth/reset-password ────────────────────────────────────────────────
 // Body: { phone, otp, new_password }
 // Uses the same OTP previously sent via /send-otp

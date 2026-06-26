@@ -128,6 +128,30 @@
       </div>
     </div>
   </div>
+  <div class="card">
+    <h3>🔒 Change Password</h3>
+    <button class="bedit" onclick="togglePwForm()">🔒 Change Password</button>
+    <div class="editform" id="pwChangeForm">
+      <div class="fg"><label class="fl">Current Password</label>
+        <div class="pww"><input class="fi" id="pw-cur" type="password" placeholder="Your current password">
+        <button class="peye" type="button" onclick="togglePw('pw-cur',this)">👁</button></div></div>
+      <div class="fg"><label class="fl">New Password</label>
+        <div class="pww"><input class="fi" id="pw-new" type="password" placeholder="New strong password"
+          oninput="checkPw('pw-new')" onfocus="document.getElementById('pw-rules').classList.add('on')">
+        <button class="peye" type="button" onclick="togglePw('pw-new',this)">👁</button></div>
+        <div class="pwrules" id="pw-rules">
+          <div class="pwr" id="pw-r1"><div class="dot"></div>Min 8 characters</div>
+          <div class="pwr" id="pw-r2"><div class="dot"></div>At least 1 uppercase (A-Z)</div>
+          <div class="pwr" id="pw-r3"><div class="dot"></div>At least 1 number (0-9)</div>
+          <div class="pwr" id="pw-r4"><div class="dot"></div>At least 1 special (@#$!%*)</div>
+        </div></div>
+      <div class="em" id="pw-err" style="display:none;margin-bottom:0"></div>
+      <div class="ea">
+        <button class="bsave" onclick="doChangePassword()">Update Password</button>
+        <button class="bcanc" onclick="togglePwForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ══════ ORDER DETAIL OVERLAY ══════ -->
@@ -1167,7 +1191,37 @@ async function saveProfile() {
   }
 }
 
+function togglePwForm() {
+  var form = document.getElementById('pwChangeForm');
+  form.classList.toggle('on');
+  if (!form.classList.contains('on')) {
+    document.getElementById('pw-cur').value = '';
+    document.getElementById('pw-new').value = '';
+    document.getElementById('pw-err').style.display = 'none';
+  }
+}
+
+async function doChangePassword() {
+  var cur = document.getElementById('pw-cur').value;
+  var nw  = document.getElementById('pw-new').value;
+  var err = document.getElementById('pw-err');
+  err.style.display = 'none';
+  if (!cur) { err.textContent = 'Enter your current password.'; err.style.display = 'block'; return; }
+  if (!isStrongPw(nw)) { err.textContent = 'New password does not meet the requirements.'; err.style.display = 'block'; return; }
+  try {
+    await API.changePassword(cur, nw);
+    document.getElementById('pw-cur').value = '';
+    document.getElementById('pw-new').value = '';
+    document.getElementById('pwChangeForm').classList.remove('on');
+    showToast('Password changed successfully.', 'ok');
+  } catch(e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+  }
+}
+
 // ── Initial load ──────────────────────────────────────────────────────────────
+registerPwRules('pw-new', ['pw-r1','pw-r2','pw-r3','pw-r4']);
 renderHome();
 updateCartBar();
 </script>
