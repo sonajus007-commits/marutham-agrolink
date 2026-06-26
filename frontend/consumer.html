@@ -139,6 +139,15 @@
   <div class="overlay-body" id="overlayBody"></div>
 </div>
 
+<!-- ══════ PRODUCT DETAIL OVERLAY ══════ -->
+<div class="overlay" id="productDetailOverlay">
+  <div class="overlay-hdr">
+    <button class="overlay-back" onclick="closeProductDetail()">←</button>
+    <div class="overlay-title" id="pdoTitle">Choose Offer</div>
+  </div>
+  <div class="overlay-body" id="pdoBody"></div>
+</div>
+
 <!-- ══════ CANCEL MODAL ══════ -->
 <div class="modal-bg" id="cancelModal">
   <div class="modal">
@@ -230,6 +239,22 @@ async function renderHome() {
 var _activeGroup   = 'All';
 var _activeCat     = 'All';
 var _activeSub     = 'All';
+
+// ── Emoji + unit helpers ──────────────────────────────────────────────────────
+var _prodEmoji = {
+  'Tomatoes':'🍅','Brinjal':'🍆','Green Chilli':'🌶️','Onion':'🧅','Potato':'🥔',
+  'Carrot':'🥕','Banana':'🍌','Mango':'🥭','Guava':'🍐','Raw Rice':'🌾',
+  'Toor Dal':'🫘','Country Chicken':'🐓','Broiler Chicken':'🍗','Goat Mutton':'🍖',
+  'Catfish':'🐟','Prawn':'🦐','Fresh Milk':'🥛','Curd':'🥣',
+  'Coriander Leaves':'🌿','Curry Leaves':'🍃'
+};
+var _decimalUnits = {'kg':1,'g':1,'litre':1,'ml':1,'quintal':1,'ton':1};
+function unitAllowsDecimal(u) { return !!_decimalUnits[u]; }
+function unitStep(u) { return unitAllowsDecimal(u) ? 0.5 : 1; }
+function getProductEmoji(name) { return _prodEmoji[name] || '🌿'; }
+
+var _pdProduct = null;
+var _pdOffers  = [];
 
 // ── Ordering window: 8 PM (20:00) → 8 AM (08:00) next day ───────────────────
 function orderingWindowStatus() {
@@ -348,6 +373,161 @@ function setSub(s) {
   renderProducts();
 }
 
+// ── PRODUCT DETAIL OVERLAY ────────────────────────────────────────────────────
+function openProductDetail(productId) {
+  var p = _allProducts.find(function(x){ return x.id === productId; });
+  if (!p) return;
+  var offers  = _offersByProduct[productId] || [];
+  var ws      = orderingWindowStatus();
+  var dp      = p.district_price;
+  var handling= dp ? parseFloat(dp.handling) : 0;
+  var mktPrice= dp ? parseFloat(dp.market_price) : 0;
+  var feePct  = p.platform_fee_pct || 5;
+
+  _pdProduct = p;
+  _pdOffers  = offers;
+
+  document.getElementById('pdoTitle').textContent = p.name;
+
+  var emoji = getProductEmoji(p.name);
+  var html  = '';
+
+  // Product header
+  html += '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:#f0faf4;border-radius:14px;margin-bottom:16px">';
+  html += '<div style="width:60px;height:60px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:34px">' + emoji + '</div>';
+  html += '<div><div style="font-size:16px;font-weight:800;color:var(--forest)">' + p.name + '</div>';
+  if (p.regional_name) html += '<div style="font-size:11px;color:var(--leaf)">' + p.regional_name + '</div>';
+  html += '<div style="font-size:11px;color:var(--gray);margin-top:2px">' + (p.product_group||'') + (p.category ? ' · ' + p.category : '') + '</div>';
+  if (mktPrice > 0) html += '<div style="font-size:11px;color:var(--gray)">Govt price: ₹' + mktPrice.toFixed(0) + ' / ' + p.unit + '</div>';
+  html += '</div></div>';
+
+  if (!ws.open) {
+    html += '<div style="background:#fde8e8;border-radius:12px;padding:14px;text-align:center;font-size:13px;font-weight:700;color:#c0392b">🔒 Ordering closed — opens at 8 PM today</div>';
+  } else if (offers.length === 0) {
+    html += '<div style="background:#f8fdf8;border-radius:12px;padding:20px;text-align:center;font-size:13px;color:var(--gray)">No farmers have listed this product today.<br>Check back at 8 PM.</div>';
+  } else {
+    html += '<div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px">' + offers.length + ' farmer offer' + (offers.length > 1 ? 's' : '') + ' today</div>';
+    offers.forEach(function(o, k) {
+      var farmerPrice = parseFloat(o.farmer_price);
+      var custPrice   = farmerPrice * (1 + feePct / 100) + handling;
+      var f           = o.farmer || {};
+      var initial     = ((f.fname||'F').charAt(0) + ((f.lname||'').charAt(0)||'')).toUpperCase();
+      var soldOut     = (o.qty_available <= 0);
+      var defStep     = unitStep(p.unit);
+      var defQty      = defStep;
+      var minQty      = defStep;
+      var qtyRule     = '';
+      if (o.qty_type === 'MOQ') {
+        minQty = parseFloat(o.qty_value) || defStep; defQty = minQty;
+        qtyRule = 'Min ' + o.qty_value + ' ' + p.unit;
+      } else if (o.qty_type === 'SPQ') {
+        defQty  = parseFloat(o.qty_value) || defStep; minQty = defQty;
+        qtyRule = 'Packs of ' + o.qty_value + ' ' + p.unit;
+      }
+      var perSave = mktPrice > 0 ? mktPrice - custPrice : 0;
+
+      html += '<div style="border:1.5px solid #eef4ee;border-radius:14px;padding:14px;margin-bottom:12px' + (soldOut ? ';opacity:.65' : '') + '">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">';
+      html += '<div style="display:flex;gap:10px;align-items:center">';
+      html += '<div style="width:36px;height:36px;border-radius:50%;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">' + initial + '</div>';
+      html += '<div><div style="font-size:13px;font-weight:700;color:var(--forest)">' + (f.fname||'Farmer') + (f.lname ? ' ' + f.lname : '') + '</div>';
+      html += '<div style="font-size:10px;color:var(--gray)">' + (f.village_town||f.district||'') + '</div></div></div>';
+      html += '<div style="text-align:right">';
+      if (mktPrice > 0 && custPrice < mktPrice) html += '<div style="font-size:10px;color:var(--gray);text-decoration:line-through">₹' + mktPrice.toFixed(0) + '</div>';
+      html += '<div style="font-size:18px;font-weight:800;color:var(--leaf)">₹' + custPrice.toFixed(0) + '</div>';
+      html += '<div style="font-size:9px;color:var(--gray)">per ' + p.unit + '</div>';
+      html += '</div></div>';
+
+      html += '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">';
+      if (!soldOut) html += '<span style="font-size:9px;color:var(--gray);background:#f4f4f4;border-radius:4px;padding:2px 6px">' + o.qty_available + ' ' + p.unit + ' available</span>';
+      if (o.time_available) html += '<span style="font-size:9px;color:#7c3aed;background:#f5f0ff;border-radius:4px;padding:2px 6px">Order by ' + o.time_available + '</span>';
+      if (qtyRule) html += '<span style="font-size:9px;color:#c2620a;background:#fff7ed;border-radius:4px;padding:2px 6px">' + qtyRule + '</span>';
+      if (perSave > 0) html += '<span style="font-size:9px;color:#1a7a4a;font-weight:700;background:#e6f7ed;border-radius:4px;padding:2px 6px">Save ₹' + perSave.toFixed(0) + '/' + p.unit + '</span>';
+      if (o.bulk_qty && o.bulk_disc_pct) html += '<span style="font-size:9px;color:#1a7a4a;background:#e6f7ed;border-radius:4px;padding:2px 6px">Bulk ' + o.bulk_qty + '+ → ' + o.bulk_disc_pct + '% off</span>';
+      html += '</div>';
+
+      if (soldOut) {
+        html += '<div style="text-align:center;font-size:12px;color:#c0392b;font-weight:700;padding:8px;background:#fde8e8;border-radius:8px">Sold out from this farmer</div>';
+      } else {
+        html += '<div style="display:flex;align-items:center;gap:8px">';
+        html += '<button onclick="stepPdQty(' + k + ',-1)" style="width:34px;height:34px;border:1.5px solid #dde8dd;background:#fff;border-radius:9px;font-size:18px;font-weight:700;color:var(--leaf);cursor:pointer">−</button>';
+        html += '<input id="pd-qty-' + k + '" type="text" value="' + defQty + '" style="width:64px;border:1.5px solid #dde8dd;border-radius:9px;text-align:center;font-size:14px;font-weight:700;padding:8px;font-family:inherit">';
+        html += '<button onclick="stepPdQty(' + k + ',1)" style="width:34px;height:34px;border:1.5px solid #dde8dd;background:#fff;border-radius:9px;font-size:18px;font-weight:700;color:var(--leaf);cursor:pointer">+</button>';
+        html += '<span style="font-size:11px;color:var(--gray)">' + p.unit + '</span>';
+        html += '<button onclick="addToCartFromDetail(' + k + ')" style="margin-left:auto;background:var(--forest);color:#fff;border:none;border-radius:50px;padding:9px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Add</button>';
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+  }
+
+  document.getElementById('pdoBody').innerHTML = html;
+  document.getElementById('productDetailOverlay').classList.add('active');
+}
+
+function closeProductDetail() {
+  document.getElementById('productDetailOverlay').classList.remove('active');
+  _pdProduct = null; _pdOffers = [];
+}
+
+function stepPdQty(k, dir) {
+  var inp = document.getElementById('pd-qty-' + k);
+  if (!inp || !_pdProduct) return;
+  var o    = _pdOffers[k];
+  var step = (o.qty_type === 'SPQ') ? parseFloat(o.qty_value) : unitStep(_pdProduct.unit);
+  var v    = (parseFloat(inp.value) || 0) + dir * step;
+  var minV = (o.qty_type === 'MOQ') ? parseFloat(o.qty_value) : (o.qty_type === 'SPQ' ? parseFloat(o.qty_value) : unitStep(_pdProduct.unit));
+  if (v < minV) v = minV;
+  if (o.qty_available && v > o.qty_available) { v = o.qty_available; showToast('Only ' + o.qty_available + ' ' + _pdProduct.unit + ' available', 'er'); }
+  inp.value = Math.round(v * 100) / 100;
+}
+
+function addToCartFromDetail(k) {
+  var o = _pdOffers[k];
+  var p = _pdProduct;
+  if (!o || !p) return;
+  var inp = document.getElementById('pd-qty-' + k);
+  var qty = parseFloat(inp ? inp.value : 1);
+  if (isNaN(qty) || qty <= 0) { showToast('Enter a valid quantity', 'er'); return; }
+  if (!unitAllowsDecimal(p.unit) && qty % 1 !== 0) { showToast('Whole numbers only for ' + p.unit, 'er'); return; }
+  if (o.qty_type === 'MOQ' && qty < parseFloat(o.qty_value)) { showToast('Minimum order: ' + o.qty_value + ' ' + p.unit, 'er'); return; }
+  if (o.qty_type === 'SPQ' && Math.round(qty * 100) % Math.round(parseFloat(o.qty_value) * 100) !== 0) { showToast('Must be in packs of ' + o.qty_value + ' ' + p.unit, 'er'); return; }
+  if (qty > o.qty_available) { showToast('Only ' + o.qty_available + ' ' + p.unit + ' available', 'er'); return; }
+
+  var f          = o.farmer || {};
+  var dp         = p.district_price;
+  var handling   = dp ? parseFloat(dp.handling) : 0;
+  var feePct     = p.platform_fee_pct || 5;
+  var farmerPrice= parseFloat(o.farmer_price);
+  var price      = farmerPrice * (1 + feePct / 100) + handling;
+
+  var existing = _cart.find(function(i){ return i.product_id === p.id && i.farmer_id === (f.id||null); });
+  if (existing) {
+    existing.qty = qty;
+  } else {
+    _cart.push({
+      product_id:      p.id,
+      product_name:    p.name,
+      unit:            p.unit,
+      price:           price,
+      qty:             qty,
+      farmer_id:       f.id || null,
+      farmer_name:     (f.fname||'') + (f.lname ? ' ' + f.lname : ''),
+      listing_id:      o.id || null,
+      farmer_price_rs: farmerPrice,
+    });
+  }
+  saveCart();
+  updateCartBar();
+  closeProductDetail();
+
+  var mktPrice = dp ? parseFloat(dp.market_price) : 0;
+  var savAmt   = mktPrice > 0 ? Math.round((mktPrice - price) * qty) : 0;
+  if (savAmt > 0) showToast('Added — save ₹' + savAmt + ' vs market', 'ok');
+  else showToast('Added to cart', 'ok');
+  renderProducts();
+}
+
 function renderProducts() {
   var filtered = _allProducts.filter(function(p) {
     if (_activeGroup !== 'All' && p.product_group !== _activeGroup) return false;
@@ -382,6 +562,7 @@ function renderProducts() {
 
     html += '<div class="prod-card">';
     html += '<div class="prod-top">';
+    html += '<div style="width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#e8f5e9,#f1f8e9);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;margin-right:10px">' + getProductEmoji(p.name) + '</div>';
     html += '<div style="flex:1">';
     html += '<div class="prod-name">' + p.name + '</div>';
     if (p.regional_name) html += '<div style="font-size:11px;color:var(--leaf)">' + p.regional_name + '</div>';
@@ -436,7 +617,7 @@ function renderProducts() {
     } else if (!ws.open) {
       html += '<div style="text-align:right"><div style="font-size:10px;font-weight:700;color:#c0392b">🔒 Closed</div><div style="font-size:9px;color:var(--gray)">Opens 8 PM</div></div>';
     } else if (cartQty === 0) {
-      html += '<button class="sbtn" style="margin:0;padding:8px 18px;font-size:12px;width:auto" onclick="addToCart(\'' + p.id + '\')">Add +</button>';
+      html += '<button class="sbtn" style="margin:0;padding:8px 18px;font-size:12px;width:auto" onclick="openProductDetail(\'' + p.id + '\')">View →</button>';
     } else {
       html += '<div class="qty-ctrl">';
       html += '<button class="qty-btn" onclick="changeQty(\'' + p.id + '\',-1)">−</button>';
@@ -496,7 +677,8 @@ function addToCart(productId) {
 function changeQty(productId, delta) {
   var idx = _cart.findIndex(function(i) { return i.product_id === productId; });
   if (idx === -1) return;
-  _cart[idx].qty += delta;
+  var step = unitStep(_cart[idx].unit || 'pcs');
+  _cart[idx].qty = Math.round((_cart[idx].qty + delta * step) * 100) / 100;
   if (_cart[idx].qty <= 0) _cart.splice(idx, 1);
   saveCart();
   renderProducts();
@@ -546,18 +728,22 @@ async function renderCart() {
 
     html += '<div class="prod-card" style="padding:12px 14px;margin-bottom:10px">';
     html += '<div class="prod-top">';
+    html += '<div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#e8f5e9,#f1f8e9);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;margin-right:10px">' + getProductEmoji(item.product_name) + '</div>';
     html += '<div style="flex:1">';
     html += '<div style="font-weight:700;font-size:13px;color:var(--forest)">' + item.product_name + '</div>';
     if (item.farmer_name) html += '<div style="font-size:10px;color:var(--gray);margin-top:2px">from ' + item.farmer_name + '</div>';
     html += '<div style="font-size:11px;color:var(--gray);margin-top:2px">₹' + unitPrice.toFixed(0) + ' / ' + item.unit + '</div>';
+    var mktP2 = dp ? parseFloat(dp.market_price) : 0;
+    if (mktP2 > 0 && unitPrice < mktP2) html += '<div style="font-size:9px;color:#1a7a4a;font-weight:700;margin-top:2px">Save ₹' + Math.round((mktP2 - unitPrice) * item.qty) + ' vs market</div>';
     html += '</div>';
     html += '<div style="text-align:right">';
     html += '<div class="qty-ctrl" style="margin-bottom:4px">';
     html += '<button class="qty-btn" onclick="changeQtyCart(' + idx + ',-1)">−</button>';
-    html += '<span class="qty-num">' + item.qty + '</span>';
+    html += '<input id="cart-inp-' + idx + '" type="text" value="' + item.qty + '" oninput="changeQtyCartInput(' + idx + ',this.value)" style="width:42px;border:1.5px solid #dde8dd;border-radius:7px;text-align:center;font-size:12px;font-weight:700;padding:4px 2px;font-family:inherit">';
     html += '<button class="qty-btn" onclick="changeQtyCart(' + idx + ',1)">+</button>';
     html += '</div>';
     html += '<div style="font-weight:700;font-size:14px;color:var(--forest)">₹' + lineTotal.toFixed(0) + '</div>';
+    html += '<a style="font-size:10px;color:#c0392b;font-weight:700;cursor:pointer;text-decoration:underline;display:block;margin-top:3px" onclick="removeCartItem(' + idx + ')">Remove</a>';
     html += '</div></div>';
 
     // Per-item fee breakdown
@@ -626,8 +812,29 @@ async function renderCart() {
 }
 
 function changeQtyCart(idx, delta) {
-  _cart[idx].qty += delta;
+  if (idx < 0 || idx >= _cart.length) return;
+  var step = unitStep(_cart[idx].unit || 'pcs');
+  _cart[idx].qty = Math.round((_cart[idx].qty + delta * step) * 100) / 100;
   if (_cart[idx].qty <= 0) _cart.splice(idx, 1);
+  saveCart();
+  renderCart();
+  renderProducts();
+  updateCartBar();
+}
+
+function changeQtyCartInput(idx, val) {
+  if (idx < 0 || idx >= _cart.length) return;
+  var v = parseFloat(val);
+  if (!isNaN(v) && v > 0) {
+    if (!unitAllowsDecimal(_cart[idx].unit)) v = Math.round(v);
+    _cart[idx].qty = Math.round(v * 100) / 100;
+    saveCart();
+    updateCartBar();
+  }
+}
+
+function removeCartItem(idx) {
+  _cart.splice(idx, 1);
   saveCart();
   renderCart();
   renderProducts();
