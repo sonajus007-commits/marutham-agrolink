@@ -29,6 +29,18 @@ var API = {
   resetPassword: function(phone, otp, new_password) {
     return apiFetch('POST', '/auth/reset-password', { phone, otp, new_password });
   },
+  createStaff: function(data) {
+    return apiFetch('POST', '/auth/create-staff', data, tok());
+  },
+  getUsers: function() {
+    return apiFetch('GET', '/users', null, tok());
+  },
+  blockUser: function(id) {
+    return apiFetch('PATCH', '/users/' + id + '/block', {}, tok());
+  },
+  unblockUser: function(id) {
+    return apiFetch('PATCH', '/users/' + id + '/unblock', {}, tok());
+  },
   getMe: function() {
     return apiFetch('GET', '/auth/me', null, tok());
   },

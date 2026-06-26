@@ -277,6 +277,71 @@ router.post('/reset-password', async (req, res) => {
   res.json({ message: 'Password reset successfully. You can now login.' });
 });
 
+// ── POST /auth/create-staff ───────────────────────────────────────────────────
+// Admin creates a VCO / Delivery Agent / District Manager / Hub Incharge / RM / SH account
+const CREATABLE_BY = {
+  'Head Office':      ['VCO','Delivery Agent','District Manager','Hub Incharge','Regional Manager','State Head','Head Office'],
+  'State Head':       ['VCO','Delivery Agent','District Manager','Hub Incharge','Regional Manager'],
+  'Regional Manager': ['VCO','Delivery Agent','District Manager','Hub Incharge'],
+  'District Manager': ['VCO','Delivery Agent'],
+};
+
+router.post('/create-staff', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required.' });
+  }
+
+  const { fname, lname, phone, password, admin_role, district, state } = req.body;
+  if (!fname || !phone || !password || !admin_role) {
+    return res.status(400).json({ error: 'fname, phone, password, and admin_role are required.' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+  }
+
+  const allowed = CREATABLE_BY[req.user.admin_role] || [];
+  if (!allowed.includes(admin_role)) {
+    return res.status(403).json({ error: `Your role (${req.user.admin_role}) cannot create ${admin_role} accounts.` });
+  }
+
+  const { data: existing } = await supabase
+    .from('users')
+    .select('id')
+    .eq('phone', phone)
+    .maybeSingle();
+  if (existing) return res.status(409).json({ error: 'A user with this phone number already exists.' });
+
+  const password_hash = await bcrypt.hash(password, 12);
+  const login_id = await generateLoginId('admin', admin_role, state || req.user.state, district || req.user.district, fname);
+
+  const newUser = {
+    login_id, phone, password_hash,
+    role: 'admin', admin_role,
+    fname, lname: lname || '',
+    district: district || req.user.district,
+    state: state || req.user.state,
+    country: 'India',
+    country_code: '+91',
+  };
+
+  const { data: created, error } = await supabase
+    .from('users')
+    .insert(newUser)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('create-staff error:', error);
+    return res.status(500).json({ error: 'Could not create staff account.' });
+  }
+
+  res.status(201).json({
+    message: 'Staff account created.',
+    login_id: created.login_id,
+    user: safeUser(created),
+  });
+});
+
 // ── GET /me ───────────────────────────────────────────────────────────────────
 router.get('/me', requireAuth, async (req, res) => {
   const { data: user, error } = await supabase

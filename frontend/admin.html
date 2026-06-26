@@ -75,11 +75,69 @@
 
 <!-- ── USERS ──────────────────────────────────────────────────────────────── -->
 <div class="panel" id="panel-users">
-  <div class="fg" style="margin-bottom:12px">
-    <input class="fi" id="userSearch" type="text" placeholder="Search by name, phone, login ID…" oninput="filterUsers()">
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+    <input class="fi" id="userSearch" type="text" placeholder="Search by name, phone, login ID…" oninput="filterUsers()" style="flex:1;min-width:180px;margin:0">
+    <button class="add-prod-btn" onclick="openCreateStaff()">➕ Add Staff</button>
   </div>
   <div class="filt-row" id="userRoleFilter"></div>
   <div id="userListWrap"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- Create Staff Modal ──────────────────────────────────────────────────────── -->
+<div class="overlay" id="createStaffOverlay" style="display:none" onclick="if(event.target===this)closeCreateStaff()">
+  <div class="obox" style="max-width:460px">
+    <div class="ohdr">
+      <span class="otitle">➕ Add Staff Member</span>
+      <button class="cls" onclick="closeCreateStaff()">✕</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div class="tc2">
+        <div class="fg"><label class="fl">First Name <span class="rq">*</span></label>
+          <input class="fi" id="cs-fn" type="text" placeholder="First name"></div>
+        <div class="fg"><label class="fl">Last Name</label>
+          <input class="fi" id="cs-ln" type="text" placeholder="Last name"></div>
+      </div>
+      <div class="fg"><label class="fl">Phone <span class="rq">*</span></label>
+        <input class="fi" id="cs-ph" type="tel" placeholder="10-digit phone" maxlength="10" oninput="numOnly(this)"></div>
+      <div class="fg"><label class="fl">Role <span class="rq">*</span></label>
+        <select class="fi" id="cs-role">
+          <option value="">— Select role —</option>
+          <option value="VCO">VCO (Verification Officer)</option>
+          <option value="Delivery Agent">Delivery Agent</option>
+          <option value="District Manager">District Manager</option>
+          <option value="Hub Incharge">Hub Incharge</option>
+          <option value="Regional Manager">Regional Manager</option>
+          <option value="State Head">State Head</option>
+        </select></div>
+      <div class="tc2">
+        <div class="fg"><label class="fl">State <span class="rq">*</span></label>
+          <select class="fi" id="cs-st" onchange="updateCsDistrictList()">
+            <option value="Tamil Nadu">Tamil Nadu</option>
+            <option value="Karnataka">Karnataka</option>
+            <option value="Kerala">Kerala</option>
+            <option value="Andhra Pradesh">Andhra Pradesh</option>
+          </select></div>
+        <div class="fg"><label class="fl">District <span class="rq">*</span></label>
+          <select class="fi" id="cs-di"></select></div>
+      </div>
+      <div class="fg"><label class="fl">Temporary Password <span class="rq">*</span></label>
+        <div class="pww">
+          <input class="fi" id="cs-pw" type="password" placeholder="Min 6 characters">
+          <button class="peye" onclick="togglePw('cs-pw',this)" type="button">👁</button>
+        </div>
+        <div style="font-size:11px;color:var(--gray);margin-top:4px">Staff member should change this on first login.</div></div>
+      <div class="em" id="cs-err" style="display:none;margin:0"></div>
+      <div class="card" id="cs-success" style="display:none;background:#f0fdf4;border-left:4px solid #16a34a;padding:14px;margin:0">
+        <div style="font-weight:700;color:#166534;margin-bottom:4px">Account created!</div>
+        <div style="font-size:13px;color:#166534">Login ID: <span class="mono" id="cs-lid" style="font-weight:700"></span></div>
+        <div style="font-size:12px;color:#64748b;margin-top:6px">Share these login credentials with the staff member.</div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="sbtn" style="background:var(--muted);color:var(--text);flex:0;padding:0 20px" onclick="closeCreateStaff()">Cancel</button>
+        <button class="sbtn" id="cs-btn" onclick="submitCreateStaff()" style="flex:0;padding:0 24px">Create Account</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ── PAYOUTS ────────────────────────────────────────────────────────────── -->
@@ -1146,8 +1204,7 @@ async function renderUsers() {
   var el = document.getElementById('userListWrap');
   el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
   try {
-    // Admin users endpoint returns users in admin's district scope
-    var res = await apiFetch('GET', '/users', null, getToken());
+    var res = await API.getUsers();
     _allUsers = res.users || [];
     renderUserTable();
   } catch(e) {
@@ -1196,9 +1253,10 @@ function renderUserTable() {
     html += '<td class="mono">' + u.phone + '</td>';
     html += '<td><span class="rbadge ' + roleClass + '">' + (u.admin_role || u.role) + '</span></td>';
     html += '<td>' + (u.district||'—') + '</td>';
-    html += '<td><span class="sbadge ' + (u.blocked ? 's-blk' : 's-act') + '">' + (u.blocked ? 'Blocked' : 'Active') + '</span></td>';
-    html += '<td><button class="blkbtn ' + (u.blocked ? 'b-unb' : 'b-blk') + '" onclick="toggleBlock(\'' + u.id + '\',' + !!u.blocked + ')">';
-    html += (u.blocked ? 'Unblock' : 'Block') + '</button></td>';
+    var isBlocked = u.status === 'blocked';
+    html += '<td><span class="sbadge ' + (isBlocked ? 's-blk' : 's-act') + '">' + (isBlocked ? 'Blocked' : 'Active') + '</span></td>';
+    html += '<td><button class="blkbtn ' + (isBlocked ? 'b-unb' : 'b-blk') + '" onclick="toggleBlock(\'' + u.id + '\',' + isBlocked + ')">';
+    html += (isBlocked ? 'Unblock' : 'Block') + '</button></td>';
     html += '</tr>';
   });
   html += '</tbody></table></div>';
@@ -1209,10 +1267,85 @@ async function toggleBlock(userId, currentlyBlocked) {
   var action = currentlyBlocked ? 'unblock' : 'block';
   if (!confirm(action.charAt(0).toUpperCase() + action.slice(1) + ' this user?')) return;
   try {
-    await apiFetch('PATCH', '/users/' + userId + '/' + action, {}, getToken());
+    if (currentlyBlocked) await API.unblockUser(userId);
+    else await API.blockUser(userId);
     showToast('User ' + action + 'ed.', 'ok');
     renderUsers();
   } catch(e) { showToast(e.message, 'er'); }
+}
+
+// ── CREATE STAFF ──────────────────────────────────────────────────────────────
+function openCreateStaff() {
+  document.getElementById('cs-fn').value = '';
+  document.getElementById('cs-ln').value = '';
+  document.getElementById('cs-ph').value = '';
+  document.getElementById('cs-role').value = '';
+  document.getElementById('cs-pw').value = '';
+  document.getElementById('cs-err').style.display = 'none';
+  document.getElementById('cs-success').style.display = 'none';
+  document.getElementById('cs-btn').disabled = false;
+  document.getElementById('cs-btn').textContent = 'Create Account';
+  // Pre-select admin's own state/district
+  document.getElementById('cs-st').value = user.state || 'Tamil Nadu';
+  updateCsDistrictList();
+  if (user.district) document.getElementById('cs-di').value = user.district;
+  document.getElementById('createStaffOverlay').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('cs-fn').focus(); }, 80);
+}
+
+function closeCreateStaff() {
+  document.getElementById('createStaffOverlay').style.display = 'none';
+}
+
+function updateCsDistrictList() {
+  var state = document.getElementById('cs-st').value;
+  var dists = _stateDistricts[state] || [];
+  document.getElementById('cs-di').innerHTML = dists.map(function(d){
+    return '<option value="' + d + '">' + d + '</option>';
+  }).join('');
+}
+
+async function submitCreateStaff() {
+  var fn   = document.getElementById('cs-fn').value.trim();
+  var ln   = document.getElementById('cs-ln').value.trim();
+  var ph   = document.getElementById('cs-ph').value.trim();
+  var role = document.getElementById('cs-role').value;
+  var st   = document.getElementById('cs-st').value;
+  var di   = document.getElementById('cs-di').value;
+  var pw   = document.getElementById('cs-pw').value;
+
+  var errEl = document.getElementById('cs-err');
+  errEl.style.display = 'none';
+  if (!fn) { errEl.textContent = 'First name is required.'; errEl.style.display = 'block'; return; }
+  if (!/^\d{10}$/.test(ph)) { errEl.textContent = 'Enter a valid 10-digit phone number.'; errEl.style.display = 'block'; return; }
+  if (!role) { errEl.textContent = 'Select a role.'; errEl.style.display = 'block'; return; }
+  if (pw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
+
+  var btn = document.getElementById('cs-btn');
+  btn.disabled = true; btn.textContent = 'Creating…';
+
+  try {
+    var res = await API.createStaff({ fname: fn, lname: ln, phone: ph, password: pw, admin_role: role, state: st, district: di });
+    document.getElementById('cs-lid').textContent = res.login_id;
+    document.getElementById('cs-success').style.display = 'block';
+    btn.textContent = 'Add Another';
+    btn.disabled = false;
+    btn.onclick = function() {
+      document.getElementById('cs-success').style.display = 'none';
+      document.getElementById('cs-fn').value = '';
+      document.getElementById('cs-ph').value = '';
+      document.getElementById('cs-pw').value = '';
+      btn.textContent = 'Create Account';
+      btn.onclick = submitCreateStaff;
+      document.getElementById('cs-fn').focus();
+    };
+    showToast(role + ' account created: ' + res.login_id, 'ok');
+    renderUsers(); // refresh the list in background
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Create Account';
+  }
 }
 
 // ── PAYOUTS ───────────────────────────────────────────────────────────────────
