@@ -111,8 +111,11 @@ var API = {
   },
 
   // ── Ratings ───────────────────────────────────────────────────────────────
-  rateOrder: function(orderId, ratings) {
-    return apiFetch('POST', '/orders/' + orderId + '/rate', { ratings }, tok());
+  rateItem: function(orderId, itemId, ratingValue) {
+    return apiFetch('POST', '/orders/' + orderId + '/items/' + itemId + '/rate', { rating_value: ratingValue }, tok());
+  },
+  getTopRatings: function() {
+    return apiFetch('GET', '/ratings/top', null, tok());
   },
 
   // ── Dashboard ─────────────────────────────────────────────────────────────

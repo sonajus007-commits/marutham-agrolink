@@ -148,6 +148,23 @@
   <div class="overlay-body" id="pdoBody"></div>
 </div>
 
+<!-- ══════ RETURN MODAL ══════ -->
+<div class="modal-bg" id="returnModal">
+  <div class="modal" style="max-height:80vh;overflow-y:auto">
+    <h3>Return Request</h3>
+    <p style="font-size:12px;color:var(--gray);margin-bottom:14px">Returns must be requested within 24 hours of delivery.</p>
+    <div id="returnItemList"></div>
+    <div class="fg" style="margin-top:12px">
+      <label class="fl">Reason <span class="op">(required)</span></label>
+      <textarea class="fi" id="returnReason" placeholder="Damaged, wrong item, quality issue…" rows="3"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-danger" onclick="submitReturn()">Submit Return</button>
+      <button class="btn-outline" onclick="closeReturnModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════ CANCEL MODAL ══════ -->
 <div class="modal-bg" id="cancelModal">
   <div class="modal">
@@ -182,6 +199,8 @@ var _cart            = JSON.parse(localStorage.getItem('ma_cart') || '[]');
 var _allProducts     = [];
 var _offersByProduct = {};   // product_id → [listing, ...]
 var _cancelOrderId = null;
+var _returnOrderId = null;
+var _returnItems   = [];
 
 // ── Tab management ────────────────────────────────────────────────────────────
 function openTab(name, tabEl) {
@@ -947,9 +966,29 @@ async function openOrderDetail(orderId) {
 
     // Items
     html += '<div class="card"><h3>🌿 Items</h3>';
+    var isDelivered = (o.status === 'Delivered');
     items.forEach(function(item) {
-      html += '<div class="irow"><span class="ilbl">' + item.name + '<br><span style="font-size:10px;color:var(--gray)">' + item.qty + ' ' + item.unit + ' × ' + fmt(item.price) + '</span></span>';
-      html += '<span class="ival">' + fmt(parseFloat(item.price) * item.qty) + '</span></div>';
+      html += '<div style="padding:10px 0;border-bottom:1px solid #f0f0f0">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+      html += '<span style="font-size:13px;font-weight:700;color:var(--forest)">' + getProductEmoji(item.name) + ' ' + item.name + '</span>';
+      html += '<span style="font-size:13px;font-weight:700">' + fmt(parseFloat(item.price) * item.qty) + '</span>';
+      html += '</div>';
+      html += '<div style="font-size:10px;color:var(--gray);margin-top:2px">' + item.qty + ' ' + item.unit + ' × ' + fmt(item.price) + (item.farmer_name ? ' · from ' + item.farmer_name : '') + '</div>';
+      if (isDelivered) {
+        if (item.rated) {
+          var stars = '';
+          for (var s = 1; s <= 5; s++) stars += s <= item.rating_value ? '★' : '☆';
+          html += '<div style="margin-top:6px;font-size:14px;color:#f4a261">' + stars + '</div>';
+        } else {
+          html += '<div style="margin-top:6px;display:flex;gap:4px;align-items:center">';
+          html += '<span style="font-size:10px;color:var(--gray)">Rate:</span>';
+          for (var r = 1; r <= 5; r++) {
+            html += '<button onclick="rateItem(\'' + o.id + '\',\'' + item.id + '\',' + r + ',this)" style="background:none;border:none;cursor:pointer;font-size:20px;padding:2px;color:#ccc;line-height:1">☆</button>';
+          }
+          html += '</div>';
+        }
+      }
+      html += '</div>';
     });
     html += '</div>';
 
@@ -961,6 +1000,16 @@ async function openOrderDetail(orderId) {
     html += '<div class="irow"><span class="ilbl" style="font-weight:700">Total</span><span class="ival" style="font-size:15px;color:var(--forest)">' + fmt(o.total) + '</span></div>';
     if (o.saved && parseFloat(o.saved) > 0) html += '<div class="irow"><span class="ilbl" style="color:var(--green)">💚 You Saved</span><span class="ival" style="color:var(--green)">' + fmt(o.saved) + '</span></div>';
     html += '</div>';
+
+    // Return request button (within 24h of delivery, no prior return)
+    if (o.status === 'Delivered' && o.delivered_at && !o.return_id) {
+      var delivHours = (Date.now() - new Date(o.delivered_at).getTime()) / 36e5;
+      if (delivHours < 24) {
+        var itemsJson = JSON.stringify(items).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        html += '<button class="req-change-btn" style="width:100%;margin-bottom:12px;padding:12px;font-size:13px;background:#fde8e8;color:#c0392b;border-color:#f5c6c6" onclick="openReturnModal(\'' + o.id + '\',\'' + itemsJson + '\')">';
+        html += '↩ Request Return / Refund</button>';
+      }
+    }
 
     // Timeline
     if (hist.length > 0) {
@@ -984,6 +1033,70 @@ async function openOrderDetail(orderId) {
 
 function closeOrderOverlay() {
   document.getElementById('orderOverlay').classList.remove('active');
+}
+
+// ── RATINGS ───────────────────────────────────────────────────────────────────
+async function rateItem(orderId, itemId, stars, btn) {
+  var row = btn.parentElement;
+  row.querySelectorAll('button').forEach(function(b, i) { b.textContent = i < stars ? '★' : '☆'; b.style.color = i < stars ? '#f4a261' : '#ccc'; });
+  try {
+    await API.rateItem(orderId, itemId, stars);
+    row.querySelectorAll('button').forEach(function(b) { b.disabled = true; b.style.cursor = 'default'; });
+    var lbl = row.querySelector('span');
+    if (lbl) lbl.textContent = 'Rated:';
+    showToast('Thanks for your rating!', 'ok');
+  } catch(e) {
+    showToast(e.message, 'er');
+  }
+}
+
+// ── RETURNS ───────────────────────────────────────────────────────────────────
+function openReturnModal(orderId, itemsJson) {
+  _returnOrderId = orderId;
+  _returnItems   = typeof itemsJson === 'string' ? JSON.parse(itemsJson.replace(/&quot;/g, '"')) : itemsJson;
+  document.getElementById('returnReason').value = '';
+
+  var html = '<div style="font-size:12px;font-weight:700;color:var(--forest);margin-bottom:8px">Select items to return:</div>';
+  _returnItems.forEach(function(item, idx) {
+    html += '<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0;cursor:pointer">';
+    html += '<input type="checkbox" id="ret-item-' + idx + '" value="' + idx + '" style="width:16px;height:16px;accent-color:var(--forest)">';
+    html += '<span style="font-size:13px">' + getProductEmoji(item.name) + ' ' + item.name + '</span>';
+    html += '<span style="margin-left:auto;font-size:12px;color:var(--gray)">' + item.qty + ' ' + item.unit + '</span>';
+    html += '</label>';
+  });
+  document.getElementById('returnItemList').innerHTML = html;
+  document.getElementById('returnModal').classList.add('active');
+}
+
+function closeReturnModal() {
+  document.getElementById('returnModal').classList.remove('active');
+  _returnOrderId = null;
+  _returnItems   = [];
+}
+
+async function submitReturn() {
+  if (!_returnOrderId) return;
+  var reason = document.getElementById('returnReason').value.trim();
+  if (!reason) { showToast('Please enter a reason', 'er'); return; }
+
+  var lines = [];
+  _returnItems.forEach(function(item, idx) {
+    if (document.getElementById('ret-item-' + idx) && document.getElementById('ret-item-' + idx).checked) {
+      lines.push({ product_code: item.product_code || '', name: item.name, farmer_name: item.farmer_name || '', qty: item.qty, unit: item.unit, price: item.price, reason: reason });
+    }
+  });
+  var fullReturn = lines.length === _returnItems.length;
+  if (lines.length === 0) { showToast('Select at least one item', 'er'); return; }
+
+  try {
+    var res = await API.requestReturn(_returnOrderId, { full_return: fullReturn, lines: lines });
+    closeReturnModal();
+    closeOrderOverlay();
+    showToast('Return ' + res.code + ' submitted!', 'ok');
+    renderOrders();
+  } catch(e) {
+    showToast(e.message, 'er');
+  }
 }
 
 // ── CANCEL ────────────────────────────────────────────────────────────────────

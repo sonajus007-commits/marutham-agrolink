@@ -35,6 +35,7 @@
   <button class="ptab"    id="tab-products"  onclick="openTab('products',this)">🌾 Products</button>
   <button class="ptab"    id="tab-orders"    onclick="openTab('orders',this)">📦 Orders</button>
   <button class="ptab"    id="tab-users"     onclick="openTab('users',this)">👥 Users</button>
+  <button class="ptab"    id="tab-returns"   onclick="openTab('returns',this)">↩ Returns</button>
   <button class="ptab"    id="tab-profile"   onclick="openTab('profile',this)">👤 My Profile</button>
 </div>
 
@@ -75,6 +76,12 @@
   </div>
   <div class="filt-row" id="userRoleFilter"></div>
   <div id="userListWrap"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- ── RETURNS ────────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-returns">
+  <div class="filt-row" id="returnFilterBar"></div>
+  <div id="returnListWrap"><div class="spinner"><div class="spin"></div></div></div>
 </div>
 
 <!-- ── PROFILE ────────────────────────────────────────────────────────────── -->
@@ -273,6 +280,7 @@ function openTab(name, tabEl) {
   if (name === 'products') renderProducts();
   if (name === 'orders')   renderAdminOrders();
   if (name === 'users')    renderUsers();
+  if (name === 'returns')  renderReturns();
   if (name === 'profile')  renderProfile();
 }
 
@@ -1062,6 +1070,103 @@ async function toggleBlock(userId, currentlyBlocked) {
     await apiFetch('PATCH', '/users/' + userId + '/' + action, {}, getToken());
     showToast('User ' + action + 'ed.', 'ok');
     renderUsers();
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+// ── RETURNS ───────────────────────────────────────────────────────────────────
+var _allReturns      = [];
+var _activeRetFilter = 'All';
+var _retFilters      = ['All','Pending','Accepted','Rejected','Collected'];
+
+function renderReturnFilterBar() {
+  var html = '';
+  _retFilters.forEach(function(f) {
+    html += '<button class="chip' + (f === _activeRetFilter ? ' on' : '') + '" onclick="setRetFilter(\'' + f + '\')">' + f + '</button>';
+  });
+  document.getElementById('returnFilterBar').innerHTML = html;
+}
+
+function setRetFilter(f) {
+  _activeRetFilter = f;
+  renderReturnFilterBar();
+  renderReturnList();
+}
+
+async function renderReturns() {
+  var el = document.getElementById('returnListWrap');
+  el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res = await API.getReturns();
+    _allReturns = res.returns || [];
+    renderReturnFilterBar();
+    renderReturnList();
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+function renderReturnList() {
+  var list = _allReturns;
+  if (_activeRetFilter === 'Pending')   list = list.filter(function(r){ return !r.decision; });
+  if (_activeRetFilter === 'Accepted')  list = list.filter(function(r){ return r.decision === 'accepted' && !r.collected; });
+  if (_activeRetFilter === 'Rejected')  list = list.filter(function(r){ return r.decision === 'rejected'; });
+  if (_activeRetFilter === 'Collected') list = list.filter(function(r){ return r.collected; });
+
+  var el = document.getElementById('returnListWrap');
+  if (list.length === 0) {
+    el.innerHTML = '<div class="empty-state"><p>No returns in this category.</p></div>'; return;
+  }
+
+  var html = '';
+  list.forEach(function(r) {
+    var ord    = r.order || {};
+    var status = r.collected ? 'Collected' : (r.decision || 'Pending');
+    var bgMap  = { Pending:'#fff8e6', accepted:'#f0faf4', rejected:'#fde8e8', Collected:'#eff6ff' };
+    var colMap = { Pending:'#92400e', accepted:'#1a7a4a', rejected:'#c0392b', Collected:'#1d4ed8' };
+    var bg     = bgMap[status] || '#f8fdf8';
+    var col    = colMap[status] || '#374151';
+
+    html += '<div class="prod-card" style="margin-bottom:12px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">';
+    html += '<div>';
+    html += '<div class="mono" style="font-size:12px;font-weight:700;color:var(--forest)">' + r.code + '</div>';
+    html += '<div style="font-size:11px;color:var(--gray);margin-top:2px">Order: <span class="mono">' + (ord.code || ord.id || '—') + '</span> · ' + (ord.consumer_name || '—') + '</div>';
+    html += '<div style="font-size:10px;color:var(--gray);margin-top:1px">' + (ord.village || '') + (ord.district ? ', ' + ord.district : '') + '</div>';
+    html += '</div>';
+    html += '<span style="padding:4px 10px;border-radius:50px;font-size:10px;font-weight:800;background:' + bg + ';color:' + col + '">' + status.charAt(0).toUpperCase() + status.slice(1) + '</span>';
+    html += '</div>';
+
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+    html += '<div style="font-size:12px;color:var(--gray)">' + (r.full_return ? 'Full return' : 'Partial return') + ' · Refund: <strong>₹' + parseFloat(r.refund_amt || 0).toFixed(0) + '</strong></div>';
+    html += '<div style="font-size:10px;color:var(--gray)">' + fmtDate(r.requested_at) + '</div>';
+    html += '</div>';
+
+    if (!r.decision) {
+      html += '<div style="display:flex;gap:8px">';
+      html += '<button class="sbtn" style="flex:1;background:#f0faf4;color:#1a7a4a;border:1.5px solid #c3e6cb;margin:0;padding:9px" onclick="decideReturn(\'' + r.id + '\',\'accepted\')">✓ Accept</button>';
+      html += '<button class="sbtn" style="flex:1;background:#fde8e8;color:#c0392b;border:1.5px solid #f5c6c6;margin:0;padding:9px" onclick="decideReturn(\'' + r.id + '\',\'rejected\')">✗ Reject</button>';
+      html += '</div>';
+    } else if (r.decision === 'accepted' && !r.collected) {
+      html += '<button class="sbtn" style="width:100%;margin:0;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;padding:9px" onclick="collectReturn(\'' + r.id + '\')">📦 Mark Collected</button>';
+    }
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+async function decideReturn(id, decision) {
+  try {
+    await API.decideReturn(id, decision);
+    showToast('Return ' + decision + '.', 'ok');
+    renderReturns();
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function collectReturn(id) {
+  try {
+    await API.collectReturn(id);
+    showToast('Return marked as collected. Refund triggered.', 'ok');
+    renderReturns();
   } catch(e) { showToast(e.message, 'er'); }
 }
 
