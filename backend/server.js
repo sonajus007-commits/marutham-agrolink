@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path    = require('path');
 const express = require('express');
 const cors    = require('cors');
 const { convertTimestamps } = require('./utils/time');
@@ -54,6 +55,9 @@ app.patch('/me', require('./middleware/auth').requireAuth, (req, res) => res.red
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
+// ── Frontend (served from same origin — works in dev and production) ──────────
+app.use(express.static(path.join(__dirname, '../frontend')));
 
 // ── 404 fallback ──────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Endpoint not found.' }));
