@@ -154,13 +154,14 @@ router.post('/login', async (req, res) => {
   const { phone, password } = req.body;
 
   if (!phone || !password) {
-    return res.status(400).json({ error: 'phone and password are required.' });
+    return res.status(400).json({ error: 'Phone/Login ID and password are required.' });
   }
 
+  // Accept either phone number or login_id in the phone field
   const { data: user, error } = await supabase
     .from('users')
     .select('*')
-    .eq('phone', phone)
+    .or(`phone.eq.${phone},login_id.eq.${phone}`)
     .maybeSingle();
 
   if (error || !user) {
@@ -241,6 +242,39 @@ router.post('/verify-otp', async (req, res) => {
     token,
     user: safeUser(user),
   });
+});
+
+// ── POST /auth/reset-password ────────────────────────────────────────────────
+// Body: { phone, otp, new_password }
+// Uses the same OTP previously sent via /send-otp
+router.post('/reset-password', async (req, res) => {
+  const { phone, otp, new_password } = req.body;
+  if (!phone || !otp || !new_password) {
+    return res.status(400).json({ error: 'phone, otp, and new_password are required.' });
+  }
+  if (new_password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+  }
+
+  const record = otpStore.get(phone);
+  if (!record) return res.status(400).json({ error: 'No OTP was sent to this number. Request one first.' });
+  if (Date.now() > record.expiresAt) {
+    otpStore.delete(phone);
+    return res.status(400).json({ error: 'OTP has expired. Request a new one.' });
+  }
+  if (record.otp !== otp) return res.status(400).json({ error: 'Incorrect OTP.' });
+
+  otpStore.delete(phone);
+
+  const password_hash = await bcrypt.hash(new_password, 12);
+  const { error } = await supabase
+    .from('users')
+    .update({ password_hash, updated_at: new Date().toISOString() })
+    .eq('phone', phone);
+
+  if (error) return res.status(500).json({ error: 'Could not reset password.' });
+
+  res.json({ message: 'Password reset successfully. You can now login.' });
 });
 
 // ── GET /me ───────────────────────────────────────────────────────────────────

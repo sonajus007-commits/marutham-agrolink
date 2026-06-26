@@ -42,9 +42,9 @@
       </div>
 
       <div class="fg">
-        <label class="fl">Phone Number <span class="rq">*</span></label>
-        <input class="fi" id="l-phone" type="tel" placeholder="10-digit phone number" maxlength="10" oninput="numOnly(this)">
-        <div class="em" id="l-phone-e">Enter your phone number</div>
+        <label class="fl">Phone Number or Login ID <span class="rq">*</span></label>
+        <input class="fi" id="l-phone" type="text" placeholder="9876543210 or CNTNPDK_KAVA01" autocomplete="username">
+        <div class="em" id="l-phone-e">Enter your phone number or Login ID</div>
       </div>
 
       <div id="lm-pw-fields">
@@ -60,9 +60,10 @@
       </div>
 
       <div id="lm-otp-fields" style="display:none">
+        <div style="font-size:11px;color:var(--gray);margin-bottom:8px">OTP login requires a phone number (10 digits)</div>
         <div class="fg">
           <div class="otprow">
-            <input class="fi" id="l-otp" type="text" placeholder="Enter OTP" maxlength="6" oninput="numOnly(this)">
+            <input class="fi" id="l-otp" type="text" placeholder="6-digit OTP" maxlength="6" oninput="numOnly(this)">
             <button class="otpbtn" id="l-sotpb" onclick="sendLoginOTP()">Send OTP</button>
           </div>
           <div class="otptmr" id="l-otpt"></div>
@@ -92,7 +93,7 @@
       <div class="fg" id="fp-otp-fg" style="display:none">
         <div class="otprow">
           <input class="fi" id="fp-otp" type="text" placeholder="Enter OTP" maxlength="6" oninput="numOnly(this)">
-          <button class="otpbtn" id="fp-sotpb" onclick="doForgotStep()">Send OTP</button>
+          <button class="otpbtn" id="fp-sotpb" onclick="resendForgotOTP()">Resend OTP</button>
         </div>
         <div class="otptmr" id="fp-otpt"></div>
       </div>
@@ -156,21 +157,14 @@
             <input class="fi" id="c-cy" type="text" placeholder="City">
             <div class="em" id="c-cy-e">Required</div></div>
           <div class="fg"><label class="fl">District <span class="rq">*</span></label>
-            <select class="fi" id="c-di">
-              <option value="Pudukkottai" selected>Pudukkottai</option>
-              <option value="Tiruchirappalli">Tiruchirappalli</option>
-              <option value="Thanjavur">Thanjavur</option>
-              <option value="Madurai">Madurai</option>
-              <option value="Sivaganga">Sivaganga</option>
-              <option value="Chennai">Chennai</option>
-            </select></div>
+            <select class="fi" id="c-di"></select></div>
         </div>
         <div class="tc2">
           <div class="fg"><label class="fl">Pincode <span class="rq">*</span></label>
             <input class="fi" id="c-pn" type="text" placeholder="6-digit PIN" maxlength="6" oninput="numOnly(this)">
             <div class="em" id="c-pn-e">Enter 6-digit pincode</div></div>
           <div class="fg"><label class="fl">State <span class="rq">*</span></label>
-            <select class="fi" id="c-st">
+            <select class="fi" id="c-st" onchange="updateDistricts('c')">
               <option value="Tamil Nadu" selected>Tamil Nadu</option>
               <option value="Karnataka">Karnataka</option>
               <option value="Kerala">Kerala</option>
@@ -237,22 +231,18 @@
             <input class="fi" id="f-cy" type="text" placeholder="City">
             <div class="em" id="f-cy-e">Required</div></div>
           <div class="fg"><label class="fl">District <span class="rq">*</span></label>
-            <select class="fi" id="f-di">
-              <option value="Pudukkottai" selected>Pudukkottai</option>
-              <option value="Tiruchirappalli">Tiruchirappalli</option>
-              <option value="Thanjavur">Thanjavur</option>
-              <option value="Madurai">Madurai</option>
-            </select></div>
+            <select class="fi" id="f-di"></select></div>
         </div>
         <div class="tc2">
           <div class="fg"><label class="fl">Pincode <span class="rq">*</span></label>
             <input class="fi" id="f-pn" type="text" placeholder="6-digit PIN" maxlength="6" oninput="numOnly(this)">
             <div class="em" id="f-pn-e">Enter 6-digit pincode</div></div>
           <div class="fg"><label class="fl">State <span class="rq">*</span></label>
-            <select class="fi" id="f-st">
+            <select class="fi" id="f-st" onchange="updateDistricts('f')">
               <option value="Tamil Nadu" selected>Tamil Nadu</option>
               <option value="Karnataka">Karnataka</option>
               <option value="Kerala">Kerala</option>
+              <option value="Andhra Pradesh">Andhra Pradesh</option>
             </select></div>
         </div>
         <div class="fsec">Bank & KYC Details</div>
@@ -333,7 +323,6 @@
 <script src="js/shared.js"></script>
 <script src="js/api.js"></script>
 <script>
-// ── State ─────────────────────────────────────────────────────────────────────
 registerPwRules('c-pw',  ['c-r1','c-r2','c-r3','c-r4']);
 registerPwRules('f-pw',  ['f-r1','f-r2','f-r3','f-r4']);
 registerPwRules('fp-np', ['fp-r1','fp-r2','fp-r3','fp-r4']);
@@ -342,14 +331,30 @@ var aRole       = 'consumer';
 var aTab        = 'login';
 var loginMethod = 'pw';
 var forgotStep  = 1;
-var _otpStore   = {};
 var _otpTimers  = {};
-var _pendingUser = null; // set after register before redirect
+var _pendingUser = null;
+
+var _stateDistricts = {
+  'Tamil Nadu':     ['Pudukkottai','Tiruchirappalli','Thanjavur','Madurai','Chennai','Coimbatore','Salem','Tirunelveli','Sivaganga','Dindigul','Namakkal','Erode','Vellore','Tiruppur'],
+  'Karnataka':      ['Bengaluru','Mysuru','Hubli','Mangaluru','Belagavi','Ballari','Tumkur','Shivamogga'],
+  'Kerala':         ['Thiruvananthapuram','Kochi','Kozhikode','Thrissur','Kannur','Kollam','Palakkad'],
+  'Andhra Pradesh': ['Vijayawada','Visakhapatnam','Guntur','Nellore','Kurnool','Tirupati'],
+};
+
+function updateDistricts(prefix) {
+  var state = document.getElementById(prefix + '-st').value;
+  var dists = _stateDistricts[state] || [];
+  var sel   = document.getElementById(prefix + '-di');
+  sel.innerHTML = dists.map(function(d){ return '<option value="' + d + '">' + d + '</option>'; }).join('');
+}
 
 // Redirect if already logged in
 (function() {
   var u = getUser();
   if (u && getToken()) redirectUser(u);
+  // Populate district dropdowns on load
+  updateDistricts('c');
+  updateDistricts('f');
 })();
 
 // ── Tab / role UI ─────────────────────────────────────────────────────────────
@@ -380,92 +385,144 @@ function setLoginMethod(m) {
 function showForgot() {
   document.getElementById('fLogin').style.display  = 'none';
   document.getElementById('fForgot').style.display = 'block';
-  forgotStep = 1;
+  document.getElementById('fp-ph').value  = '';
+  document.getElementById('fp-otp').value = '';
+  document.getElementById('fp-np').value  = '';
   document.getElementById('fp-otp-fg').style.display = 'none';
   document.getElementById('fp-np-fg').style.display  = 'none';
   document.getElementById('fp-btn').textContent = 'Send OTP to Phone';
+  forgotStep = 1;
 }
 function showLogin() {
   document.getElementById('fForgot').style.display = 'none';
   document.getElementById('fLogin').style.display  = 'block';
 }
 
-// ── OTP (mock — backend OTP not wired yet) ────────────────────────────────────
-function sendLoginOTP() {
-  var ph = document.getElementById('l-phone').value.trim();
-  if (!/^\d{10}$/.test(ph)) { showToast('Enter your 10-digit phone number first', 'er'); return; }
-  var otp = String(Math.floor(100000 + Math.random() * 900000));
-  _otpStore['l-otp'] = otp;
-  showToast('Demo OTP: ' + otp, 'nfo');
-  startOtpTimer('l-sotpb', 'l-otpt');
-}
-function startOtpTimer(btnId, timerId) {
+// ── OTP timer ─────────────────────────────────────────────────────────────────
+function startOtpTimer(btnId, timerId, resetLabel) {
   var btn = document.getElementById(btnId), tmr = document.getElementById(timerId);
   btn.disabled = true; tmr.classList.add('on');
   var sec = 30; tmr.textContent = 'Resend in ' + sec + 's';
   if (_otpTimers[btnId]) clearInterval(_otpTimers[btnId]);
   _otpTimers[btnId] = setInterval(function() {
     sec--;
-    if (sec <= 0) { clearInterval(_otpTimers[btnId]); btn.disabled = false; tmr.textContent = 'Resend OTP'; }
+    if (sec <= 0) { clearInterval(_otpTimers[btnId]); btn.disabled = false; btn.textContent = resetLabel || 'Resend OTP'; tmr.textContent = ''; tmr.classList.remove('on'); }
     else tmr.textContent = 'Resend in ' + sec + 's';
   }, 1000);
 }
 
+// ── OTP login ─────────────────────────────────────────────────────────────────
+async function sendLoginOTP() {
+  var ph = document.getElementById('l-phone').value.trim();
+  if (!/^\d{10}$/.test(ph)) { showToast('Enter your 10-digit phone number first', 'er'); return; }
+  var btn = document.getElementById('l-sotpb');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    var res = await API.sendOtp(ph);
+    if (res.otp) showToast('Sandbox OTP: ' + res.otp, 'nfo');
+    else showToast('OTP sent to +91 ' + ph, 'ok');
+    startOtpTimer('l-sotpb', 'l-otpt', 'Resend OTP');
+  } catch(e) {
+    showToast(e.message, 'er');
+    btn.disabled = false; btn.textContent = 'Send OTP';
+  }
+}
+
 // ── Forgot password ───────────────────────────────────────────────────────────
-function doForgotStep() {
+async function doForgotStep() {
+  var btn = document.getElementById('fp-btn');
   if (forgotStep === 1) {
     var ph = document.getElementById('fp-ph').value.trim();
     if (!/^\d{10}$/.test(ph)) { showErr('fp-ph-e', 'Enter registered phone number'); return; }
     hideErr('fp-ph-e');
-    var otp = String(Math.floor(100000 + Math.random() * 900000));
-    _otpStore['fp-otp'] = otp;
-    showToast('Demo OTP sent: ' + otp, 'nfo');
-    document.getElementById('fp-otp-fg').style.display = 'block';
-    document.getElementById('fp-btn').textContent = 'Verify OTP';
-    forgotStep = 2;
+    btn.disabled = true; btn.textContent = 'Sending OTP…';
+    try {
+      var res = await API.sendOtp(ph);
+      if (res.otp) showToast('Sandbox OTP: ' + res.otp, 'nfo');
+      else showToast('OTP sent to +91 ' + ph, 'ok');
+      document.getElementById('fp-otp-fg').style.display = 'block';
+      startOtpTimer('fp-sotpb', 'fp-otpt', 'Resend OTP');
+      btn.textContent = 'Verify OTP';
+      forgotStep = 2;
+    } catch(e) {
+      showToast(e.message, 'er');
+    } finally {
+      btn.disabled = false;
+    }
   } else if (forgotStep === 2) {
     var entered = document.getElementById('fp-otp').value.trim();
-    if (entered !== _otpStore['fp-otp']) { showToast('Incorrect OTP', 'er'); return; }
+    if (!entered || entered.length < 6) { showToast('Enter the 6-digit OTP', 'er'); return; }
     document.getElementById('fp-np-fg').style.display = 'block';
-    document.getElementById('fp-btn').textContent = 'Reset Password';
+    document.getElementById('fp-pwr').classList.add('on');
+    btn.textContent = 'Reset Password';
     forgotStep = 3;
   } else if (forgotStep === 3) {
-    var np = document.getElementById('fp-np').value;
+    var ph2  = document.getElementById('fp-ph').value.trim();
+    var otp2 = document.getElementById('fp-otp').value.trim();
+    var np   = document.getElementById('fp-np').value;
     if (!isStrongPw(np)) { showErr('fp-np-e', 'Password does not meet requirements'); return; }
-    // TODO: wire to PATCH /auth/reset-password when backend supports it
-    showToast('Password reset — please login with your new password', 'ok');
-    setTimeout(showLogin, 1500);
+    hideErr('fp-np-e');
+    btn.disabled = true; btn.textContent = 'Resetting…';
+    try {
+      await API.resetPassword(ph2, otp2, np);
+      showToast('Password reset! Please log in.', 'ok');
+      setTimeout(showLogin, 1200);
+    } catch(e) {
+      showToast(e.message, 'er');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Reset Password';
+    }
+  }
+}
+
+async function resendForgotOTP() {
+  var ph = document.getElementById('fp-ph').value.trim();
+  var btn = document.getElementById('fp-sotpb');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    var res = await API.sendOtp(ph);
+    if (res.otp) showToast('Sandbox OTP: ' + res.otp, 'nfo');
+    else showToast('OTP resent to +91 ' + ph, 'ok');
+    startOtpTimer('fp-sotpb', 'fp-otpt', 'Resend OTP');
+  } catch(e) {
+    showToast(e.message, 'er');
+    btn.disabled = false; btn.textContent = 'Resend OTP';
   }
 }
 
 // ── LOGIN ─────────────────────────────────────────────────────────────────────
 async function doLogin() {
-  var phone = document.getElementById('l-phone').value.trim();
-  if (!phone) { showErr('l-phone-e', 'Enter your phone number'); return; }
-  if (!/^\d{10}$/.test(phone)) { showErr('l-phone-e', 'Enter valid 10-digit number'); return; }
+  var identifier = document.getElementById('l-phone').value.trim();
+  if (!identifier) { showErr('l-phone-e', 'Enter your phone number or Login ID'); return; }
   hideErr('l-phone-e');
-
-  if (loginMethod === 'otp') {
-    var otp = document.getElementById('l-otp').value.trim();
-    if (otp !== _otpStore['l-otp']) { showErr('l-otp-e', 'Incorrect OTP'); return; }
-    hideErr('l-otp-e');
-  } else {
-    var pw = document.getElementById('l-pw').value;
-    if (!pw) { showErr('l-pw-e', 'Password required'); return; }
-    hideErr('l-pw-e');
-  }
 
   var btn = document.getElementById('login-btn');
   btn.disabled = true; btn.textContent = 'Logging in…';
+
   try {
-    var pw = document.getElementById('l-pw').value;
-    var res = await API.login(phone, pw);
+    var res;
+    if (loginMethod === 'otp') {
+      if (!/^\d{10}$/.test(identifier)) {
+        showErr('l-phone-e', 'OTP login requires a 10-digit phone number');
+        btn.disabled = false; btn.textContent = 'Login →'; return;
+      }
+      var otp = document.getElementById('l-otp').value.trim();
+      if (!otp) { showErr('l-otp-e', 'Enter the OTP'); btn.disabled = false; btn.textContent = 'Login →'; return; }
+      hideErr('l-otp-e');
+      res = await API.verifyOtp(identifier, otp);
+    } else {
+      var pw = document.getElementById('l-pw').value;
+      if (!pw) { showErr('l-pw-e', 'Password required'); btn.disabled = false; btn.textContent = 'Login →'; return; }
+      hideErr('l-pw-e');
+      res = await API.login(identifier, pw);
+    }
     setSession(res.token, res.user);
     showToast('Welcome back, ' + res.user.fname + '!', 'ok');
     setTimeout(function() { redirectUser(res.user); }, 600);
   } catch(e) {
     showToast(e.message, 'er');
-    showErr('l-pw-e', e.message);
+    if (loginMethod === 'otp') showErr('l-otp-e', e.message);
+    else showErr('l-pw-e', e.message);
     btn.disabled = false; btn.textContent = 'Login →';
   }
 }

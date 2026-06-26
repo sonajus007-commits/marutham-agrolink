@@ -20,6 +20,15 @@ var API = {
   register: function(data) {
     return apiFetch('POST', '/auth/register', data);
   },
+  sendOtp: function(phone) {
+    return apiFetch('POST', '/auth/send-otp', { phone });
+  },
+  verifyOtp: function(phone, otp) {
+    return apiFetch('POST', '/auth/verify-otp', { phone, otp });
+  },
+  resetPassword: function(phone, otp, new_password) {
+    return apiFetch('POST', '/auth/reset-password', { phone, otp, new_password });
+  },
   getMe: function() {
     return apiFetch('GET', '/auth/me', null, tok());
   },
