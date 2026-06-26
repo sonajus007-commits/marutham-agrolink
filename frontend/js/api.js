@@ -169,5 +169,16 @@ var API = {
   },
   runPayouts: function() {
     return apiFetch('POST', '/payouts/run', {}, tok());
+  },
+
+  // ── Farmers directory ─────────────────────────────────────────────────────
+  getFarmers: function() {
+    return apiFetch('GET', '/farmers', null, tok());
+  },
+  blockFarmer: function(id) {
+    return apiFetch('PATCH', '/farmers/' + id + '/block', {}, tok());
+  },
+  unblockFarmer: function(id) {
+    return apiFetch('PATCH', '/farmers/' + id + '/unblock', {}, tok());
   }
 };

@@ -37,6 +37,7 @@
   <button class="ptab"    id="tab-users"     onclick="openTab('users',this)">👥 Users</button>
   <button class="ptab"    id="tab-payouts"   onclick="openTab('payouts',this)">💸 Payouts</button>
   <button class="ptab"    id="tab-returns"   onclick="openTab('returns',this)">↩ Returns</button>
+  <button class="ptab"    id="tab-farmers"   onclick="openTab('farmers',this)">🌾 Farmers</button>
   <button class="ptab"    id="tab-hub"       onclick="openTab('hub',this)" style="display:none">🏭 Hub Queue</button>
   <button class="ptab"    id="tab-profile"   onclick="openTab('profile',this)">👤 My Profile</button>
 </div>
@@ -178,6 +179,23 @@
 <div class="panel" id="panel-returns">
   <div class="filt-row" id="returnFilterBar"></div>
   <div id="returnListWrap"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- ── FARMERS ────────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-farmers">
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+    <input id="farmer-search" type="text" placeholder="Search by name or village…"
+      style="flex:1;border:1.5px solid #e2e8e2;border-radius:10px;padding:9px 12px;font-size:12px;font-family:inherit;outline:none"
+      oninput="filterFarmers()">
+    <select id="farmer-sort" onchange="filterFarmers()"
+      style="border:1.5px solid #e2e8e2;border-radius:10px;padding:9px 10px;font-size:12px;font-family:inherit;background:#fff;outline:none">
+      <option value="revenue">↓ Revenue</option>
+      <option value="orders">↓ Orders</option>
+      <option value="rating">↓ Rating</option>
+      <option value="name">A–Z Name</option>
+    </select>
+  </div>
+  <div id="farmersWrap"><div class="spinner"><div class="spin"></div></div></div>
 </div>
 
 <!-- ── HUB QUEUE ──────────────────────────────────────────────────────────── -->
@@ -435,6 +453,7 @@ function openTab(name, tabEl) {
   if (name === 'users')    renderUsers();
   if (name === 'payouts')  renderPayouts();
   if (name === 'returns')  renderReturns();
+  if (name === 'farmers')  renderFarmers();
   if (name === 'hub')      renderHubQueue();
   if (name === 'profile')  renderProfile();
 }
@@ -1534,6 +1553,112 @@ async function doAssignAgent(orderId) {
     showToast(e.message, 'er');
     btn.disabled = false; btn.textContent = 'Assign';
   }
+}
+
+// ── FARMERS DIRECTORY ─────────────────────────────────────────────────────────
+var _allFarmers = [];
+
+async function renderFarmers() {
+  var wrap = document.getElementById('farmersWrap');
+  wrap.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res = await API.getFarmers();
+    _allFarmers = res.farmers || [];
+    filterFarmers();
+  } catch(e) {
+    wrap.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+function filterFarmers() {
+  var q    = (document.getElementById('farmer-search').value || '').toLowerCase();
+  var sort = document.getElementById('farmer-sort').value;
+  var list = _allFarmers.filter(function(f) {
+    if (!q) return true;
+    var name = ((f.fname||'') + ' ' + (f.lname||'')).toLowerCase();
+    var loc  = (f.village_town||'' + ' ' + (f.district||'')).toLowerCase();
+    return name.includes(q) || loc.includes(q);
+  });
+  list.sort(function(a, b) {
+    if (sort === 'revenue') return (b.total_revenue||0) - (a.total_revenue||0);
+    if (sort === 'orders')  return (b.delivered_orders||0) - (a.delivered_orders||0);
+    if (sort === 'rating')  return (parseFloat(b.avg_rating)||0) - (parseFloat(a.avg_rating)||0);
+    return (a.fname||'').localeCompare(b.fname||'');
+  });
+
+  var wrap = document.getElementById('farmersWrap');
+  if (list.length === 0) {
+    wrap.innerHTML = '<div class="empty-state"><div class="es-icon">👨‍🌾</div><p>No farmers found' + (q ? ' matching "' + q + '"' : '') + '.</p></div>';
+    return;
+  }
+
+  // Summary strip
+  var totalRev = list.reduce(function(s,f){ return s + (parseFloat(f.total_revenue)||0); }, 0);
+  var totalOrd = list.reduce(function(s,f){ return s + (f.delivered_orders||0); }, 0);
+  var html = '<div style="display:flex;gap:10px;margin-bottom:12px">';
+  html += '<div class="sc" style="flex:1;border-left:3px solid var(--forest)"><div class="slbl">Farmers</div><div class="sval">' + list.length + '</div></div>';
+  html += '<div class="sc" style="flex:1;border-left:3px solid #f59e0b"><div class="slbl">Total Revenue</div><div class="sval mono">' + fmt(totalRev) + '</div></div>';
+  html += '<div class="sc" style="flex:1;border-left:3px solid #7c3aed"><div class="slbl">Orders Fulfilled</div><div class="sval">' + totalOrd + '</div></div>';
+  html += '</div>';
+
+  list.forEach(function(f) {
+    var isBlocked  = f.status === 'blocked';
+    var initials   = ((f.fname||'F')[0] + (f.lname||'?')[0]).toUpperCase();
+    var avgR       = parseFloat(f.avg_rating);
+    var stars      = '';
+    if (!isNaN(avgR)) {
+      var filled = Math.round(avgR);
+      for (var s = 1; s <= 5; s++) stars += s <= filled ? '★' : '☆';
+    }
+
+    html += '<div class="card" style="padding:14px;margin-bottom:10px' + (isBlocked ? ';opacity:.65' : '') + '">';
+    html += '<div style="display:flex;align-items:flex-start;gap:12px">';
+    // Avatar
+    html += '<div style="width:42px;height:42px;border-radius:50%;background:' + (isBlocked ? '#9ca3af' : 'var(--forest)') + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0">' + initials + '</div>';
+
+    html += '<div style="flex:1;min-width:0">';
+    // Name + status
+    html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
+    html += '<div style="font-size:14px;font-weight:700;color:var(--forest)">' + (f.fname||'') + (f.lname ? ' ' + f.lname : '') + '</div>';
+    if (isBlocked) html += '<span style="font-size:9px;font-weight:700;background:#fee2e2;color:#c0392b;padding:2px 8px;border-radius:50px">Blocked</span>';
+    html += '</div>';
+    // Location
+    html += '<div style="font-size:11px;color:var(--gray);margin-top:2px">' + (f.village_town||'') + (f.district ? (f.village_town ? ', ' : '') + f.district : '') + '</div>';
+    // Stats row
+    html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">';
+    html += '<div style="text-align:center"><div style="font-size:15px;font-weight:800;color:var(--forest)">' + fmt(f.total_revenue) + '</div><div style="font-size:9px;color:var(--gray)">Revenue</div></div>';
+    html += '<div style="text-align:center"><div style="font-size:15px;font-weight:800;color:#2d6a4f">' + f.delivered_orders + '</div><div style="font-size:9px;color:var(--gray)">Orders</div></div>';
+    html += '<div style="text-align:center"><div style="font-size:15px;font-weight:800;color:#1e40af">' + f.active_listings + '</div><div style="font-size:9px;color:var(--gray)">Listed</div></div>';
+    if (stars) html += '<div style="text-align:center"><div style="font-size:13px;color:#f4a261">' + stars + '</div><div style="font-size:9px;color:var(--gray)">' + avgR.toFixed(1) + ' (' + f.num_ratings + ')</div></div>';
+    html += '</div>';
+    // Phone + bank
+    if (f.phone) html += '<div style="font-size:11px;color:var(--gray);margin-top:6px">📞 ' + f.phone + (f.bank_name ? '  ·  🏦 ' + f.bank_name : '') + '</div>';
+    html += '</div>';
+
+    // Block/unblock action
+    html += '<div style="margin-left:auto;padding-left:8px">';
+    if (isBlocked) {
+      html += '<button onclick="toggleFarmerBlock(\'' + f.id + '\',false)" style="font-size:11px;padding:6px 12px;border:1.5px solid #2d6a4f;background:#f0faf4;color:var(--forest);border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">Unblock</button>';
+    } else {
+      html += '<button onclick="toggleFarmerBlock(\'' + f.id + '\',true)" style="font-size:11px;padding:6px 12px;border:1.5px solid #fee2e2;background:#fff5f5;color:#c0392b;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">Block</button>';
+    }
+    html += '</div>';
+
+    html += '</div></div>';
+  });
+
+  wrap.innerHTML = html;
+}
+
+async function toggleFarmerBlock(id, block) {
+  try {
+    if (block) await API.blockFarmer(id);
+    else       await API.unblockFarmer(id);
+    var f = _allFarmers.find(function(x){ return x.id === id; });
+    if (f) f.status = block ? 'blocked' : 'active';
+    filterFarmers(); // re-render without refetching
+    showToast(block ? 'Farmer blocked.' : 'Farmer unblocked.', 'ok');
+  } catch(e) { showToast(e.message, 'er'); }
 }
 
 // ── PAYOUTS ───────────────────────────────────────────────────────────────────
