@@ -62,7 +62,7 @@ router.get('/', async (req, res) => {
       .select(`
         id, product_id, farmer_price, qty_available,
         time_available, cutoff_ts, bulk_qty, bulk_disc_pct, qty_type, qty_value, images,
-        farmer:users ( id, fname, lname, village_town, district )
+        farmer:users ( id, fname, lname, village_town, district, seller_type )
       `)
       .eq('listed', true)
       .eq('confirmed', true)
@@ -72,14 +72,22 @@ router.get('/', async (req, res) => {
       console.error('GET /listings?district error:', error);
       return res.status(500).json({ error: 'Could not fetch listings.' });
     }
+
+    // Enrich with seller-type-aware consumer price (mirrors ?product= query)
+    const enriched = (data || []).map(l => {
+      const feePct       = getFeeForSeller(l.farmer?.seller_type);
+      const consumerPrice = Math.round(l.farmer_price * (1 + feePct / 100));
+      return { ...l, fee_pct: feePct, consumer_price: consumerPrice };
+    });
+
     // Group by product_id so the consumer can look up offers per product quickly
     const byProduct = {};
-    (data || []).forEach(l => {
-      if (!l.farmer) return;           // skip rows where farmer district join missed
+    enriched.forEach(l => {
+      if (!l.farmer) return;
       if (!byProduct[l.product_id]) byProduct[l.product_id] = [];
       byProduct[l.product_id].push(l);
     });
-    return res.json({ listings: data, by_product: byProduct });
+    return res.json({ listings: enriched, by_product: byProduct });
   }
 
   // Farmer fetches only their own listings

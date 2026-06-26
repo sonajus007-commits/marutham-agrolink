@@ -70,6 +70,8 @@
       <button id="shopSearchClear" onclick="clearShopSearch()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:16px;color:#7a8492;cursor:pointer;line-height:1">✕</button>
     </div>
     <div id="shopFilters">
+      <div class="filt-label">Seller</div>
+      <div id="sellerFilterRow" class="filt-row"></div>
       <div class="filt-label">Group</div>
       <div id="groupFilter" class="filt-row"></div>
       <div id="catFilter" style="display:none">
@@ -362,6 +364,7 @@ async function renderHome() {
 var _activeGroup   = 'All';
 var _activeCat     = 'All';
 var _activeSub     = 'All';
+var _sellerFilter  = 'All';
 var _shopSearch    = '';
 var _orderingWindow = { open_hour: 20, close_hour: 8 };
 
@@ -461,7 +464,20 @@ async function renderShop() {
   renderProducts();
 }
 
+function renderSellerFilter() {
+  var html = '';
+  html += '<button class="chip' + (_sellerFilter==='All'    ? ' on' : '') + '" onclick="setSellerFilter(\'All\')">All Sellers</button>';
+  html += '<button class="chip' + (_sellerFilter==='Farmer' ? ' on' : '') + '" onclick="setSellerFilter(\'Farmer\')">🌱 Farmer Direct</button>';
+  document.getElementById('sellerFilterRow').innerHTML = html;
+}
+function setSellerFilter(f) {
+  _sellerFilter = f;
+  renderSellerFilter();
+  renderProducts();
+}
+
 function renderGroupFilter() {
+  renderSellerFilter();
   var groups = ['All'];
   _allProducts.forEach(function(p) { if (p.product_group && !groups.includes(p.product_group)) groups.push(p.product_group); });
   var html = '';
@@ -529,7 +545,6 @@ function openProductDetail(productId) {
   var dp      = p.district_price;
   var handling= dp ? parseFloat(dp.handling) : 0;
   var mktPrice= dp ? parseFloat(dp.market_price) : 0;
-  var feePct  = p.platform_fee_pct || 5;
 
   _pdProduct = p;
   _pdOffers  = offers;
@@ -585,10 +600,10 @@ function openProductDetail(productId) {
   } else if (offers.length === 0) {
     html += '<div style="background:#f8fdf8;border-radius:12px;padding:20px;text-align:center;font-size:13px;color:var(--gray)">No farmers have listed this product today.<br>Check back at 8 PM.</div>';
   } else {
-    html += '<div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px">' + offers.length + ' farmer offer' + (offers.length > 1 ? 's' : '') + ' today</div>';
+    html += '<div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px">' + offers.length + ' seller offer' + (offers.length > 1 ? 's' : '') + ' today</div>';
     offers.forEach(function(o, k) {
       var farmerPrice = parseFloat(o.farmer_price);
-      var custPrice   = farmerPrice * (1 + feePct / 100) + handling;
+      var custPrice   = (o.consumer_price != null ? o.consumer_price / 100 : farmerPrice * (1 + (p.platform_fee_pct || 5) / 100)) + handling;
       var f           = o.farmer || {};
       var initial     = ((f.fname||'F').charAt(0) + ((f.lname||'').charAt(0)||'')).toUpperCase();
       var soldOut     = (o.qty_available <= 0);
@@ -617,7 +632,10 @@ function openProductDetail(productId) {
         html += '<div style="width:36px;height:36px;border-radius:50%;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">' + initial + '</div>';
       }
       html += '<div>';
-      html += '<div style="font-size:13px;font-weight:700;color:var(--forest)">' + (f.fname||'Farmer') + (f.lname ? ' ' + f.lname : '') + '</div>';
+      html += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">';
+      html += '<span style="font-size:13px;font-weight:700;color:var(--forest)">' + (f.fname||'Seller') + (f.lname ? ' ' + f.lname : '') + '</span>';
+      html += sellerTypeBadge(f.seller_type);
+      html += '</div>';
       html += '<div style="font-size:10px;color:var(--gray)">' + (f.village_town||f.district||'') + '</div>';
       if (farmerRating) {
         var fStars = '';
@@ -691,9 +709,8 @@ function addToCartFromDetail(k) {
   var f          = o.farmer || {};
   var dp         = p.district_price;
   var handling   = dp ? parseFloat(dp.handling) : 0;
-  var feePct     = p.platform_fee_pct || 5;
   var farmerPrice= parseFloat(o.farmer_price);
-  var price      = farmerPrice * (1 + feePct / 100) + handling;
+  var price      = (o.consumer_price != null ? o.consumer_price / 100 : farmerPrice * (1 + (p.platform_fee_pct || 5) / 100)) + handling;
 
   var existing = _cart.find(function(i){ return i.product_id === p.id && i.farmer_id === (f.id||null); });
   if (existing) {
@@ -738,12 +755,21 @@ function clearShopSearch() {
   document.getElementById('shopSearchInput').focus();
 }
 
+function sellerTypeBadge(sellerType) {
+  if (sellerType === 'Retailer') return '<span style="font-size:9px;font-weight:700;background:#eff6ff;color:#1d4ed8;border-radius:4px;padding:2px 6px">🏪 Retailer</span>';
+  return '<span style="font-size:9px;font-weight:700;background:#e6f7ed;color:#1a7a4a;border-radius:4px;padding:2px 6px">🌱 Direct from Farmer</span>';
+}
+
 function renderProducts() {
   var filtered = _allProducts.filter(function(p) {
     if (_shopSearch) return (p.name || '').toLowerCase().includes(_shopSearch);
     if (_activeGroup !== 'All' && p.product_group !== _activeGroup) return false;
     if (_activeCat  !== 'All' && p.category      !== _activeCat)   return false;
     if (_activeSub  !== 'All' && p.sub_type       !== _activeSub)   return false;
+    if (_sellerFilter === 'Farmer') {
+      var farmOffers = (_offersByProduct[p.id] || []).filter(function(o) { return o.farmer && o.farmer.seller_type === 'Farmer'; });
+      if (farmOffers.length === 0) return false;
+    }
     return true;
   });
   if (filtered.length === 0) {
@@ -758,18 +784,26 @@ function renderProducts() {
     var handling = dp ? parseFloat(dp.handling) : 0;
     var offers   = _offersByProduct[p.id] || [];
 
-    // Best offer = lowest farmer_price among active listings
+    // When Farmer Direct filter is on, only consider Farmer offers for the best pick
+    var relevantOffers = _sellerFilter === 'Farmer'
+      ? offers.filter(function(o) { return o.farmer && o.farmer.seller_type === 'Farmer'; })
+      : offers;
+
+    // Best offer = lowest consumer_price (seller-type-aware fee already baked in by API)
     var bestOffer = null;
-    if (offers.length > 0) {
-      bestOffer = offers.reduce(function(best, o) {
-        return (parseFloat(o.farmer_price) < parseFloat(best.farmer_price)) ? o : best;
+    if (relevantOffers.length > 0) {
+      bestOffer = relevantOffers.reduce(function(best, o) {
+        var oPrice  = o.consumer_price != null ? o.consumer_price : parseFloat(o.farmer_price);
+        var bPrice  = best.consumer_price != null ? best.consumer_price : parseFloat(best.farmer_price);
+        return oPrice < bPrice ? o : best;
       });
     }
 
-    // Customer-facing price = farmer_price + platform_fee% + handling
+    // Use consumer_price from API (seller-type-aware); fall back for legacy data
     var farmerPrice = bestOffer ? parseFloat(bestOffer.farmer_price) : null;
-    var feePct      = p.platform_fee_pct || 5;
-    var custPrice   = farmerPrice != null ? (farmerPrice * (1 + feePct / 100) + handling) : null;
+    var custPrice   = bestOffer
+      ? (bestOffer.consumer_price != null ? bestOffer.consumer_price / 100 : farmerPrice * (1 + (p.platform_fee_pct || 5) / 100)) + handling
+      : null;
     var hasStock    = bestOffer && bestOffer.qty_available > 0;
 
     var rating       = _ratingsMap[p.id];
@@ -804,14 +838,15 @@ function renderProducts() {
       html += '<span style="font-size:10px;color:var(--gray)">' + avg.toFixed(1) + ' (' + rating.num_ratings + ')</span>';
       html += '</div>';
     }
-    // Farmer info
+    // Seller info + type badge
     if (bestOffer && bestOffer.farmer) {
       var f = bestOffer.farmer;
       var initial = ((f.fname||'F')[0] + (f.lname||'')[0]).toUpperCase();
-      html += '<div style="display:flex;align-items:center;gap:6px;margin-top:5px">';
+      html += '<div style="display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap">';
       html += '<div style="width:22px;height:22px;border-radius:50%;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">' + initial + '</div>';
       html += '<span style="font-size:10px;color:var(--gray)">' + f.fname + (f.lname ? ' ' + f.lname : '') + (f.village_town ? ', ' + f.village_town : '') + '</span>';
-      if (offers.length > 1) html += '<span style="font-size:9px;color:#1e40af;font-weight:700">+' + (offers.length-1) + ' more</span>';
+      html += sellerTypeBadge(f.seller_type);
+      if (relevantOffers.length > 1) html += '<span style="font-size:9px;color:#1e40af;font-weight:700">+' + (relevantOffers.length-1) + ' more</span>';
       html += '</div>';
     }
     html += '</div>';
@@ -820,7 +855,7 @@ function renderProducts() {
     html += '<div class="prod-price-box">';
     if (custPrice != null) {
       html += '<div class="prod-price">₹' + custPrice.toFixed(0) + '</div>';
-      html += '<div style="font-size:9px;color:var(--gray)">farmer ₹' + farmerPrice.toFixed(0) + '</div>';
+      html += '<div style="font-size:9px;color:var(--gray)">seller ₹' + farmerPrice.toFixed(0) + '</div>';
       if (handling > 0) html += '<div style="font-size:9px;color:var(--gray)">+₹' + handling.toFixed(0) + ' hdl</div>';
     } else if (dp) {
       html += '<div class="prod-price" style="font-size:12px;color:var(--gray)">Mkt ₹' + parseFloat(dp.market_price).toFixed(0) + '</div>';
