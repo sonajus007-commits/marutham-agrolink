@@ -137,9 +137,9 @@
 
   <!-- Stats -->
   <div class="agent-stats">
-    <div class="astat"><div class="astat-val" id="s-queue">—</div><div class="astat-lbl">In Queue</div></div>
-    <div class="astat"><div class="astat-val" id="s-delivered">—</div><div class="astat-lbl">Delivered</div></div>
-    <div class="astat"><div class="astat-val" id="s-cod">₹0</div><div class="astat-lbl">COD Collected</div></div>
+    <div class="astat"><div class="astat-val" id="s-queue">—</div><div class="astat-lbl" id="lbl-queue">In Queue</div></div>
+    <div class="astat"><div class="astat-val" id="s-delivered">—</div><div class="astat-lbl" id="lbl-delivered">Delivered</div></div>
+    <div class="astat"><div class="astat-val" id="s-cod">₹0</div><div class="astat-lbl" id="lbl-cod">COD Collected</div></div>
   </div>
 
   <!-- Scan bar -->
@@ -239,7 +239,10 @@ if (!user) throw new Error('redirect');
 
 startClock('liveClock');
 document.getElementById('agentName').textContent = user.fname + (user.lname ? ' ' + user.lname : '');
-document.getElementById('agentSub').textContent  = (user.admin_role || 'Delivery Agent') + ' · ' + (user.district || '—');
+document.getElementById('agentSub').textContent  =
+  _isVCO
+    ? 'VCO · ' + (user.vco_city || user.village_town || user.district || '—')
+    : 'Delivery Agent · ' + (user.district || '—');
 
 var _toVerify  = [];   // Packaged — VCO to verify
 var _toPickUp  = [];   // VCO Verified — agent to pick up
@@ -248,6 +251,13 @@ var _toDeliver = [];   // Out for Delivery — agent to deliver
 var _delivered = [];   // Delivered today
 
 var _isVCO = (user.admin_role === 'VCO');
+
+// Relabel stats for VCOs
+if (_isVCO) {
+  document.getElementById('lbl-queue').textContent     = 'To Verify';
+  document.getElementById('lbl-delivered').textContent = 'Verified';
+  document.getElementById('lbl-cod').textContent       = 'In Pipeline';
+}
 
 // ── Load orders ───────────────────────────────────────────────────────────────
 async function loadOrders() {
@@ -271,11 +281,16 @@ async function loadOrders() {
 function renderStats() {
   var queueTotal = (_isVCO ? _toVerify.length : 0) + _toPickUp.length + _inTransit.length + _toDeliver.length;
   document.getElementById('s-queue').textContent     = queueTotal;
-  document.getElementById('s-delivered').textContent = _delivered.length;
-  var cod = _delivered.reduce(function(s, o) {
-    return s + (o.pay_method === 'Cash on Delivery' ? parseFloat(o.total || 0) : 0);
-  }, 0);
-  document.getElementById('s-cod').textContent = '₹' + cod.toFixed(0);
+  document.getElementById('s-delivered').textContent = _isVCO ? _toPickUp.length + _inTransit.length + _toDeliver.length : _delivered.length;
+  if (_isVCO) {
+    // "In Pipeline" = all orders beyond VCO Verified stage in their village
+    document.getElementById('s-cod').textContent = _toPickUp.length + _inTransit.length + _toDeliver.length + _delivered.length;
+  } else {
+    var cod = _delivered.reduce(function(s, o) {
+      return s + (o.pay_method === 'Cash on Delivery' ? parseFloat(o.total || 0) : 0);
+    }, 0);
+    document.getElementById('s-cod').textContent = '₹' + cod.toFixed(0);
+  }
 }
 
 // ── Queue sections ────────────────────────────────────────────────────────────

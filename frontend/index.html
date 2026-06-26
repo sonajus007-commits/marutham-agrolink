@@ -530,7 +530,7 @@ async function doLogin() {
 function redirectUser(u) {
   if (u.role === 'consumer') { window.location.href = 'consumer.html'; return; }
   if (u.role === 'farmer')   { window.location.href = 'farmer.html';   return; }
-  if (u.role === 'admin' && u.admin_role === 'Delivery Agent') {
+  if (u.role === 'admin' && ['Delivery Agent', 'VCO'].includes(u.admin_role)) {
     window.location.href = 'agent.html'; return;
   }
   if (u.role === 'admin')    { window.location.href = 'admin.html';    return; }

@@ -17,7 +17,8 @@ function requireAuth(expectedRole) {
   var user  = getUser();
   if (!token || !user) { window.location.href = 'index.html'; return null; }
   if (expectedRole === 'agent') {
-    if (user.role !== 'admin' || user.admin_role !== 'Delivery Agent') {
+    // Both Delivery Agents and VCOs use agent.html
+    if (user.role !== 'admin' || !['Delivery Agent', 'VCO'].includes(user.admin_role)) {
       window.location.href = 'index.html'; return null;
     }
   } else if (expectedRole && user.role !== expectedRole) {

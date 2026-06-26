@@ -231,6 +231,7 @@ var _cart            = JSON.parse(localStorage.getItem('ma_cart') || '[]');
 var _allProducts     = [];
 var _offersByProduct = {};   // product_id → [listing, ...]
 var _ratingsMap      = {};   // product_id → { avg_rating, num_ratings }
+var _ratingsByFP     = {};   // farmerId_productId → { avg_rating, num_ratings }
 var _cancelOrderId = null;
 var _returnOrderId = null;
 var _returnItems   = [];
@@ -408,13 +409,16 @@ async function renderShop() {
       _allProducts     = prodRes.products || [];
       _offersByProduct = offerRes.by_product || {};
       // Build rating map: product_id → { avg_rating, num_ratings }
-      _ratingsMap = {};
+      _ratingsMap  = {};
+      _ratingsByFP = {};
       (ratingRes.top_ratings || []).forEach(function(r) {
         var pid = r.product_id || (r.product && r.product.id);
+        var fid = r.farmer && r.farmer.id;
         if (!pid) return;
         if (!_ratingsMap[pid] || parseFloat(r.avg_rating) > parseFloat(_ratingsMap[pid].avg_rating)) {
           _ratingsMap[pid] = { avg_rating: parseFloat(r.avg_rating), num_ratings: r.num_ratings };
         }
+        if (fid) _ratingsByFP[fid + '_' + pid] = { avg_rating: parseFloat(r.avg_rating), num_ratings: r.num_ratings };
       });
       if (winRes.ordering_window) _orderingWindow = winRes.ordering_window;
     } catch(e) {
@@ -503,17 +507,49 @@ function openProductDetail(productId) {
 
   document.getElementById('pdoTitle').textContent = p.name;
 
-  var emoji = getProductEmoji(p.name);
-  var html  = '';
+  var emoji    = getProductEmoji(p.name);
+  var rating   = _ratingsMap[p.id];
+  var html     = '';
+
+  // Collect unique farmer photos across all offers
+  var photos = [];
+  offers.forEach(function(o) {
+    if (o.images && o.images[0] && !photos.includes(o.images[0])) photos.push(o.images[0]);
+  });
+
+  // Photo gallery strip
+  if (photos.length > 0) {
+    html += '<div style="display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:4px;-webkit-overflow-scrolling:touch">';
+    photos.forEach(function(src) {
+      html += '<img src="' + src + '" style="width:160px;height:120px;object-fit:cover;border-radius:12px;flex-shrink:0" alt="">';
+    });
+    html += '</div>';
+  }
 
   // Product header
-  html += '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:#f0faf4;border-radius:14px;margin-bottom:16px">';
-  html += '<div style="width:60px;height:60px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:34px">' + emoji + '</div>';
+  html += '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:#f0faf4;border-radius:14px;margin-bottom:' + (rating ? '8' : '16') + 'px">';
+  if (photos.length > 0) {
+    html += '<img src="' + photos[0] + '" style="width:60px;height:60px;object-fit:cover;border-radius:12px;flex-shrink:0" alt="">';
+  } else {
+    html += '<div style="width:60px;height:60px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:34px;flex-shrink:0">' + emoji + '</div>';
+  }
   html += '<div><div style="font-size:16px;font-weight:800;color:var(--forest)">' + p.name + '</div>';
   if (p.regional_name) html += '<div style="font-size:11px;color:var(--leaf)">' + p.regional_name + '</div>';
   html += '<div style="font-size:11px;color:var(--gray);margin-top:2px">' + (p.product_group||'') + (p.category ? ' · ' + p.category : '') + '</div>';
   if (mktPrice > 0) html += '<div style="font-size:11px;color:var(--gray)">Govt price: ₹' + mktPrice.toFixed(0) + ' / ' + p.unit + '</div>';
   html += '</div></div>';
+
+  // Product-level rating banner
+  if (rating) {
+    var filledStars = Math.round(rating.avg_rating);
+    var starStr = '';
+    for (var rs = 1; rs <= 5; rs++) starStr += rs <= filledStars ? '★' : '☆';
+    html += '<div style="display:flex;align-items:center;gap:10px;background:#fffbeb;border-radius:10px;padding:10px 14px;margin-bottom:14px">';
+    html += '<span style="font-size:16px;color:#f4a261;letter-spacing:2px">' + starStr + '</span>';
+    html += '<div><div style="font-size:13px;font-weight:700;color:#92400e">' + rating.avg_rating.toFixed(1) + ' / 5</div>';
+    html += '<div style="font-size:10px;color:var(--gray)">' + rating.num_ratings + ' rating' + (rating.num_ratings !== 1 ? 's' : '') + ' from buyers</div></div>';
+    html += '</div>';
+  }
 
   if (!ws.open) {
     html += '<div style="background:#fde8e8;border-radius:12px;padding:14px;text-align:center;font-size:13px;font-weight:700;color:#c0392b">🔒 Ordering closed — opens at 8 PM today</div>';
@@ -542,10 +578,25 @@ function openProductDetail(productId) {
 
       html += '<div style="border:1.5px solid #eef4ee;border-radius:14px;padding:14px;margin-bottom:12px' + (soldOut ? ';opacity:.65' : '') + '">';
       html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">';
+      var fpKey     = (f.id || '') + '_' + p.id;
+      var farmerRating = _ratingsByFP[fpKey];
+      var farmerThumb  = o.images && o.images[0];
       html += '<div style="display:flex;gap:10px;align-items:center">';
-      html += '<div style="width:36px;height:36px;border-radius:50%;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">' + initial + '</div>';
-      html += '<div><div style="font-size:13px;font-weight:700;color:var(--forest)">' + (f.fname||'Farmer') + (f.lname ? ' ' + f.lname : '') + '</div>';
-      html += '<div style="font-size:10px;color:var(--gray)">' + (f.village_town||f.district||'') + '</div></div></div>';
+      if (farmerThumb) {
+        html += '<img src="' + farmerThumb + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0" alt="">';
+      } else {
+        html += '<div style="width:36px;height:36px;border-radius:50%;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">' + initial + '</div>';
+      }
+      html += '<div>';
+      html += '<div style="font-size:13px;font-weight:700;color:var(--forest)">' + (f.fname||'Farmer') + (f.lname ? ' ' + f.lname : '') + '</div>';
+      html += '<div style="font-size:10px;color:var(--gray)">' + (f.village_town||f.district||'') + '</div>';
+      if (farmerRating) {
+        var fStars = '';
+        var fFilled = Math.round(farmerRating.avg_rating);
+        for (var fs = 1; fs <= 5; fs++) fStars += fs <= fFilled ? '★' : '☆';
+        html += '<div style="font-size:10px;color:#f4a261">' + fStars + ' <span style="color:var(--gray)">' + farmerRating.avg_rating.toFixed(1) + ' (' + farmerRating.num_ratings + ')</span></div>';
+      }
+      html += '</div></div>';
       html += '<div style="text-align:right">';
       if (mktPrice > 0 && custPrice < mktPrice) html += '<div style="font-size:10px;color:var(--gray);text-decoration:line-through">₹' + mktPrice.toFixed(0) + '</div>';
       html += '<div style="font-size:18px;font-weight:800;color:var(--leaf)">₹' + custPrice.toFixed(0) + '</div>';
