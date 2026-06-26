@@ -24,10 +24,14 @@ router.get('/', requireRole('admin'), async (req, res) => {
   try {
     let q = supabase
       .from('users')
-      .select('id,login_id,fname,lname,phone,role,admin_role,district,state,status,created_at')
+      .select('id,login_id,fname,lname,phone,role,admin_role,district,state,status,agent_vehicle,created_at')
       .order('created_at', { ascending: false });
 
     q = scopeQuery(q, req.user);
+
+    if (req.query.admin_role) q = q.eq('admin_role', req.query.admin_role);
+    if (req.query.district)   q = q.eq('district',   req.query.district);
+    if (req.query.role)       q = q.eq('role',        req.query.role);
 
     const { data, error } = await q;
     if (error) return res.status(500).json({ error: error.message });

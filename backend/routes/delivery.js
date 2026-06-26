@@ -241,6 +241,53 @@ router.post('/:id/advance', async (req, res) => {
   res.json({ ok: true, message: `Order advanced to: ${updated.status}.`, newStatus: updated.status, order: updated });
 });
 
+// ── POST /orders/:id/assign  (Admin only — assign / reassign delivery agent) ──
+router.post('/:id/assign', async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Only admins can assign agents.' });
+  }
+
+  const { agent_id } = req.body;
+  if (!agent_id) return res.status(400).json({ error: 'agent_id is required.' });
+
+  const { data: agent, error: ae } = await supabase
+    .from('users')
+    .select('id, fname, lname, phone, agent_vehicle, role, admin_role')
+    .eq('id', agent_id)
+    .single();
+
+  if (ae || !agent) return res.status(404).json({ error: 'Agent not found.' });
+  if (agent.role !== 'admin' || agent.admin_role !== 'Delivery Agent') {
+    return res.status(400).json({ error: 'Selected user is not a Delivery Agent.' });
+  }
+
+  const agentName = agent.fname + (agent.lname ? ' ' + agent.lname : '');
+  const { data: updated, error: ue } = await supabase
+    .from('orders')
+    .update({
+      agent_id,
+      agent_name:    agentName,
+      agent_phone:   agent.phone,
+      agent_vehicle: agent.agent_vehicle || '',
+      updated_at:    new Date().toISOString(),
+    })
+    .eq('id', req.params.id)
+    .select()
+    .single();
+
+  if (ue) return res.status(500).json({ error: ue.message });
+
+  // Log assignment in order history
+  await supabase.from('order_history').insert({
+    order_id: req.params.id,
+    label:    'Agent Assigned',
+    note:     `${agentName} assigned by ${req.user.fname} (${req.user.admin_role})`,
+    ts:       new Date().toISOString(),
+  });
+
+  res.json({ message: `Agent ${agentName} assigned.`, order: updated });
+});
+
 // ── GET /orders/:id/track  (consumer who owns it, or any staff) ───────────────
 router.get('/:id/track', async (req, res) => {
   const u = req.user;

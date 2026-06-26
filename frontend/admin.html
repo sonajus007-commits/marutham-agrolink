@@ -1212,13 +1212,30 @@ async function openOrderDetail(orderId) {
     if (o.delivered_at) html += '<div class="irow"><span class="ilbl">Delivered</span><span class="ival">' + fmtDate(o.delivered_at) + '</span></div>';
     html += '</div>';
 
-    // ── Agent info (if assigned) ────────────────────────────────────────────
-    if (o.agent_name) {
+    // ── Agent assignment (stage >= 2 and not cancelled) ────────────────────
+    if (!o.cancelled && (o.stage || 0) >= 2) {
+      html += '<div class="card" id="agentCard-' + o.id + '"><h3>🛵 Delivery Agent</h3>';
+      if (o.agent_name) {
+        html += '<div class="irow"><span class="ilbl">Assigned</span><span class="ival" style="font-weight:700;color:var(--forest)">' + o.agent_name + '</span></div>';
+        if (o.agent_phone)   html += '<div class="irow"><span class="ilbl">Phone</span><span class="ival mono">' + o.agent_phone + '</span></div>';
+        if (o.agent_vehicle) html += '<div class="irow"><span class="ilbl">Vehicle</span><span class="ival">' + o.agent_vehicle + '</span></div>';
+        if (o.eta_ts)        html += '<div class="irow"><span class="ilbl">ETA</span><span class="ival">' + fmtDate(o.eta_ts) + '</span></div>';
+        html += '<div style="margin-top:10px" id="reassignRow-' + o.id + '">';
+        html += '<button class="chip" onclick="loadAgentSelect(\'' + o.id + '\',\'' + (o.district||'') + '\')">↩ Reassign Agent</button>';
+        html += '</div>';
+      } else {
+        html += '<div style="font-size:12px;color:var(--gray);margin-bottom:10px">No agent assigned yet.</div>';
+        html += '<div id="reassignRow-' + o.id + '">';
+        html += '<button class="sbtn" style="margin:0;padding:9px 16px;font-size:12px;width:auto" onclick="loadAgentSelect(\'' + o.id + '\',\'' + (o.district||'') + '\')">➕ Assign Agent</button>';
+        html += '</div>';
+      }
+      html += '</div>';
+    } else if (o.agent_name) {
       html += '<div class="card"><h3>🛵 Delivery Agent</h3>';
       html += '<div class="irow"><span class="ilbl">Agent</span><span class="ival">' + o.agent_name + '</span></div>';
-      if (o.agent_phone) html += '<div class="irow"><span class="ilbl">Phone</span><span class="ival mono">' + o.agent_phone + '</span></div>';
+      if (o.agent_phone)   html += '<div class="irow"><span class="ilbl">Phone</span><span class="ival mono">' + o.agent_phone + '</span></div>';
       if (o.agent_vehicle) html += '<div class="irow"><span class="ilbl">Vehicle</span><span class="ival">' + o.agent_vehicle + '</span></div>';
-      if (o.eta_ts) html += '<div class="irow"><span class="ilbl">ETA</span><span class="ival">' + fmtDate(o.eta_ts) + '</span></div>';
+      if (o.eta_ts)        html += '<div class="irow"><span class="ilbl">ETA</span><span class="ival">' + fmtDate(o.eta_ts) + '</span></div>';
       html += '</div>';
     }
 
@@ -1454,6 +1471,47 @@ async function submitCreateStaff() {
     errEl.textContent = e.message;
     errEl.style.display = 'block';
     btn.disabled = false; btn.textContent = 'Create Account';
+  }
+}
+
+async function loadAgentSelect(orderId, district) {
+  var row = document.getElementById('reassignRow-' + orderId);
+  if (!row) return;
+  row.innerHTML = '<div style="font-size:12px;color:var(--gray)">Loading agents…</div>';
+  try {
+    var res = await apiFetch('GET', '/users?admin_role=Delivery+Agent&district=' + encodeURIComponent(district), null, getToken());
+    var agents = (res.users || []).filter(function(u) { return u.status !== 'blocked'; });
+    if (agents.length === 0) {
+      row.innerHTML = '<div style="font-size:12px;color:var(--gray)">No Delivery Agents in ' + district + '.</div>'; return;
+    }
+    var html = '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+    html += '<select class="fi" id="agentSel-' + orderId + '" style="flex:1;margin:0;font-size:12px">';
+    html += '<option value="">— Select agent —</option>';
+    agents.forEach(function(a) {
+      html += '<option value="' + a.id + '">' + a.fname + (a.lname ? ' ' + a.lname : '') + (a.agent_vehicle ? ' · ' + a.agent_vehicle : '') + '</option>';
+    });
+    html += '</select>';
+    html += '<button class="sbtn" id="assignBtn-' + orderId + '" onclick="doAssignAgent(\'' + orderId + '\')" style="margin:0;padding:9px 14px;font-size:12px;width:auto;flex-shrink:0">Assign</button>';
+    html += '</div>';
+    row.innerHTML = html;
+  } catch(e) {
+    row.innerHTML = '<div style="font-size:12px;color:#c0392b">' + e.message + '</div>';
+  }
+}
+
+async function doAssignAgent(orderId) {
+  var sel = document.getElementById('agentSel-' + orderId);
+  var btn = document.getElementById('assignBtn-' + orderId);
+  if (!sel || !sel.value) { showToast('Select an agent first.', 'er'); return; }
+  btn.disabled = true; btn.textContent = 'Assigning…';
+  try {
+    var res = await API.assignAgent(orderId, sel.value);
+    showToast(res.message, 'ok');
+    await renderAdminOrders();
+    closeOrderOverlay();
+  } catch(e) {
+    showToast(e.message, 'er');
+    btn.disabled = false; btn.textContent = 'Assign';
   }
 }
 

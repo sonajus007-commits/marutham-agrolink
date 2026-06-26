@@ -119,6 +119,10 @@ var API = {
   assignAgent: function(id, agentId) {
     return apiFetch('POST', '/orders/' + id + '/assign', { agent_id: agentId }, tok());
   },
+  getAgents: function(district) {
+    var qs = district ? '?district=' + encodeURIComponent(district) : '';
+    return apiFetch('GET', '/users' + qs, null, tok());
+  },
   deliverOrder: function(id) {
     return apiFetch('POST', '/orders/' + id + '/deliver', {}, tok());
   },

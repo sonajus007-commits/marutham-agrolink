@@ -264,21 +264,61 @@ async function renderHome() {
     html += '<div class="sc"><div class="slbl">Completed</div><div class="sval">' + delivered.length + '</div><div class="ssub">Delivered</div></div>';
     html += '</div>';
 
-    // Recent orders
+    // Pipeline step definitions (for home cards)
+    var _directStages = ['Order Placed','Packaged','VCO Verified','Picked Up','Out for Delivery','Delivered'];
+    var _hubStages    = ['Order Placed','Packaged','VCO Verified','Picked Up','In Transit','At Hub','Out for Delivery','Delivered'];
+
+    function miniPipeline(stage, route) {
+      var stages = route === 'hub' ? _hubStages : _directStages;
+      var pct = stages.length > 1 ? Math.round((stage / (stages.length - 1)) * 100) : 0;
+      var label = stages[stage] || '—';
+      var h = '<div style="margin:10px 0 4px">';
+      h += '<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:5px">';
+      h += '<span style="font-weight:700;color:var(--forest)">' + label + '</span>';
+      h += '<span style="color:var(--gray)">Step ' + (stage + 1) + ' of ' + stages.length + '</span>';
+      h += '</div>';
+      h += '<div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden">';
+      h += '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#1a7a4a,#52b788);border-radius:3px;transition:width .4s"></div>';
+      h += '</div></div>';
+      return h;
+    }
+
     if (orders.length === 0) {
       html += '<div class="empty-state"><div class="es-icon">🌿</div><p>No orders yet.<br>Browse the shop and place your first order!</p>';
       html += '<button class="sbtn" style="margin-top:16px;width:auto;padding:12px 24px" onclick="openTab(\'shop\',document.getElementById(\'tab-shop\'))">Shop Now →</button></div>';
     } else {
-      html += '<div class="card"><h3>📦 Recent Orders</h3>';
-      orders.slice(0, 5).forEach(function(o) {
-        html += '<div class="ord-item" onclick="openOrderDetail(\'' + o.id + '\')">';
-        html += '<div class="ord-statusbar" style="background:' + statusColor(o.status) + '"></div>';
-        html += '<div style="flex:1"><div class="ord-id">' + (o.code || o.id.slice(0,8).toUpperCase()) + '</div>';
-        html += '<div class="ord-loc">' + (o.status || '—') + ' · ' + fmtDateShort(o.created_at) + '</div></div>';
-        html += '<div class="ord-amt">' + fmt(o.total) + '</div>';
+      // Active orders — prominent tracking cards
+      if (active.length > 0) {
+        html += '<div style="margin-bottom:4px">';
+        html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--gray);margin-bottom:8px">Active Orders</div>';
+        active.forEach(function(o) {
+          html += '<div class="card" style="padding:14px;margin-bottom:10px;cursor:pointer;border-left:4px solid ' + statusColor(o.status) + '" onclick="openOrderDetail(\'' + o.id + '\')">';
+          html += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+          html += '<div><div class="ord-id">' + (o.code || o.id.slice(0,8).toUpperCase()) + '</div>';
+          html += '<div style="font-size:10px;color:var(--gray);margin-top:1px">' + fmtDateShort(o.created_at) + (o.agent_name ? ' · 🛵 ' + o.agent_name : '') + '</div></div>';
+          html += '<div style="text-align:right"><div class="ord-amt">' + fmt(o.total) + '</div>';
+          html += '<div style="font-size:10px;color:var(--gray)">' + (o.pay_method || '') + '</div></div>';
+          html += '</div>';
+          html += miniPipeline(o.stage || 0, o.route || 'direct');
+          html += '<div style="font-size:11px;color:var(--forest);font-weight:600;margin-top:6px">Track Order →</div>';
+          html += '</div>';
+        });
         html += '</div>';
-      });
-      html += '</div>';
+      }
+      // Past orders — compact list
+      var past = orders.filter(function(o) { return o.status === 'Delivered' || o.cancelled; });
+      if (past.length > 0) {
+        html += '<div class="card"><h3>📦 Past Orders</h3>';
+        past.slice(0, 4).forEach(function(o) {
+          html += '<div class="ord-item" onclick="openOrderDetail(\'' + o.id + '\')">';
+          html += '<div class="ord-statusbar" style="background:' + statusColor(o.status) + '"></div>';
+          html += '<div style="flex:1"><div class="ord-id">' + (o.code || o.id.slice(0,8).toUpperCase()) + '</div>';
+          html += '<div class="ord-loc">' + (o.cancelled ? 'Cancelled' : o.status) + ' · ' + fmtDateShort(o.created_at) + '</div></div>';
+          html += '<div class="ord-amt">' + fmt(o.total) + '</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
     }
     el.innerHTML = html;
   } catch(e) {
