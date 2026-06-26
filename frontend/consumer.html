@@ -392,15 +392,19 @@ function fmtHour(h) {
 }
 
 function orderingWindowStatus() {
-  var oh   = _orderingWindow.open_hour;
-  var ch   = _orderingWindow.close_hour;
-  var hour = new Date().getHours();
-  // Window spans midnight when open_hour > close_hour (e.g. 20→8)
-  var open = oh > ch ? (hour >= oh || hour < ch) : (hour >= oh && hour < ch);
-  if (open) {
-    return { open: true,  msg: 'Ordering open until ' + fmtHour(ch) };
-  }
-  return { open: false, msg: 'Order window: ' + fmtHour(oh) + ' – ' + fmtHour(ch) + '  ·  Opens at ' + fmtHour(oh) };
+  // DISABLED FOR TESTING — ordering allowed at any time.
+  // To re-enable, remove the early return below.
+  return { open: true, msg: 'Ordering open (no time restriction)' };
+
+  // var oh   = _orderingWindow.open_hour;
+  // var ch   = _orderingWindow.close_hour;
+  // var hour = new Date().getHours();
+  // // Window spans midnight when open_hour > close_hour (e.g. 20→8)
+  // var open = oh > ch ? (hour >= oh || hour < ch) : (hour >= oh && hour < ch);
+  // if (open) {
+  //   return { open: true,  msg: 'Ordering open until ' + fmtHour(ch) };
+  // }
+  // return { open: false, msg: 'Order window: ' + fmtHour(oh) + ' – ' + fmtHour(ch) + '  ·  Opens at ' + fmtHour(oh) };
 }
 
 function renderOrderingBanner() {
