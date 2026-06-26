@@ -29,6 +29,7 @@ const dashboardRouter = require('./routes/dashboard');
 const payoutsRouter   = require('./routes/payouts');
 const usersRouter     = require('./routes/users');
 const farmersRouter   = require('./routes/farmers');
+const consumersRouter = require('./routes/consumers');
 const configRouter    = require('./routes/config');
 
 app.use('/auth',      authRouter);
@@ -44,6 +45,7 @@ app.use('/dashboard', dashboardRouter);
 app.use('/payouts',   payoutsRouter);
 app.use('/users',     usersRouter);
 app.use('/farmers',   farmersRouter);
+app.use('/consumers', consumersRouter);
 app.use('/config',    configRouter);
 
 // /me lives under /auth but the spec exposes it at /me — alias both

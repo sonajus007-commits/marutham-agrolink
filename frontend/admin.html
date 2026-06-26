@@ -38,6 +38,7 @@
   <button class="ptab"    id="tab-payouts"   onclick="openTab('payouts',this)">💸 Payouts</button>
   <button class="ptab"    id="tab-returns"   onclick="openTab('returns',this)">↩ Returns</button>
   <button class="ptab"    id="tab-farmers"   onclick="openTab('farmers',this)">🌾 Farmers</button>
+  <button class="ptab"    id="tab-consumers" onclick="openTab('consumers',this)">🛒 Consumers</button>
   <button class="ptab"    id="tab-hub"       onclick="openTab('hub',this)" style="display:none">🏭 Hub Queue</button>
   <button class="ptab"    id="tab-profile"   onclick="openTab('profile',this)">👤 My Profile</button>
 </div>
@@ -91,8 +92,9 @@
 
 <!-- ── ORDERS ─────────────────────────────────────────────────────────────── -->
 <div class="panel" id="panel-orders">
-  <div class="fg" style="margin-bottom:10px">
-    <input class="fi" id="orderSearch" type="text" placeholder="Search order code, consumer name, village…" oninput="filterAdminOrders()">
+  <div style="display:flex;gap:8px;margin-bottom:10px">
+    <input class="fi" id="orderSearch" type="text" placeholder="Search order code, consumer name, village…" oninput="filterAdminOrders()" style="flex:1">
+    <button onclick="exportOrdersCSV()" style="padding:8px 14px;background:#f0faf4;border:1.5px solid #c3e6cb;border-radius:10px;font-size:11px;font-weight:700;color:var(--forest);cursor:pointer;white-space:nowrap;font-family:inherit">⬇ CSV</button>
   </div>
   <div class="filt-row" id="adminOrderFilter"></div>
   <div id="adminOrderList"><div class="spinner"><div class="spin"></div></div></div>
@@ -170,7 +172,10 @@
   <div id="payoutSummaryBar"></div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
     <div class="filt-row" id="payoutFilterBar" style="margin:0"></div>
-    <button class="add-prod-btn" id="runSettleBtn" onclick="runSettlement()">⚡ Run Settlement</button>
+    <div style="display:flex;gap:8px">
+      <button onclick="exportPayoutsCSV()" style="padding:8px 14px;background:#f0faf4;border:1.5px solid #c3e6cb;border-radius:10px;font-size:11px;font-weight:700;color:var(--forest);cursor:pointer;font-family:inherit">⬇ CSV</button>
+      <button class="add-prod-btn" id="runSettleBtn" onclick="runSettlement()">⚡ Run Settlement</button>
+    </div>
   </div>
   <div id="payoutListWrap"><div class="spinner"><div class="spin"></div></div></div>
 </div>
@@ -181,10 +186,28 @@
   <div id="returnListWrap"><div class="spinner"><div class="spin"></div></div></div>
 </div>
 
+<!-- ── CONSUMERS ──────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-consumers">
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+    <input id="consumer-search" type="text" placeholder="Search by name, phone or village…"
+      style="flex:1;border:1.5px solid #e2e8e2;border-radius:10px;padding:9px 12px;font-size:12px;font-family:inherit;outline:none"
+      oninput="filterConsumers()">
+    <select id="consumer-sort" onchange="filterConsumers()"
+      style="border:1.5px solid #e2e8e2;border-radius:10px;padding:9px 10px;font-size:12px;font-family:inherit;background:#fff;outline:none">
+      <option value="spend">↓ Spend</option>
+      <option value="orders">↓ Orders</option>
+      <option value="name">A–Z Name</option>
+      <option value="joined">Newest</option>
+    </select>
+    <button onclick="exportConsumersCSV()" style="padding:8px 14px;background:#f0faf4;border:1.5px solid #c3e6cb;border-radius:10px;font-size:11px;font-weight:700;color:var(--forest);cursor:pointer;font-family:inherit;white-space:nowrap">⬇ CSV</button>
+  </div>
+  <div id="consumersWrap"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
 <!-- ── FARMERS ────────────────────────────────────────────────────────────── -->
 <div class="panel" id="panel-farmers">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
-    <input id="farmer-search" type="text" placeholder="Search by name or village…"
+    <input id="farmer-search" type="text" placeholder="Search by name or village…" style="flex:1"
       style="flex:1;border:1.5px solid #e2e8e2;border-radius:10px;padding:9px 12px;font-size:12px;font-family:inherit;outline:none"
       oninput="filterFarmers()">
     <select id="farmer-sort" onchange="filterFarmers()"
@@ -194,6 +217,7 @@
       <option value="rating">↓ Rating</option>
       <option value="name">A–Z Name</option>
     </select>
+    <button onclick="exportFarmersCSV()" style="padding:8px 14px;background:#f0faf4;border:1.5px solid #c3e6cb;border-radius:10px;font-size:11px;font-weight:700;color:var(--forest);cursor:pointer;font-family:inherit;white-space:nowrap">⬇ CSV</button>
   </div>
   <div id="farmersWrap"><div class="spinner"><div class="spin"></div></div></div>
 </div>
@@ -453,6 +477,7 @@ function openTab(name, tabEl) {
   if (name === 'users')    renderUsers();
   if (name === 'payouts')  renderPayouts();
   if (name === 'returns')  renderReturns();
+  if (name === 'consumers') renderConsumers();
   if (name === 'farmers')  renderFarmers();
   if (name === 'hub')      renderHubQueue();
   if (name === 'profile')  renderProfile();
@@ -1592,6 +1617,170 @@ async function doAssignAgent(orderId) {
     showToast(e.message, 'er');
     btn.disabled = false; btn.textContent = 'Assign';
   }
+}
+
+// ── CSV EXPORTS ───────────────────────────────────────────────────────────────
+function exportOrdersCSV() {
+  var orders = _allAdminOrders || [];
+  var date = new Date().toISOString().slice(0,10);
+  downloadCSV('orders_' + date + '.csv',
+    ['Code','Consumer','District','Village','Status','Pay Method','Pay Status','Total (₹)','Date'],
+    orders.map(function(o) { return [
+      o.code || o.id.slice(0,8),
+      o.consumer_name || '',
+      o.district || '',
+      o.village  || '',
+      o.cancelled ? 'Cancelled' : (o.status || ''),
+      o.pay_method   || '',
+      o.pay_status   || '',
+      parseFloat(o.total || 0).toFixed(2),
+      fmtDateShort(o.created_at),
+    ]; })
+  );
+}
+
+function exportPayoutsCSV() {
+  var payouts = _allPayouts || [];
+  var date = new Date().toISOString().slice(0,10);
+  downloadCSV('payouts_' + date + '.csv',
+    ['Order Code','Farmer','District','Amount (₹)','Status','Reference','Paid At'],
+    payouts.map(function(p) { return [
+      (p.order && p.order.code) || '',
+      (p.farmer && ((p.farmer.fname||'') + ' ' + (p.farmer.lname||'')).trim()) || '',
+      (p.farmer && p.farmer.district) || '',
+      parseFloat(p.amount || 0).toFixed(2),
+      p.status || '',
+      p.reference || '',
+      p.paid_at ? fmtDateShort(p.paid_at) : '',
+    ]; })
+  );
+}
+
+function exportFarmersCSV() {
+  var farmers = _allFarmers || [];
+  var date = new Date().toISOString().slice(0,10);
+  downloadCSV('farmers_' + date + '.csv',
+    ['Name','Phone','Village','District','Active Listings','Orders Delivered','Revenue (₹)','Avg Rating','Ratings Count','Bank','Status'],
+    farmers.map(function(f) { return [
+      ((f.fname||'') + ' ' + (f.lname||'')).trim(),
+      f.phone || '',
+      f.village_town || '',
+      f.district     || '',
+      f.active_listings  || 0,
+      f.delivered_orders || 0,
+      parseFloat(f.total_revenue || 0).toFixed(2),
+      f.avg_rating  || '',
+      f.num_ratings || 0,
+      f.bank_name   || '',
+      f.status      || 'active',
+    ]; })
+  );
+}
+
+// ── CONSUMERS DIRECTORY ───────────────────────────────────────────────────────
+var _allConsumers = [];
+
+async function renderConsumers() {
+  var wrap = document.getElementById('consumersWrap');
+  wrap.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res = await API.getConsumers();
+    _allConsumers = res.consumers || [];
+    filterConsumers();
+  } catch(e) {
+    wrap.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+function filterConsumers() {
+  var q    = (document.getElementById('consumer-search').value || '').toLowerCase();
+  var sort = document.getElementById('consumer-sort').value;
+  var list = _allConsumers.filter(function(c) {
+    if (!q) return true;
+    var name  = ((c.fname||'') + ' ' + (c.lname||'')).toLowerCase();
+    var phone = (c.phone||'').toLowerCase();
+    var loc   = ((c.village_town||'') + ' ' + (c.district||'')).toLowerCase();
+    return name.includes(q) || phone.includes(q) || loc.includes(q);
+  });
+  list.sort(function(a, b) {
+    if (sort === 'spend')  return (b.total_spend||0) - (a.total_spend||0);
+    if (sort === 'orders') return (b.total_orders||0) - (a.total_orders||0);
+    if (sort === 'joined') return new Date(b.created_at) - new Date(a.created_at);
+    return ((a.fname||'') + (a.lname||'')).localeCompare((b.fname||'') + (b.lname||''));
+  });
+
+  var wrap = document.getElementById('consumersWrap');
+  if (list.length === 0) {
+    wrap.innerHTML = '<div class="empty-state"><div class="es-icon">🛒</div><p>No consumers found' + (q ? ' matching "' + q + '"' : '') + '.</p></div>';
+    return;
+  }
+
+  var totalSpend  = list.reduce(function(s,c){ return s + parseFloat(c.total_spend||0); }, 0);
+  var totalOrders = list.reduce(function(s,c){ return s + (c.total_orders||0); }, 0);
+  var html = '<div style="display:flex;gap:10px;margin-bottom:12px">';
+  html += '<div class="sc" style="flex:1;border-left:3px solid #1d4ed8"><div class="slbl">Consumers</div><div class="sval">' + list.length + '</div></div>';
+  html += '<div class="sc" style="flex:1;border-left:3px solid #f59e0b"><div class="slbl">Total Spend</div><div class="sval mono">' + fmt(totalSpend) + '</div></div>';
+  html += '<div class="sc" style="flex:1;border-left:3px solid #7c3aed"><div class="slbl">Orders Placed</div><div class="sval">' + totalOrders + '</div></div>';
+  html += '</div>';
+
+  list.forEach(function(c) {
+    var isBlocked = c.status === 'blocked';
+    var initials  = ((c.fname||'C')[0] + (c.lname||'')[0]).toUpperCase();
+    html += '<div class="card" style="padding:12px 14px;margin-bottom:8px' + (isBlocked ? ';opacity:.65' : '') + '">';
+    html += '<div style="display:flex;align-items:center;gap:12px">';
+    html += '<div style="width:38px;height:38px;border-radius:50%;background:' + (isBlocked ? '#9ca3af' : '#1d4ed8') + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">' + initials + '</div>';
+    html += '<div style="flex:1;min-width:0">';
+    html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
+    html += '<div style="font-size:13px;font-weight:700;color:#1d4ed8">' + (c.fname||'') + (c.lname ? ' ' + c.lname : '') + '</div>';
+    if (isBlocked) html += '<span style="font-size:9px;font-weight:700;background:#fee2e2;color:#c0392b;padding:2px 8px;border-radius:50px">Blocked</span>';
+    html += '</div>';
+    html += '<div style="font-size:11px;color:var(--gray);margin-top:1px">' + (c.village_town||'') + (c.district ? (c.village_town ? ', ' : '') + c.district : '') + '</div>';
+    html += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:7px">';
+    html += '<div><div style="font-size:14px;font-weight:800;color:#1d4ed8">' + fmt(c.total_spend) + '</div><div style="font-size:9px;color:var(--gray)">Spend</div></div>';
+    html += '<div><div style="font-size:14px;font-weight:800;color:#2d6a4f">' + c.total_orders + '</div><div style="font-size:9px;color:var(--gray)">Orders</div></div>';
+    html += '<div><div style="font-size:14px;font-weight:800;color:#7c3aed">' + c.delivered + '</div><div style="font-size:9px;color:var(--gray)">Delivered</div></div>';
+    html += '</div>';
+    if (c.phone) html += '<div style="font-size:11px;color:var(--gray);margin-top:5px">📞 ' + c.phone + (c.email ? '  ·  ✉ ' + c.email : '') + '</div>';
+    html += '</div>';
+    html += '<div style="margin-left:auto;padding-left:8px">';
+    if (isBlocked) {
+      html += '<button onclick="toggleConsumerBlock(\'' + c.id + '\',false)" style="font-size:11px;padding:6px 12px;border:1.5px solid #2d6a4f;background:#f0faf4;color:var(--forest);border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">Unblock</button>';
+    } else {
+      html += '<button onclick="toggleConsumerBlock(\'' + c.id + '\',true)" style="font-size:11px;padding:6px 12px;border:1.5px solid #fee2e2;background:#fff5f5;color:#c0392b;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">Block</button>';
+    }
+    html += '</div></div></div>';
+  });
+  wrap.innerHTML = html;
+}
+
+async function toggleConsumerBlock(id, block) {
+  try {
+    if (block) await API.blockConsumer(id);
+    else       await API.unblockConsumer(id);
+    var c = _allConsumers.find(function(x){ return x.id === id; });
+    if (c) c.status = block ? 'blocked' : 'active';
+    filterConsumers();
+    showToast(block ? 'Consumer blocked.' : 'Consumer unblocked.', 'ok');
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+function exportConsumersCSV() {
+  var date = new Date().toISOString().slice(0,10);
+  downloadCSV('consumers_' + date + '.csv',
+    ['Name','Phone','Email','Village','District','Orders','Delivered','Spend (₹)','Joined','Status'],
+    _allConsumers.map(function(c) { return [
+      ((c.fname||'') + ' ' + (c.lname||'')).trim(),
+      c.phone   || '',
+      c.email   || '',
+      c.village_town || '',
+      c.district     || '',
+      c.total_orders || 0,
+      c.delivered    || 0,
+      parseFloat(c.total_spend || 0).toFixed(2),
+      fmtDateShort(c.created_at),
+      c.status || 'active',
+    ]; })
+  );
 }
 
 // ── FARMERS DIRECTORY ─────────────────────────────────────────────────────────

@@ -392,8 +392,9 @@ router.patch('/me', requireAuth, async (req, res) => {
     'fname', 'lname', 'email', 'alt_phone',
     'house_no', 'street1', 'street2', 'landmark',
     'village_town', 'city', 'district', 'pincode', 'state',
-    'bank_name', 'bank_account', 'ifsc',  // farmer bank details
-    'agent_vehicle',                        // agent vehicle
+    'bank_name', 'bank_account', 'ifsc',    // farmer bank details
+    'agent_vehicle',                         // agent vehicle
+    'delivery_addresses',                    // consumer address book (JSONB array)
   ];
 
   const updates = {};

@@ -180,5 +180,16 @@ var API = {
   },
   unblockFarmer: function(id) {
     return apiFetch('PATCH', '/farmers/' + id + '/unblock', {}, tok());
+  },
+
+  // ── Consumers directory ───────────────────────────────────────────────────
+  getConsumers: function() {
+    return apiFetch('GET', '/consumers', null, tok());
+  },
+  blockConsumer: function(id) {
+    return apiFetch('PATCH', '/consumers/' + id + '/block', {}, tok());
+  },
+  unblockConsumer: function(id) {
+    return apiFetch('PATCH', '/consumers/' + id + '/unblock', {}, tok());
   }
 };

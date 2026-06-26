@@ -136,6 +136,35 @@
       </div>
     </div>
   </div>
+  <!-- Address Book -->
+  <div class="card" id="addrBookCard">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h3 style="margin:0">📍 Address Book</h3>
+      <button onclick="openAddrForm(null)" style="font-size:11px;padding:6px 12px;background:var(--forest);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-family:inherit">+ Add</button>
+    </div>
+    <div id="addrList"></div>
+    <!-- Add/Edit form -->
+    <div id="addrForm" style="display:none;margin-top:12px;border-top:1px solid #eee;padding-top:12px">
+      <div class="fg"><label class="fl">Label (e.g. Home, Work)</label>
+        <input class="fi" id="addr-label" type="text" placeholder="Home"></div>
+      <div class="fg"><label class="fl">House / Flat No.</label>
+        <input class="fi" id="addr-house" type="text"></div>
+      <div class="fg"><label class="fl">Street Line 1</label>
+        <input class="fi" id="addr-street1" type="text"></div>
+      <div class="fg"><label class="fl">Landmark</label>
+        <input class="fi" id="addr-landmark" type="text" placeholder="Near school, temple…"></div>
+      <div class="fg"><label class="fl">Village / Town</label>
+        <input class="fi" id="addr-village" type="text"></div>
+      <div class="fg"><label class="fl">Pincode</label>
+        <input class="fi" id="addr-pincode" type="text" maxlength="6" oninput="numOnly(this)"></div>
+      <div class="em" id="addr-err" style="display:none;margin-bottom:4px"></div>
+      <div class="ea">
+        <button class="bsave" onclick="saveAddr()">Save Address</button>
+        <button class="bcanc" onclick="closeAddrForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <div class="card">
     <h3>🔒 Change Password</h3>
     <button class="bedit" onclick="togglePwForm()">🔒 Change Password</button>
@@ -1028,6 +1057,23 @@ async function renderCart() {
   sumHtml += '<div class="irow"><span class="ilbl" style="font-size:14px;font-weight:700;color:var(--forest)">Grand Total</span><span class="ival" style="font-size:16px;font-weight:700;color:var(--forest)">₹' + grandTotal.toFixed(0) + '</span></div>';
   sumHtml += '</div>';
 
+  // Delivery address picker
+  var addrs = (user.delivery_addresses || []);
+  sumHtml += '<div class="fg"><label class="fl">Delivery Address <span class="rq">*</span></label>';
+  if (addrs.length > 0) {
+    sumHtml += '<select class="fi" id="addrPicker">';
+    addrs.forEach(function(a, i) {
+      var line = a.label + ': ' + [a.house_no, a.street1, a.landmark, a.village_town, a.pincode].filter(Boolean).join(', ');
+      sumHtml += '<option value="' + i + '"' + (a.is_default ? ' selected' : '') + '>' + line + '</option>';
+    });
+    sumHtml += '<option value="profile">📍 Use profile address</option>';
+    sumHtml += '</select>';
+  } else {
+    sumHtml += '<div style="font-size:11px;color:var(--gray);padding:8px;background:#f8f9fa;border-radius:8px">📍 Using your profile address. Add saved addresses in Profile tab.</div>';
+    sumHtml += '<input type="hidden" id="addrPicker" value="profile">';
+  }
+  sumHtml += '</div>';
+
   sumHtml += '<div class="fg"><label class="fl">Payment Method <span class="rq">*</span></label>';
   sumHtml += '<select class="fi" id="payMethod">';
   sumHtml += '<option value="Cash on Delivery">Cash on Delivery</option>';
@@ -1102,7 +1148,13 @@ async function placeOrder() {
   var btn = document.querySelector('#panel-cart .sbtn');
   btn.disabled = true; btn.textContent = 'Placing order…';
   try {
-    var res = await API.placeOrder({ items: items, pay_method: payMethod, delivery_fee: 30 });
+    var addrPicker = document.getElementById('addrPicker');
+    var selectedAddr = null;
+    if (addrPicker && addrPicker.value !== 'profile') {
+      var idx = parseInt(addrPicker.value);
+      selectedAddr = (user.delivery_addresses || [])[idx] || null;
+    }
+    var res = await API.placeOrder({ items: items, pay_method: payMethod, delivery_fee: 30, delivery_address: selectedAddr });
     _cart = [];
     saveCart();
     updateCartBar();
@@ -1403,6 +1455,103 @@ function renderProfile() {
   document.getElementById('p-email').textContent    = user.email || '—';
   document.getElementById('p-district').textContent = user.district || '—';
   document.getElementById('p-addr').textContent     = buildAddress(user);
+  renderAddrList();
+}
+
+// ── ADDRESS BOOK ──────────────────────────────────────────────────────────────
+var _editAddrIdx = null;
+
+function renderAddrList() {
+  var el    = document.getElementById('addrList');
+  var addrs = user.delivery_addresses || [];
+  if (addrs.length === 0) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--gray);padding:4px 0">No saved addresses yet.</div>';
+    return;
+  }
+  var html = '';
+  addrs.forEach(function(a, i) {
+    html += '<div style="border:1.5px solid ' + (a.is_default ? 'var(--forest)' : '#e2e8e2') + ';border-radius:10px;padding:10px 12px;margin-bottom:8px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+    html += '<div><div style="font-size:12px;font-weight:700;color:var(--forest)">' + (a.label || 'Address ' + (i+1)) + (a.is_default ? ' <span style="font-size:9px;background:#e6f7ed;color:#1a7a4a;padding:1px 6px;border-radius:50px">Default</span>' : '') + '</div>';
+    html += '<div style="font-size:11px;color:var(--gray);margin-top:3px;line-height:1.5">' + [a.house_no, a.street1, a.landmark, a.village_town, a.pincode].filter(Boolean).join(', ') + '</div></div>';
+    html += '<div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px">';
+    if (!a.is_default) html += '<button onclick="setDefaultAddr(' + i + ')" style="font-size:10px;padding:4px 8px;border:1px solid #c3e6cb;background:#f0faf4;color:var(--forest);border-radius:6px;cursor:pointer;font-family:inherit">Default</button>';
+    html += '<button onclick="openAddrForm(' + i + ')" style="font-size:10px;padding:4px 8px;border:1px solid #dde;background:#f8f8ff;color:#374151;border-radius:6px;cursor:pointer;font-family:inherit">Edit</button>';
+    html += '<button onclick="deleteAddr(' + i + ')" style="font-size:10px;padding:4px 8px;border:1px solid #fee2e2;background:#fff5f5;color:#c0392b;border-radius:6px;cursor:pointer;font-family:inherit">✕</button>';
+    html += '</div></div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function openAddrForm(idx) {
+  _editAddrIdx = idx;
+  var a = idx !== null ? (user.delivery_addresses || [])[idx] : {};
+  sv('addr-label',   a.label    || '');
+  sv('addr-house',   a.house_no || '');
+  sv('addr-street1', a.street1  || '');
+  sv('addr-landmark',a.landmark || '');
+  sv('addr-village', a.village_town || '');
+  sv('addr-pincode', a.pincode  || '');
+  document.getElementById('addrErr') && (document.getElementById('addrErr').style.display = 'none');
+  document.getElementById('addrForm').style.display = 'block';
+  document.getElementById('addr-label').focus();
+}
+
+function closeAddrForm() {
+  document.getElementById('addrForm').style.display = 'none';
+  _editAddrIdx = null;
+}
+
+async function saveAddr() {
+  var label   = gv('addr-label') || 'Home';
+  var house   = gv('addr-house');
+  var street1 = gv('addr-street1');
+  var village = gv('addr-village');
+  var pincode = gv('addr-pincode');
+  var err     = document.getElementById('addr-err');
+  if (!street1 && !village) { err.textContent = 'Enter at least a street or village.'; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  var addrs = JSON.parse(JSON.stringify(user.delivery_addresses || []));
+  var entry = { label, house_no: house, street1, landmark: gv('addr-landmark'), village_town: village, pincode, is_default: false };
+  if (_editAddrIdx !== null) {
+    entry.is_default = addrs[_editAddrIdx].is_default;
+    addrs[_editAddrIdx] = entry;
+  } else {
+    if (addrs.length === 0) entry.is_default = true;
+    addrs.push(entry);
+  }
+  try {
+    await API.patchMe({ delivery_addresses: addrs });
+    user.delivery_addresses = addrs;
+    localStorage.setItem('ma_user', JSON.stringify(user));
+    closeAddrForm();
+    renderAddrList();
+    showToast('Address saved.', 'ok');
+  } catch(e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+
+async function deleteAddr(idx) {
+  var addrs = (user.delivery_addresses || []).filter(function(_,i){ return i !== idx; });
+  if (addrs.length > 0 && !addrs.some(function(a){ return a.is_default; })) addrs[0].is_default = true;
+  try {
+    await API.patchMe({ delivery_addresses: addrs });
+    user.delivery_addresses = addrs;
+    localStorage.setItem('ma_user', JSON.stringify(user));
+    renderAddrList();
+    showToast('Address removed.', 'ok');
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function setDefaultAddr(idx) {
+  var addrs = JSON.parse(JSON.stringify(user.delivery_addresses || []));
+  addrs.forEach(function(a, i){ a.is_default = (i === idx); });
+  try {
+    await API.patchMe({ delivery_addresses: addrs });
+    user.delivery_addresses = addrs;
+    localStorage.setItem('ma_user', JSON.stringify(user));
+    renderAddrList();
+    showToast('Default address updated.', 'ok');
+  } catch(e) { showToast(e.message, 'er'); }
 }
 
 function toggleEditForm() {

@@ -167,6 +167,23 @@ function statusColor(status) {
   return map[status] || '#5a6472';
 }
 
+// ── CSV export ───────────────────────────────────────────────────────────────
+function downloadCSV(filename, headers, rows) {
+  var lines = [headers];
+  rows.forEach(function(r) {
+    lines.push(r.map(function(v) {
+      var s = (v === null || v === undefined) ? '' : String(v);
+      return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0)
+        ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }).join(','));
+  });
+  var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ── Address builder ───────────────────────────────────────────────────────────
 function buildAddress(u) {
   return [u.house_no, u.street1, u.street2, u.landmark, u.village_town,

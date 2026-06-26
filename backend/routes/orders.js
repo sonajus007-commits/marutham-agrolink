@@ -19,7 +19,7 @@ router.post('/', async (req, res) => {
     return res.status(403).json({ error: 'Only consumers can place orders.' });
   }
 
-  const { items, pay_method, delivery_fee: clientDeliveryFee } = req.body;
+  const { items, pay_method, delivery_fee: clientDeliveryFee, delivery_address } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'items array is required and must not be empty.' });
@@ -174,6 +174,7 @@ router.post('/', async (req, res) => {
       stage:         0,
       status:        'Order Placed',
       route:         '',
+      ...(delivery_address ? { delivery_address } : {}),
     })
     .select()
     .single();
