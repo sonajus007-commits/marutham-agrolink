@@ -127,5 +127,8 @@ var API = {
   // ── Payouts ───────────────────────────────────────────────────────────────
   getPayouts: function() {
     return apiFetch('GET', '/payouts', null, tok());
+  },
+  runPayouts: function() {
+    return apiFetch('POST', '/payouts/run', {}, tok());
   }
 };

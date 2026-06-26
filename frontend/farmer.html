@@ -266,33 +266,91 @@ async function renderEarnings() {
   var el = document.getElementById('earnings-body');
   el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
   try {
-    var res = await API.getOrders();
-    var orders = res.orders || [];
-    var delivered = orders.filter(function(o){ return o.status === 'Delivered'; });
-    var pending   = orders.filter(function(o){ return !o.cancelled && o.status !== 'Delivered'; });
-    var totalEarned = delivered.reduce(function(s,o){ return s + parseFloat(o.farmer_payout || 0); }, 0);
-    var pendingAmt  = pending.reduce(function(s,o){ return s + parseFloat(o.farmer_payout || 0); }, 0);
+    var [ordRes, payRes] = await Promise.all([API.getOrders(), API.getPayouts()]);
+    var orders  = ordRes.orders  || [];
+    var payouts = payRes.payouts || [];
 
-    var html = '<div class="sgrid">';
-    html += '<div class="sc"><div class="slbl">Total Earned</div><div class="sval mono">₹' + totalEarned.toFixed(0) + '</div><div class="ssub">From delivered orders</div></div>';
-    html += '<div class="sc"><div class="slbl">Pending</div><div class="sval mono">₹' + pendingAmt.toFixed(0) + '</div><div class="ssub">Active orders</div></div>';
+    // Amounts from actual payout records
+    var paidAmt    = payouts.filter(function(p){ return p.status === 'paid'; })
+                            .reduce(function(s,p){ return s + parseFloat(p.amount||0); }, 0);
+    var pendingAmt = payouts.filter(function(p){ return p.status === 'pending'; })
+                            .reduce(function(s,p){ return s + parseFloat(p.amount||0); }, 0);
+
+    // Delivered orders with no payout record yet = awaiting settlement
+    var paidOrderIds = new Set(payouts.map(function(p){ return p.order && p.order.id; }));
+    var awaitingOrders = orders.filter(function(o){
+      return o.status === 'Delivered' && !o.cancelled && !paidOrderIds.has(o.id);
+    });
+    var awaitingAmt = awaitingOrders.reduce(function(s,o){ return s + parseFloat(o.farmer_payout||0); }, 0);
+
+    // Active (in-flight) orders
+    var activeOrders = orders.filter(function(o){ return !o.cancelled && o.status !== 'Delivered'; });
+    var activeAmt    = activeOrders.reduce(function(s,o){ return s + parseFloat(o.farmer_payout||0); }, 0);
+
+    var html = '';
+
+    // ── Summary KPIs ─────────────────────────────────────────────────────────
+    html += '<div class="sgrid">';
+    html += '<div class="sc" style="border-left:3px solid #1a7a4a"><div class="slbl">Paid Out</div><div class="sval mono" style="color:#1a7a4a">₹' + paidAmt.toFixed(0) + '</div><div class="ssub">Bank transferred</div></div>';
+    html += '<div class="sc" style="border-left:3px solid #f59e0b"><div class="slbl">Pending Transfer</div><div class="sval mono" style="color:#92400e">₹' + pendingAmt.toFixed(0) + '</div><div class="ssub">Settlement queued</div></div>';
     html += '</div>';
     html += '<div class="sgrid">';
-    html += '<div class="sc"><div class="slbl">Delivered</div><div class="sval">' + delivered.length + '</div><div class="ssub">Orders</div></div>';
-    html += '<div class="sc"><div class="slbl">In Progress</div><div class="sval">' + pending.length + '</div><div class="ssub">Orders</div></div>';
+    html += '<div class="sc" style="border-left:3px solid #7c3aed"><div class="slbl">Awaiting Settlement</div><div class="sval mono" style="color:#7c3aed">₹' + awaitingAmt.toFixed(0) + '</div><div class="ssub">' + awaitingOrders.length + ' delivered order' + (awaitingOrders.length!==1?'s':'') + '</div></div>';
+    html += '<div class="sc" style="border-left:3px solid #2d6a4f"><div class="slbl">In Transit</div><div class="sval mono" style="color:#2d6a4f">₹' + activeAmt.toFixed(0) + '</div><div class="ssub">' + activeOrders.length + ' active order' + (activeOrders.length!==1?'s':'') + '</div></div>';
     html += '</div>';
 
-    if (delivered.length > 0) {
-      html += '<div class="card"><h3>💰 Payout History</h3>';
-      delivered.slice(0,10).forEach(function(o) {
-        html += '<div class="irow"><div><div class="ord-id">' + (o.code||o.id.slice(0,8).toUpperCase()) + '</div>';
-        html += '<div class="ord-loc">' + fmtDateShort(o.delivered_at||o.created_at) + '</div></div>';
-        html += '<div style="font-weight:800;color:var(--green);font-size:14px">₹' + parseFloat(o.farmer_payout||0).toFixed(2) + '</div></div>';
+    // ── Bank details reminder ─────────────────────────────────────────────────
+    if (user.bank_name || user.bank_account) {
+      html += '<div class="card" style="background:#f0faf4;border:1px solid #c3e6cb">';
+      html += '<div style="display:flex;align-items:center;gap:10px">';
+      html += '<div style="font-size:24px">🏦</div>';
+      html += '<div><div style="font-size:12px;font-weight:700;color:var(--forest)">Payments go to</div>';
+      html += '<div style="font-size:13px;color:#374151;margin-top:2px">' + (user.bank_name||'') + (user.bank_account ? ' · ••••' + user.bank_account.slice(-4) : '') + '</div>';
+      if (user.ifsc) html += '<div style="font-size:10px;color:var(--gray)">' + user.ifsc + '</div>';
+      html += '</div></div></div>';
+    }
+
+    // ── Payout records ───────────────────────────────────────────────────────
+    if (payouts.length > 0) {
+      html += '<div class="card"><h3>💳 Payout Records</h3>';
+      payouts.forEach(function(p) {
+        var ord      = p.order || {};
+        var isPaid   = p.status === 'paid';
+        var statusBg = isPaid ? '#e6f7ed' : '#fffbeb';
+        var statusCo = isPaid ? '#1a7a4a' : '#92400e';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f0">';
+        html += '<div>';
+        html += '<div style="font-size:12px;font-weight:700;color:var(--forest)" class="mono">' + (ord.code || '—') + '</div>';
+        html += '<div style="font-size:10px;color:var(--gray);margin-top:2px">' + fmtDate(p.created_at) + '</div>';
+        if (p.reference) html += '<div style="font-size:10px;color:#7c3aed;margin-top:2px">Ref: ' + p.reference + '</div>';
+        if (isPaid && p.paid_at) html += '<div style="font-size:10px;color:#1a7a4a;margin-top:1px">Paid ' + fmtDateShort(p.paid_at) + '</div>';
+        html += '</div>';
+        html += '<div style="text-align:right">';
+        html += '<div style="font-size:15px;font-weight:800;color:var(--forest)">₹' + parseFloat(p.amount||0).toFixed(0) + '</div>';
+        html += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:50px;background:' + statusBg + ';color:' + statusCo + '">' + (isPaid ? '✓ Paid' : '⏳ Pending') + '</span>';
+        html += '</div></div>';
       });
       html += '</div>';
-    } else {
-      html += '<div class="empty-state"><div class="es-icon">💰</div><p>No deliveries yet.<br>Earnings will appear here once orders are delivered.</p></div>';
     }
+
+    // ── Awaiting settlement (delivered, no payout record yet) ────────────────
+    if (awaitingOrders.length > 0) {
+      html += '<div class="card"><h3>⏳ Awaiting Settlement</h3>';
+      html += '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">Delivered orders — your earnings will be processed in the next settlement run by admin.</p>';
+      awaitingOrders.forEach(function(o) {
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0">';
+        html += '<div><div class="mono" style="font-size:12px;font-weight:700;color:var(--forest)">' + (o.code||o.id.slice(0,8).toUpperCase()) + '</div>';
+        html += '<div style="font-size:10px;color:var(--gray)">' + fmtDateShort(o.delivered_at||o.created_at) + '</div></div>';
+        html += '<div style="font-size:14px;font-weight:800;color:#7c3aed">₹' + parseFloat(o.farmer_payout||0).toFixed(0) + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    if (payouts.length === 0 && awaitingOrders.length === 0) {
+      html += '<div class="empty-state"><div class="es-icon">💰</div><p>No earnings yet.<br>Your payouts will appear here after orders are delivered and settled.</p></div>';
+    }
+
     el.innerHTML = html;
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';

@@ -35,6 +35,7 @@
   <button class="ptab"    id="tab-products"  onclick="openTab('products',this)">🌾 Products</button>
   <button class="ptab"    id="tab-orders"    onclick="openTab('orders',this)">📦 Orders</button>
   <button class="ptab"    id="tab-users"     onclick="openTab('users',this)">👥 Users</button>
+  <button class="ptab"    id="tab-payouts"   onclick="openTab('payouts',this)">💸 Payouts</button>
   <button class="ptab"    id="tab-returns"   onclick="openTab('returns',this)">↩ Returns</button>
   <button class="ptab"    id="tab-profile"   onclick="openTab('profile',this)">👤 My Profile</button>
 </div>
@@ -76,6 +77,16 @@
   </div>
   <div class="filt-row" id="userRoleFilter"></div>
   <div id="userListWrap"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- ── PAYOUTS ────────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-payouts">
+  <div id="payoutSummaryBar"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div class="filt-row" id="payoutFilterBar" style="margin:0"></div>
+    <button class="add-prod-btn" id="runSettleBtn" onclick="runSettlement()">⚡ Run Settlement</button>
+  </div>
+  <div id="payoutListWrap"><div class="spinner"><div class="spin"></div></div></div>
 </div>
 
 <!-- ── RETURNS ────────────────────────────────────────────────────────────── -->
@@ -280,6 +291,7 @@ function openTab(name, tabEl) {
   if (name === 'products') renderProducts();
   if (name === 'orders')   renderAdminOrders();
   if (name === 'users')    renderUsers();
+  if (name === 'payouts')  renderPayouts();
   if (name === 'returns')  renderReturns();
   if (name === 'profile')  renderProfile();
 }
@@ -1071,6 +1083,105 @@ async function toggleBlock(userId, currentlyBlocked) {
     showToast('User ' + action + 'ed.', 'ok');
     renderUsers();
   } catch(e) { showToast(e.message, 'er'); }
+}
+
+// ── PAYOUTS ───────────────────────────────────────────────────────────────────
+var _allPayouts       = [];
+var _activePayFilter  = 'All';
+var _payFilters       = ['All','Pending','Paid'];
+
+function renderPayoutFilterBar() {
+  var html = '';
+  _payFilters.forEach(function(f) {
+    html += '<button class="chip' + (f === _activePayFilter ? ' on' : '') + '" onclick="setPayFilter(\'' + f + '\')">' + f + '</button>';
+  });
+  document.getElementById('payoutFilterBar').innerHTML = html;
+}
+
+function setPayFilter(f) {
+  _activePayFilter = f;
+  renderPayoutFilterBar();
+  renderPayoutList();
+}
+
+async function renderPayouts() {
+  document.getElementById('payoutListWrap').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res = await API.getPayouts();
+    _allPayouts = res.payouts || [];
+    renderPayoutSummary();
+    renderPayoutFilterBar();
+    renderPayoutList();
+  } catch(e) {
+    document.getElementById('payoutListWrap').innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+function renderPayoutSummary() {
+  var totalPaid    = _allPayouts.filter(function(p){ return p.status === 'paid'; }).reduce(function(s,p){ return s + parseFloat(p.amount||0); }, 0);
+  var totalPending = _allPayouts.filter(function(p){ return p.status === 'pending'; }).reduce(function(s,p){ return s + parseFloat(p.amount||0); }, 0);
+  var html = '<div class="sgrid" style="margin-bottom:14px">';
+  html += '<div class="sc" style="border-left:3px solid #1a7a4a"><div class="slbl">Total Paid</div><div class="sval mono" style="color:#1a7a4a">₹' + totalPaid.toFixed(0) + '</div><div class="ssub">' + _allPayouts.filter(function(p){return p.status==='paid';}).length + ' records</div></div>';
+  html += '<div class="sc" style="border-left:3px solid #f59e0b"><div class="slbl">Pending</div><div class="sval mono" style="color:#92400e">₹' + totalPending.toFixed(0) + '</div><div class="ssub">' + _allPayouts.filter(function(p){return p.status==='pending';}).length + ' records</div></div>';
+  html += '</div>';
+  document.getElementById('payoutSummaryBar').innerHTML = html;
+}
+
+function renderPayoutList() {
+  var list = _allPayouts;
+  if (_activePayFilter === 'Pending') list = list.filter(function(p){ return p.status === 'pending'; });
+  if (_activePayFilter === 'Paid')    list = list.filter(function(p){ return p.status === 'paid'; });
+
+  var el = document.getElementById('payoutListWrap');
+  if (list.length === 0) {
+    el.innerHTML = '<div class="empty-state"><p>No payouts in this category.</p></div>'; return;
+  }
+
+  var html = '';
+  list.forEach(function(p) {
+    var f      = p.farmer || {};
+    var ord    = p.order  || {};
+    var isPaid = p.status === 'paid';
+    var statusBg = isPaid ? '#e6f7ed' : '#fffbeb';
+    var statusCo = isPaid ? '#1a7a4a' : '#92400e';
+
+    html += '<div class="prod-card" style="margin-bottom:12px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">';
+    html += '<div>';
+    html += '<div style="font-size:14px;font-weight:800;color:var(--forest)">' + (f.fname||'') + (f.lname ? ' ' + f.lname : '') + '</div>';
+    html += '<div style="font-size:10px;color:var(--gray);margin-top:1px" class="mono">' + (f.phone||'') + '</div>';
+    html += '</div>';
+    html += '<span style="padding:4px 10px;border-radius:50px;font-size:10px;font-weight:800;background:' + statusBg + ';color:' + statusCo + '">' + (isPaid ? '✓ Paid' : '⏳ Pending') + '</span>';
+    html += '</div>';
+
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+    html += '<div>';
+    html += '<div style="font-size:10px;color:var(--gray)">Order <span class="mono">' + (ord.code||'—') + '</span> · ' + fmtDateShort(p.created_at) + '</div>';
+    if (f.bank_name) html += '<div style="font-size:10px;color:#374151;margin-top:2px">🏦 ' + f.bank_name + (f.bank_account ? ' · ••••' + f.bank_account.slice(-4) : '') + (f.ifsc ? ' · ' + f.ifsc : '') + '</div>';
+    if (p.reference) html += '<div style="font-size:10px;color:#7c3aed;margin-top:2px">Ref: ' + p.reference + '</div>';
+    if (isPaid && p.paid_at) html += '<div style="font-size:10px;color:#1a7a4a;margin-top:1px">Paid ' + fmtDate(p.paid_at) + '</div>';
+    html += '</div>';
+    html += '<div style="font-size:18px;font-weight:800;color:var(--forest)">₹' + parseFloat(p.amount||0).toFixed(0) + '</div>';
+    html += '</div>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+async function runSettlement() {
+  var btn = document.getElementById('runSettleBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Running…';
+  try {
+    var res = await API.runPayouts();
+    showToast(res.message || ('Created ' + res.created + ' payout record(s).'), 'ok');
+    renderPayouts();
+  } catch(e) {
+    showToast(e.message, 'er');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Run Settlement';
+  }
 }
 
 // ── RETURNS ───────────────────────────────────────────────────────────────────
