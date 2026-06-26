@@ -19,6 +19,7 @@ const router = express.Router();
 const ROLE_PREFIXES = {
   consumer:           'CN',
   farmer:             'FR',
+  'Retailer':         'RT',
   'Delivery Agent':   'DA',
   'VCO':              'VC',
   'District Manager': 'DM',
@@ -46,8 +47,12 @@ function fromAlphaCounter(s) {
 
 // Generate a unique login ID by querying the DB for the highest existing counter
 // on the same base prefix, then issuing the next one.
-async function generateLoginId(role, adminRole, state, district, fname) {
-  const rp     = (role === 'admin' ? ROLE_PREFIXES[adminRole] : ROLE_PREFIXES[role]) || 'US';
+async function generateLoginId(role, adminRole, state, district, fname, sellerType) {
+  let rp;
+  if (role === 'admin')         rp = ROLE_PREFIXES[adminRole];
+  else if (role === 'farmer')   rp = sellerType === 'Retailer' ? ROLE_PREFIXES['Retailer'] : ROLE_PREFIXES['farmer'];
+  else                          rp = ROLE_PREFIXES[role];
+  rp = rp || 'US';
   const sc     = stateCode(state);
   const dc     = distCode(district);
   const name3  = (fname || 'USR').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase().padEnd(3, 'X');
@@ -93,8 +98,10 @@ router.post('/register', async (req, res) => {
     country_code,
     house_no, street1, street2, landmark,
     village_town, city, district, pincode, state, country,
-    // farmer-only
+    // farmer (Farmer type)
     aadhar, bank_name, bank_account, ifsc,
+    // farmer (Retailer type)
+    seller_type, business_name, gst_number, business_type,
   } = req.body;
 
   if (!phone || !password || !role || !fname) {
@@ -103,11 +110,16 @@ router.post('/register', async (req, res) => {
   if (!['consumer', 'farmer'].includes(role)) {
     return res.status(400).json({ error: 'role must be consumer or farmer.' });
   }
+  if (role === 'farmer' && !['Farmer', 'Retailer'].includes(seller_type)) {
+    return res.status(400).json({ error: 'seller_type must be Farmer or Retailer.' });
+  }
+  if (role === 'farmer' && seller_type === 'Retailer' && !business_name) {
+    return res.status(400).json({ error: 'business_name is required for Retailers.' });
+  }
   if (password.length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters.' });
   }
 
-  // Check duplicate phone
   const { data: existing } = await supabase
     .from('users')
     .select('id')
@@ -119,7 +131,7 @@ router.post('/register', async (req, res) => {
   }
 
   const password_hash = await bcrypt.hash(password, 12);
-  const login_id = await generateLoginId(role, req.body.admin_role, state, district, fname);
+  const login_id = await generateLoginId(role, req.body.admin_role, state, district, fname, seller_type);
 
   const newUser = {
     login_id, phone, password_hash, role,
@@ -128,7 +140,9 @@ router.post('/register', async (req, res) => {
     house_no, street1, street2, landmark,
     village_town, city, district, pincode,
     state, country: country || 'India',
-    ...(role === 'farmer' && { aadhar, bank_name, bank_account, ifsc }),
+    ...(role === 'farmer' && { seller_type }),
+    ...(role === 'farmer' && seller_type === 'Farmer'   && { aadhar, bank_name, bank_account, ifsc }),
+    ...(role === 'farmer' && seller_type === 'Retailer' && { business_name, gst_number, business_type }),
   };
 
   const { data: created, error } = await supabase
@@ -392,9 +406,10 @@ router.patch('/me', requireAuth, async (req, res) => {
     'fname', 'lname', 'email', 'alt_phone',
     'house_no', 'street1', 'street2', 'landmark',
     'village_town', 'city', 'district', 'pincode', 'state',
-    'bank_name', 'bank_account', 'ifsc',    // farmer bank details
-    'agent_vehicle',                         // agent vehicle
-    'delivery_addresses',                    // consumer address book (JSONB array)
+    'bank_name', 'bank_account', 'ifsc',              // farmer bank details
+    'business_name', 'gst_number', 'business_type',   // retailer details
+    'agent_vehicle',                                   // agent vehicle
+    'delivery_addresses',                              // consumer address book (JSONB array)
   ];
 
   const updates = {};

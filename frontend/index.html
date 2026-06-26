@@ -197,8 +197,12 @@
         <button class="sbtn" onclick="doRegister('consumer')">✅ Create Consumer Account</button>
       </div>
 
-      <!-- FARMER -->
+      <!-- SELLER (Farmer or Retailer) -->
       <div id="fd-farmer" style="display:none">
+        <div class="lmeth">
+          <button class="lmbtn on" id="st-farmer"   onclick="setSellerType('Farmer')">👨‍🌾 Farmer</button>
+          <button class="lmbtn"    id="st-retailer" onclick="setSellerType('Retailer')">🏪 Retailer</button>
+        </div>
         <div class="fsec">Personal Information</div>
         <div class="tc2">
           <div class="fg"><label class="fl">First Name <span class="rq">*</span></label>
@@ -217,13 +221,13 @@
           <input class="fi" id="f-em" type="email" placeholder="your@email.com">
           <div class="em" id="f-em-e">Enter valid email</div>
         </div>
-        <div class="fsec">Farm Address</div>
-        <div class="fg"><label class="fl">House / Survey Number <span class="op">(optional)</span></label>
+        <div class="fsec" id="f-addr-sec">Farm Address</div>
+        <div class="fg"><label class="fl" id="f-hn-label">House / Survey Number <span class="op">(optional)</span></label>
           <input class="fi" id="f-hn" type="text" placeholder="House / Survey No"></div>
         <div class="fg"><label class="fl">Street Line 1 <span class="rq">*</span></label>
           <input class="fi" id="f-s1" type="text" placeholder="Street name">
           <div class="em" id="f-s1-e">Required</div></div>
-        <div class="fg"><label class="fl">Village / Town <span class="rq">*</span></label>
+        <div class="fg"><label class="fl" id="f-vt-label">Village / Town <span class="rq" id="f-vt-req">*</span></label>
           <input class="fi" id="f-vt" type="text" placeholder="Village or Town">
           <div class="em" id="f-vt-e">Required for farmers</div></div>
         <div class="tc2">
@@ -245,22 +249,48 @@
               <option value="Andhra Pradesh">Andhra Pradesh</option>
             </select></div>
         </div>
-        <div class="fsec">Bank & KYC Details</div>
-        <div class="fg"><label class="fl">Aadhaar Number <span class="rq">*</span></label>
-          <input class="fi" id="f-aad" type="text" placeholder="12-digit Aadhaar" maxlength="12" oninput="numOnly(this)">
-          <div class="em" id="f-aad-e">Enter valid 12-digit Aadhaar</div></div>
-        <div class="fg"><label class="fl">Bank Name <span class="rq">*</span></label>
-          <input class="fi" id="f-bn" type="text" placeholder="Bank name">
-          <div class="em" id="f-bn-e">Required</div></div>
-        <div class="fg"><label class="fl">Account Number <span class="rq">*</span></label>
-          <input class="fi" id="f-bac" type="text" placeholder="Account number" oninput="numOnly(this)">
-          <div class="em" id="f-bac-e">Enter valid account number (9–18 digits)</div></div>
-        <div class="fg"><label class="fl">Confirm Account Number <span class="rq">*</span></label>
-          <input class="fi" id="f-bac2" type="text" placeholder="Re-enter account number" oninput="numOnly(this)">
-          <div class="em" id="f-bac2-e">Account numbers do not match</div></div>
-        <div class="fg"><label class="fl">IFSC Code <span class="op">(optional)</span></label>
-          <input class="fi" id="f-ifsc" type="text" placeholder="e.g. SBIN0001234" style="text-transform:uppercase">
-          <div class="em" id="f-ifsc-e">Enter valid IFSC</div></div>
+
+        <!-- Farmer: Aadhaar + bank details -->
+        <div id="f-kyc-farmer">
+          <div class="fsec">Bank & KYC Details</div>
+          <div class="fg"><label class="fl">Aadhaar Number <span class="rq">*</span></label>
+            <input class="fi" id="f-aad" type="text" placeholder="12-digit Aadhaar" maxlength="12" oninput="numOnly(this)">
+            <div class="em" id="f-aad-e">Enter valid 12-digit Aadhaar</div></div>
+          <div class="fg"><label class="fl">Bank Name <span class="rq">*</span></label>
+            <input class="fi" id="f-bn" type="text" placeholder="Bank name">
+            <div class="em" id="f-bn-e">Required</div></div>
+          <div class="fg"><label class="fl">Account Number <span class="rq">*</span></label>
+            <input class="fi" id="f-bac" type="text" placeholder="Account number" oninput="numOnly(this)">
+            <div class="em" id="f-bac-e">Enter valid account number (9–18 digits)</div></div>
+          <div class="fg"><label class="fl">Confirm Account Number <span class="rq">*</span></label>
+            <input class="fi" id="f-bac2" type="text" placeholder="Re-enter account number" oninput="numOnly(this)">
+            <div class="em" id="f-bac2-e">Account numbers do not match</div></div>
+          <div class="fg"><label class="fl">IFSC Code <span class="op">(optional)</span></label>
+            <input class="fi" id="f-ifsc" type="text" placeholder="e.g. SBIN0001234" style="text-transform:uppercase">
+            <div class="em" id="f-ifsc-e">Enter valid IFSC</div></div>
+        </div>
+
+        <!-- Retailer: GST + business details -->
+        <div id="f-kyc-retailer" style="display:none">
+          <div class="fsec">Business Details</div>
+          <div class="fg"><label class="fl">Business / Shop Name <span class="rq">*</span></label>
+            <input class="fi" id="f-bname" type="text" placeholder="e.g. Sri Murugan Provisions">
+            <div class="em" id="f-bname-e">Business name is required</div></div>
+          <div class="fg"><label class="fl">GSTIN <span class="op">(optional — required if turnover ≥ ₹40L)</span></label>
+            <input class="fi" id="f-gst" type="text" placeholder="e.g. 33AABCU9603R1ZX" maxlength="15" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+            <div class="em" id="f-gst-e">Enter valid 15-character GSTIN</div></div>
+          <div class="fg"><label class="fl">Business Type <span class="op">(optional)</span></label>
+            <select class="fi" id="f-btype">
+              <option value="">— Select type —</option>
+              <option value="Grocery / General Store">Grocery / General Store</option>
+              <option value="Organic Store">Organic Store</option>
+              <option value="Wholesale Distributor">Wholesale Distributor</option>
+              <option value="Farm Supply Shop">Farm Supply Shop</option>
+              <option value="Food Processor">Food Processor</option>
+              <option value="Other">Other</option>
+            </select></div>
+        </div>
+
         <div class="fsec">Security</div>
         <div class="fg"><label class="fl">Password <span class="rq">*</span></label>
           <div class="pww">
@@ -284,7 +314,7 @@
           </div>
           <div class="em" id="f-cpw-e">Passwords do not match</div>
         </div>
-        <button class="sbtn" onclick="doRegister('farmer')">✅ Create Farmer Account</button>
+        <button class="sbtn" id="f-submit-btn" onclick="doRegister('farmer')">✅ Create Farmer Account</button>
       </div>
 
       <!-- ADMIN (view-only notice) -->
@@ -329,6 +359,7 @@ registerPwRules('fp-np', ['fp-r1','fp-r2','fp-r3','fp-r4']);
 
 var aRole       = 'consumer';
 var aTab        = 'login';
+var sellerType  = 'Farmer';
 var loginMethod = 'pw';
 var forgotStep  = 1;
 var _otpTimers  = {};
@@ -375,6 +406,23 @@ function setRole(role) {
     var fd = document.getElementById('fd-' + r);
     if (fd) fd.style.display = r === role ? 'block' : 'none';
   });
+  if (role === 'farmer') setSellerType('Farmer');
+}
+function setSellerType(type) {
+  sellerType = type;
+  document.getElementById('st-farmer').classList.toggle('on',   type === 'Farmer');
+  document.getElementById('st-retailer').classList.toggle('on', type === 'Retailer');
+  document.getElementById('f-kyc-farmer').style.display   = type === 'Farmer'   ? 'block' : 'none';
+  document.getElementById('f-kyc-retailer').style.display = type === 'Retailer' ? 'block' : 'none';
+  document.getElementById('f-addr-sec').textContent       = type === 'Farmer' ? 'Farm Address' : 'Business Address';
+  document.getElementById('f-vt-label').innerHTML         = type === 'Farmer'
+    ? 'Village / Town <span class="rq">*</span>'
+    : 'Area / Locality <span class="op">(optional)</span>';
+  document.getElementById('f-hn-label').innerHTML         = type === 'Farmer'
+    ? 'House / Survey Number <span class="op">(optional)</span>'
+    : 'Door / Unit Number <span class="op">(optional)</span>';
+  document.getElementById('f-submit-btn').textContent     = type === 'Farmer'
+    ? '✅ Create Farmer Account' : '✅ Create Retailer Account';
 }
 function setLoginMethod(m) {
   loginMethod = m;
@@ -565,14 +613,22 @@ async function doRegister(role) {
   if (em && !isValidEmail(em)) { showErr(p+'-em-e','Enter valid email'); ok=false; } else hideErr(p+'-em-e');
 
   if (role === 'farmer') {
-    var aad  = gv('f-aad'), bn = gv('f-bn'), bac = gv('f-bac'), bac2 = gv('f-bac2'), ifsc = gv('f-ifsc');
-    var fvt  = gv('f-vt');
-    if (!fvt) { showErr('f-vt-e','Required for farmers'); ok=false; } else hideErr('f-vt-e');
-    if (!/^\d{12}$/.test(aad)) { showErr('f-aad-e','Enter valid 12-digit Aadhaar'); ok=false; } else hideErr('f-aad-e');
-    if (!bn) { showErr('f-bn-e','Required'); ok=false; } else hideErr('f-bn-e');
-    if (bac.length < 9 || bac.length > 18) { showErr('f-bac-e','Enter valid account number'); ok=false; } else hideErr('f-bac-e');
-    if (bac !== bac2) { showErr('f-bac2-e','Account numbers do not match'); ok=false; } else hideErr('f-bac2-e');
-    if (ifsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc.toUpperCase())) { showErr('f-ifsc-e','Enter valid IFSC'); ok=false; } else hideErr('f-ifsc-e');
+    if (sellerType === 'Farmer') {
+      var aad  = gv('f-aad'), bn = gv('f-bn'), bac = gv('f-bac'), bac2 = gv('f-bac2'), ifsc = gv('f-ifsc');
+      var fvt  = gv('f-vt');
+      if (!fvt)  { showErr('f-vt-e',  'Required for farmers'); ok=false; }  else hideErr('f-vt-e');
+      if (!/^\d{12}$/.test(aad))          { showErr('f-aad-e',  'Enter valid 12-digit Aadhaar'); ok=false; }     else hideErr('f-aad-e');
+      if (!bn)                             { showErr('f-bn-e',   'Required'); ok=false; }                         else hideErr('f-bn-e');
+      if (bac.length < 9 || bac.length > 18) { showErr('f-bac-e','Enter valid account number'); ok=false; }      else hideErr('f-bac-e');
+      if (bac !== bac2)                    { showErr('f-bac2-e', 'Account numbers do not match'); ok=false; }     else hideErr('f-bac2-e');
+      if (ifsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc.toUpperCase())) { showErr('f-ifsc-e','Enter valid IFSC'); ok=false; } else hideErr('f-ifsc-e');
+    } else {
+      var bname = gv('f-bname'), gst = gv('f-gst');
+      if (!bname) { showErr('f-bname-e','Business name is required'); ok=false; } else hideErr('f-bname-e');
+      if (gst && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gst.toUpperCase())) {
+        showErr('f-gst-e','Enter valid 15-character GSTIN'); ok=false;
+      } else hideErr('f-gst-e');
+    }
   }
 
   if (!ok) return;
@@ -586,10 +642,17 @@ async function doRegister(role) {
     country_code: document.getElementById(p+'-cc').value,
   };
   if (role === 'farmer') {
-    body.aadhar       = gv('f-aad');
-    body.bank_name    = gv('f-bn');
-    body.bank_account = gv('f-bac');
-    body.ifsc         = gv('f-ifsc') || undefined;
+    body.seller_type = sellerType;
+    if (sellerType === 'Farmer') {
+      body.aadhar       = gv('f-aad');
+      body.bank_name    = gv('f-bn');
+      body.bank_account = gv('f-bac');
+      body.ifsc         = gv('f-ifsc') || undefined;
+    } else {
+      body.business_name = gv('f-bname');
+      body.gst_number    = gv('f-gst') || undefined;
+      body.business_type = gv('f-btype') || undefined;
+    }
   }
 
   var btns = document.querySelectorAll('#fd-' + role + ' .sbtn');
@@ -605,7 +668,7 @@ async function doRegister(role) {
     document.getElementById('regSuccessOverlay').classList.add('active');
   } catch(e) {
     showToast(e.message, 'er');
-    btns.forEach(function(b){ b.disabled=false; b.textContent='✅ Create ' + (role==='consumer'?'Consumer':'Farmer') + ' Account'; });
+    btns.forEach(function(b){ b.disabled=false; b.textContent='✅ Create ' + (role==='consumer'?'Consumer':sellerType) + ' Account'; });
   }
 }
 
