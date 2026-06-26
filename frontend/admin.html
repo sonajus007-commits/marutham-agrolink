@@ -37,6 +37,7 @@
   <button class="ptab"    id="tab-users"     onclick="openTab('users',this)">👥 Users</button>
   <button class="ptab"    id="tab-payouts"   onclick="openTab('payouts',this)">💸 Payouts</button>
   <button class="ptab"    id="tab-returns"   onclick="openTab('returns',this)">↩ Returns</button>
+  <button class="ptab"    id="tab-hub"       onclick="openTab('hub',this)" style="display:none">🏭 Hub Queue</button>
   <button class="ptab"    id="tab-profile"   onclick="openTab('profile',this)">👤 My Profile</button>
 </div>
 
@@ -177,6 +178,16 @@
 <div class="panel" id="panel-returns">
   <div class="filt-row" id="returnFilterBar"></div>
   <div id="returnListWrap"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- ── HUB QUEUE ──────────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-hub">
+  <div class="card" style="background:linear-gradient(135deg,#2d3561 0%,#1a1a2e 100%);color:#fff;margin-bottom:12px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:2px">🏭 Hub Incharge Queue</div>
+    <div style="font-size:11px;opacity:.75" id="hub-district-lbl">Loading…</div>
+  </div>
+  <div id="hub-transit-wrap"></div>
+  <div id="hub-athub-wrap"></div>
 </div>
 
 <!-- ── PROFILE ────────────────────────────────────────────────────────────── -->
@@ -395,6 +406,13 @@ document.getElementById('heroLabel').textContent  = user.admin_role || 'Admin';
 document.getElementById('heroScope').textContent  = user.fname + ' ' + (user.lname || '');
 document.getElementById('heroSub').textContent    = (user.district ? user.district + ' · ' : '') + 'Marutham Agrolink';
 
+// Hub Incharge: reveal hub queue tab and land there by default
+if (user.admin_role === 'Hub Incharge') {
+  var _hubTab = document.getElementById('tab-hub');
+  _hubTab.style.display = '';
+  setTimeout(function() { openTab('hub', _hubTab); }, 0);
+}
+
 var _allProducts     = [];
 var _activeProdGroup = 'All';
 var _activeProdCat   = 'All';
@@ -417,6 +435,7 @@ function openTab(name, tabEl) {
   if (name === 'users')    renderUsers();
   if (name === 'payouts')  renderPayouts();
   if (name === 'returns')  renderReturns();
+  if (name === 'hub')      renderHubQueue();
   if (name === 'profile')  renderProfile();
 }
 
@@ -1536,6 +1555,83 @@ function setPayFilter(f) {
   renderPayoutList();
 }
 
+// ── HUB QUEUE ─────────────────────────────────────────────────────────────────
+async function renderHubQueue() {
+  var transitWrap = document.getElementById('hub-transit-wrap');
+  var athubWrap   = document.getElementById('hub-athub-wrap');
+  transitWrap.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  athubWrap.innerHTML   = '';
+  try {
+    var res = await API.getOrders({ route: 'hub' });
+    var all = res.orders || [];
+    var inTransit = all.filter(function(o) { return o.status === 'In Transit' && !o.cancelled; });
+    var atHub     = all.filter(function(o) { return o.status === 'At Hub'     && !o.cancelled; });
+
+    document.getElementById('hub-district-lbl').textContent =
+      user.district ? user.district + ' Hub  ·  ' + inTransit.length + ' arriving  ·  ' + atHub.length + ' ready to dispatch'
+                    : inTransit.length + ' arriving  ·  ' + atHub.length + ' ready to dispatch';
+    setTabBadge('tab-hub', inTransit.length);
+
+    function hubCard(o, action) {
+      var h = '<div class="card" style="padding:14px;margin-bottom:10px">';
+      h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">';
+      h += '<div><div class="ord-id">' + (o.code || o.id.slice(0,8).toUpperCase()) + '</div>';
+      h += '<div style="font-size:10px;color:var(--gray);margin-top:2px">' + fmtDate(o.created_at) + (o.agent_name ? '  ·  🛵 ' + o.agent_name : '') + '</div></div>';
+      h += '<div style="text-align:right"><div class="ord-amt">' + fmt(o.total) + '</div>';
+      h += '<div style="font-size:10px;color:var(--gray)">' + (o.pay_method || '') + '</div></div>';
+      h += '</div>';
+      h += '<div style="font-size:11px;font-weight:600;margin-bottom:10px;padding:5px 8px;border-radius:6px;display:inline-block;background:' +
+           (action === 'checkin' ? '#fff3e0;color:#e65100' : '#e8f5e9;color:#2e7d32') + '">' +
+           (action === 'checkin' ? '🚚 In Transit — Awaiting Check-in' : '🏭 At Hub — Ready to Dispatch') + '</div>';
+      // Items summary
+      if (o.item_count) {
+        h += '<div style="font-size:11px;color:var(--gray);margin-bottom:10px">' + o.item_count + ' item(s)</div>';
+      }
+      h += '<button class="sbtn" style="padding:10px;font-size:13px" onclick="hubAction(\'' + o.id + '\',\'' + action + '\')">' +
+           (action === 'checkin' ? '✓ Mark Arrived at Hub' : '🚀 Dispatch — Out for Delivery') +
+           '</button>';
+      h += '</div>';
+      return h;
+    }
+
+    // In Transit section
+    var tHtml = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--gray);margin-bottom:8px">';
+    tHtml += 'Arriving at Hub (' + inTransit.length + ')</div>';
+    if (inTransit.length === 0) {
+      tHtml += '<div class="empty-state" style="padding:24px 0"><div class="es-icon" style="font-size:28px">🚚</div><p>No orders in transit right now.</p></div>';
+    } else {
+      inTransit.forEach(function(o) { tHtml += hubCard(o, 'checkin'); });
+    }
+    transitWrap.innerHTML = tHtml;
+
+    // At Hub section
+    var aHtml = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--gray);margin:12px 0 8px">';
+    aHtml += 'Ready to Dispatch (' + atHub.length + ')</div>';
+    if (atHub.length === 0) {
+      aHtml += '<div class="empty-state" style="padding:24px 0"><div class="es-icon" style="font-size:28px">🏭</div><p>No orders waiting at hub.</p></div>';
+    } else {
+      atHub.forEach(function(o) { aHtml += hubCard(o, 'dispatch'); });
+    }
+    athubWrap.innerHTML = aHtml;
+
+  } catch(e) {
+    transitWrap.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+async function hubAction(orderId, action) {
+  try {
+    var res = await API.scanOrder(orderId);
+    showToast(res.message || 'Order advanced.', 'ok');
+    renderHubQueue();
+    // Refresh order tab badge in background
+    API.getOrders().then(function(r) {
+      var cnt = (r.orders || []).filter(function(o) { return !o.cancelled && o.status !== 'Delivered'; }).length;
+      setTabBadge('tab-orders', cnt);
+    }).catch(function(){});
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
 async function renderPayouts() {
   document.getElementById('payoutListWrap').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
   try {
@@ -1785,11 +1881,15 @@ renderOverview();
 
 // Background badge counts — fetch in parallel on load
 (function refreshAdminBadges() {
-  Promise.all([
+  var fetches = [
     API.getOrders().catch(function(){ return { orders: [] }; }),
     API.getReturns().catch(function(){ return { returns: [] }; }),
     API.getPayouts().catch(function(){ return { payouts: [] }; }),
-  ]).then(function(results) {
+  ];
+  if (user.admin_role === 'Hub Incharge') {
+    fetches.push(API.getOrders({ route: 'hub' }).catch(function(){ return { orders: [] }; }));
+  }
+  Promise.all(fetches).then(function(results) {
     var orders  = results[0].orders  || [];
     var returns = results[1].returns || [];
     var payouts = results[2].payouts || [];
@@ -1799,8 +1899,13 @@ renderOverview();
     setTabBadge('tab-orders',  activeOrders);
     setTabBadge('tab-returns', pendingReturns);
     setTabBadge('tab-payouts', pendingPayouts);
+    if (results[3]) {
+      var hubOrders  = results[3].orders || [];
+      var hubPending = hubOrders.filter(function(o) { return o.status === 'In Transit' && !o.cancelled; }).length;
+      setTabBadge('tab-hub', hubPending);
+    }
   });
-  setTimeout(refreshAdminBadges, 120000); // refresh every 2 minutes
+  setTimeout(refreshAdminBadges, 120000);
 })();
 </script>
 </body>

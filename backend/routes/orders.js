@@ -227,7 +227,7 @@ router.post('/', async (req, res) => {
 
 // ── GET /orders  (role-scoped) ────────────────────────────────────────────────
 router.get('/', async (req, res) => {
-  const { village, district } = req.query;
+  const { village, district, route, status } = req.query;
   const u = req.user;
 
   let query = supabase
@@ -268,6 +268,9 @@ router.get('/', async (req, res) => {
       if (district) query = query.eq('district', district);
     }
   }
+
+  if (route)  query = query.eq('route',  route);
+  if (status) query = query.eq('status', status);
 
   const { data, error } = await query;
   if (error) {
