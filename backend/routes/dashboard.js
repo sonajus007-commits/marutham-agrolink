@@ -44,6 +44,51 @@ router.get('/', async (req, res) => {
   const gmv         = activeOrders.reduce((s, o) => s + o.total, 0);
   const platformFee = activeOrders.reduce((s, o) => s + o.market_fee, 0);
 
+  // ── 7-day daily trend (IST date, computed from fetched orders) ─────────────
+  const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayBuckets = {};
+  const today = new Date(Date.now() + 5.5 * 3600000); // IST
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10); // YYYY-MM-DD
+    dayBuckets[key] = { date: key, day_label: DAY_LABELS[d.getDay()], order_count: 0, revenue: 0 };
+  }
+  activeOrders.forEach(o => {
+    // Adjust stored UTC timestamp to IST before extracting date
+    const istDate = new Date(new Date(o.created_at).getTime() + 5.5 * 3600000)
+      .toISOString().slice(0, 10);
+    if (dayBuckets[istDate]) {
+      dayBuckets[istDate].order_count++;
+      dayBuckets[istDate].revenue += o.total; // paise; middleware converts
+    }
+  });
+  const daily_trend = Object.values(dayBuckets);
+
+  // ── Top products by order count ───────────────────────────────────────────
+  let topProducts = [];
+  if (activeOrders.length > 0) {
+    const orderIds = activeOrders.map(o => o.id);
+    const { data: items } = await supabase
+      .from('order_items')
+      .select('product_id, qty, subtotal, product:products(name, unit)')
+      .in('order_id', orderIds);
+
+    const prodMap = {};
+    (items || []).forEach(item => {
+      const pid  = item.product_id;
+      const name = item.product?.name || 'Unknown';
+      const unit = item.product?.unit || '';
+      if (!prodMap[pid]) prodMap[pid] = { name, unit, qty: 0, revenue: 0 };
+      prodMap[pid].qty     += parseFloat(item.qty    || 0);
+      prodMap[pid].revenue += parseFloat(item.subtotal || 0);
+    });
+    topProducts = Object.entries(prodMap)
+      .map(([id, v]) => ({ product_id: id, ...v }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+  }
+
   // ── Farmers in scope ──────────────────────────────────────────────────────
   let farmersQuery = supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'farmer');
   if (orderFilter.district) farmersQuery = farmersQuery.eq('district', orderFilter.district);
@@ -88,6 +133,8 @@ router.get('/', async (req, res) => {
       total_returns:    returnCount,
     },
     status_breakdown: statusBreakdown,
+    daily_trend,
+    top_products: topProducts,
   });
 });
 
