@@ -142,6 +142,14 @@ var API = {
     return apiFetch('GET', '/ratings/top', null, tok());
   },
 
+  // ── Config ────────────────────────────────────────────────────────────────
+  getOrderingWindow: function() {
+    return apiFetch('GET', '/config/ordering-window');
+  },
+  setOrderingWindow: function(open_hour, close_hour) {
+    return apiFetch('PUT', '/config/ordering-window', { open_hour, close_hour }, tok());
+  },
+
   // ── Dashboard ─────────────────────────────────────────────────────────────
   getDashboard: function(params) {
     var qs = params ? '?' + new URLSearchParams(params).toString() : '';

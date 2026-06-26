@@ -43,6 +43,29 @@
 <!-- ── OVERVIEW ───────────────────────────────────────────────────────────── -->
 <div class="panel on" id="panel-overview">
   <div id="overviewBody"><div class="spinner"><div class="spin"></div></div></div>
+  <div class="card" style="margin-top:14px">
+    <h3>🕐 Ordering Window</h3>
+    <div style="font-size:12px;color:var(--gray);margin-bottom:12px">Consumers can only place orders during this daily window.</div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div>
+        <div class="filt-label" style="margin-bottom:4px">Opens at</div>
+        <select class="fi" id="ow-open" style="width:120px;margin:0">
+          <!-- populated by JS -->
+        </select>
+      </div>
+      <div style="font-size:18px;color:var(--gray);padding-top:18px">→</div>
+      <div>
+        <div class="filt-label" style="margin-bottom:4px">Closes at</div>
+        <select class="fi" id="ow-close" style="width:120px;margin:0">
+          <!-- populated by JS -->
+        </select>
+      </div>
+      <div style="padding-top:18px">
+        <button class="sbtn" id="ow-btn" onclick="saveOrderingWindow()" style="margin:0;padding:10px 20px;width:auto">Save</button>
+      </div>
+    </div>
+    <div id="ow-status" style="margin-top:10px;font-size:12px;color:var(--gray)"></div>
+  </div>
 </div>
 
 <!-- ── PRODUCTS ───────────────────────────────────────────────────────────── -->
@@ -398,6 +421,52 @@ function openTab(name, tabEl) {
 }
 
 // ── OVERVIEW ──────────────────────────────────────────────────────────────────
+// ── Ordering window ───────────────────────────────────────────────────────────
+function fmtHour(h) {
+  if (h === 0)  return '12 AM';
+  if (h === 12) return '12 PM';
+  return h > 12 ? (h - 12) + ' PM' : h + ' AM';
+}
+
+function buildHourOptions(selId, selectedHour) {
+  var sel = document.getElementById(selId);
+  var html = '';
+  for (var h = 0; h < 24; h++) {
+    html += '<option value="' + h + '"' + (h === selectedHour ? ' selected' : '') + '>' + fmtHour(h) + '</option>';
+  }
+  sel.innerHTML = html;
+}
+
+async function initOrderingWindow() {
+  try {
+    var res = await API.getOrderingWindow();
+    var w = res.ordering_window || { open_hour: 20, close_hour: 8 };
+    buildHourOptions('ow-open',  w.open_hour);
+    buildHourOptions('ow-close', w.close_hour);
+    document.getElementById('ow-status').textContent = 'Current: ' + fmtHour(w.open_hour) + ' → ' + fmtHour(w.close_hour);
+  } catch(e) {
+    buildHourOptions('ow-open',  20);
+    buildHourOptions('ow-close', 8);
+  }
+}
+
+async function saveOrderingWindow() {
+  var oh  = parseInt(document.getElementById('ow-open').value);
+  var ch  = parseInt(document.getElementById('ow-close').value);
+  var btn = document.getElementById('ow-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    var res = await API.setOrderingWindow(oh, ch);
+    var w = res.ordering_window;
+    document.getElementById('ow-status').textContent = 'Saved: ' + fmtHour(w.open_hour) + ' → ' + fmtHour(w.close_hour);
+    showToast('Ordering window updated.', 'ok');
+  } catch(e) {
+    showToast(e.message, 'er');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save';
+  }
+}
+
 async function renderOverview() {
   var el = document.getElementById('overviewBody');
   el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
@@ -1649,6 +1718,7 @@ async function doAdminChangePw() {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 registerPwRules('adm-npw', ['adm-r1','adm-r2','adm-r3','adm-r4']);
+initOrderingWindow();
 renderOverview();
 </script>
 </body>
