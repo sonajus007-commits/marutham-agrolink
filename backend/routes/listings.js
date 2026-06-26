@@ -52,7 +52,7 @@ router.get('/', async (req, res) => {
       .from('farmer_listings')
       .select(`
         id, product_id, farmer_price, qty_available,
-        time_available, cutoff_ts, bulk_qty, bulk_disc_pct, qty_type, qty_value,
+        time_available, cutoff_ts, bulk_qty, bulk_disc_pct, qty_type, qty_value, images,
         farmer:users ( id, fname, lname, village_town, district )
       `)
       .eq('listed', true)
@@ -167,7 +167,7 @@ router.patch('/:id', async (req, res) => {
   const ALLOWED = [
     'farmer_price', 'qty_available', 'listed', 'confirmed',
     'time_available', 'cutoff_ts', 'bulk_qty', 'bulk_disc_pct',
-    'qty_type', 'qty_value',
+    'qty_type', 'qty_value', 'images',
   ];
 
   const updates = {};

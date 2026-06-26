@@ -75,30 +75,27 @@ router.post('/:id/items/:itemId/rate', async (req, res) => {
   res.json({ message: 'Rating saved. Thank you!', rating_value });
 });
 
-// ── GET /ratings/top  (admin or farmer) ───────────────────────────────────────
-// ?scope=district&district=Chennai  or  ?scope=all
+// ── GET /ratings/top  (all authenticated users) ───────────────────────────────
+// Consumers can call this to display ratings in the shop.
 router.get('/top', async (req, res) => {
-  if (req.user.role === 'consumer') {
-    return res.status(403).json({ error: 'Only admins and farmers can view top ratings.' });
-  }
-
   const { data, error } = await supabase
     .from('product_ratings')
     .select(`
-      sum_stars, num_ratings,
+      product_id, sum_stars, num_ratings,
       farmer:users ( id, fname, lname, village_town, district ),
       product:products ( id, code, name, unit )
     `)
     .gt('num_ratings', 0)
     .order('sum_stars', { ascending: false })
-    .limit(20);
+    .limit(50);
 
   if (error) return res.status(500).json({ error: 'Could not fetch ratings.' });
 
   const results = data.map(r => ({
-    product: r.product,
-    farmer:  r.farmer,
-    avg_rating: (r.sum_stars / r.num_ratings).toFixed(1),
+    product_id:  r.product_id,
+    product:     r.product,
+    farmer:      r.farmer,
+    avg_rating:  (r.sum_stars / r.num_ratings).toFixed(1),
     num_ratings: r.num_ratings,
   }));
 

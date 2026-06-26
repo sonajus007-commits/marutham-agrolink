@@ -230,6 +230,7 @@ document.getElementById('heroName').textContent  = 'Welcome, ' + user.fname + '!
 var _cart            = JSON.parse(localStorage.getItem('ma_cart') || '[]');
 var _allProducts     = [];
 var _offersByProduct = {};   // product_id → [listing, ...]
+var _ratingsMap      = {};   // product_id → { avg_rating, num_ratings }
 var _cancelOrderId = null;
 var _returnOrderId = null;
 var _returnItems   = [];
@@ -398,13 +399,23 @@ async function renderShop() {
     document.getElementById('productList').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
     try {
       var dist = user.district || 'Pudukkottai';
-      var [prodRes, offerRes, winRes] = await Promise.all([
+      var [prodRes, offerRes, winRes, ratingRes] = await Promise.all([
         API.getProducts({ available: true, district: dist }),
         API.getDistrictListings(dist),
-        API.getOrderingWindow()
+        API.getOrderingWindow(),
+        API.getTopRatings().catch(function(){ return { top_ratings: [] }; })
       ]);
       _allProducts     = prodRes.products || [];
       _offersByProduct = offerRes.by_product || {};
+      // Build rating map: product_id → { avg_rating, num_ratings }
+      _ratingsMap = {};
+      (ratingRes.top_ratings || []).forEach(function(r) {
+        var pid = r.product_id || (r.product && r.product.id);
+        if (!pid) return;
+        if (!_ratingsMap[pid] || parseFloat(r.avg_rating) > parseFloat(_ratingsMap[pid].avg_rating)) {
+          _ratingsMap[pid] = { avg_rating: parseFloat(r.avg_rating), num_ratings: r.num_ratings };
+        }
+      });
       if (winRes.ordering_window) _orderingWindow = winRes.ordering_window;
     } catch(e) {
       document.getElementById('productList').innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
@@ -681,9 +692,19 @@ function renderProducts() {
     var custPrice   = farmerPrice != null ? (farmerPrice * (1 + feePct / 100) + handling) : null;
     var hasStock    = bestOffer && bestOffer.qty_available > 0;
 
+    var rating       = _ratingsMap[p.id];
+    var listingImage = bestOffer && bestOffer.images && bestOffer.images[0];
+
     html += '<div class="prod-card">';
     html += '<div class="prod-top">';
-    html += '<div style="width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#e8f5e9,#f1f8e9);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;margin-right:10px">' + getProductEmoji(p.name) + '</div>';
+    // Thumbnail: farmer photo if available, else emoji placeholder
+    if (listingImage) {
+      html += '<div style="width:52px;height:52px;border-radius:12px;overflow:hidden;flex-shrink:0;margin-right:10px">';
+      html += '<img src="' + listingImage + '" style="width:100%;height:100%;object-fit:cover" alt="">';
+      html += '</div>';
+    } else {
+      html += '<div style="width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#e8f5e9,#f1f8e9);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;margin-right:10px">' + getProductEmoji(p.name) + '</div>';
+    }
     html += '<div style="flex:1">';
     html += '<div class="prod-name">' + p.name + '</div>';
     if (p.regional_name) html += '<div style="font-size:11px;color:var(--leaf)">' + p.regional_name + '</div>';
@@ -692,6 +713,17 @@ function renderProducts() {
     if (p.category)      html += '<span class="prod-chip" style="background:#fffaf0;color:#92400e">' + p.category + '</span>';
     if (p.sub_type)      html += '<span style="font-size:9px;color:var(--gray)">' + p.sub_type + '</span>';
     html += '</div>';
+    // Rating row
+    if (rating) {
+      var avg = rating.avg_rating;
+      var filled = Math.round(avg);
+      var stars = '';
+      for (var s = 1; s <= 5; s++) stars += s <= filled ? '★' : '☆';
+      html += '<div style="display:flex;align-items:center;gap:4px;margin-top:3px">';
+      html += '<span style="font-size:11px;color:#f4a261;letter-spacing:1px">' + stars + '</span>';
+      html += '<span style="font-size:10px;color:var(--gray)">' + avg.toFixed(1) + ' (' + rating.num_ratings + ')</span>';
+      html += '</div>';
+    }
     // Farmer info
     if (bestOffer && bestOffer.farmer) {
       var f = bestOffer.farmer;

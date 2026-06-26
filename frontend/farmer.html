@@ -541,8 +541,18 @@ function onListingImagePick(event, slot) {
   if (!file) return;
   var reader = new FileReader();
   reader.onload = function(e) {
-    _listingImages[slot] = e.target.result;
-    renderListingImageSlots();
+    var img = new Image();
+    img.onload = function() {
+      var maxW = 640, q = 0.75;
+      var ratio = img.width > maxW ? maxW / img.width : 1;
+      var canvas = document.createElement('canvas');
+      canvas.width  = Math.round(img.width  * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      _listingImages[slot] = canvas.toDataURL('image/jpeg', q);
+      renderListingImageSlots();
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
@@ -600,6 +610,9 @@ async function openEditListing(id) {
     document.getElementById('lo-cutoff').value   = l.time_available || '8 AM';
     document.getElementById('lo-qty-type').value = l.qty_type || 'MOQ';
     onLQtyTypeChange(); updatePricePreview();
+    if (Array.isArray(l.images)) {
+      l.images.forEach(function(src, i) { if (i < 3) _listingImages[i] = src || null; });
+    }
     renderListingImageSlots();
     hideErr('lo-product-e'); hideErr('lo-price-e'); hideErr('lo-qty-e');
     document.getElementById('listingOverlay').classList.add('active');
@@ -660,6 +673,7 @@ async function saveListing() {
     bulk_disc_pct:   hasBulk ? Math.min(bulkDisc, 90) : null,
     qty_type:        hasQtyRule ? qtyType  : null,
     qty_value:       hasQtyRule ? qtyValue : null,
+    images:          _listingImages.filter(Boolean),
   };
 
   try {
