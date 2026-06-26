@@ -82,6 +82,22 @@
         <div class="filt-label">Sub-type</div>
         <div id="subFilterRow" class="filt-row"></div>
       </div>
+      <div class="filt-label" style="margin-top:8px">Location</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select class="fi" id="shopStateSelect" onchange="onShopStateChange(this.value)"
+          style="flex:1;margin:0;font-size:11px;padding:7px 8px;height:auto"></select>
+        <select class="fi" id="shopDistrictSelect" onchange="onShopDistrictChange(this.value)"
+          style="flex:1;margin:0;font-size:11px;padding:7px 8px;height:auto"></select>
+      </div>
+      <div style="position:relative;margin-bottom:4px">
+        <input class="fi" id="cityFilterInput" type="text"
+          placeholder="🔍 Village / city (optional)" oninput="setCityFilter(this.value)"
+          style="margin:0;font-size:11px;padding:7px 28px 7px 10px">
+        <button id="cityFilterClear" onclick="clearCityFilter()"
+          style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);
+          background:none;border:none;font-size:14px;color:#7a8492;cursor:pointer;line-height:1">✕</button>
+      </div>
+      <div id="deliveryFeeNote" style="font-size:10px;color:var(--gray);padding:2px 0 6px"></div>
     </div>
     <div id="productList"></div>
   </div>
@@ -361,11 +377,22 @@ async function renderHome() {
 }
 
 // ── SHOP ──────────────────────────────────────────────────────────────────────
+var _stateDistricts = {
+  'Tamil Nadu':     ['Pudukkottai','Tiruchirappalli','Thanjavur','Madurai','Chennai','Coimbatore','Salem','Tirunelveli','Sivaganga','Dindigul','Namakkal','Erode','Vellore','Tiruppur'],
+  'Karnataka':      ['Bengaluru','Mysuru','Hubli','Mangaluru','Belagavi','Ballari','Tumkur','Shivamogga'],
+  'Kerala':         ['Thiruvananthapuram','Kochi','Kozhikode','Thrissur','Kannur','Kollam','Palakkad'],
+  'Andhra Pradesh': ['Vijayawada','Visakhapatnam','Guntur','Nellore','Kurnool','Tirupati'],
+};
 var _activeGroup   = 'All';
 var _activeCat     = 'All';
 var _activeSub     = 'All';
 var _sellerFilter  = 'All';
 var _shopSearch    = '';
+var _shopState     = '';
+var _shopDistrict  = '';
+var _homeState     = '';
+var _homeDistrict  = '';
+var _cityFilter    = '';
 var _orderingWindow = { open_hour: 20, close_hour: 8 };
 
 // ── Emoji + unit helpers ──────────────────────────────────────────────────────
@@ -429,13 +456,16 @@ function renderOrderingBanner() {
 }
 
 async function renderShop() {
-  document.getElementById('shopLocation').textContent = (user.district || '—') + ', ' + (user.state || 'Tamil Nadu');
+  if (!_homeDistrict) initLocation();
+  document.getElementById('shopLocation').textContent = _shopDistrict
+    ? _shopDistrict + ', ' + _shopState + (_shopDistrict !== _homeDistrict ? ' (browsing)' : '')
+    : '—';
   updateCartBar();
 
   if (_allProducts.length === 0) {
     document.getElementById('productList').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
     try {
-      var dist = user.district || 'Pudukkottai';
+      var dist = _shopDistrict || user.district || 'Pudukkottai';
       var [prodRes, offerRes, winRes, ratingRes] = await Promise.all([
         API.getProducts({ available: true, district: dist }),
         API.getDistrictListings(dist),
@@ -465,13 +495,15 @@ async function renderShop() {
 
   renderOrderingBanner();
   renderGroupFilter();
+  renderLocationFilter();
   renderProducts();
 }
 
 function renderSellerFilter() {
   var html = '';
-  html += '<button class="chip' + (_sellerFilter==='All'    ? ' on' : '') + '" onclick="setSellerFilter(\'All\')">All Sellers</button>';
-  html += '<button class="chip' + (_sellerFilter==='Farmer' ? ' on' : '') + '" onclick="setSellerFilter(\'Farmer\')">🌱 Farmer Direct</button>';
+  html += '<button class="chip' + (_sellerFilter==='All'      ? ' on' : '') + '" onclick="setSellerFilter(\'All\')">All Sellers</button>';
+  html += '<button class="chip' + (_sellerFilter==='Farmer'   ? ' on' : '') + '" onclick="setSellerFilter(\'Farmer\')">🌱 Farm Direct</button>';
+  html += '<button class="chip' + (_sellerFilter==='Retailer' ? ' on' : '') + '" onclick="setSellerFilter(\'Retailer\')">🏪 Retail Shopping</button>';
   document.getElementById('sellerFilterRow').innerHTML = html;
 }
 function setSellerFilter(f) {
@@ -759,6 +791,94 @@ function clearShopSearch() {
   document.getElementById('shopSearchInput').focus();
 }
 
+// ── LOCATION FILTER ───────────────────────────────────────────────────────────
+// Delivery fee tiers — edit these three values to adjust rates.
+var _DELIVERY_FEE_HOME    = 30;   // same district as consumer's home
+var _DELIVERY_FEE_STATE   = 50;   // different district, same state
+var _DELIVERY_FEE_CROSS   = 80;   // cross-state
+
+function initLocation() {
+  _homeState    = user.state    || 'Tamil Nadu';
+  _homeDistrict = user.district || '';
+  _shopState    = _homeState;
+  _shopDistrict = _homeDistrict;
+}
+
+function getDeliveryFee() {
+  if (!_homeDistrict || _shopDistrict === _homeDistrict) return _DELIVERY_FEE_HOME;
+  if (_shopState === _homeState) return _DELIVERY_FEE_STATE;
+  return _DELIVERY_FEE_CROSS;
+}
+
+function renderLocationFilter() {
+  var stateEl = document.getElementById('shopStateSelect');
+  var distEl  = document.getElementById('shopDistrictSelect');
+  if (!stateEl || !distEl) return;
+
+  var states = Object.keys(_stateDistricts);
+  stateEl.innerHTML = states.map(function(s) {
+    return '<option value="' + s + '"' + (s === _shopState ? ' selected' : '') + '>' + s + '</option>';
+  }).join('');
+
+  var dists = _stateDistricts[_shopState] || [];
+  distEl.innerHTML = dists.map(function(d) {
+    return '<option value="' + d + '"' + (d === _shopDistrict ? ' selected' : '') + '>' + d + '</option>';
+  }).join('');
+
+  var fee   = getDeliveryFee();
+  var label = _shopDistrict === _homeDistrict
+    ? '📍 Your home district'
+    : _shopState === _homeState
+      ? '🚚 Different district, same state'
+      : '🚛 Cross-state delivery';
+  var noteEl = document.getElementById('deliveryFeeNote');
+  if (noteEl) noteEl.textContent = label + ' — Delivery ₹' + fee;
+}
+
+async function onShopStateChange(state) {
+  _shopState    = state;
+  _shopDistrict = (_stateDistricts[state] || [])[0] || '';
+  await reloadShopLocation();
+}
+
+async function onShopDistrictChange(district) {
+  if (district === _shopDistrict) return;
+  _shopDistrict = district;
+  await reloadShopLocation();
+}
+
+async function reloadShopLocation() {
+  if (_cart.length > 0) {
+    _cart = [];
+    saveCart();
+    updateCartBar();
+    showToast('Location changed — cart cleared', 'ok');
+  }
+  _allProducts     = [];
+  _offersByProduct = {};
+  _cityFilter      = '';
+  var cityEl = document.getElementById('cityFilterInput');
+  if (cityEl) cityEl.value = '';
+  var clearEl = document.getElementById('cityFilterClear');
+  if (clearEl) clearEl.style.display = 'none';
+  document.getElementById('shopLocation').textContent = _shopDistrict + ', ' + _shopState;
+  document.getElementById('productList').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  await renderShop();
+}
+
+function setCityFilter(val) {
+  _cityFilter = val.toLowerCase().trim();
+  document.getElementById('cityFilterClear').style.display = _cityFilter ? 'inline' : 'none';
+  renderProducts();
+}
+
+function clearCityFilter() {
+  _cityFilter = '';
+  document.getElementById('cityFilterInput').value = '';
+  document.getElementById('cityFilterClear').style.display = 'none';
+  renderProducts();
+}
+
 function sellerTypeBadge(sellerType) {
   if (sellerType === 'Retailer') return '<span style="font-size:9px;font-weight:700;background:#eff6ff;color:#1d4ed8;border-radius:4px;padding:2px 6px">🏪 Retailer</span>';
   return '<span style="font-size:9px;font-weight:700;background:#e6f7ed;color:#1a7a4a;border-radius:4px;padding:2px 6px">🌱 Direct from Farmer</span>';
@@ -774,6 +894,16 @@ function renderProducts() {
       var farmOffers = (_offersByProduct[p.id] || []).filter(function(o) { return o.farmer && o.farmer.seller_type === 'Farmer'; });
       if (farmOffers.length === 0) return false;
     }
+    if (_sellerFilter === 'Retailer') {
+      var retailOffers = (_offersByProduct[p.id] || []).filter(function(o) { return o.farmer && o.farmer.seller_type === 'Retailer'; });
+      if (retailOffers.length === 0) return false;
+    }
+    if (_cityFilter) {
+      var cityOffers = (_offersByProduct[p.id] || []).filter(function(o) {
+        return ((o.farmer && o.farmer.village_town) || '').toLowerCase().includes(_cityFilter);
+      });
+      if (cityOffers.length === 0) return false;
+    }
     return true;
   });
   if (filtered.length === 0) {
@@ -788,10 +918,12 @@ function renderProducts() {
     var handling = dp ? parseFloat(dp.handling) : 0;
     var offers   = _offersByProduct[p.id] || [];
 
-    // When Farmer Direct filter is on, only consider Farmer offers for the best pick
+    // Narrow offers to the active seller-type filter for best-offer selection
     var relevantOffers = _sellerFilter === 'Farmer'
       ? offers.filter(function(o) { return o.farmer && o.farmer.seller_type === 'Farmer'; })
-      : offers;
+      : _sellerFilter === 'Retailer'
+        ? offers.filter(function(o) { return o.farmer && o.farmer.seller_type === 'Retailer'; })
+        : offers;
 
     // Best offer = lowest consumer_price (seller-type-aware fee already baked in by API)
     var bestOffer = null;
@@ -1072,7 +1204,7 @@ async function renderCart() {
     return s + (dp ? parseFloat(dp.handling) : 0);
   }, 0);
 
-  var deliveryFee = 30; // flat ₹30 per order — same for all districts currently
+  var deliveryFee = getDeliveryFee();
   var grandTotal  = itemSubtotal + deliveryFee;
 
   // Savings vs govt market price
@@ -1090,7 +1222,12 @@ async function renderCart() {
   sumHtml += '<div class="irow"><span class="ilbl">Item Total</span><span class="ival">₹' + itemSubtotal.toFixed(0) + '</span></div>';
   if (totalMarketFee > 0.5) sumHtml += '<div class="irow" style="font-size:11px"><span class="ilbl" style="color:var(--gray)">  incl. Market Fee</span><span class="ival" style="color:var(--gray)">₹' + totalMarketFee.toFixed(0) + '</span></div>';
   if (totalHandling > 0) sumHtml += '<div class="irow" style="font-size:11px"><span class="ilbl" style="color:var(--gray)">  incl. Handling</span><span class="ival" style="color:var(--gray)">₹' + totalHandling.toFixed(0) + '</span></div>';
-  sumHtml += '<div class="irow"><span class="ilbl">Delivery Fee</span><span class="ival">₹' + deliveryFee.toFixed(0) + '</span></div>';
+  var deliveryNote = _shopDistrict === _homeDistrict
+    ? '(same district)'
+    : _shopState === _homeState
+      ? '(different district)'
+      : '(cross-state)';
+  sumHtml += '<div class="irow"><span class="ilbl">Delivery Fee <span style="font-size:10px;color:var(--gray)">' + deliveryNote + '</span></span><span class="ival">₹' + deliveryFee.toFixed(0) + '</span></div>';
   if (savings > 0) sumHtml += '<div class="irow" style="color:#1a7a4a;font-weight:700"><span class="ilbl">🎉 You Save</span><span class="ival">₹' + savings.toFixed(0) + ' vs Govt Rate</span></div>';
   sumHtml += '<div style="border-top:2px solid #2d6a4f;margin:10px 0"></div>';
   sumHtml += '<div class="irow"><span class="ilbl" style="font-size:14px;font-weight:700;color:var(--forest)">Grand Total</span><span class="ival" style="font-size:16px;font-weight:700;color:var(--forest)">₹' + grandTotal.toFixed(0) + '</span></div>';
@@ -1193,7 +1330,7 @@ async function placeOrder() {
       var idx = parseInt(addrPicker.value);
       selectedAddr = (user.delivery_addresses || [])[idx] || null;
     }
-    var res = await API.placeOrder({ items: items, pay_method: payMethod, delivery_fee: 30, delivery_address: selectedAddr });
+    var res = await API.placeOrder({ items: items, pay_method: payMethod, delivery_fee: getDeliveryFee(), delivery_address: selectedAddr });
     _cart = [];
     saveCart();
     updateCartBar();
