@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { generateOrderCode } = require('../utils/codeGen');
+const { getFeeForSeller } = require('../utils/fees');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -80,10 +81,10 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: `Product ${product_id} is not available.` });
     }
 
-    // Fetch farmer info (name + village for fulfilment)
+    // Fetch seller info (name + village for fulfilment + seller_type for fee)
     const { data: farmer } = await supabase
       .from('users')
-      .select('id, fname, lname, village_town, district')
+      .select('id, fname, lname, village_town, district, seller_type')
       .eq('id', farmer_id)
       .single();
 
@@ -111,7 +112,8 @@ router.post('/', async (req, res) => {
       farmerPrice = Math.round(farmerPrice * (1 - listing.bulk_disc_pct / 100));
     }
 
-    const platformFeePct = product.platform_fee_pct ?? 5;
+    // Fee is seller-type-aware: Farmers 5%, Retailers 10%
+    const platformFeePct = getFeeForSeller(farmer.seller_type);
     const consumerPrice = Math.round(farmerPrice * (1 + platformFeePct / 100));
     const lineTotal = Math.round(consumerPrice * qty);
     const lineFarmerTotal = Math.round(farmerPrice * qty);

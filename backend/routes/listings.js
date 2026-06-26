@@ -1,6 +1,7 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { getFeeForSeller } = require('../utils/fees');
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ router.get('/', async (req, res) => {
       .select(`
         id, farmer_price, qty_available, listed, confirmed,
         time_available, cutoff_ts, bulk_qty, bulk_disc_pct, qty_type, qty_value,
-        farmer:users ( id, fname, lname, village_town, district ),
+        farmer:users ( id, fname, lname, village_town, district, seller_type ),
         product:products ( id, code, name, unit, platform_fee_pct )
       `)
       .eq('product_id', product)
@@ -30,7 +31,15 @@ router.get('/', async (req, res) => {
       console.error('GET /listings?product error:', error);
       return res.status(500).json({ error: 'Could not fetch listings.' });
     }
-    return res.json({ listings: data });
+
+    // Compute consumer_price and fee_pct per listing so clients can display the right price
+    const enriched = (data || []).map(l => {
+      const feePct       = getFeeForSeller(l.farmer?.seller_type);
+      const consumerPrice = Math.round(l.farmer_price * (1 + feePct / 100));
+      return { ...l, fee_pct: feePct, consumer_price: consumerPrice };
+    });
+
+    return res.json({ listings: enriched });
   }
 
   // Consumer browsing: ?district=X returns all active listings from farmers in that district
