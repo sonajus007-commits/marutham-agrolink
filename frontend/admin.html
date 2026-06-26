@@ -1077,6 +1077,8 @@ async function renderAdminOrders() {
   try {
     var res = await API.getOrders();
     _allAdminOrders = res.orders || [];
+    var activeCount = _allAdminOrders.filter(function(o) { return !o.cancelled && o.status !== 'Delivered'; }).length;
+    setTabBadge('tab-orders', activeCount);
     renderAdminOrderList();
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
@@ -1539,6 +1541,7 @@ async function renderPayouts() {
   try {
     var res = await API.getPayouts();
     _allPayouts = res.payouts || [];
+    setTabBadge('tab-payouts', _allPayouts.filter(function(p) { return p.status === 'pending'; }).length);
     renderPayoutSummary();
     renderPayoutFilterBar();
     renderPayoutList();
@@ -1639,6 +1642,7 @@ async function renderReturns() {
   try {
     var res = await API.getReturns();
     _allReturns = res.returns || [];
+    setTabBadge('tab-returns', _allReturns.filter(function(r) { return r.status === 'pending'; }).length);
     renderReturnFilterBar();
     renderReturnList();
   } catch(e) {
@@ -1778,6 +1782,26 @@ async function doAdminChangePw() {
 registerPwRules('adm-npw', ['adm-r1','adm-r2','adm-r3','adm-r4']);
 initOrderingWindow();
 renderOverview();
+
+// Background badge counts — fetch in parallel on load
+(function refreshAdminBadges() {
+  Promise.all([
+    API.getOrders().catch(function(){ return { orders: [] }; }),
+    API.getReturns().catch(function(){ return { returns: [] }; }),
+    API.getPayouts().catch(function(){ return { payouts: [] }; }),
+  ]).then(function(results) {
+    var orders  = results[0].orders  || [];
+    var returns = results[1].returns || [];
+    var payouts = results[2].payouts || [];
+    var activeOrders   = orders.filter(function(o) { return !o.cancelled && o.status !== 'Delivered'; }).length;
+    var pendingReturns = returns.filter(function(r) { return r.status === 'pending'; }).length;
+    var pendingPayouts = payouts.filter(function(p) { return p.status === 'pending'; }).length;
+    setTabBadge('tab-orders',  activeOrders);
+    setTabBadge('tab-returns', pendingReturns);
+    setTabBadge('tab-payouts', pendingPayouts);
+  });
+  setTimeout(refreshAdminBadges, 120000); // refresh every 2 minutes
+})();
 </script>
 </body>
 </html>

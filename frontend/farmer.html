@@ -727,6 +727,9 @@ async function renderOrders() {
     var params = _statusFilter !== 'All' ? { status: _statusFilter } : {};
     var res = await API.getOrders(params);
     var orders = res.orders || [];
+    // Update badge with fresh count
+    var pendingPacks = orders.filter(function(o) { return (o.stage === 0 || o.stage === '0') && !o.cancelled; }).length;
+    setTabBadge('tab-orders', pendingPacks);
 
     if (orders.length === 0) {
       el.innerHTML = '<div class="empty-state"><div class="es-icon">📦</div><p>No orders' + (_statusFilter !== 'All' ? ' with status "' + _statusFilter + '"' : '') + '.</p></div>';
@@ -940,6 +943,15 @@ async function doChangePassword() {
 // ── Init ──────────────────────────────────────────────────────────────────────
 registerPwRules('pw-new', ['pw-r1','pw-r2','pw-r3','pw-r4']);
 renderEarnings();
+
+// Background badge refresh — count orders needing packing
+(function refreshBadges() {
+  API.getOrders().then(function(res) {
+    var pendingPacks = (res.orders || []).filter(function(o) { return (o.stage === 0 || o.stage === '0') && !o.cancelled; }).length;
+    setTabBadge('tab-orders', pendingPacks);
+  }).catch(function(){});
+  setTimeout(refreshBadges, 60000); // re-check every minute
+})();
 </script>
 </body>
 </html>

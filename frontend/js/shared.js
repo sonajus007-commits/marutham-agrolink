@@ -113,6 +113,26 @@ function checkPw(inputId) {
   });
 }
 
+// ── Tab notification badges ───────────────────────────────────────────────────
+function setTabBadge(tabId, count) {
+  var btn = document.getElementById(tabId);
+  if (!btn) return;
+  var badge = btn.querySelector('.tab-badge');
+  if (count > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'tab-badge';
+      badge.style.cssText = 'background:#c0392b;color:#fff;font-size:9px;font-weight:800;' +
+        'padding:1px 5px;border-radius:50px;vertical-align:middle;margin-left:4px;' +
+        'min-width:16px;display:inline-block;text-align:center;line-height:14px';
+      btn.appendChild(badge);
+    }
+    badge.textContent = count > 99 ? '99+' : String(count);
+  } else {
+    if (badge) badge.remove();
+  }
+}
+
 // ── Tab switcher ─────────────────────────────────────────────────────────────
 function switchPanel(panelId, tabEl, containerSel) {
   var container = document.querySelector(containerSel || 'body');

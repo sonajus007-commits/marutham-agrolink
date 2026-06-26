@@ -256,6 +256,7 @@ async function renderHome() {
     var orders = res.orders || [];
     var active = orders.filter(function(o) { return !o.cancelled && o.status !== 'Delivered'; });
     var delivered = orders.filter(function(o) { return o.status === 'Delivered'; });
+    setTabBadge('tab-orders', active.length);
     var html = '';
 
     // Stats
@@ -1037,6 +1038,8 @@ async function renderOrders() {
   try {
     var res = await API.getOrders();
     var orders = res.orders || [];
+    var activeCount = orders.filter(function(o) { return !o.cancelled && o.status !== 'Delivered'; }).length;
+    setTabBadge('tab-orders', activeCount);
     if (orders.length === 0) {
       el.innerHTML = '<div class="empty-state"><div class="es-icon">📦</div><p>No orders yet.</p></div>'; return;
     }
