@@ -1018,20 +1018,73 @@ async function renderOrders() {
   }
 }
 
+var _trackPollTimer = null;
+
 async function openOrderDetail(orderId) {
   var overlay = document.getElementById('orderOverlay');
   var body    = document.getElementById('overlayBody');
   overlay.classList.add('active');
   body.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  if (_trackPollTimer) { clearInterval(_trackPollTimer); _trackPollTimer = null; }
   try {
-    var res   = await API.getOrder(orderId);
+    var [res, trackRes] = await Promise.all([API.getOrder(orderId), API.trackOrder(orderId).catch(function(){ return null; })]);
     var o     = res.order;
     var items = res.items || [];
     var hist  = res.history || [];
     document.getElementById('overlayOrderCode').textContent = o.code || 'Order Details';
 
     var html = '';
-    // Status badge
+
+    // ── Route pipeline ────────────────────────────────────────────────────
+    if (trackRes && trackRes.routeMap) {
+      var rm = trackRes.routeMap;
+      html += '<div class="card" style="padding:14px 10px">';
+      html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><div style="display:flex;align-items:flex-start;min-width:max-content">';
+      rm.forEach(function(step, idx) {
+        var done    = step.status === 'done';
+        var active  = step.status === 'active';
+        var dotBg   = done ? '#1a7a4a' : active ? '#f4a261' : '#e2e8f0';
+        var dotBdr  = done ? '#1a7a4a' : active ? '#f4a261' : '#cbd5e1';
+        var lblClr  = done ? '#1a7a4a' : active ? '#f4a261' : '#94a3b8';
+        var lblWt   = active ? '700' : '400';
+        html += '<div style="display:flex;flex-direction:column;align-items:center;min-width:72px">';
+        html += '<div style="display:flex;align-items:center;width:100%">';
+        if (idx > 0) html += '<div style="flex:1;height:2px;background:' + (done || active ? '#1a7a4a' : '#e2e8f0') + '"></div>';
+        html += '<div style="width:22px;height:22px;border-radius:50%;background:' + dotBg + ';border:2px solid ' + dotBdr + ';display:flex;align-items:center;justify-content:center;flex-shrink:0' + (active ? ';box-shadow:0 0 0 4px rgba(244,162,97,.25)' : '') + '">';
+        html += done ? '<span style="font-size:10px;color:#fff">✓</span>' : (active ? '<span style="font-size:8px;color:#fff">●</span>' : '');
+        html += '</div>';
+        if (idx < rm.length - 1) html += '<div style="flex:1;height:2px;background:' + (done ? '#1a7a4a' : '#e2e8f0') + '"></div>';
+        html += '</div>';
+        html += '<div style="font-size:8px;text-align:center;margin-top:5px;color:' + lblClr + ';font-weight:' + lblWt + ';line-height:1.3;max-width:70px;padding:0 2px">' + step.label + '</div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+      // Agent + ETA card
+      if (trackRes.agent || trackRes.eta) {
+        html += '<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">';
+        if (trackRes.agent) {
+          html += '<div style="flex:1;min-width:140px;background:#f0faf4;border-radius:8px;padding:8px 12px">';
+          html += '<div style="font-size:10px;color:var(--gray);font-weight:600">🛵 Your Delivery Agent</div>';
+          html += '<div style="font-size:13px;font-weight:700;color:var(--forest);margin-top:2px">' + trackRes.agent.name + '</div>';
+          if (trackRes.agent.vehicle) html += '<div style="font-size:10px;color:var(--gray)">' + trackRes.agent.vehicle + '</div>';
+          html += '</div>';
+        }
+        if (trackRes.eta) {
+          html += '<div style="flex:1;min-width:120px;background:#fff8e6;border-radius:8px;padding:8px 12px">';
+          html += '<div style="font-size:10px;color:#92400e;font-weight:600">⏱ Estimated Arrival</div>';
+          html += '<div style="font-size:13px;font-weight:700;color:#92400e;margin-top:2px">' + fmtDate(trackRes.eta) + '</div>';
+          html += '</div>';
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+      // Poll every 30s for active (non-delivered, non-cancelled) orders
+      if (!o.cancelled && o.status !== 'Delivered') {
+        _trackPollTimer = setInterval(function() { openOrderDetail(orderId); }, 30000);
+      }
+    }
+
+    // Status badge + cancel
     html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">';
     html += '<span style="display:inline-block;padding:6px 14px;border-radius:50px;font-size:12px;font-weight:700;background:' + statusColor(o.status) + ';color:#fff;">' + o.status + '</span>';
     if (!o.cancelled && ['Order Placed','Packaged'].includes(o.status)) {
@@ -1125,6 +1178,7 @@ async function openOrderDetail(orderId) {
 
 function closeOrderOverlay() {
   document.getElementById('orderOverlay').classList.remove('active');
+  if (_trackPollTimer) { clearInterval(_trackPollTimer); _trackPollTimer = null; }
 }
 
 // ── RATINGS ───────────────────────────────────────────────────────────────────

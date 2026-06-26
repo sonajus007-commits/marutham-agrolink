@@ -106,6 +106,9 @@ var API = {
   },
 
   // ── Delivery ──────────────────────────────────────────────────────────────
+  trackOrder: function(id) {
+    return apiFetch('GET', '/orders/' + id + '/track', null, tok());
+  },
   packOrder: function(id) {
     return apiFetch('POST', '/orders/' + id + '/pack', {}, tok());
   },

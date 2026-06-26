@@ -115,6 +115,7 @@
       <div class="status-dot"></div>
       <span class="agent-status-text">On Duty</span>
     </div>
+    <button class="hbtn" onclick="openAgentProfile()" style="margin-right:6px;background:rgba(255,255,255,.12)">👤</button>
     <button class="hbtn" onclick="doLogout()">Exit</button>
   </div>
 </div>
@@ -175,6 +176,58 @@
     <div class="overlay-title" id="sheetTitle">Order Details</div>
   </div>
   <div class="deliver-body" id="sheetContent"></div>
+</div>
+
+<!-- PROFILE SHEET -->
+<div class="deliver-sheet" id="profileSheet">
+  <div class="deliver-hdr">
+    <button class="overlay-back" onclick="closeAgentProfile()">←</button>
+    <div class="overlay-title">My Profile</div>
+  </div>
+  <div class="deliver-body" style="padding:16px;display:flex;flex-direction:column;gap:14px">
+
+    <!-- Identity card -->
+    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:16px">
+      <div style="font-size:18px;font-weight:800;color:var(--gold2)" id="prof-name">—</div>
+      <div style="font-size:11px;color:#95d5b2;margin-top:2px" id="prof-role">—</div>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between;font-size:12px">
+          <span style="color:#95d5b2">Login ID</span><span class="mono" style="color:#fff;font-weight:700" id="prof-lid">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px">
+          <span style="color:#95d5b2">Phone</span><span class="mono" style="color:#fff" id="prof-phone">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px">
+          <span style="color:#95d5b2">District</span><span style="color:#fff" id="prof-district">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vehicle info -->
+    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--gold2);margin-bottom:10px">🛵 Vehicle</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input id="prof-vehicle" type="text" placeholder="e.g. TN 38 AB 1234 — Bike"
+          style="flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px 13px;font-size:13px;color:#fff;outline:none">
+        <button onclick="saveVehicle()" style="background:var(--gold2);color:#1a2e1e;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">Save</button>
+      </div>
+    </div>
+
+    <!-- Change password -->
+    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--gold2);margin-bottom:10px">🔒 Change Password</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input id="prof-cpw" type="password" placeholder="Current password"
+          style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px 13px;font-size:13px;color:#fff;outline:none">
+        <input id="prof-npw" type="password" placeholder="New password (min 6 chars)"
+          style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px 13px;font-size:13px;color:#fff;outline:none">
+        <div id="prof-pw-err" style="display:none;font-size:11px;color:#f87171;padding:4px 0"></div>
+        <button onclick="agentChangePw()" style="background:var(--gold2);color:#1a2e1e;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;width:100%">Update Password</button>
+      </div>
+    </div>
+
+    <button onclick="doLogout()" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25);border-radius:12px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;width:100%">Sign Out</button>
+  </div>
 </div>
 
 <script src="js/config.js"></script>
@@ -423,6 +476,53 @@ function renderDelivered() {
     html += '</div></div>';
   });
   document.getElementById('deliveredList').innerHTML = html;
+}
+
+// ── Agent profile ─────────────────────────────────────────────────────────────
+function openAgentProfile() {
+  document.getElementById('prof-name').textContent     = user.fname + (user.lname ? ' ' + user.lname : '');
+  document.getElementById('prof-role').textContent     = (user.admin_role || 'Delivery Agent') + ' · ' + (user.district || '—');
+  document.getElementById('prof-lid').textContent      = user.login_id || '—';
+  document.getElementById('prof-phone').textContent    = (user.country_code || '+91') + ' ' + user.phone;
+  document.getElementById('prof-district').textContent = user.district || '—';
+  document.getElementById('prof-vehicle').value        = user.agent_vehicle || '';
+  document.getElementById('prof-cpw').value            = '';
+  document.getElementById('prof-npw').value            = '';
+  document.getElementById('prof-pw-err').style.display = 'none';
+  document.getElementById('profileSheet').classList.add('active');
+}
+
+function closeAgentProfile() {
+  document.getElementById('profileSheet').classList.remove('active');
+}
+
+async function saveVehicle() {
+  var v = document.getElementById('prof-vehicle').value.trim();
+  try {
+    var res = await API.patchMe({ agent_vehicle: v || '' });
+    user = res.user;
+    setSession(getToken(), user);
+    document.getElementById('agentSub').textContent = (user.admin_role || 'Delivery Agent') + ' · ' + (user.district || '—');
+    showToast('Vehicle info saved.', 'ok');
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function agentChangePw() {
+  var cur = document.getElementById('prof-cpw').value;
+  var nw  = document.getElementById('prof-npw').value;
+  var err = document.getElementById('prof-pw-err');
+  err.style.display = 'none';
+  if (!cur) { err.textContent = 'Enter your current password.'; err.style.display = 'block'; return; }
+  if (nw.length < 6) { err.textContent = 'New password must be at least 6 characters.'; err.style.display = 'block'; return; }
+  try {
+    await API.changePassword(cur, nw);
+    document.getElementById('prof-cpw').value = '';
+    document.getElementById('prof-npw').value = '';
+    showToast('Password changed.', 'ok');
+  } catch(e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+  }
 }
 
 // ── Init + auto-refresh ───────────────────────────────────────────────────────
