@@ -2385,9 +2385,8 @@ function renderRegistrationList(list, status) {
   list.forEach(function(r) {
     var name = r.fname + (r.lname ? ' ' + r.lname : '');
     var type = r.seller_type || r.role;
-    var typeColor = r.seller_type === 'Retailer' ? '#6d28d9' : '#166534';
     var date = r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : '—';
-    html += '<div class="card" style="cursor:pointer;border-left:4px solid ' + typeColor + ';padding:12px 14px" onclick="openRegDetail(\'' + r.id + '\')">';
+    html += '<div class="card" style="cursor:pointer;border-left:4px solid #CB4E86;padding:12px 14px" onclick="openRegDetail(\'' + r.id + '\')">';
     html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">';
     html += '<div>';
     html += '<div style="font-weight:700;font-size:14px">' + name + '</div>';
@@ -2395,7 +2394,7 @@ function renderRegistrationList(list, status) {
     html += '<div style="font-size:12px;color:var(--gray);margin-top:2px">' + (r.district || '—') + ', ' + (r.state || '—') + '</div>';
     html += '</div>';
     html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">';
-    html += '<span style="background:' + typeColor + ';color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px">' + type + '</span>';
+    html += '<span class="bloom-badge">' + type + '</span>';
     html += statusBadgeReg(r.approval_status);
     html += '<div style="font-size:10px;color:var(--gray)">' + date + '</div>';
     html += '</div>';
