@@ -191,5 +191,23 @@ var API = {
   },
   unblockConsumer: function(id) {
     return apiFetch('PATCH', '/consumers/' + id + '/unblock', {}, tok());
-  }
+  },
+
+  // ── Registrations (approval workflow) ────────────────────────────────────
+  getRegistrations: function(status) {
+    var qs = status ? '?status=' + encodeURIComponent(status) : '';
+    return apiFetch('GET', '/registrations' + qs, null, tok());
+  },
+  getRegistration: function(id) {
+    return apiFetch('GET', '/registrations/' + id, null, tok());
+  },
+  approveRegistration: function(id, subscription_amount) {
+    return apiFetch('POST', '/registrations/' + id + '/approve', { subscription_amount }, tok());
+  },
+  rejectRegistration: function(id, reason) {
+    return apiFetch('POST', '/registrations/' + id + '/reject', { reason }, tok());
+  },
+  confirmPayment: function(id) {
+    return apiFetch('POST', '/registrations/' + id + '/confirm-payment', {}, tok());
+  },
 };

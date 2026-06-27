@@ -39,8 +39,9 @@
   <button class="ptab"    id="tab-returns"   onclick="openTab('returns',this)">↩ Returns</button>
   <button class="ptab"    id="tab-farmers"   onclick="openTab('farmers',this)">🌾 Farmers</button>
   <button class="ptab"    id="tab-consumers" onclick="openTab('consumers',this)">🛒 Consumers</button>
-  <button class="ptab"    id="tab-hub"       onclick="openTab('hub',this)" style="display:none">🏭 Hub Queue</button>
-  <button class="ptab"    id="tab-profile"   onclick="openTab('profile',this)">👤 My Profile</button>
+  <button class="ptab"    id="tab-hub"           onclick="openTab('hub',this)" style="display:none">🏭 Hub Queue</button>
+  <button class="ptab"    id="tab-registrations" onclick="openTab('registrations',this)">📋 Registrations</button>
+  <button class="ptab"    id="tab-profile"       onclick="openTab('profile',this)">👤 My Profile</button>
 </div>
 
 <!-- ── OVERVIEW ───────────────────────────────────────────────────────────── -->
@@ -220,6 +221,81 @@
     <button onclick="exportFarmersCSV()" style="padding:8px 14px;background:#f0faf4;border:1.5px solid #c3e6cb;border-radius:10px;font-size:11px;font-weight:700;color:var(--forest);cursor:pointer;font-family:inherit;white-space:nowrap">⬇ CSV</button>
   </div>
   <div id="farmersWrap"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- ── REGISTRATIONS ──────────────────────────────────────────────────────── -->
+<div class="panel" id="panel-registrations">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div class="sec-head" style="margin:0"><span class="sh-icon" style="background:#eff6ff">📋</span> Seller Registrations</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="reg-status-filter" onchange="loadRegistrations()" style="border:1.5px solid #e2e8e2;border-radius:10px;padding:8px 10px;font-size:12px;font-family:inherit;background:#fff;outline:none">
+        <option value="pending_review">Pending Review</option>
+        <option value="payment_pending">Payment Pending</option>
+        <option value="active">Activated</option>
+        <option value="rejected">Rejected</option>
+        <option value="all">All</option>
+      </select>
+      <button onclick="loadRegistrations()" style="padding:8px 14px;background:#f0faf4;border:1.5px solid #c3e6cb;border-radius:10px;font-size:11px;font-weight:700;color:var(--forest);cursor:pointer;font-family:inherit">↻ Refresh</button>
+    </div>
+  </div>
+  <div id="regListWrap"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- Registration Detail Modal -->
+<div class="overlay" id="regDetailOverlay" style="display:none" onclick="if(event.target===this)closeRegDetail()">
+  <div class="obox" style="max-width:560px">
+    <div class="ohdr">
+      <span class="otitle" id="regDetailTitle">Registration Details</span>
+      <button class="cls" onclick="closeRegDetail()">✕</button>
+    </div>
+    <div id="regDetailBody" style="padding:16px;max-height:70vh;overflow-y:auto"></div>
+    <div id="regDetailActions" style="padding:12px 16px;border-top:1px solid #e8edf2;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"></div>
+  </div>
+</div>
+
+<!-- Approve Modal -->
+<div class="overlay" id="regApproveOverlay" style="display:none" onclick="if(event.target===this)closeApproveModal()">
+  <div class="obox" style="max-width:400px">
+    <div class="ohdr">
+      <span class="otitle">Approve Registration</span>
+      <button class="cls" onclick="closeApproveModal()">✕</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:13px;color:var(--text)" id="approve-name-lbl"></div>
+      <div class="fg">
+        <label class="fl">Annual Subscription Amount (₹) <span class="rq">*</span></label>
+        <input class="fi" id="approve-amount" type="number" min="1" step="1" placeholder="e.g. 500">
+        <div style="font-size:11px;color:var(--gray);margin-top:4px">This amount will be sent to the applicant for payment activation.</div>
+      </div>
+      <div class="em" id="approve-err" style="display:none;margin:0"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="sbtn" style="background:var(--muted);color:var(--text);flex:0;padding:0 20px" onclick="closeApproveModal()">Cancel</button>
+        <button class="sbtn" id="approve-btn" onclick="submitApprove()" style="flex:0;padding:0 24px;background:#16a34a">Approve & Send Payment Link</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="overlay" id="regRejectOverlay" style="display:none" onclick="if(event.target===this)closeRejectModal()">
+  <div class="obox" style="max-width:400px">
+    <div class="ohdr">
+      <span class="otitle">Reject Registration</span>
+      <button class="cls" onclick="closeRejectModal()">✕</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:13px;color:var(--text)" id="reject-name-lbl"></div>
+      <div class="fg">
+        <label class="fl">Reason for Rejection <span class="rq">*</span></label>
+        <textarea class="fi" id="reject-reason" rows="3" placeholder="Provide a clear reason that will be sent to the applicant…" style="resize:vertical"></textarea>
+      </div>
+      <div class="em" id="reject-err" style="display:none;margin:0"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="sbtn" style="background:var(--muted);color:var(--text);flex:0;padding:0 20px" onclick="closeRejectModal()">Cancel</button>
+        <button class="sbtn" id="reject-btn" onclick="submitReject()" style="flex:0;padding:0 24px;background:#dc2626">Reject & Notify</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ── HUB QUEUE ──────────────────────────────────────────────────────────── -->
@@ -479,8 +555,9 @@ function openTab(name, tabEl) {
   if (name === 'returns')  renderReturns();
   if (name === 'consumers') renderConsumers();
   if (name === 'farmers')  renderFarmers();
-  if (name === 'hub')      renderHubQueue();
-  if (name === 'profile')  renderProfile();
+  if (name === 'hub')           renderHubQueue();
+  if (name === 'registrations') loadRegistrations();
+  if (name === 'profile')       renderProfile();
 }
 
 // ── OVERVIEW ──────────────────────────────────────────────────────────────────
@@ -2259,7 +2336,250 @@ renderOverview();
     }
   });
   setTimeout(refreshAdminBadges, 120000);
+
+  // Fetch pending registration count for badge on load
+  API.getRegistrations('pending_review').then(function(r) {
+    var regs = r.registrations || [];
+    setTabBadge('tab-registrations', regs.length);
+  }).catch(function(){});
 })();
+
+// ── REGISTRATIONS ─────────────────────────────────────────────────────────────
+var _currentRegId = null;
+var _allRegistrations = [];
+
+async function loadRegistrations() {
+  var wrap = document.getElementById('regListWrap');
+  var status = document.getElementById('reg-status-filter').value;
+  wrap.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res = await API.getRegistrations(status);
+    _allRegistrations = res.registrations || [];
+    renderRegistrationList(_allRegistrations, status);
+    if (status === 'pending_review') {
+      setTabBadge('tab-registrations', _allRegistrations.length);
+    }
+  } catch(e) {
+    wrap.innerHTML = '<div class="em">' + e.message + '</div>';
+  }
+}
+
+function statusBadgeReg(s) {
+  var map = {
+    'pending_review':  { bg:'#fef9c3', color:'#854d0e', label:'Pending Review' },
+    'payment_pending': { bg:'#fff7ed', color:'#9a3412', label:'Payment Pending' },
+    'active':          { bg:'#f0fdf4', color:'#166534', label:'Active' },
+    'rejected':        { bg:'#fef2f2', color:'#991b1b', label:'Rejected' },
+  };
+  var st = map[s] || { bg:'#f1f5f9', color:'#475569', label: s };
+  return '<span style="background:' + st.bg + ';color:' + st.color + ';font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px">' + st.label + '</span>';
+}
+
+function renderRegistrationList(list, status) {
+  var wrap = document.getElementById('regListWrap');
+  if (!list.length) {
+    wrap.innerHTML = '<div class="card" style="text-align:center;color:var(--gray);padding:32px">No registrations in <strong>' + status + '</strong> status.</div>';
+    return;
+  }
+  var html = '<div style="display:flex;flex-direction:column;gap:10px">';
+  list.forEach(function(r) {
+    var name = r.fname + (r.lname ? ' ' + r.lname : '');
+    var type = r.seller_type || r.role;
+    var typeColor = r.seller_type === 'Retailer' ? '#6d28d9' : '#166534';
+    var date = r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+    html += '<div class="card" style="cursor:pointer;border-left:4px solid ' + typeColor + ';padding:12px 14px" onclick="openRegDetail(\'' + r.id + '\')">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">';
+    html += '<div>';
+    html += '<div style="font-weight:700;font-size:14px">' + name + '</div>';
+    html += '<div style="font-size:12px;color:var(--gray);margin-top:2px">' + r.phone + (r.email ? ' &bull; ' + r.email : '') + '</div>';
+    html += '<div style="font-size:12px;color:var(--gray);margin-top:2px">' + (r.district || '—') + ', ' + (r.state || '—') + '</div>';
+    html += '</div>';
+    html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">';
+    html += '<span style="background:' + typeColor + ';color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px">' + type + '</span>';
+    html += statusBadgeReg(r.approval_status);
+    html += '<div style="font-size:10px;color:var(--gray)">' + date + '</div>';
+    html += '</div>';
+    html += '</div>';
+    if (r.approval_status === 'payment_pending' && r.payment_reference) {
+      html += '<div style="margin-top:8px;font-size:11px;background:#fff7ed;padding:6px 10px;border-radius:6px">Ref: <strong>' + r.payment_reference + '</strong> &bull; ₹' + ((r.subscription_amount||0)/100).toFixed(0) + '</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+async function openRegDetail(id) {
+  _currentRegId = id;
+  document.getElementById('regDetailBody').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  document.getElementById('regDetailActions').innerHTML = '';
+  document.getElementById('regDetailOverlay').style.display = 'flex';
+  try {
+    var res = await API.getRegistration(id);
+    var r = res.registration;
+    var name = r.fname + (r.lname ? ' ' + r.lname : '');
+    document.getElementById('regDetailTitle').textContent = name + ' — ' + (r.seller_type || 'Seller');
+    var html = '';
+
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:14px">';
+    function row(label, val) {
+      return '<div><div style="font-size:11px;color:var(--gray);margin-bottom:2px">' + label + '</div><div style="font-size:13px;font-weight:600">' + (val || '—') + '</div></div>';
+    }
+    html += row('Login ID', '<span style="font-family:monospace">' + r.login_id + '</span>');
+    html += row('Status', statusBadgeReg(r.approval_status));
+    html += row('Phone', r.phone);
+    html += row('Alt Phone', r.alt_phone);
+    html += row('Email', r.email);
+    html += row('Type', r.seller_type || '—');
+    html += row('Applied', r.created_at ? new Date(r.created_at).toLocaleString('en-IN') : '—');
+    html += '</div>';
+
+    html += '<div style="font-weight:700;font-size:12px;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Address</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:14px">';
+    html += row('Village/Town', r.village_town);
+    html += row('City', r.city);
+    html += row('District', r.district);
+    html += row('State', r.state);
+    html += row('Pincode', r.pincode);
+    html += row('House / Street', [r.house_no, r.street1, r.street2].filter(Boolean).join(', '));
+    html += '</div>';
+
+    if (r.seller_type === 'Farmer') {
+      html += '<div style="font-weight:700;font-size:12px;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">KYC Details</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:14px">';
+      html += row('Aadhaar', r.aadhar);
+      html += row('Bank Name', r.bank_name);
+      html += row('Account No', r.bank_account);
+      html += row('IFSC', r.ifsc);
+      html += '</div>';
+    } else if (r.seller_type === 'Retailer') {
+      html += '<div style="font-weight:700;font-size:12px;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Business Details</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:14px">';
+      html += row('Business Name', r.business_name);
+      html += row('GST Number', r.gst_number);
+      html += row('Business Type', r.business_type);
+      html += '</div>';
+    }
+
+    if (r.approval_status === 'payment_pending' || r.approval_status === 'active') {
+      html += '<div style="font-weight:700;font-size:12px;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Subscription</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:14px">';
+      html += row('Amount', r.subscription_amount ? '₹' + (r.subscription_amount/100).toFixed(0) : '—');
+      html += row('Payment Ref', '<span style="font-family:monospace">' + (r.payment_reference || '—') + '</span>');
+      html += row('Approved By', r.approved_at ? new Date(r.approved_at).toLocaleString('en-IN') : '—');
+      html += row('Payment Confirmed', r.payment_confirmed_at ? new Date(r.payment_confirmed_at).toLocaleString('en-IN') : 'Pending');
+      html += row('Subscription Expires', r.subscription_expires_at ? new Date(r.subscription_expires_at).toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'}) : '—');
+      html += '</div>';
+    }
+
+    if (r.approval_status === 'rejected' && r.rejection_reason) {
+      html += '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;font-size:13px"><strong>Rejection Reason:</strong> ' + r.rejection_reason + '</div>';
+    }
+
+    document.getElementById('regDetailBody').innerHTML = html;
+
+    // Action buttons based on status
+    var actHtml = '';
+    if (r.approval_status === 'pending_review') {
+      actHtml += '<button class="sbtn" style="background:#dc2626;flex:0;padding:0 18px" onclick="openRejectModal(\'' + r.id + '\',\'' + name.replace(/'/g,'') + '\')">Reject</button>';
+      actHtml += '<button class="sbtn" style="background:#16a34a;flex:0;padding:0 18px" onclick="openApproveModal(\'' + r.id + '\',\'' + name.replace(/'/g,'') + '\')">Approve & Send Payment Link</button>';
+    } else if (r.approval_status === 'payment_pending') {
+      actHtml += '<button class="sbtn" style="background:#dc2626;flex:0;padding:0 18px" onclick="openRejectModal(\'' + r.id + '\',\'' + name.replace(/'/g,'') + '\')">Reject</button>';
+      actHtml += '<button class="sbtn" style="background:#2563eb;flex:0;padding:0 18px" onclick="doConfirmPayment(\'' + r.id + '\')">Confirm Payment Received</button>';
+    }
+    actHtml += '<button class="sbtn" style="background:var(--muted);color:var(--text);flex:0;padding:0 18px" onclick="closeRegDetail()">Close</button>';
+    document.getElementById('regDetailActions').innerHTML = actHtml;
+  } catch(e) {
+    document.getElementById('regDetailBody').innerHTML = '<div class="em">' + e.message + '</div>';
+  }
+}
+
+function closeRegDetail() {
+  document.getElementById('regDetailOverlay').style.display = 'none';
+  _currentRegId = null;
+}
+
+function openApproveModal(id, name) {
+  _currentRegId = id;
+  document.getElementById('approve-name-lbl').textContent = 'Approving registration for: ' + name;
+  document.getElementById('approve-amount').value = '';
+  document.getElementById('approve-err').style.display = 'none';
+  document.getElementById('regApproveOverlay').style.display = 'flex';
+}
+function closeApproveModal() {
+  document.getElementById('regApproveOverlay').style.display = 'none';
+}
+
+async function submitApprove() {
+  var amount = parseFloat(document.getElementById('approve-amount').value);
+  var err = document.getElementById('approve-err');
+  var btn = document.getElementById('approve-btn');
+  err.style.display = 'none';
+  if (!amount || amount <= 0) {
+    err.textContent = 'Please enter a valid subscription amount in rupees.';
+    err.style.display = 'block';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Processing…';
+  try {
+    var res = await API.approveRegistration(_currentRegId, amount);
+    closeApproveModal();
+    closeRegDetail();
+    showToast('Approved! Payment notification sent. Ref: ' + res.payment_reference, 'ok');
+    loadRegistrations();
+  } catch(e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Approve & Send Payment Link';
+  }
+}
+
+function openRejectModal(id, name) {
+  _currentRegId = id;
+  document.getElementById('reject-name-lbl').textContent = 'Rejecting registration for: ' + name;
+  document.getElementById('reject-reason').value = '';
+  document.getElementById('reject-err').style.display = 'none';
+  document.getElementById('regRejectOverlay').style.display = 'flex';
+}
+function closeRejectModal() {
+  document.getElementById('regRejectOverlay').style.display = 'none';
+}
+
+async function submitReject() {
+  var reason = document.getElementById('reject-reason').value.trim();
+  var err = document.getElementById('reject-err');
+  var btn = document.getElementById('reject-btn');
+  err.style.display = 'none';
+  if (!reason) {
+    err.textContent = 'Please enter a rejection reason.';
+    err.style.display = 'block';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Rejecting…';
+  try {
+    await API.rejectRegistration(_currentRegId, reason);
+    closeRejectModal();
+    closeRegDetail();
+    showToast('Registration rejected. Applicant notified.', 'ok');
+    loadRegistrations();
+  } catch(e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Reject & Notify';
+  }
+}
+
+async function doConfirmPayment(id) {
+  if (!confirm('Confirm that payment has been received and activate this account?')) return;
+  try {
+    var res = await API.confirmPayment(id);
+    closeRegDetail();
+    showToast(res.message || 'Account activated!', 'ok');
+    loadRegistrations();
+  } catch(e) {
+    showToast(e.message, 'err');
+  }
+}
 </script>
 </body>
 </html>

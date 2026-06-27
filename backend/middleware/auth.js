@@ -17,12 +17,24 @@ async function requireAuth(req, res, next) {
 
   const { data: user, error } = await supabase
     .from('users')
-    .select('id, login_id, phone, role, admin_role, status, fname, lname, email, district, village_town, vco_city, district_assign, agent_vehicle')
+    .select('id, login_id, phone, role, admin_role, status, approval_status, payment_reference, fname, lname, email, district, state, village_town, vco_city, district_assign, agent_vehicle')
     .eq('id', payload.sub)
     .single();
 
   if (error || !user) return res.status(401).json({ error: 'User not found.' });
   if (user.status === 'blocked') return res.status(403).json({ error: 'Account is blocked.' });
+
+  if (user.role === 'farmer') {
+    if (user.approval_status === 'pending_review') {
+      return res.status(403).json({ error: 'Your registration is still under review.', approval_status: 'pending_review' });
+    }
+    if (user.approval_status === 'payment_pending') {
+      return res.status(403).json({ error: 'Please complete your subscription payment to access your account.', approval_status: 'payment_pending', payment_reference: user.payment_reference });
+    }
+    if (user.approval_status === 'rejected') {
+      return res.status(403).json({ error: 'Your registration was not approved. Please contact support.', approval_status: 'rejected' });
+    }
+  }
 
   req.user = user;
   next();

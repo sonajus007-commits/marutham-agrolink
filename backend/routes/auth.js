@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { distCode, stateCode } = require('../utils/codeGen');
+const notify = require('../utils/notify');
 
 const router = express.Router();
 
@@ -133,6 +134,9 @@ router.post('/register', async (req, res) => {
   const password_hash = await bcrypt.hash(password, 12);
   const login_id = await generateLoginId(role, req.body.admin_role, state, district, fname, seller_type);
 
+  // Farmers and retailers go into pending review; consumers are immediately active
+  const approval_status = role === 'farmer' ? 'pending_review' : 'active';
+
   const newUser = {
     login_id, phone, password_hash, role,
     fname, lname, email, alt_phone,
@@ -140,6 +144,7 @@ router.post('/register', async (req, res) => {
     house_no, street1, street2, landmark,
     village_town, city, district, pincode,
     state, country: country || 'India',
+    approval_status,
     ...(role === 'farmer' && { seller_type }),
     ...(role === 'farmer' && seller_type === 'Farmer'   && { aadhar, bank_name, bank_account, ifsc }),
     ...(role === 'farmer' && seller_type === 'Retailer' && { business_name, gst_number, business_type }),
@@ -156,8 +161,19 @@ router.post('/register', async (req, res) => {
     return res.status(500).json({ error: 'Could not create account. Please try again.' });
   }
 
+  // Send confirmation notifications to applicant + admin (non-blocking)
+  if (role === 'farmer') {
+    notify.notifyRegistrationReceived(created).catch(e =>
+      console.error('Registration notification error:', e.message)
+    );
+  }
+
+  const message = role === 'farmer'
+    ? 'Registration submitted successfully. Your application is under review. You will be notified once approved.'
+    : 'Account created successfully.';
+
   res.status(201).json({
-    message: 'Account created successfully.',
+    message,
     login_id: created.login_id,
     user: safeUser(created),
   });
@@ -183,6 +199,19 @@ router.post('/login', async (req, res) => {
   }
   if (user.status === 'blocked') {
     return res.status(403).json({ error: 'Your account has been blocked. Contact support.' });
+  }
+
+  // Seller-specific approval gate
+  if (user.role === 'farmer') {
+    if (user.approval_status === 'pending_review') {
+      return res.status(403).json({ error: 'Your registration is under review by our team. You will be notified once approved.', approval_status: 'pending_review' });
+    }
+    if (user.approval_status === 'payment_pending') {
+      return res.status(403).json({ error: `Your application is approved! Please complete the subscription payment (Ref: ${user.payment_reference}) to activate your account.`, approval_status: 'payment_pending', payment_reference: user.payment_reference });
+    }
+    if (user.approval_status === 'rejected') {
+      return res.status(403).json({ error: `Your registration was not approved. ${user.rejection_reason ? 'Reason: ' + user.rejection_reason : 'Please contact support.'}`, approval_status: 'rejected' });
+    }
   }
 
   const passwordOk = await bcrypt.compare(password, user.password_hash);

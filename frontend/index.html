@@ -329,7 +329,7 @@
   </div><!-- /auth-card -->
 </div><!-- /auth-bg -->
 
-<!-- Registration success overlay -->
+<!-- Registration success overlay (consumer) -->
 <div class="overlay" id="regSuccessOverlay">
   <div style="min-height:100vh;background:radial-gradient(ellipse at 20% 50%,#0f2d1c 0%,#1a3d2b 40%,#0a1f12 100%);
     display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;">
@@ -345,6 +345,34 @@
     </div>
     <button class="sbtn" style="max-width:340px;margin-top:20px;" onclick="goToDashboard()">
       Continue to Dashboard →
+    </button>
+  </div>
+</div>
+
+<!-- Registration pending overlay (farmer/retailer) -->
+<div class="overlay" id="regPendingOverlay">
+  <div style="min-height:100vh;background:radial-gradient(ellipse at 20% 50%,#0f2d1c 0%,#1a3d2b 40%,#0a1f12 100%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;">
+    <div style="font-size:56px;margin-bottom:16px;">📋</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--gold2);font-weight:700;text-align:center;margin-bottom:8px;">
+      Application Submitted!
+    </div>
+    <div style="font-size:14px;color:var(--mint);text-align:center;margin-bottom:20px;">Your registration is under review</div>
+    <div class="lid-box" style="width:100%;max-width:360px;">
+      <div class="lid-lbl">Your Login ID</div>
+      <div class="lid-val" id="pending-lid">—</div>
+      <div class="lid-note">Keep this safe — you will need it to login once approved</div>
+    </div>
+    <div style="width:100%;max-width:360px;margin-top:16px;background:rgba(255,255,255,0.07);border-radius:12px;padding:16px;font-size:13px;color:var(--mint);line-height:1.7">
+      <div style="font-weight:700;color:var(--gold2);margin-bottom:8px">What happens next?</div>
+      <div>1. Our Head Office team will review your details</div>
+      <div>2. You will receive an email / SMS once reviewed</div>
+      <div>3. If approved, a payment link will be sent to you</div>
+      <div>4. Complete the subscription payment to activate your account</div>
+      <div>5. Your login credentials will be confirmed after payment</div>
+    </div>
+    <button class="sbtn" style="max-width:360px;margin-top:20px;background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.2);" onclick="document.getElementById('regPendingOverlay').classList.remove('active')">
+      Back to Login
     </button>
   </div>
 </div>
@@ -660,12 +688,18 @@ async function doRegister(role) {
 
   try {
     var res = await API.register(body);
-    // Register doesn't return a token — login immediately
-    var loginRes = await API.login(ph, pw);
-    setSession(loginRes.token, loginRes.user);
-    _pendingUser = loginRes.user;
-    document.getElementById('success-lid').textContent = loginRes.user.login_id || '—';
-    document.getElementById('regSuccessOverlay').classList.add('active');
+    if (role === 'farmer') {
+      // Farmers/retailers go into pending review — do not auto-login
+      document.getElementById('pending-lid').textContent = res.login_id || '—';
+      document.getElementById('regPendingOverlay').classList.add('active');
+    } else {
+      // Consumers are immediately active — auto-login
+      var loginRes = await API.login(ph, pw);
+      setSession(loginRes.token, loginRes.user);
+      _pendingUser = loginRes.user;
+      document.getElementById('success-lid').textContent = loginRes.user.login_id || '—';
+      document.getElementById('regSuccessOverlay').classList.add('active');
+    }
   } catch(e) {
     showToast(e.message, 'er');
     btns.forEach(function(b){ b.disabled=false; b.textContent='✅ Create ' + (role==='consumer'?'Consumer':sellerType) + ' Account'; });
