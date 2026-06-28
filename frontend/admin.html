@@ -2855,7 +2855,18 @@ async function loadAdminListings(status) {
           : '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700">Pending</span>';
       html += '<tr>';
       html += '<td style="font-weight:700">' + (p.name||'—') + ' <span style="font-size:10px;color:#6b7280">' + (p.code||'') + '</span></td>';
-      html += '<td>' + (f.fname||'—') + (f.lname?' '+f.lname:'') + '<br><span class="mono" style="font-size:10px">' + (f.login_id||'') + '</span></td>';
+      var sellerCell = (f.fname||'—') + (f.lname?' '+f.lname:'') + '<br><span class="mono" style="font-size:10px">' + (f.login_id||'') + '</span>';
+      if (f.subscription_plan) {
+        var lSubExpired  = f.subscription_expires_at && new Date(f.subscription_expires_at) < new Date();
+        var lDaysLeft    = f.subscription_expires_at ? Math.ceil((new Date(f.subscription_expires_at) - new Date()) / 86400000) : null;
+        var lExpStr      = f.subscription_expires_at ? new Date(f.subscription_expires_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'}) : null;
+        sellerCell += '<br><span style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:1px 6px;border-radius:50px;font-size:9px;font-weight:700">📅 ' + f.subscription_plan + '</span>';
+        if (lExpStr) {
+          var lExpColor = lSubExpired ? 'color:#dc2626' : (lDaysLeft <= 10 ? 'color:#d97706' : 'color:#16a34a');
+          sellerCell += ' <span style="font-size:9px;font-weight:700;' + lExpColor + '">' + (lSubExpired ? '⚠ Exp ' : '✓ ') + lExpStr + (lDaysLeft > 0 && lDaysLeft <= 10 ? ' (' + lDaysLeft + 'd)' : '') + '</span>';
+        }
+      }
+      html += '<td>' + sellerCell + '</td>';
       html += '<td class="mono">₹' + parseFloat(l.farmer_price||0).toFixed(0) + ' / ' + (p.unit||'unit') + '</td>';
       html += '<td>' + (l.qty_available||'—') + '</td>';
       html += '<td>' + (f.district||'—') + '</td>';

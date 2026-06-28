@@ -252,7 +252,7 @@ router.get('/admin/pending', async (req, res) => {
     .from('farmer_listings')
     .select(`
       id, farmer_price, qty_available, listing_status, created_at, images,
-      farmer:users ( id, fname, lname, login_id, district, seller_type ),
+      farmer:users ( id, fname, lname, login_id, district, seller_type, subscription_plan, subscription_expires_at ),
       product:products ( id, code, name, unit )
     `)
     .eq('listing_status', status)
