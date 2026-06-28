@@ -240,9 +240,21 @@
           <div class="fg" style="grid-column:span 2"><label class="fl">Business Name</label><input class="fi" id="ud-bizname" type="text"></div>
         </div>
         <div class="fsec">Subscription</div>
-        <div class="fg" style="max-width:240px">
-          <label class="fl">Subscription Expires On</label>
-          <input class="fi" id="ud-subexp" type="date">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="fg">
+            <label class="fl">Subscription Plan</label>
+            <select class="fi" id="ud-subplan">
+              <option value="">— Not set —</option>
+              <option value="Monthly">Monthly (30 days)</option>
+              <option value="Quarterly">Quarterly (90 days)</option>
+              <option value="Half Yearly">Half Yearly (180 days)</option>
+              <option value="Yearly">Yearly (365 days)</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Subscription Expires On</label>
+            <input class="fi" id="ud-subexp" type="date">
+          </div>
         </div>
         <div class="ea" style="margin-top:14px">
           <button class="sbtn" onclick="saveUserDetail()">Save Changes</button>
@@ -1771,11 +1783,17 @@ function renderUserDetail() {
   document.getElementById('ud-role-badge').textContent = u.admin_role || u.seller_type || u.role;
   var subExp = u.subscription_expires_at;
   var subBadge = '';
+  if (u.subscription_plan) {
+    subBadge += '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:50px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;margin-right:6px">📅 ' + u.subscription_plan + '</span>';
+  }
   if (subExp) {
     var isExpired = new Date(subExp) < new Date();
-    var expStr = new Date(subExp).toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'});
-    subBadge = '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:50px;background:' + (isExpired ? '#fef2f2;color:#dc2626' : '#f0fdf4;color:#16a34a') + '">'
-      + (isExpired ? '⚠ Expired ' : '✓ Valid till ') + expStr + '</span>';
+    var daysLeft  = Math.ceil((new Date(subExp) - new Date()) / 86400000);
+    var expStr    = new Date(subExp).toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'});
+    var expColor  = isExpired ? '#fef2f2;color:#dc2626' : (daysLeft <= 10 ? '#fffbeb;color:#92400e' : '#f0fdf4;color:#16a34a');
+    var expLabel  = isExpired ? '⚠ Expired ' : (daysLeft <= 10 ? '⚠ Expires ' : '✓ Valid till ');
+    var dayNote   = (!isExpired && daysLeft <= 10) ? ' (' + daysLeft + 'd left)' : '';
+    subBadge += '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:50px;background:' + expColor + '">' + expLabel + expStr + dayNote + '</span>';
   }
   document.getElementById('ud-sub-badge').innerHTML = subBadge;
 
@@ -1797,6 +1815,17 @@ function renderUserDetail() {
     info += infoRow('IFSC', u.ifsc);
     info += infoRow('Business Name', u.business_name);
     info += infoRow('GST', u.gst_number);
+    info += infoRow('Subscription Plan', u.subscription_plan || '—');
+    if (u.subscription_expires_at) {
+      var sExp = new Date(u.subscription_expires_at);
+      var sExpired = sExp < new Date();
+      var sDays = Math.ceil((sExp - new Date()) / 86400000);
+      var sLabel = sExp.toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'});
+      var sColor = sExpired ? '#dc2626' : (sDays <= 10 ? '#d97706' : '#16a34a');
+      info += infoRow('Valid Until', '<span style="color:' + sColor + ';font-weight:700">' + sLabel + (sExpired ? ' (Expired)' : sDays <= 10 ? ' (' + sDays + 'd left)' : '') + '</span>');
+    } else {
+      info += infoRow('Valid Until', '—');
+    }
   }
   document.getElementById('ud-info').innerHTML = info;
 
@@ -1832,6 +1861,7 @@ function toggleUdEditForm() {
   document.getElementById('ud-ifsc').value    = u.ifsc || '';
   document.getElementById('ud-gst').value     = u.gst_number || '';
   document.getElementById('ud-bizname').value = u.business_name || '';
+  document.getElementById('ud-subplan').value = u.subscription_plan || '';
   document.getElementById('ud-subexp').value  = u.subscription_expires_at
     ? u.subscription_expires_at.slice(0, 10) : '';
   form.style.display = '';
@@ -1852,7 +1882,8 @@ async function saveUserDetail() {
     ifsc:        (document.getElementById('ud-ifsc').value.trim().toUpperCase()) || undefined,
     gst_number:  document.getElementById('ud-gst').value.trim()     || undefined,
     business_name:document.getElementById('ud-bizname').value.trim()|| undefined,
-    subscription_expires_at: document.getElementById('ud-subexp').value || undefined,
+    subscription_plan:       document.getElementById('ud-subplan').value || undefined,
+    subscription_expires_at: document.getElementById('ud-subexp').value  || undefined,
   };
   try {
     var res = await API.updateUser(_udUserId, data);
