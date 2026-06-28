@@ -38,11 +38,32 @@ var API = {
   getUsers: function() {
     return apiFetch('GET', '/users', null, tok());
   },
+  getUserById: function(id) {
+    return apiFetch('GET', '/users/' + id, null, tok());
+  },
+  updateUser: function(id, data) {
+    return apiFetch('PATCH', '/users/' + id, data, tok());
+  },
   blockUser: function(id) {
     return apiFetch('PATCH', '/users/' + id + '/block', {}, tok());
   },
   unblockUser: function(id) {
     return apiFetch('PATCH', '/users/' + id + '/unblock', {}, tok());
+  },
+  getChangeRequests: function(status) {
+    return apiFetch('GET', '/users/change-requests' + (status ? '?status=' + status : ''), null, tok());
+  },
+  approveChangeRequest: function(id, notes) {
+    return apiFetch('POST', '/users/change-requests/' + id + '/approve', { notes: notes || '' }, tok());
+  },
+  rejectChangeRequest: function(id, notes) {
+    return apiFetch('POST', '/users/change-requests/' + id + '/reject', { notes: notes || '' }, tok());
+  },
+  submitProfileChangeRequest: function(data) {
+    return apiFetch('POST', '/auth/profile-change-request', data, tok());
+  },
+  getMyChangeRequests: function() {
+    return apiFetch('GET', '/auth/my-change-request', null, tok());
   },
   getMe: function() {
     return apiFetch('GET', '/auth/me', null, tok());

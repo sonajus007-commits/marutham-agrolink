@@ -109,7 +109,21 @@
 <div class="panel" id="panel-users">
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
     <input class="fi" id="userSearch" type="text" placeholder="Search by name, phone, login ID…" oninput="filterUsers()" style="flex:1;min-width:180px;margin:0">
+    <button class="add-prod-btn" id="chreq-btn" onclick="toggleChangeRequestsPanel()" style="background:#1d4ed8;display:none">
+      📋 Change Requests <span id="chreq-badge" style="background:#fff;color:#1d4ed8;border-radius:50px;padding:1px 7px;font-size:10px;margin-left:4px">0</span>
+    </button>
     <button class="add-prod-btn" onclick="openCreateStaff()">➕ Add Staff</button>
+  </div>
+  <div id="changeRequestsPanel" style="display:none;margin-bottom:16px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:14px;padding:14px">
+    <div style="font-weight:700;color:#1d4ed8;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+      📋 Profile Change Requests
+      <div style="display:flex;gap:8px">
+        <button onclick="loadChangeRequests('pending')" id="cr-tab-pending" class="chip on" style="font-size:11px">Pending</button>
+        <button onclick="loadChangeRequests('approved')" id="cr-tab-approved" class="chip" style="font-size:11px">Approved</button>
+        <button onclick="loadChangeRequests('rejected')" id="cr-tab-rejected" class="chip" style="font-size:11px">Rejected</button>
+      </div>
+    </div>
+    <div id="changeRequestsList"><div class="spinner"><div class="spin"></div></div></div>
   </div>
   <div class="filt-row" id="userRoleFilter"></div>
   <div id="userListWrap"><div class="spinner"><div class="spin"></div></div></div>
@@ -175,6 +189,92 @@
       <div style="display:flex;gap:10px;justify-content:flex-end">
         <button class="sbtn" style="background:var(--muted);color:var(--text);flex:0;padding:0 20px" onclick="closeCreateStaff()">Cancel</button>
         <button class="sbtn" id="cs-btn" onclick="submitCreateStaff()" style="flex:0;padding:0 24px">Create Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── USER DETAIL OVERLAY ───────────────────────────────────────────────── -->
+<div class="overlay" id="userDetailOverlay" style="display:none" onclick="if(event.target===this)closeUserDetail()">
+  <div class="obox" style="max-width:560px;max-height:90vh;overflow-y:auto">
+    <div class="ohdr">
+      <span class="otitle">👤 User Profile</span>
+      <button class="cls" onclick="closeUserDetail()">✕</button>
+    </div>
+    <div style="padding:18px;display:flex;flex-direction:column;gap:14px">
+      <div style="background:#f0fdf4;border-radius:12px;padding:14px">
+        <div style="font-size:17px;font-weight:800;color:var(--forest)" id="ud-name">—</div>
+        <div style="font-size:11px;color:#5f7268;margin-top:2px" id="ud-meta">—</div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span class="rbadge" id="ud-role-badge">—</span>
+          <span id="ud-sub-badge"></span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px" id="ud-info"></div>
+      <div id="ud-edit-form" style="display:none;border-top:1px solid #e5e7eb;padding-top:14px">
+        <div class="fsec" style="padding-top:0;border-top:none">Edit Profile</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="fg"><label class="fl">First Name</label><input class="fi" id="ud-fname" type="text"></div>
+          <div class="fg"><label class="fl">Last Name</label><input class="fi" id="ud-lname" type="text"></div>
+          <div class="fg"><label class="fl">Email</label><input class="fi" id="ud-email" type="email"></div>
+          <div class="fg"><label class="fl">Alt Phone</label><input class="fi" id="ud-altphone" type="text"></div>
+          <div class="fg"><label class="fl">Gender</label>
+            <select class="fi" id="ud-gender">
+              <option value="">— Select —</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Transgender">Transgender</option>
+            </select>
+          </div>
+          <div class="fg"><label class="fl">District</label><input class="fi" id="ud-district" type="text"></div>
+          <div class="fg"><label class="fl">State</label><input class="fi" id="ud-state" type="text"></div>
+          <div class="fg"><label class="fl">Pincode</label><input class="fi" id="ud-pincode" type="text"></div>
+        </div>
+        <div class="fsec">Bank &amp; Business Details</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="fg"><label class="fl">Bank Name</label><input class="fi" id="ud-bank" type="text"></div>
+          <div class="fg"><label class="fl">Account No</label><input class="fi" id="ud-acc" type="text"></div>
+          <div class="fg"><label class="fl">IFSC</label><input class="fi" id="ud-ifsc" type="text" style="text-transform:uppercase"></div>
+          <div class="fg"><label class="fl">GST Number</label><input class="fi" id="ud-gst" type="text"></div>
+          <div class="fg" style="grid-column:span 2"><label class="fl">Business Name</label><input class="fi" id="ud-bizname" type="text"></div>
+        </div>
+        <div class="fsec">Subscription</div>
+        <div class="fg" style="max-width:240px">
+          <label class="fl">Subscription Expires On</label>
+          <input class="fi" id="ud-subexp" type="date">
+        </div>
+        <div class="ea" style="margin-top:14px">
+          <button class="sbtn" onclick="saveUserDetail()">Save Changes</button>
+          <button class="sbtn" style="background:var(--muted);color:var(--text)" onclick="toggleUdEditForm()">Cancel</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="sbtn" style="flex:0;padding:0 18px" id="ud-edit-btn" onclick="toggleUdEditForm()">✏️ Edit</button>
+        <button class="sbtn" id="ud-block-btn" style="flex:0;padding:0 18px;background:#ef4444" onclick="udToggleBlock()">Block</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CHANGE REQUEST REVIEW OVERLAY ─────────────────────────────────────── -->
+<div class="overlay" id="crReviewOverlay" style="display:none" onclick="if(event.target===this)closeCrReview()">
+  <div class="obox" style="max-width:480px">
+    <div class="ohdr">
+      <span class="otitle" id="cr-review-title">Review Change Request</span>
+      <button class="cls" onclick="closeCrReview()">✕</button>
+    </div>
+    <div style="padding:18px;display:flex;flex-direction:column;gap:12px">
+      <div style="background:#f0fdf4;border-radius:10px;padding:12px" id="cr-review-user"></div>
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px">
+        <div style="font-size:11px;font-weight:700;color:#92400e;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Requested Changes</div>
+        <div id="cr-review-changes"></div>
+      </div>
+      <div class="fg"><label class="fl">Notes (optional)</label>
+        <textarea class="fi" id="cr-review-notes" rows="2" placeholder="Reason for approval or rejection…" style="resize:none"></textarea>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="sbtn" style="background:#16a34a;flex:1" onclick="doCrApprove()">✓ Approve</button>
+        <button class="sbtn" style="background:#ef4444;flex:1" onclick="doCrReject()">✗ Reject</button>
       </div>
     </div>
   </div>
@@ -1540,6 +1640,19 @@ async function renderUsers() {
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
   }
+  // Show Change Requests button for Head Office only
+  var isHO = (user.admin_role === 'Head Office' || user.admin_role === 'State Head');
+  var crBtn = document.getElementById('chreq-btn');
+  if (isHO) {
+    crBtn.style.display = '';
+    try {
+      var crRes = await API.getChangeRequests('pending');
+      var cnt = (crRes.requests || []).length;
+      document.getElementById('chreq-badge').textContent = cnt;
+    } catch(e) {}
+  } else {
+    crBtn.style.display = 'none';
+  }
 }
 
 function renderUserRoleFilter() {
@@ -1573,12 +1686,13 @@ function renderUserTable() {
   }
 
   var html = '<div class="tbl-wrap"><table class="utbl"><thead><tr>';
-  html += '<th>Name</th><th>Login ID</th><th>Phone</th><th>Role</th><th>Gender</th><th>District</th><th>Status</th><th>Action</th>';
+  html += '<th>Name</th><th>Login ID</th><th>Phone</th><th>Role</th><th>Gender</th><th>District</th><th>Subscription</th><th>Status</th><th>Action</th>';
   html += '</tr></thead><tbody>';
   list.forEach(function(u) {
     var roleClass = u.role === 'admin' ? 'rb-vc' : (u.role === 'farmer' ? 'rb-fa' : 'rb-co');
     html += '<tr>';
-    html += '<td style="font-weight:700">' + u.fname + (u.lname ? ' ' + u.lname : '') + '</td>';
+    var fullName = u.fname + (u.lname ? ' ' + u.lname : '');
+    html += '<td><a href="#" style="font-weight:700;color:var(--forest);text-decoration:underline dotted" onclick="openUserDetail(\'' + u.id + '\');return false">' + fullName + '</a></td>';
     html += '<td class="mono">' + (u.login_id||'—') + '</td>';
     html += '<td class="mono">' + u.phone + '</td>';
     html += '<td><span class="rbadge ' + roleClass + '">' + (u.admin_role || u.role) + '</span></td>';
@@ -1589,6 +1703,11 @@ function renderUserTable() {
       : '—';
     html += '<td>' + genderLabel + '</td>';
     html += '<td>' + (u.district||'—') + '</td>';
+    var subExp = u.subscription_expires_at
+      ? new Date(u.subscription_expires_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})
+      : '—';
+    var subExpired = u.subscription_expires_at && new Date(u.subscription_expires_at) < new Date();
+    html += '<td style="font-size:11px;' + (subExpired ? 'color:#dc2626;font-weight:700' : '') + '">' + subExp + (subExpired ? ' ⚠' : '') + '</td>';
     var isBlocked = u.status === 'blocked';
     html += '<td><span class="sbadge ' + (isBlocked ? 's-blk' : 's-act') + '">' + (isBlocked ? 'Blocked' : 'Active') + '</span></td>';
     html += '<td><button class="blkbtn ' + (isBlocked ? 'b-unb' : 'b-blk') + '" onclick="toggleBlock(\'' + u.id + '\',' + isBlocked + ')">';
@@ -1597,6 +1716,241 @@ function renderUserTable() {
   });
   html += '</tbody></table></div>';
   document.getElementById('userListWrap').innerHTML = html;
+}
+
+// ── USER DETAIL OVERLAY ───────────────────────────────────────────────────────
+var _udUserId = null;
+var _udUser   = null;
+
+async function openUserDetail(id) {
+  _udUserId = id;
+  document.getElementById('userDetailOverlay').style.display = 'flex';
+  document.getElementById('ud-info').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  document.getElementById('ud-edit-form').style.display = 'none';
+  try {
+    var res = await API.getUserById(id);
+    _udUser = res.user;
+    renderUserDetail();
+  } catch(e) { document.getElementById('ud-info').innerHTML = '<p style="color:red">' + e.message + '</p>'; }
+}
+
+function renderUserDetail() {
+  var u = _udUser;
+  var fullName = u.fname + (u.lname ? ' ' + u.lname : '');
+  document.getElementById('ud-name').textContent = fullName;
+  document.getElementById('ud-meta').textContent = (u.login_id || '—') + ' · ' + u.phone + (u.email ? ' · ' + u.email : '');
+  var roleClass = u.role === 'admin' ? 'rb-vc' : (u.role === 'farmer' ? 'rb-fa' : 'rb-co');
+  document.getElementById('ud-role-badge').className = 'rbadge ' + roleClass;
+  document.getElementById('ud-role-badge').textContent = u.admin_role || u.seller_type || u.role;
+  var subExp = u.subscription_expires_at;
+  var subBadge = '';
+  if (subExp) {
+    var isExpired = new Date(subExp) < new Date();
+    var expStr = new Date(subExp).toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'});
+    subBadge = '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:50px;background:' + (isExpired ? '#fef2f2;color:#dc2626' : '#f0fdf4;color:#16a34a') + '">'
+      + (isExpired ? '⚠ Expired ' : '✓ Valid till ') + expStr + '</span>';
+  }
+  document.getElementById('ud-sub-badge').innerHTML = subBadge;
+
+  function infoRow(label, val) {
+    return '<div style="background:#f8fafc;border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">' + label + '</div><div style="font-weight:600;font-size:13px">' + (val || '—') + '</div></div>';
+  }
+  var info = '';
+  info += infoRow('Gender', u.gender);
+  info += infoRow('Status', '<span class="sbadge ' + (u.status === 'blocked' ? 's-blk' : 's-act') + '">' + (u.status || 'active') + '</span>');
+  info += infoRow('District', u.district);
+  info += infoRow('State', u.state);
+  info += infoRow('Village/Town', u.village_town);
+  info += infoRow('City', u.city);
+  info += infoRow('Pincode', u.pincode);
+  info += infoRow('Aadhaar', u.aadhar ? '••••' + String(u.aadhar).slice(-4) : '—');
+  if (u.role === 'farmer') {
+    info += infoRow('Bank', u.bank_name);
+    info += infoRow('Account No', u.bank_account ? '••••' + String(u.bank_account).slice(-4) : '—');
+    info += infoRow('IFSC', u.ifsc);
+    info += infoRow('Business Name', u.business_name);
+    info += infoRow('GST', u.gst_number);
+  }
+  document.getElementById('ud-info').innerHTML = info;
+
+  var isBlocked = u.status === 'blocked';
+  var blockBtn = document.getElementById('ud-block-btn');
+  blockBtn.textContent = isBlocked ? 'Unblock' : 'Block';
+  blockBtn.style.background = isBlocked ? '#16a34a' : '#ef4444';
+
+  var isHO = (user.admin_role === 'Head Office' || user.admin_role === 'State Head');
+  document.getElementById('ud-edit-btn').style.display = isHO ? '' : 'none';
+  blockBtn.style.display = '';
+}
+
+function closeUserDetail() {
+  document.getElementById('userDetailOverlay').style.display = 'none';
+}
+
+function toggleUdEditForm() {
+  var form = document.getElementById('ud-edit-form');
+  var visible = form.style.display !== 'none';
+  if (visible) { form.style.display = 'none'; return; }
+  var u = _udUser;
+  document.getElementById('ud-fname').value   = u.fname || '';
+  document.getElementById('ud-lname').value   = u.lname || '';
+  document.getElementById('ud-email').value   = u.email || '';
+  document.getElementById('ud-altphone').value= u.alt_phone || '';
+  document.getElementById('ud-gender').value  = u.gender || '';
+  document.getElementById('ud-district').value= u.district || '';
+  document.getElementById('ud-state').value   = u.state || '';
+  document.getElementById('ud-pincode').value = u.pincode || '';
+  document.getElementById('ud-bank').value    = u.bank_name || '';
+  document.getElementById('ud-acc').value     = u.bank_account || '';
+  document.getElementById('ud-ifsc').value    = u.ifsc || '';
+  document.getElementById('ud-gst').value     = u.gst_number || '';
+  document.getElementById('ud-bizname').value = u.business_name || '';
+  document.getElementById('ud-subexp').value  = u.subscription_expires_at
+    ? u.subscription_expires_at.slice(0, 10) : '';
+  form.style.display = '';
+}
+
+async function saveUserDetail() {
+  var data = {
+    fname:    document.getElementById('ud-fname').value.trim()   || undefined,
+    lname:    document.getElementById('ud-lname').value.trim()   || undefined,
+    email:    document.getElementById('ud-email').value.trim()   || undefined,
+    alt_phone:document.getElementById('ud-altphone').value.trim()|| undefined,
+    gender:   document.getElementById('ud-gender').value         || undefined,
+    district: document.getElementById('ud-district').value.trim()|| undefined,
+    state:    document.getElementById('ud-state').value.trim()   || undefined,
+    pincode:  document.getElementById('ud-pincode').value.trim() || undefined,
+    bank_name:   document.getElementById('ud-bank').value.trim()    || undefined,
+    bank_account:document.getElementById('ud-acc').value.trim()     || undefined,
+    ifsc:        (document.getElementById('ud-ifsc').value.trim().toUpperCase()) || undefined,
+    gst_number:  document.getElementById('ud-gst').value.trim()     || undefined,
+    business_name:document.getElementById('ud-bizname').value.trim()|| undefined,
+    subscription_expires_at: document.getElementById('ud-subexp').value || undefined,
+  };
+  try {
+    var res = await API.updateUser(_udUserId, data);
+    _udUser = res.user;
+    document.getElementById('ud-edit-form').style.display = 'none';
+    renderUserDetail();
+    renderUsers();
+    showToast('Profile updated.', 'ok');
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function udToggleBlock() {
+  var isBlocked = _udUser.status === 'blocked';
+  if (!confirm((isBlocked ? 'Unblock' : 'Block') + ' this user?')) return;
+  try {
+    if (isBlocked) await API.unblockUser(_udUserId);
+    else await API.blockUser(_udUserId);
+    var res = await API.getUserById(_udUserId);
+    _udUser = res.user;
+    renderUserDetail();
+    renderUsers();
+    showToast('User ' + (isBlocked ? 'unblocked' : 'blocked') + '.', 'ok');
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+// ── CHANGE REQUESTS ───────────────────────────────────────────────────────────
+var _crActiveStatus = 'pending';
+var _crCurrentId = null;
+
+function toggleChangeRequestsPanel() {
+  var panel = document.getElementById('changeRequestsPanel');
+  var visible = panel.style.display !== 'none';
+  if (visible) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  loadChangeRequests('pending');
+}
+
+async function loadChangeRequests(status) {
+  _crActiveStatus = status;
+  ['pending','approved','rejected'].forEach(function(s) {
+    document.getElementById('cr-tab-' + s).classList.toggle('on', s === status);
+  });
+  var el = document.getElementById('changeRequestsList');
+  el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res = await API.getChangeRequests(status);
+    var list = res.requests || [];
+    if (list.length === 0) { el.innerHTML = '<div class="empty-state" style="padding:20px 0"><p>No ' + status + ' requests.</p></div>'; return; }
+    var LABELS = { bank_name:'Bank Name', bank_account:'Account No', ifsc:'IFSC', gst_number:'GST', business_name:'Business Name', business_type:'Business Type' };
+    var html = '';
+    list.forEach(function(r) {
+      var changes = Object.entries(r.requested_changes || {}).map(function(e) {
+        return '<span style="font-size:11px;background:#fff;border:1px solid #bfdbfe;border-radius:50px;padding:2px 8px;margin:2px;display:inline-block">' + (LABELS[e[0]]||e[0]) + ': <strong>' + e[1] + '</strong></span>';
+      }).join('');
+      var dt = new Date(r.requested_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'});
+      html += '<div style="background:#fff;border-radius:10px;padding:12px;margin-bottom:10px;border:1px solid #bfdbfe">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">';
+      html += '<div><div style="font-weight:700;color:#1e3a5f">' + (r.fname||'User') + ' <span class="mono" style="font-size:11px;color:#6b7280">' + r.login_id + '</span></div>';
+      html += '<div style="font-size:11px;color:#6b7280;margin-top:2px">' + dt + '</div></div>';
+      if (status === 'pending') {
+        html += '<button class="sbtn" style="flex:0;padding:4px 14px;font-size:12px" onclick="openCrReview(\'' + r.id + '\')">Review</button>';
+      } else {
+        var badge = r.status === 'approved'
+          ? '<span style="background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:50px;font-size:11px;font-weight:700">Approved</span>'
+          : '<span style="background:#fef2f2;color:#dc2626;padding:2px 8px;border-radius:50px;font-size:11px;font-weight:700">Rejected</span>';
+        html += badge;
+      }
+      html += '</div>';
+      html += '<div>' + changes + '</div>';
+      if (r.notes) html += '<div style="font-size:11px;color:#6b7280;margin-top:6px">Notes: ' + r.notes + '</div>';
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  } catch(e) { el.innerHTML = '<p style="color:red">' + e.message + '</p>'; }
+}
+
+function openCrReview(id) {
+  _crCurrentId = id;
+  var el = document.getElementById('changeRequestsList');
+  var cards = el.querySelectorAll('[data-cr-id]');
+  // Find from last loaded list
+  API.getChangeRequests(_crActiveStatus).then(function(res) {
+    var r = (res.requests || []).find(function(x) { return x.id === id; });
+    if (!r) return;
+    var LABELS = { bank_name:'Bank Name', bank_account:'Account No', ifsc:'IFSC', gst_number:'GST', business_name:'Business Name', business_type:'Business Type' };
+    document.getElementById('cr-review-user').innerHTML =
+      '<strong>' + (r.fname||'User') + '</strong> <span class="mono" style="font-size:12px">' + r.login_id + '</span>';
+    var changes = Object.entries(r.requested_changes || {}).map(function(e) {
+      return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid #fde68a">'
+        + '<span style="color:#92400e">' + (LABELS[e[0]]||e[0]) + '</span><strong>' + e[1] + '</strong></div>';
+    }).join('');
+    document.getElementById('cr-review-changes').innerHTML = changes;
+    document.getElementById('cr-review-notes').value = '';
+    document.getElementById('crReviewOverlay').style.display = 'flex';
+  }).catch(function() {});
+}
+
+function closeCrReview() {
+  document.getElementById('crReviewOverlay').style.display = 'none';
+}
+
+async function doCrApprove() {
+  var notes = document.getElementById('cr-review-notes').value.trim();
+  try {
+    await API.approveChangeRequest(_crCurrentId, notes);
+    closeCrReview();
+    showToast('Change request approved and applied.', 'ok');
+    loadChangeRequests(_crActiveStatus);
+    // Refresh badge
+    var crRes = await API.getChangeRequests('pending');
+    document.getElementById('chreq-badge').textContent = (crRes.requests || []).length;
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function doCrReject() {
+  var notes = document.getElementById('cr-review-notes').value.trim();
+  if (!notes) { showToast('Please add a reason for rejection.', 'er'); return; }
+  try {
+    await API.rejectChangeRequest(_crCurrentId, notes);
+    closeCrReview();
+    showToast('Change request rejected.', 'ok');
+    loadChangeRequests(_crActiveStatus);
+    var crRes = await API.getChangeRequests('pending');
+    document.getElementById('chreq-badge').textContent = (crRes.requests || []).length;
+  } catch(e) { showToast(e.message, 'er'); }
 }
 
 async function toggleBlock(userId, currentlyBlocked) {

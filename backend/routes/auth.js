@@ -221,6 +221,19 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ error: 'Invalid phone number or password.' });
   }
 
+  // Auto-block farmer/retailer if subscription has expired
+  if (user.role === 'farmer' && user.subscription_expires_at) {
+    if (new Date(user.subscription_expires_at) < new Date()) {
+      await supabase.from('users')
+        .update({ status: 'blocked', updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+      return res.status(403).json({
+        error: 'Your annual subscription has expired. Please contact Marutham Agrolink Head Office to renew.',
+        subscription_expired: true,
+      });
+    }
+  }
+
   const token = signToken(user.id);
 
   res.json({
@@ -439,8 +452,6 @@ router.patch('/me', requireAuth, async (req, res) => {
     'gender',
     'house_no', 'street1', 'street2', 'landmark',
     'village_town', 'city', 'district', 'pincode', 'state',
-    'bank_name', 'bank_account', 'ifsc',              // farmer bank details
-    'business_name', 'gst_number', 'business_type',   // retailer details
     'agent_vehicle',                                   // agent vehicle
     'delivery_addresses',                              // consumer address book (JSONB array)
   ];
@@ -469,6 +480,57 @@ router.patch('/me', requireAuth, async (req, res) => {
   }
 
   res.json({ message: 'Profile updated.', user: safeUser(updated) });
+});
+
+// ── POST /auth/profile-change-request ────────────────────────────────────────
+// Farmer/retailer submits sensitive field changes for Head Office approval
+const SENSITIVE_FIELDS = ['bank_name', 'bank_account', 'ifsc', 'gst_number', 'business_name', 'business_type'];
+
+router.post('/profile-change-request', requireAuth, async (req, res) => {
+  if (req.user.role !== 'farmer') {
+    return res.status(403).json({ error: 'Only farmer/retailer accounts can submit profile change requests.' });
+  }
+
+  const changes = {};
+  for (const key of SENSITIVE_FIELDS) {
+    if (req.body[key] !== undefined && req.body[key] !== '') changes[key] = req.body[key];
+  }
+  if (Object.keys(changes).length === 0) {
+    return res.status(400).json({ error: 'No sensitive fields provided.' });
+  }
+
+  const { data: existing } = await supabase
+    .from('profile_change_requests')
+    .select('id')
+    .eq('user_id', req.user.id)
+    .eq('status', 'pending')
+    .maybeSingle();
+  if (existing) {
+    return res.status(409).json({ error: 'You already have a pending change request. Please wait for it to be reviewed before submitting another.' });
+  }
+
+  const { data: request, error } = await supabase
+    .from('profile_change_requests')
+    .insert({ user_id: req.user.id, login_id: req.user.login_id, fname: req.user.fname, requested_changes: changes })
+    .select()
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+
+  try { await notify.notifyProfileChangeRequest(req.user, changes); } catch(e) { console.error('Notify error:', e.message); }
+
+  res.status(201).json({ message: 'Change request submitted. The Head Office team will review it shortly.', request });
+});
+
+// ── GET /auth/my-change-request ───────────────────────────────────────────────
+router.get('/my-change-request', requireAuth, async (req, res) => {
+  const { data, error } = await supabase
+    .from('profile_change_requests')
+    .select('*')
+    .eq('user_id', req.user.id)
+    .order('requested_at', { ascending: false })
+    .limit(5);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ requests: data || [] });
 });
 
 module.exports = router;

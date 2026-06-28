@@ -183,9 +183,67 @@ async function notifyRejection(applicant, reason) {
   );
 }
 
+const FIELD_LABELS = {
+  bank_name: 'Bank Name', bank_account: 'Account Number', ifsc: 'IFSC Code',
+  gst_number: 'GST Number', business_name: 'Business Name', business_type: 'Business Type',
+};
+
+async function notifyProfileChangeRequest(user, changes) {
+  const name = `${user.fname}${user.lname ? ' ' + user.lname : ''}`;
+  const subject = `Approve my Profile update_${user.login_id}`;
+  const rows = Object.entries(changes)
+    .map(([k, v]) => `<tr><td style="padding:6px 8px;color:#6b7280;font-size:13px">${FIELD_LABELS[k] || k}</td><td style="font-weight:700">${v}</td></tr>`)
+    .join('');
+
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (adminEmail) {
+    await sendEmail(adminEmail, subject, `
+      <p>A profile update request requires Head Office approval:</p>
+      <table style="border-collapse:collapse;width:100%;max-width:480px;margin:12px 0">
+        <tr><td style="padding:6px 8px;color:#6b7280;font-size:13px">Name</td><td><strong>${name}</strong></td></tr>
+        <tr><td style="padding:6px 8px;color:#6b7280;font-size:13px">Login ID</td><td style="font-family:monospace;font-weight:700">${user.login_id}</td></tr>
+        <tr><td style="padding:6px 8px;color:#6b7280;font-size:13px">Phone</td><td>${user.phone}</td></tr>
+      </table>
+      <h3 style="color:#1a3d2b;margin:0 0 8px">Requested Changes</h3>
+      <table style="border-collapse:collapse;width:100%;max-width:480px;background:#f0fdf4;border-radius:8px">${rows}</table>
+      <p><a href="${process.env.APP_URL || 'http://localhost:3000'}/admin.html"
+        style="background:#16a34a;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:12px">
+        Review in Admin Portal</a></p>
+    `);
+  }
+
+  if (user.email) {
+    await sendEmail(user.email, `Profile Update Request Received — ${user.login_id}`, `
+      <p>Dear ${name},</p>
+      <p>Your profile update request has been submitted and is pending approval by the Head Office team.</p>
+      <h3 style="color:#1a3d2b;margin:0 0 8px">Fields Requested for Change</h3>
+      <table style="border-collapse:collapse;width:100%;max-width:480px;background:#f0fdf4;border-radius:8px">${rows}</table>
+      <p>You will be notified by email once the request is reviewed.</p>
+      <p>Regards,<br><strong>Marutham Agrolink Head Office</strong></p>
+    `);
+  }
+}
+
+async function notifyProfileChangeOutcome(user, status, notes, approverName) {
+  const name = `${user.fname}${user.lname ? ' ' + user.lname : ''}`;
+  const isApproved = status === 'approved';
+  const subject = `Profile Update ${isApproved ? 'Approved' : 'Rejected'} — ${user.login_id}`;
+  if (user.email) {
+    await sendEmail(user.email, subject, `
+      <p>Dear ${name},</p>
+      <p>Your profile update request has been <strong style="color:${isApproved ? '#16a34a' : '#dc2626'}">${isApproved ? 'APPROVED' : 'REJECTED'}</strong> by the Head Office team.</p>
+      ${notes ? `<div style="background:#f8f9fa;border-radius:8px;padding:14px;margin:12px 0"><strong>Notes:</strong> ${notes}</div>` : ''}
+      ${isApproved ? '<p>Your profile has been updated with the requested changes.</p>' : '<p>The requested changes were not applied. Please contact support if you have questions.</p>'}
+      <p>Regards,<br><strong>${approverName || 'Marutham Agrolink Head Office'}</strong></p>
+    `);
+  }
+}
+
 module.exports = {
   notifyRegistrationReceived,
   notifyApprovalWithPayment,
   notifyAccountActivated,
   notifyRejection,
+  notifyProfileChangeRequest,
+  notifyProfileChangeOutcome,
 };

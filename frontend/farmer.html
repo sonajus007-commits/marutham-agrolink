@@ -100,16 +100,22 @@
   </div>
   <div class="card">
     <h3>🏦 Bank Details</h3>
+    <div id="bank-pending-banner" style="display:none;font-size:12px;color:#92400e;background:#fffbeb;border:1.5px solid #f59e0b;border-radius:8px;padding:10px 13px;margin-bottom:10px">
+      ⏳ <strong>Change request pending</strong> — Your bank detail update is awaiting Head Office approval.
+    </div>
     <div class="irow"><span class="ilbl">Bank Name</span><span class="ival" id="p-bank">—</span></div>
     <div class="irow"><span class="ilbl">Account No</span><span class="ival mono" id="p-acc">—</span></div>
     <div class="irow"><span class="ilbl">IFSC</span><span class="ival mono" id="p-ifsc">—</span></div>
     <div class="irow"><span class="ilbl">Aadhaar</span><span class="ival" id="p-aad">—</span></div>
     <div style="font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 11px;margin-top:10px">
-      Bank details are used for payout settlement. Keep them accurate.
+      Bank details require Head Office approval when changed. Submit a request below.
     </div>
-    <button class="bedit" onclick="toggleBankForm()">🏦 Edit Bank Details</button>
+    <button class="bedit" id="bank-edit-btn" onclick="toggleBankForm()">🏦 Request Bank Detail Change</button>
     <div class="editform" id="bankEditForm">
-      <div class="fsec" style="padding-top:0;border-top:none">Bank & KYC Details</div>
+      <div class="fsec" style="padding-top:0;border-top:none">Bank Detail Change Request</div>
+      <div style="font-size:12px;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:9px 12px;margin-bottom:12px">
+        Changes to bank details require approval from the Head Office team. You will be notified by email once reviewed.
+      </div>
       <div class="fg"><label class="fl">Bank Name</label>
         <input class="fi" id="edit-bank" type="text" placeholder="e.g. State Bank of India"></div>
       <div class="fg"><label class="fl">Account Number</label>
@@ -117,7 +123,7 @@
       <div class="fg"><label class="fl">IFSC Code</label>
         <input class="fi" id="edit-ifsc" type="text" placeholder="e.g. SBIN0001234" style="text-transform:uppercase"></div>
       <div class="ea">
-        <button class="bsave" onclick="saveBankDetails()">Save Bank Details</button>
+        <button class="bsave" onclick="saveBankDetails()">Submit Change Request</button>
         <button class="bcanc" onclick="toggleBankForm()">Cancel</button>
       </div>
     </div>
@@ -311,7 +317,7 @@ function openTab(name, tabEl) {
   if (name === 'earnings') renderEarnings();
   if (name === 'products') renderListings();
   if (name === 'orders')   renderOrders();
-  if (name === 'profile')  renderProfile();
+  if (name === 'profile')  { renderProfile(); checkPendingChangeRequest(); }
 }
 
 // ── EARNINGS ──────────────────────────────────────────────────────────────────
@@ -926,19 +932,36 @@ function toggleBankForm() {
   }
 }
 
-async function saveBankDetails() {
-  var data = {
-    bank_name:    gv('edit-bank') || undefined,
-    bank_account: gv('edit-acc')  || undefined,
-    ifsc:         (gv('edit-ifsc') || '').toUpperCase() || undefined,
-  };
+async function checkPendingChangeRequest() {
   try {
-    var res = await API.patchMe(data);
-    user = res.user;
-    setSession(getToken(), user);
-    renderProfile();
+    var res = await API.getMyChangeRequests();
+    var pending = (res.requests || []).find(function(r) { return r.status === 'pending'; });
+    var banner = document.getElementById('bank-pending-banner');
+    var btn = document.getElementById('bank-edit-btn');
+    if (pending) {
+      banner.style.display = 'block';
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      btn.title = 'You already have a pending change request.';
+    } else {
+      banner.style.display = 'none';
+      btn.disabled = false;
+      btn.style.opacity = '';
+    }
+  } catch(e) { /* non-critical */ }
+}
+
+async function saveBankDetails() {
+  var data = {};
+  if (gv('edit-bank'))  data.bank_name    = gv('edit-bank');
+  if (gv('edit-acc'))   data.bank_account = gv('edit-acc');
+  if (gv('edit-ifsc'))  data.ifsc         = gv('edit-ifsc').toUpperCase();
+  if (Object.keys(data).length === 0) { showToast('Please fill at least one field.', 'er'); return; }
+  try {
+    await API.submitProfileChangeRequest(data);
     document.getElementById('bankEditForm').classList.remove('on');
-    showToast('Bank details updated.', 'ok');
+    showToast('Change request submitted. Head Office will review and notify you.', 'ok');
+    checkPendingChangeRequest();
   } catch(e) { showToast(e.message, 'er'); }
 }
 
