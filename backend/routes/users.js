@@ -81,11 +81,17 @@ router.get('/change-requests', requireRole('admin'), async (req, res) => {
   const status = req.query.status || 'pending';
   const { data, error } = await supabase
     .from('profile_change_requests')
-    .select('*')
+    .select('*, user:users(subscription_plan, subscription_expires_at)')
     .eq('status', status)
     .order('requested_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ requests: data || [] });
+  const enriched = (data || []).map(r => ({
+    ...r,
+    subscription_plan:       r.user?.subscription_plan       || null,
+    subscription_expires_at: r.user?.subscription_expires_at || null,
+    user: undefined,
+  }));
+  res.json({ requests: enriched });
 });
 
 // ── POST /users/change-requests/:id/approve ───────────────────────────────────
