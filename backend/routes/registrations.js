@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 
   let query = supabase
     .from('users')
-    .select('id, login_id, fname, lname, phone, email, role, seller_type, district, state, village_town, approval_status, approved_at, rejection_reason, subscription_amount, subscription_expires_at, payment_reference, payment_confirmed_at, created_at, business_name, gst_number, business_type, aadhar, bank_name, bank_account, ifsc')
+    .select('id, login_id, fname, lname, phone, email, role, seller_type, gender, district, state, village_town, approval_status, approved_at, rejection_reason, subscription_amount, subscription_expires_at, payment_reference, payment_confirmed_at, created_at, business_name, gst_number, business_type, aadhar, bank_name, bank_account, ifsc')
     .eq('role', 'farmer')
     .order('created_at', { ascending: false });
 
@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const { data, error } = await supabase
     .from('users')
-    .select('id, login_id, fname, lname, phone, email, role, seller_type, district, state, village_town, city, pincode, house_no, street1, street2, landmark, approval_status, approved_by, approved_at, rejection_reason, subscription_amount, subscription_expires_at, payment_reference, payment_confirmed_at, created_at, business_name, gst_number, business_type, aadhar, bank_name, bank_account, ifsc, alt_phone')
+    .select('id, login_id, fname, lname, phone, email, role, seller_type, gender, district, state, village_town, city, pincode, house_no, street1, street2, landmark, approval_status, approved_by, approved_at, rejection_reason, subscription_amount, subscription_expires_at, payment_reference, payment_confirmed_at, created_at, business_name, gst_number, business_type, aadhar, bank_name, bank_account, ifsc, alt_phone')
     .eq('id', req.params.id)
     .eq('role', 'farmer')
     .single();

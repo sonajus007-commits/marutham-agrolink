@@ -129,6 +129,14 @@
         <div class="fg"><label class="fl">Last Name</label>
           <input class="fi" id="cs-ln" type="text" placeholder="Last name"></div>
       </div>
+      <div class="fg"><label class="fl">Gender <span class="rq">*</span></label>
+        <select class="fi" id="cs-gd">
+          <option value="">— Select Gender —</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Transgender">Transgender</option>
+        </select>
+        <div class="em" id="cs-gd-e" style="display:none;margin-top:4px">Please select gender</div></div>
       <div class="fg"><label class="fl">Phone <span class="rq">*</span></label>
         <input class="fi" id="cs-ph" type="tel" placeholder="10-digit phone" maxlength="10" oninput="numOnly(this)"></div>
       <div class="fg"><label class="fl">Role <span class="rq">*</span></label>
@@ -266,6 +274,9 @@
     </div>
     <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
       <div style="font-size:13px;color:var(--text)" id="approve-name-lbl"></div>
+      <div id="approve-concession" style="display:none;padding:10px 14px;
+        background:linear-gradient(135deg,#fce4ec,#f8bbd0);
+        border:1.5px solid #e85d8a;border-radius:10px;font-size:12px;color:#880e4f;line-height:1.6"></div>
       <div class="fg">
         <label class="fl">Annual Subscription Amount (₹) <span class="rq">*</span></label>
         <input class="fi" id="approve-amount" type="number" min="1" step="1" placeholder="e.g. 500">
@@ -322,6 +333,7 @@
       <div class="lid-note">Use this ID or phone number to login</div>
     </div>
     <div class="irow"><span class="ilbl">Full Name</span><span class="ival" id="p-name">—</span></div>
+    <div class="irow"><span class="ilbl">Gender</span><span class="ival" id="p-gender">—</span></div>
     <div class="irow"><span class="ilbl">Phone</span><span class="ival mono" id="p-phone">—</span></div>
     <div class="irow"><span class="ilbl">Email</span><span class="ival" id="p-email">—</span></div>
     <div class="irow"><span class="ilbl">Admin Role</span><span class="ival" id="p-arole">—</span></div>
@@ -329,6 +341,13 @@
     <button class="bedit" onclick="toggleAdminEditForm()">✏️ Edit Profile</button>
     <div class="editform" id="adminEditForm">
       <div class="fsec" style="padding-top:0;border-top:none">Editable Fields</div>
+      <div class="fg"><label class="fl">Gender</label>
+        <select class="fi" id="adm-gender">
+          <option value="">— Select Gender —</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Transgender">Transgender</option>
+        </select></div>
       <div class="fg"><label class="fl">Email</label>
         <input class="fi" id="adm-email" type="email" placeholder="your@email.com"></div>
       <div class="fg"><label class="fl">Alt. Phone</label>
@@ -1589,9 +1608,11 @@ async function toggleBlock(userId, currentlyBlocked) {
 function openCreateStaff() {
   document.getElementById('cs-fn').value = '';
   document.getElementById('cs-ln').value = '';
+  document.getElementById('cs-gd').value = '';
   document.getElementById('cs-ph').value = '';
   document.getElementById('cs-role').value = '';
   document.getElementById('cs-pw').value = '';
+  document.getElementById('cs-gd-e').style.display = 'none';
   document.getElementById('cs-err').style.display = 'none';
   document.getElementById('cs-success').style.display = 'none';
   document.getElementById('cs-btn').disabled = false;
@@ -1619,6 +1640,7 @@ function updateCsDistrictList() {
 async function submitCreateStaff() {
   var fn   = document.getElementById('cs-fn').value.trim();
   var ln   = document.getElementById('cs-ln').value.trim();
+  var gd   = document.getElementById('cs-gd').value;
   var ph   = document.getElementById('cs-ph').value.trim();
   var role = document.getElementById('cs-role').value;
   var st   = document.getElementById('cs-st').value;
@@ -1626,8 +1648,11 @@ async function submitCreateStaff() {
   var pw   = document.getElementById('cs-pw').value;
 
   var errEl = document.getElementById('cs-err');
+  var gdEl  = document.getElementById('cs-gd-e');
   errEl.style.display = 'none';
+  gdEl.style.display  = 'none';
   if (!fn) { errEl.textContent = 'First name is required.'; errEl.style.display = 'block'; return; }
+  if (!gd) { gdEl.style.display = 'block'; return; }
   if (!/^\d{10}$/.test(ph)) { errEl.textContent = 'Enter a valid 10-digit phone number.'; errEl.style.display = 'block'; return; }
   if (!role) { errEl.textContent = 'Select a role.'; errEl.style.display = 'block'; return; }
   if (pw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
@@ -1636,7 +1661,7 @@ async function submitCreateStaff() {
   btn.disabled = true; btn.textContent = 'Creating…';
 
   try {
-    var res = await API.createStaff({ fname: fn, lname: ln, phone: ph, password: pw, admin_role: role, state: st, district: di });
+    var res = await API.createStaff({ fname: fn, lname: ln, gender: gd, phone: ph, password: pw, admin_role: role, state: st, district: di });
     document.getElementById('cs-lid').textContent = res.login_id;
     document.getElementById('cs-success').style.display = 'block';
     btn.textContent = 'Add Another';
@@ -1644,6 +1669,7 @@ async function submitCreateStaff() {
     btn.onclick = function() {
       document.getElementById('cs-success').style.display = 'none';
       document.getElementById('cs-fn').value = '';
+      document.getElementById('cs-gd').value = '';
       document.getElementById('cs-ph').value = '';
       document.getElementById('cs-pw').value = '';
       btn.textContent = 'Create Account';
@@ -1651,7 +1677,7 @@ async function submitCreateStaff() {
       document.getElementById('cs-fn').focus();
     };
     showToast(role + ' account created: ' + res.login_id, 'ok');
-    renderUsers(); // refresh the list in background
+    renderUsers();
   } catch(e) {
     errEl.textContent = e.message;
     errEl.style.display = 'block';
@@ -2249,6 +2275,7 @@ async function collectReturn(id) {
 function renderProfile() {
   document.getElementById('p-lid').textContent      = user.login_id || '—';
   document.getElementById('p-name').textContent     = user.fname + (user.lname ? ' ' + user.lname : '');
+  document.getElementById('p-gender').textContent   = user.gender || '—';
   document.getElementById('p-phone').textContent    = (user.country_code||'+91') + ' ' + user.phone;
   document.getElementById('p-email').textContent    = user.email || '—';
   document.getElementById('p-arole').textContent    = user.admin_role || '—';
@@ -2259,13 +2286,15 @@ function toggleAdminEditForm() {
   var form = document.getElementById('adminEditForm');
   form.classList.toggle('on');
   if (form.classList.contains('on')) {
-    document.getElementById('adm-email').value = user.email || '';
-    document.getElementById('adm-alt').value   = user.alt_phone || '';
+    document.getElementById('adm-gender').value = user.gender || '';
+    document.getElementById('adm-email').value  = user.email || '';
+    document.getElementById('adm-alt').value    = user.alt_phone || '';
   }
 }
 
 async function saveAdminProfile() {
   var data = {
+    gender:    document.getElementById('adm-gender').value || undefined,
     email:     document.getElementById('adm-email').value.trim() || undefined,
     alt_phone: document.getElementById('adm-alt').value.trim()   || undefined,
   };
@@ -2399,6 +2428,9 @@ function renderRegistrationList(list, status) {
     html += '</div>';
     html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">';
     html += '<span class="bloom-badge">' + type + '</span>';
+    if (r.gender === 'Female' || r.gender === 'Transgender') {
+      html += '<span style="background:#fce4ec;color:#880e4f;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700">' + r.gender + ' 🌸</span>';
+    }
     html += statusBadgeReg(r.approval_status);
     html += '<div style="font-size:10px;color:var(--gray)">' + date + '</div>';
     html += '</div>';
@@ -2433,6 +2465,11 @@ async function openRegDetail(id) {
     html += row('Phone', r.phone);
     html += row('Alt Phone', r.alt_phone);
     html += row('Email', r.email);
+    html += row('Gender', r.gender
+      ? (r.gender === 'Female' || r.gender === 'Transgender'
+        ? '<span style="background:#fce4ec;color:#880e4f;padding:2px 8px;border-radius:50px;font-size:11px;font-weight:700">' + r.gender + ' 🌸 Concession eligible</span>'
+        : r.gender)
+      : '—');
     html += row('Type', r.seller_type || '—');
     html += row('Applied', r.created_at ? new Date(r.created_at).toLocaleString('en-IN') : '—');
     html += '</div>';
@@ -2485,7 +2522,7 @@ async function openRegDetail(id) {
     var actHtml = '';
     if (r.approval_status === 'pending_review') {
       actHtml += '<button class="sbtn" style="background:#dc2626;flex:0;padding:0 18px" onclick="openRejectModal(\'' + r.id + '\',\'' + name.replace(/'/g,'') + '\')">Reject</button>';
-      actHtml += '<button class="sbtn" style="background:#16a34a;flex:0;padding:0 18px" onclick="openApproveModal(\'' + r.id + '\',\'' + name.replace(/'/g,'') + '\')">Approve & Send Payment Link</button>';
+      actHtml += '<button class="sbtn" style="background:#16a34a;flex:0;padding:0 18px" onclick="openApproveModal(\'' + r.id + '\',\'' + name.replace(/'/g,'') + '\',\'' + (r.gender||'') + '\')">Approve & Send Payment Link</button>';
     } else if (r.approval_status === 'payment_pending') {
       actHtml += '<button class="sbtn" style="background:#dc2626;flex:0;padding:0 18px" onclick="openRejectModal(\'' + r.id + '\',\'' + name.replace(/'/g,'') + '\')">Reject</button>';
       actHtml += '<button class="sbtn" style="background:#2563eb;flex:0;padding:0 18px" onclick="doConfirmPayment(\'' + r.id + '\')">Confirm Payment Received</button>';
@@ -2502,11 +2539,22 @@ function closeRegDetail() {
   _currentRegId = null;
 }
 
-function openApproveModal(id, name) {
+function openApproveModal(id, name, gender) {
   _currentRegId = id;
   document.getElementById('approve-name-lbl').textContent = 'Approving registration for: ' + name;
-  document.getElementById('approve-amount').value = '';
   document.getElementById('approve-err').style.display = 'none';
+  // Show/hide concession banner and pre-fill amount
+  var isConcession = (gender === 'Female' || gender === 'Transgender');
+  var concBanner = document.getElementById('approve-concession');
+  if (concBanner) {
+    concBanner.style.display = isConcession ? 'block' : 'none';
+    if (isConcession) {
+      concBanner.innerHTML = '<strong>🌸 Women & Transgender Concession applies</strong><br>' +
+        'Standard fee: ₹500 → Concession fee: ₹250 (50% off).<br>' +
+        '<span style="font-size:10px;opacity:.8">You may override the amount below.</span>';
+    }
+  }
+  document.getElementById('approve-amount').value = isConcession ? 250 : 500;
   document.getElementById('regApproveOverlay').style.display = 'flex';
 }
 function closeApproveModal() {

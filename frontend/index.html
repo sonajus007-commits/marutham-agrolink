@@ -335,6 +335,15 @@ body{background:var(--green-bg);}
           <div class="fg"><label class="fl">Last Name <span class="op">(optional)</span></label>
             <input class="fi" id="c-ln" type="text" placeholder="Last name" oninput="alphaOnly(this)"></div>
         </div>
+        <div class="fg"><label class="fl">Gender <span class="rq">*</span></label>
+          <select class="fi" id="c-gd">
+            <option value="">— Select Gender —</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Transgender">Transgender</option>
+          </select>
+          <div class="em" id="c-gd-e">Please select your gender</div>
+        </div>
         <div class="fg"><label class="fl">Phone Number <span class="rq">*</span></label>
           <div class="phrow">
             <select class="ccsel" id="c-cc">
@@ -416,6 +425,23 @@ body{background:var(--green-bg);}
             <div class="em" id="f-fn-e">Required</div></div>
           <div class="fg"><label class="fl">Last Name <span class="op">(optional)</span></label>
             <input class="fi" id="f-ln" type="text" placeholder="Last name" oninput="alphaOnly(this)"></div>
+        </div>
+        <div class="fg"><label class="fl">Gender <span class="rq">*</span></label>
+          <select class="fi" id="f-gd" onchange="showGenderConcession()">
+            <option value="">— Select Gender —</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Transgender">Transgender</option>
+          </select>
+          <div class="em" id="f-gd-e">Please select your gender</div>
+          <!-- Concession banner shown for Female / Transgender -->
+          <div id="f-gd-concession" style="display:none;margin-top:8px;padding:10px 14px;
+            background:linear-gradient(135deg,#fce4ec,#f8bbd0);
+            border:1.5px solid #e85d8a;border-radius:10px;font-size:12px;color:#880e4f;line-height:1.6">
+            <strong style="font-size:13px">🌸 Women &amp; Transgender Empowerment Concession</strong><br>
+            You qualify for a <strong>50% discount</strong> on the annual subscription fee!<br>
+            <span style="font-size:11px;opacity:.8">Our admin team will automatically apply the concession when reviewing your application.</span>
+          </div>
         </div>
         <div class="fg"><label class="fl">Phone Number <span class="rq">*</span></label>
           <div class="phrow">
@@ -666,6 +692,11 @@ function setSellerType(type) {
   document.getElementById('f-submit-btn').textContent     = type === 'Farmer'
     ? '✅ Create Farmer Account' : '✅ Create Retailer Account';
 }
+function showGenderConcession() {
+  var v = document.getElementById('f-gd').value;
+  document.getElementById('f-gd-concession').style.display =
+    (v === 'Female' || v === 'Transgender') ? 'block' : 'none';
+}
 function setLoginMethod(m) {
   loginMethod = m;
   document.getElementById('lm-pw').classList.toggle('on',  m === 'pw');
@@ -823,10 +854,12 @@ async function doRegister(role) {
   var ok = true;
   var fn  = gv(p + '-fn'), ph  = gv(p + '-ph'), s1  = gv(p + '-s1');
   var cy  = gv(p + '-cy'), pn  = gv(p + '-pn'), pw  = gv(p + '-pw'), cpw = gv(p + '-cpw');
+  var gd  = document.getElementById(p + '-gd') ? document.getElementById(p + '-gd').value : '';
   var di  = document.getElementById(p + '-di').value;
   var st  = document.getElementById(p + '-st').value;
 
   if (!fn) { showErr(p+'-fn-e','Required'); ok=false; } else hideErr(p+'-fn-e');
+  if (!gd) { showErr(p+'-gd-e','Please select your gender'); ok=false; } else hideErr(p+'-gd-e');
   if (!/^\d{10}$/.test(ph)) { showErr(p+'-ph-e','Enter valid 10-digit number'); ok=false; } else hideErr(p+'-ph-e');
   if (!s1) { showErr(p+'-s1-e','Required'); ok=false; } else hideErr(p+'-s1-e');
   if (!cy) { showErr(p+'-cy-e','Required'); ok=false; } else hideErr(p+'-cy-e');
@@ -861,6 +894,7 @@ async function doRegister(role) {
   var body = {
     phone: ph, password: pw, role: role,
     fname: fn, lname: gv(p+'-ln'), email: em || undefined,
+    gender: gd || undefined,
     house_no: gv(p+'-hn'), street1: s1, street2: gv(p+'-s2'),
     landmark: gv(p+'-lm'), village_town: gv(p+'-vt'),
     city: cy, district: di, pincode: pn, state: st, country: 'India',

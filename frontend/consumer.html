@@ -133,6 +133,7 @@
       <div class="lid-note">Use this ID or phone number to login</div>
     </div>
     <div class="irow"><span class="ilbl">Full Name</span><span class="ival" id="p-name">—</span></div>
+    <div class="irow"><span class="ilbl">Gender</span><span class="ival" id="p-gender">—</span></div>
     <div class="irow"><span class="ilbl">Phone</span><span class="ival mono" id="p-phone">—</span></div>
     <div class="irow"><span class="ilbl">Email</span><span class="ival" id="p-email">—</span></div>
     <div class="irow"><span class="ilbl">District</span><span class="ival" id="p-district">—</span></div>
@@ -140,6 +141,13 @@
     <button class="bedit" onclick="toggleEditForm()">✏️ Edit Profile</button>
     <div class="editform" id="profileEditForm">
       <div class="fsec" style="padding-top:0;border-top:none">Editable Fields</div>
+      <div class="fg"><label class="fl">Gender</label>
+        <select class="fi" id="edit-gender">
+          <option value="">— Select Gender —</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Transgender">Transgender</option>
+        </select></div>
       <div class="fg"><label class="fl">Email</label>
         <input class="fi" id="edit-email" type="email" placeholder="your@email.com"></div>
       <div class="fg"><label class="fl">Street Line 1</label>
@@ -1631,6 +1639,7 @@ async function confirmCancel() {
 function renderProfile() {
   document.getElementById('p-lid').textContent      = user.login_id || '—';
   document.getElementById('p-name').textContent     = user.fname + (user.lname ? ' ' + user.lname : '');
+  document.getElementById('p-gender').textContent   = user.gender || '—';
   document.getElementById('p-phone').textContent    = (user.country_code || '+91') + ' ' + user.phone;
   document.getElementById('p-email').textContent    = user.email || '—';
   document.getElementById('p-district').textContent = user.district || '—';
@@ -1738,6 +1747,7 @@ function toggleEditForm() {
   var form = document.getElementById('profileEditForm');
   form.classList.toggle('on');
   if (form.classList.contains('on')) {
+    document.getElementById('edit-gender').value = user.gender || '';
     sv('edit-email',   user.email   || '');
     sv('edit-street1', user.street1 || '');
     sv('edit-street2', user.street2 || '');
@@ -1749,6 +1759,7 @@ function toggleEditForm() {
 
 async function saveProfile() {
   var data = {
+    gender:       document.getElementById('edit-gender').value || undefined,
     email:        gv('edit-email')   || undefined,
     street1:      gv('edit-street1') || undefined,
     street2:      gv('edit-street2') || undefined,

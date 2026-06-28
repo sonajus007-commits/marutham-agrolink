@@ -96,6 +96,7 @@ router.post('/register', async (req, res) => {
   const {
     phone, password, role,
     fname, lname, email, alt_phone,
+    gender,
     country_code,
     house_no, street1, street2, landmark,
     village_town, city, district, pincode, state, country,
@@ -140,6 +141,7 @@ router.post('/register', async (req, res) => {
   const newUser = {
     login_id, phone, password_hash, role,
     fname, lname, email, alt_phone,
+    gender: gender || null,
     country_code: country_code || '+91',
     house_no, street1, street2, landmark,
     village_town, city, district, pincode,
@@ -364,7 +366,7 @@ router.post('/create-staff', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'Admin access required.' });
   }
 
-  const { fname, lname, phone, password, admin_role, district, state } = req.body;
+  const { fname, lname, phone, password, admin_role, district, state, gender } = req.body;
   if (!fname || !phone || !password || !admin_role) {
     return res.status(400).json({ error: 'fname, phone, password, and admin_role are required.' });
   }
@@ -391,6 +393,7 @@ router.post('/create-staff', requireAuth, async (req, res) => {
     login_id, phone, password_hash,
     role: 'admin', admin_role,
     fname, lname: lname || '',
+    gender: gender || null,
     district: district || req.user.district,
     state: state || req.user.state,
     country: 'India',
@@ -433,6 +436,7 @@ router.patch('/me', requireAuth, async (req, res) => {
   // Fields a user can update on their own profile
   const ALLOWED = [
     'fname', 'lname', 'email', 'alt_phone',
+    'gender',
     'house_no', 'street1', 'street2', 'landmark',
     'village_town', 'city', 'district', 'pincode', 'state',
     'bank_name', 'bank_account', 'ifsc',              // farmer bank details

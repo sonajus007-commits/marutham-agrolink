@@ -24,7 +24,7 @@ router.get('/', requireRole('admin'), async (req, res) => {
   try {
     let q = supabase
       .from('users')
-      .select('id,login_id,fname,lname,phone,role,admin_role,district,state,status,agent_vehicle,created_at')
+      .select('id,login_id,fname,lname,phone,role,admin_role,gender,district,state,status,agent_vehicle,created_at')
       .order('created_at', { ascending: false });
 
     q = scopeQuery(q, req.user);
