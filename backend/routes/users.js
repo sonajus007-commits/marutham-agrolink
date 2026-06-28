@@ -110,35 +110,32 @@ router.post('/change-requests/:id/approve', requireRole('admin'), async (req, re
   const PLAN_DAYS = { 'Monthly': 30, 'Quarterly': 90, 'Half Yearly': 180, 'Yearly': 365 };
 
   if (cr.requested_changes && cr.requested_changes.subscription_renewal) {
-    // ── Subscription renewal: compute new expiry, reactivate user ────────────
-    const plan = cr.requested_changes.new_plan;
-    const planDays = PLAN_DAYS[plan] || 365;
-    const { data: currentUser } = await supabase.from('users').select('subscription_expires_at').eq('id', cr.user_id).single();
-    const now         = new Date();
-    const currentExp  = currentUser?.subscription_expires_at ? new Date(currentUser.subscription_expires_at) : null;
-    const baseDate    = (currentExp && currentExp > now) ? currentExp : now;
-    const newExpiry   = new Date(baseDate);
-    newExpiry.setDate(newExpiry.getDate() + planDays);
+    // ── Renewal step 1: set payment_pending, notify seller with amount ────────
+    const renewalAmountRs = parseFloat(req.body.renewal_amount);
+    if (!renewalAmountRs || renewalAmountRs <= 0) {
+      return res.status(400).json({ error: 'renewal_amount (in rupees) is required to approve a renewal.' });
+    }
+    const plan          = cr.requested_changes.new_plan;
+    const paymentRef    = 'RNW-' + require('crypto').randomBytes(4).toString('hex').toUpperCase();
+    const amountPaise   = Math.round(renewalAmountRs * 100);
 
-    const { error: upErr } = await supabase.from('users').update({
-      subscription_plan:        plan,
-      subscription_expires_at:  newExpiry.toISOString(),
-      status:                   'active',
-      updated_at:               now.toISOString(),
-    }).eq('id', cr.user_id);
-    if (upErr) return res.status(500).json({ error: upErr.message });
-
-    await supabase.from('profile_change_requests').update({
-      status: 'approved', reviewed_at: now.toISOString(),
-      reviewed_by: req.user.id, reviewer_name: req.user.fname, notes: req.body.notes || null,
+    const { error: upErr } = await supabase.from('profile_change_requests').update({
+      status:            'payment_pending',
+      reviewed_at:       now.toISOString(),
+      reviewed_by:       req.user.id,
+      reviewer_name:     req.user.fname,
+      notes:             req.body.notes || null,
+      payment_reference: paymentRef,
+      renewal_amount:    amountPaise,
     }).eq('id', req.params.id);
+    if (upErr) return res.status(500).json({ error: upErr.message });
 
     try {
       const { data: u } = await supabase.from('users').select('fname,lname,email,login_id').eq('id', cr.user_id).single();
-      if (u) await notify.notifySubscriptionRenewalOutcome(u, true, newExpiry.toISOString(), plan);
+      if (u) await notify.notifySubscriptionRenewalPaymentPending(u, plan, amountPaise, paymentRef);
     } catch(e) { console.error('Notify error:', e.message); }
 
-    return res.json({ message: `Subscription renewed (${plan}) and user reactivated until ${newExpiry.toDateString()}.` });
+    return res.json({ message: `Payment request sent to seller. Reference: ${paymentRef}`, payment_reference: paymentRef });
   }
 
   // ── Regular profile change (bank/business fields) ─────────────────────────
@@ -195,6 +192,57 @@ router.post('/change-requests/:id/reject', requireRole('admin'), async (req, res
   } catch(e) { console.error('Notify error:', e.message); }
 
   res.json({ message: 'Change request rejected.' });
+});
+
+// ── POST /users/change-requests/:id/confirm-renewal-payment ──────────────────
+router.post('/change-requests/:id/confirm-renewal-payment', requireRole('admin'), async (req, res) => {
+  if (!isHeadOffice(req.user)) {
+    return res.status(403).json({ error: 'Head Office access required.' });
+  }
+  const { data: cr } = await supabase
+    .from('profile_change_requests')
+    .select('*')
+    .eq('id', req.params.id)
+    .single();
+  if (!cr) return res.status(404).json({ error: 'Change request not found.' });
+  if (!cr.requested_changes || !cr.requested_changes.subscription_renewal) {
+    return res.status(400).json({ error: 'This is not a renewal request.' });
+  }
+  if (cr.status !== 'payment_pending') {
+    return res.status(409).json({ error: `Expected payment_pending status, got '${cr.status}'.` });
+  }
+
+  const PLAN_DAYS = { 'Monthly': 30, 'Quarterly': 90, 'Half Yearly': 180, 'Yearly': 365 };
+  const plan     = cr.requested_changes.new_plan;
+  const planDays = PLAN_DAYS[plan] || 365;
+  const now      = new Date();
+
+  const { data: currentUser } = await supabase.from('users').select('subscription_expires_at').eq('id', cr.user_id).single();
+  const currentExp = currentUser?.subscription_expires_at ? new Date(currentUser.subscription_expires_at) : null;
+  const baseDate   = (currentExp && currentExp > now) ? currentExp : now;
+  const newExpiry  = new Date(baseDate);
+  newExpiry.setDate(newExpiry.getDate() + planDays);
+
+  const { error: upErr } = await supabase.from('users').update({
+    subscription_plan:        plan,
+    subscription_expires_at:  newExpiry.toISOString(),
+    subscription_amount:      cr.renewal_amount || 0,
+    status:                   'active',
+    updated_at:               now.toISOString(),
+  }).eq('id', cr.user_id);
+  if (upErr) return res.status(500).json({ error: upErr.message });
+
+  await supabase.from('profile_change_requests').update({
+    status:               'approved',
+    payment_confirmed_at: now.toISOString(),
+  }).eq('id', req.params.id);
+
+  try {
+    const { data: u } = await supabase.from('users').select('fname,lname,email,login_id').eq('id', cr.user_id).single();
+    if (u) await notify.notifySubscriptionRenewalOutcome(u, true, newExpiry.toISOString(), plan);
+  } catch(e) { console.error('Notify error:', e.message); }
+
+  res.json({ message: `Renewal confirmed. ${plan} subscription active until ${newExpiry.toDateString()}.` });
 });
 
 // ── GET /users/:id ────────────────────────────────────────────────────────────

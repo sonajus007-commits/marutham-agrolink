@@ -120,6 +120,7 @@
       📋 Profile Change Requests
       <div style="display:flex;gap:8px">
         <button onclick="loadChangeRequests('pending')" id="cr-tab-pending" class="chip on" style="font-size:11px">Pending</button>
+        <button onclick="loadChangeRequests('payment_pending')" id="cr-tab-payment_pending" class="chip" style="font-size:11px">Payment Pending</button>
         <button onclick="loadChangeRequests('approved')" id="cr-tab-approved" class="chip" style="font-size:11px">Approved</button>
         <button onclick="loadChangeRequests('rejected')" id="cr-tab-rejected" class="chip" style="font-size:11px">Rejected</button>
       </div>
@@ -284,12 +285,20 @@
         <div style="font-size:11px;font-weight:700;color:#92400e;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Requested Changes</div>
         <div id="cr-review-changes"></div>
       </div>
+      <div class="fg" id="cr-renewal-amount-row" style="display:none">
+        <label class="fl">Subscription Amount (₹) <span class="rq">*</span></label>
+        <input class="fi" id="cr-renewal-amount" type="number" min="1" placeholder="e.g. 700">
+        <div style="font-size:11px;color:#6b7280;margin-top:4px">Plan fees — Monthly: ₹250 · Quarterly: ₹700 · Half Yearly: ₹1,400 · Yearly: ₹2,800</div>
+      </div>
       <div class="fg"><label class="fl">Notes (optional)</label>
         <textarea class="fi" id="cr-review-notes" rows="2" placeholder="Reason for approval or rejection…" style="resize:none"></textarea>
       </div>
-      <div style="display:flex;gap:10px">
+      <div style="display:flex;gap:10px" id="cr-action-btns">
         <button class="sbtn" style="background:#16a34a;flex:1" onclick="doCrApprove()">✓ Approve</button>
         <button class="sbtn" style="background:#ef4444;flex:1" onclick="doCrReject()">✗ Reject</button>
+      </div>
+      <div id="cr-confirm-payment-row" style="display:none">
+        <button class="sbtn" style="background:#1d4ed8;width:100%" onclick="doConfirmRenewalPayment()">✓ Confirm Payment Received &amp; Activate</button>
       </div>
     </div>
   </div>
@@ -1978,7 +1987,7 @@ function toggleChangeRequestsPanel() {
 
 async function loadChangeRequests(status) {
   _crActiveStatus = status;
-  ['pending','approved','rejected'].forEach(function(s) {
+  ['pending','payment_pending','approved','rejected'].forEach(function(s) {
     document.getElementById('cr-tab-' + s).classList.toggle('on', s === status);
   });
   var el = document.getElementById('changeRequestsList');
@@ -2021,6 +2030,8 @@ async function loadChangeRequests(status) {
       html += '</div>';
       if (status === 'pending') {
         html += '<button class="sbtn" style="flex:0;padding:4px 14px;font-size:12px" onclick="openCrReview(\'' + r.id + '\')">Review</button>';
+      } else if (status === 'payment_pending') {
+        html += '<button class="sbtn" style="flex:0;padding:4px 14px;font-size:12px;background:#1d4ed8" onclick="openCrReview(\'' + r.id + '\')">Confirm</button>';
       } else {
         var badge = r.status === 'approved'
           ? '<span style="background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:50px;font-size:11px;font-weight:700">Approved</span>'
@@ -2029,7 +2040,11 @@ async function loadChangeRequests(status) {
       }
       html += '</div>';
       html += '<div>' + changes + '</div>';
-      if (r.notes) html += '<div style="font-size:11px;color:#6b7280;margin-top:6px">Notes: ' + r.notes + '</div>';
+      if (r.payment_reference) {
+        var rnwAmt = r.renewal_amount ? ' · ₹' + (r.renewal_amount / 100).toFixed(0) : '';
+        html += '<div style="font-size:11px;color:#1d4ed8;margin-top:6px;font-weight:600">Ref: ' + r.payment_reference + rnwAmt + (r.payment_confirmed_at ? ' · Paid ✓' : ' · Awaiting payment') + '</div>';
+      }
+      if (r.notes) html += '<div style="font-size:11px;color:#6b7280;margin-top:4px">Notes: ' + r.notes + '</div>';
       html += '</div>';
     });
     el.innerHTML = html;
@@ -2077,6 +2092,17 @@ function openCrReview(id) {
     }
     document.getElementById('cr-review-changes').innerHTML = changes;
     document.getElementById('cr-review-notes').value = '';
+    // Show/hide controls depending on request type and status
+    var isPaymentPending = r.status === 'payment_pending';
+    document.getElementById('cr-action-btns').style.display       = isPaymentPending ? 'none' : '';
+    document.getElementById('cr-confirm-payment-row').style.display = isPaymentPending ? '' : 'none';
+    document.getElementById('cr-renewal-amount-row').style.display  = (!isPaymentPending && isRenewal) ? '' : 'none';
+    if (isPaymentPending && r.payment_reference) {
+      var amt = r.renewal_amount ? ' · ₹' + (r.renewal_amount / 100).toFixed(0) : '';
+      document.getElementById('cr-review-changes').innerHTML += '<div style="margin-top:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:9px 12px;font-size:12px;color:#1d4ed8">'
+        + '💳 Payment Reference: <strong>' + r.payment_reference + '</strong>' + amt + '<br>'
+        + 'Click "Confirm Payment" once you have verified the payment in your bank.</div>';
+    }
     document.getElementById('crReviewOverlay').style.display = 'flex';
   }).catch(function() {});
 }
@@ -2086,11 +2112,17 @@ function closeCrReview() {
 }
 
 async function doCrApprove() {
-  var notes = document.getElementById('cr-review-notes').value.trim();
+  var notes  = document.getElementById('cr-review-notes').value.trim();
+  var amtRow = document.getElementById('cr-renewal-amount-row');
+  var renewalAmount = null;
+  if (amtRow.style.display !== 'none') {
+    renewalAmount = parseFloat(document.getElementById('cr-renewal-amount').value);
+    if (!renewalAmount || renewalAmount <= 0) { showToast('Please enter the subscription amount.', 'er'); return; }
+  }
   try {
-    await API.approveChangeRequest(_crCurrentId, notes);
+    var result = await API.approveChangeRequest(_crCurrentId, notes, renewalAmount);
     closeCrReview();
-    showToast('Change request approved and applied.', 'ok');
+    showToast(result.message || 'Approved.', 'ok');
     loadChangeRequests(_crActiveStatus);
     // Refresh badge
     var crRes = await API.getChangeRequests('pending');
@@ -2108,6 +2140,15 @@ async function doCrReject() {
     loadChangeRequests(_crActiveStatus);
     var crRes = await API.getChangeRequests('pending');
     document.getElementById('chreq-badge').textContent = (crRes.requests || []).length;
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function doConfirmRenewalPayment() {
+  try {
+    var result = await API.confirmRenewalPayment(_crCurrentId);
+    closeCrReview();
+    showToast(result.message || 'Renewal confirmed and account activated.', 'ok');
+    loadChangeRequests(_crActiveStatus);
   } catch(e) { showToast(e.message, 'er'); }
 }
 

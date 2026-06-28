@@ -274,6 +274,24 @@ async function notifySubscriptionExpired(user) {
   }
 }
 
+async function notifySubscriptionRenewalPaymentPending(user, plan, amountPaise, ref) {
+  const name    = [user.fname, user.lname].filter(Boolean).join(' ');
+  const amountRs = (amountPaise / 100).toFixed(0);
+  const subject = `Action Required — Pay ₹${amountRs} to Renew Subscription — Ref: ${ref}`;
+  if (user.email) {
+    await sendEmail(user.email, subject, `
+      <p>Dear ${name},</p>
+      <p>Your subscription renewal request (<strong>${plan}</strong>) has been reviewed and approved.</p>
+      <p>Please pay <strong>₹${amountRs}</strong> to complete the renewal.</p>
+      ${paymentDetailsBlock()}
+      <p><strong>Payment Reference:</strong> ${ref}<br>
+      Please mention this reference when making the payment.</p>
+      <p>Once payment is confirmed by our team, your account will be reactivated.</p>
+      <p>Regards,<br><strong>Marutham Agrolink Team</strong></p>
+    `);
+  }
+}
+
 async function notifySubscriptionRenewalRequest(user, plan) {
   const name       = [user.fname, user.lname].filter(Boolean).join(' ');
   const adminEmail = process.env.ADMIN_EMAIL;
@@ -322,5 +340,6 @@ module.exports = {
   notifySubscriptionExpiring,
   notifySubscriptionExpired,
   notifySubscriptionRenewalRequest,
+  notifySubscriptionRenewalPaymentPending,
   notifySubscriptionRenewalOutcome,
 };

@@ -137,7 +137,7 @@
     <div class="irow"><span class="ilbl">Valid Until</span><span class="ival" id="p-sub-expiry">—</span></div>
     <div class="irow"><span class="ilbl">Status</span><span class="ival" id="p-sub-status">—</span></div>
     <div id="p-sub-alert" style="display:none;margin-top:10px;font-size:12px;border-radius:8px;padding:10px 13px;line-height:1.5"></div>
-    <div id="p-sub-pending" style="display:none;margin-top:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:9px 12px;font-size:12px;color:#1d4ed8">⏳ <strong>Renewal request pending</strong> — Head Office is reviewing your request.</div>
+    <div id="p-sub-pending" style="display:none;margin-top:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:9px 12px;font-size:12px;color:#1d4ed8">⏳ <strong id="p-sub-pending-msg">Renewal request pending</strong> — Head Office is reviewing your request.</div>
   </div>
   <div class="card">
     <h3>🔒 Change Password</h3>
@@ -1127,14 +1127,23 @@ async function submitRenewal() {
 async function checkPendingRenewal() {
   try {
     var res = await API.getMyChangeRequests();
-    var pendingRenewal = (res.requests || []).find(function(r) {
-      return r.status === 'pending' && r.requested_changes && r.requested_changes.subscription_renewal;
+    var activeRenewal = (res.requests || []).find(function(r) {
+      return (r.status === 'pending' || r.status === 'payment_pending')
+          && r.requested_changes && r.requested_changes.subscription_renewal;
     });
-    var pendingEl = document.getElementById('p-sub-pending');
-    var renewBtn  = document.getElementById('p-sub-renew-btn');
-    if (pendingRenewal) {
+    var pendingEl  = document.getElementById('p-sub-pending');
+    var pendingMsg = document.getElementById('p-sub-pending-msg');
+    var renewBtn   = document.getElementById('p-sub-renew-btn');
+    if (activeRenewal) {
       pendingEl.style.display = 'block';
       renewBtn.style.display  = 'none';
+      if (activeRenewal.status === 'payment_pending') {
+        pendingMsg.textContent = 'Payment required for renewal';
+        pendingEl.innerHTML = '💳 <strong>Payment required</strong> — Please pay the subscription fee using the reference sent to your email to complete renewal.';
+      } else {
+        pendingMsg.textContent = 'Renewal request pending';
+        pendingEl.innerHTML = '⏳ <strong>Renewal request pending</strong> — Head Office is reviewing your request.';
+      }
     } else {
       pendingEl.style.display = 'none';
     }

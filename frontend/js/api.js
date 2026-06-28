@@ -53,8 +53,10 @@ var API = {
   getChangeRequests: function(status) {
     return apiFetch('GET', '/users/change-requests' + (status ? '?status=' + status : ''), null, tok());
   },
-  approveChangeRequest: function(id, notes) {
-    return apiFetch('POST', '/users/change-requests/' + id + '/approve', { notes: notes || '' }, tok());
+  approveChangeRequest: function(id, notes, renewalAmount) {
+    var body = { notes: notes || '' };
+    if (renewalAmount) body.renewal_amount = renewalAmount;
+    return apiFetch('POST', '/users/change-requests/' + id + '/approve', body, tok());
   },
   rejectChangeRequest: function(id, notes) {
     return apiFetch('POST', '/users/change-requests/' + id + '/reject', { notes: notes || '' }, tok());
@@ -64,6 +66,9 @@ var API = {
   },
   submitRenewalRequest: function(plan) {
     return apiFetch('POST', '/auth/subscription-renewal', { plan }, tok());
+  },
+  confirmRenewalPayment: function(id) {
+    return apiFetch('POST', '/users/change-requests/' + id + '/confirm-renewal-payment', {}, tok());
   },
   getMyChangeRequests: function() {
     return apiFetch('GET', '/auth/my-change-request', null, tok());
