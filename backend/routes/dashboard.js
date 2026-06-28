@@ -101,6 +101,33 @@ router.get('/', async (req, res) => {
   if (orderFilter.village)  consumersQuery = consumersQuery.eq('village_town', orderFilter.village);
   const { count: consumerCount } = await consumersQuery;
 
+  // ── Subscription summary (sellers only) ──────────────────────────────────
+  let subQuery = supabase
+    .from('users')
+    .select('subscription_plan, subscription_expires_at, status')
+    .eq('role', 'farmer')
+    .not('subscription_expires_at', 'is', null);
+  if (orderFilter.district) subQuery = subQuery.eq('district', orderFilter.district);
+  const { data: subUsers } = await subQuery;
+
+  const now = new Date();
+  const subSummary = { active: 0, expiring_soon: 0, expired: 0, by_plan: {} };
+  (subUsers || []).forEach(u => {
+    const exp  = new Date(u.subscription_expires_at);
+    const days = Math.ceil((exp - now) / 86400000);
+    if (days <= 0) {
+      subSummary.expired++;
+    } else if (days <= 10) {
+      subSummary.expiring_soon++;
+      subSummary.active++;
+    } else {
+      subSummary.active++;
+    }
+    if (u.subscription_plan) {
+      subSummary.by_plan[u.subscription_plan] = (subSummary.by_plan[u.subscription_plan] || 0) + 1;
+    }
+  });
+
   // ── Returns in scope ──────────────────────────────────────────────────────
   const orderIds = orders.map(o => o.id);
   let returnCount = 0;
@@ -135,6 +162,7 @@ router.get('/', async (req, res) => {
     status_breakdown: statusBreakdown,
     daily_trend,
     top_products: topProducts,
+    subscription_summary: subSummary,
   });
 });
 
