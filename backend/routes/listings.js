@@ -25,7 +25,8 @@ router.get('/', async (req, res) => {
         product:products ( id, code, name, unit, platform_fee_pct )
       `)
       .eq('product_id', product)
-      .eq('listed', true);
+      .eq('listed', true)
+      .eq('listing_status', 'active');
 
     if (error) {
       console.error('GET /listings?product error:', error);
@@ -65,7 +66,7 @@ router.get('/', async (req, res) => {
         farmer:users ( id, fname, lname, village_town, district, seller_type )
       `)
       .eq('listed', true)
-      .eq('confirmed', true)
+      .eq('listing_status', 'active')
       .in('farmer_id', farmerIds);
 
     if (error) {
@@ -148,6 +149,7 @@ router.post('/', async (req, res) => {
       time_available, cutoff_ts, bulk_qty, bulk_disc_pct,
       qty_type, qty_value,
       listed: true,
+      listing_status: 'pending',
     })
     .select()
     .single();
@@ -236,6 +238,46 @@ router.delete('/:id', async (req, res) => {
   if (error) return res.status(500).json({ error: 'Could not delete listing.' });
 
   res.json({ message: 'Listing deleted.' });
+});
+
+// ── GET /listings/admin/pending  (admin only) ────────────────────────────────
+router.get('/admin/pending', async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required.' });
+  }
+  const status = req.query.status || 'pending';
+  const { data, error } = await supabase
+    .from('farmer_listings')
+    .select(`
+      id, farmer_price, qty_available, listing_status, created_at, images,
+      farmer:users ( id, fname, lname, login_id, district, seller_type ),
+      product:products ( id, code, name, unit )
+    `)
+    .eq('listing_status', status)
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ listings: data || [] });
+});
+
+// ── PATCH /listings/:id/status  (admin only) ─────────────────────────────────
+router.patch('/:id/status', async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required.' });
+  }
+  const { status, rejection_reason } = req.body;
+  if (!['active', 'rejected', 'pending'].includes(status)) {
+    return res.status(400).json({ error: 'status must be active, rejected, or pending.' });
+  }
+  const update = { listing_status: status, updated_at: new Date().toISOString() };
+  if (status === 'rejected' && rejection_reason) update.rejection_reason = rejection_reason;
+  const { data, error } = await supabase
+    .from('farmer_listings')
+    .update(update)
+    .eq('id', req.params.id)
+    .select()
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ message: `Listing ${status}.`, listing: data });
 });
 
 module.exports = router;

@@ -466,6 +466,15 @@ async function renderListings() {
 
       // ── Details row ──
       html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px">';
+      // Listing status badge
+      var lstatus = l.listing_status || 'pending';
+      var lstatusStyle = lstatus === 'active'
+        ? 'color:#166534;background:#dcfce7;border:1px solid #86efac'
+        : lstatus === 'rejected'
+          ? 'color:#991b1b;background:#fee2e2;border:1px solid #fca5a5'
+          : 'color:#92400e;background:#fef3c7;border:1px solid #fcd34d';
+      var lstatusLabel = lstatus === 'active' ? '✅ Admin Approved' : lstatus === 'rejected' ? '❌ Rejected' : '⏳ Pending Approval';
+      html += '<span style="font-size:10px;font-weight:700;border-radius:6px;padding:2px 8px;' + lstatusStyle + '">' + lstatusLabel + '</span>';
       if (l.qty_available != null) html += '<span style="font-size:10px;color:var(--gray);background:#f4f4f4;border-radius:6px;padding:2px 7px">' + l.qty_available + ' ' + (p.unit||'') + ' avail</span>';
       if (l.time_available)        html += '<span style="font-size:10px;color:#7c3aed;background:#f5f0ff;border-radius:6px;padding:2px 7px">Order by ' + l.time_available + '</span>';
       if (l.bulk_qty && l.bulk_disc_pct) html += '<span style="font-size:10px;color:#1a7a4a;background:#e6f7ed;border-radius:6px;padding:2px 7px">Bulk ' + l.bulk_qty + '+ → ' + l.bulk_disc_pct + '% off</span>';

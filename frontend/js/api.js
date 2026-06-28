@@ -110,6 +110,12 @@ var API = {
   deleteListing: function(id) {
     return apiFetch('DELETE', '/listings/' + id, null, tok());
   },
+  getAdminListings: function(status) {
+    return apiFetch('GET', '/listings/admin/pending' + (status ? '?status=' + status : ''), null, tok());
+  },
+  setListingStatus: function(id, status, rejection_reason) {
+    return apiFetch('PATCH', '/listings/' + id + '/status', { status, rejection_reason }, tok());
+  },
 
   // ── Orders ────────────────────────────────────────────────────────────────
   placeOrder: function(data) {

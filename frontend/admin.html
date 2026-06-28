@@ -45,6 +45,7 @@
   <button class="ptab"    id="tab-consumers" onclick="openTab('consumers',this)">🛒 Consumers</button>
   <button class="ptab"    id="tab-hub"           onclick="openTab('hub',this)" style="display:none">🏭 Hub Queue</button>
   <button class="ptab"    id="tab-registrations" onclick="openTab('registrations',this)">📋 Registrations</button>
+  <button class="ptab"    id="tab-listings-review" onclick="openTab('listings-review',this)">🔍 Listing Approvals</button>
   <button class="ptab"    id="tab-profile"       onclick="openTab('profile',this)">👤 My Profile</button>
 </div>
 
@@ -413,6 +414,19 @@
   </div>
 </div>
 
+<!-- ── LISTING APPROVALS ──────────────────────────────────────────────────── -->
+<div class="panel" id="panel-listings-review">
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+    <div style="font-size:15px;font-weight:800;color:var(--forest);flex:1">🔍 Listing Approvals</div>
+    <div style="display:flex;gap:6px">
+      <button id="lr-tab-pending"  class="chip on"  onclick="loadAdminListings('pending')">⏳ Pending</button>
+      <button id="lr-tab-active"   class="chip"     onclick="loadAdminListings('active')">✅ Active</button>
+      <button id="lr-tab-rejected" class="chip"     onclick="loadAdminListings('rejected')">❌ Rejected</button>
+    </div>
+  </div>
+  <div id="listingReviewWrap"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
 <!-- ── HUB QUEUE ──────────────────────────────────────────────────────────── -->
 <div class="panel" id="panel-hub">
   <div class="card" style="background:linear-gradient(135deg,#2d3561 0%,#1a1a2e 100%);color:#fff;margin-bottom:12px">
@@ -678,9 +692,10 @@ function openTab(name, tabEl) {
   if (name === 'returns')  renderReturns();
   if (name === 'consumers') renderConsumers();
   if (name === 'farmers')  renderFarmers();
-  if (name === 'hub')           renderHubQueue();
-  if (name === 'registrations') loadRegistrations();
-  if (name === 'profile')       renderProfile();
+  if (name === 'hub')              renderHubQueue();
+  if (name === 'registrations')    loadRegistrations();
+  if (name === 'listings-review')  loadAdminListings('pending');
+  if (name === 'profile')          renderProfile();
 }
 
 // ── OVERVIEW ──────────────────────────────────────────────────────────────────
@@ -2740,6 +2755,89 @@ renderOverview();
 // ── REGISTRATIONS ─────────────────────────────────────────────────────────────
 var _currentRegId = null;
 var _allRegistrations = [];
+
+// ── LISTING APPROVALS ─────────────────────────────────────────────────────────
+var _lrStatus = 'pending';
+
+async function loadAdminListings(status) {
+  _lrStatus = status || 'pending';
+  ['pending','active','rejected'].forEach(function(s) {
+    document.getElementById('lr-tab-' + s).classList.toggle('on', s === _lrStatus);
+  });
+  var wrap = document.getElementById('listingReviewWrap');
+  wrap.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res = await API.getAdminListings(_lrStatus);
+    var list = res.listings || [];
+    if (list.length === 0) {
+      wrap.innerHTML = '<div class="empty-state"><p>No ' + _lrStatus + ' listings.</p></div>';
+      return;
+    }
+    var html = '<div class="tbl-wrap"><table class="utbl"><thead><tr>';
+    html += '<th>Product</th><th>Seller</th><th>Price</th><th>Qty</th><th>District</th><th>Submitted</th><th>Status</th><th>Action</th>';
+    html += '</tr></thead><tbody>';
+    list.forEach(function(l) {
+      var p = l.product || {};
+      var f = l.farmer  || {};
+      var dt = new Date(l.created_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'});
+      var statusBadge = l.listing_status === 'active'
+        ? '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700">Active</span>'
+        : l.listing_status === 'rejected'
+          ? '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700">Rejected</span>'
+          : '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700">Pending</span>';
+      html += '<tr>';
+      html += '<td style="font-weight:700">' + (p.name||'—') + ' <span style="font-size:10px;color:#6b7280">' + (p.code||'') + '</span></td>';
+      html += '<td>' + (f.fname||'—') + (f.lname?' '+f.lname:'') + '<br><span class="mono" style="font-size:10px">' + (f.login_id||'') + '</span></td>';
+      html += '<td class="mono">₹' + parseFloat(l.farmer_price||0).toFixed(0) + ' / ' + (p.unit||'unit') + '</td>';
+      html += '<td>' + (l.qty_available||'—') + '</td>';
+      html += '<td>' + (f.district||'—') + '</td>';
+      html += '<td style="font-size:11px">' + dt + '</td>';
+      html += '<td>' + statusBadge + '</td>';
+      html += '<td style="white-space:nowrap">';
+      if (l.listing_status !== 'active') {
+        html += '<button class="sbtn" style="padding:4px 10px;font-size:11px;background:#16a34a;margin-right:4px" onclick="approveListing(\'' + l.id + '\')">Approve</button>';
+      }
+      if (l.listing_status !== 'rejected') {
+        html += '<button class="sbtn" style="padding:4px 10px;font-size:11px;background:#ef4444" onclick="rejectListingPrompt(\'' + l.id + '\')">Reject</button>';
+      }
+      if (l.listing_status === 'active') {
+        html += '<button class="sbtn" style="padding:4px 10px;font-size:11px;background:#f59e0b" onclick="deactivateListing(\'' + l.id + '\')">Deactivate</button>';
+      }
+      html += '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+    wrap.innerHTML = html;
+  } catch(e) {
+    wrap.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+async function approveListing(id) {
+  try {
+    await API.setListingStatus(id, 'active');
+    showToast('Listing approved — now visible to customers.', 'ok');
+    loadAdminListings(_lrStatus);
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function deactivateListing(id) {
+  if (!confirm('Deactivate this listing? It will be hidden from customers.')) return;
+  try {
+    await API.setListingStatus(id, 'pending');
+    showToast('Listing deactivated.', 'ok');
+    loadAdminListings(_lrStatus);
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function rejectListingPrompt(id) {
+  var reason = prompt('Reason for rejection (shown to farmer):');
+  if (reason === null) return;
+  try {
+    await API.setListingStatus(id, 'rejected', reason);
+    showToast('Listing rejected.', 'ok');
+    loadAdminListings(_lrStatus);
+  } catch(e) { showToast(e.message, 'er'); }
+}
 
 async function loadRegistrations() {
   var wrap = document.getElementById('regListWrap');
