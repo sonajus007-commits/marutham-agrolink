@@ -11,12 +11,16 @@
 
 <!-- APP HEADER -->
 <div class="apphdr">
-  <div class="hbrand">
+  <a href="home.html" class="hbrand">
     <div class="hring"><img src="img/logo-sm.jpg" alt="MA"></div>
     <div><div class="hname">Marutham <span>Agrolink</span></div><div class="htag">Farm to Home</div></div>
-  </div>
+  </a>
   <div class="hdrr">
     <span id="liveClock" class="liveclk">--</span>
+    <div class="lang-toggle">
+      <button id="lang-en" class="active" onclick="setLang('en',this)">EN</button>
+      <button id="lang-ta" onclick="setLang('ta',this)">த</button>
+    </div>
     <div class="ubadge" id="userBadge">Consumer</div>
     <button class="hbtn" onclick="doLogout()">Logout</button>
   </div>

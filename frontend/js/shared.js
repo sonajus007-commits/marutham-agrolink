@@ -32,6 +32,25 @@ function doLogout() {
   window.location.href = 'index.html';
 }
 
+// ── Language toggle (used by all pages) ──────────────────────────────────────
+var _appLang = localStorage.getItem('ma_lang') || 'en';
+function setLang(lang, btn) {
+  _appLang = lang;
+  localStorage.setItem('ma_lang', lang);
+  document.querySelectorAll('.lang-toggle button').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('[data-en]').forEach(function(el) {
+    var t = el.getAttribute('data-' + lang);
+    if (t) el.innerHTML = t;
+  });
+  document.documentElement.lang = lang;
+}
+function initLang() {
+  var lang = _appLang;
+  var btn = document.getElementById('lang-' + lang);
+  if (btn) { btn.classList.add('active'); if (lang !== 'en') setLang(lang, btn); }
+}
+
 // ── Toast ─────────────────────────────────────────────────────────────────────
 var _toastTimer = null;
 function showToast(msg, type) {

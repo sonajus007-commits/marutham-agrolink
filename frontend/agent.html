@@ -106,14 +106,18 @@
 
 <!-- HEADER -->
 <div class="agent-hdr">
-  <div class="hbrand">
+  <a href="home.html" class="hbrand">
     <div class="hring"><img src="img/logo-sm.jpg" alt="MA"></div>
     <div><div class="hname">Marutham <span>Agrolink</span></div><div class="htag">Delivery Agent</div></div>
-  </div>
+  </a>
   <div class="hdrr">
     <div class="agent-status-pill">
       <div class="status-dot"></div>
       <span class="agent-status-text">On Duty</span>
+    </div>
+    <div class="lang-toggle">
+      <button id="lang-en" class="active" onclick="setLang('en',this)">EN</button>
+      <button id="lang-ta" onclick="setLang('ta',this)">த</button>
     </div>
     <button class="hbtn" onclick="openAgentProfile()" style="margin-right:6px;background:rgba(255,255,255,.12)">👤</button>
     <button class="hbtn" onclick="doLogout()">Exit</button>

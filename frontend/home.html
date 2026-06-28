@@ -3,624 +3,563 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Marutham Agrolink — Farm Fresh from Pudukkottai</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Noto+Serif+Tamil:wght@500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<title>Marutham AgroLink — Fresh from Pudukkottai</title>
 <style>
-/* ─────────────────────────────────────────────────────────────────────────────
-   MARUTHAM AGROLINK — Custom Blend Theme
-
-   Dark sections (hero, story, footer) → V3 paddy depth (#1A3D2B)
-   Light sections (how-it-works, why-us) → V1 cool mint softness
-   CTA / interactive → V3 bright leaf green (#4E9F3D)
-   Pink accent → sparingly: nav login, story Tamil, 4 badge tags only
-   Gold → brand name and stats
-───────────────────────────────────────────────────────────────────────────── */
 :root{
-  --forest:#1A3D2B;     /* deepest paddy — hero, story, footer */
-  --forest2:#0A1F12;    /* near-black green — gradient endpoint */
-  --mid:#2D6A4F;        /* medium green — headings on light bg */
-  --leaf:#4E9F3D;       /* bright leaf — primary CTA, section labels */
-  --sage:#74C25C;       /* lighter leaf — step circles, hover states */
-  --mint:#EEF7EC;       /* very light — How It Works bg */
-  --warm:#F5F9F3;       /* warm tint (V2 influence) — card backgrounds */
-  --white:#FFFFFF;
-  --bg-section:#FFFFFF; /* Why Us bg */
-  --text:#1C2820;
-  --muted:#4F6155;
-  --border:#C6DECA;
-  --bloom:#CB4E86;      /* marutham flower pink — used sparingly */
-  --bloom-soft:#FDEDF5;
-  --gold:#C9A227;       /* harvest gold — brand name, stats */
-  --shadow-sm:0 1px 8px rgba(26,61,43,.08);
-  --shadow-md:0 4px 20px rgba(26,61,43,.12);
-  --r:10px;
+  --green-deep:#1f6b3b; --green:#2e8b50; --green-light:#eaf6ed; --green-bg:#f3faf4;
+  --pink:#e85d8a; --pink-soft:#fce4ec; --ink:#1a2e22; --muted:#5f7268; --white:#ffffff;
 }
-
-/* ── RESET ── */
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
-body{font-family:'Outfit',sans-serif;color:var(--text);background:#fff;
-  -webkit-font-smoothing:antialiased;overflow-x:hidden;}
+body{font-family:'Segoe UI',system-ui,sans-serif;color:var(--ink);background:var(--green-bg);line-height:1.6;}
 a{text-decoration:none;color:inherit;}
-img{display:block;max-width:100%;}
+.container{max-width:1200px;margin:0 auto;padding:0 20px;}
 
-/* ── UTILITY ── */
-.container{width:100%;max-width:1080px;margin:0 auto;padding:0 20px;}
-.section-tag{font-size:10.5px;font-weight:700;letter-spacing:2.5px;
-  text-transform:uppercase;color:var(--leaf);margin-bottom:10px;}
-.section-tag.on-dark{color:var(--sage);}
-h2.sec-h{font-family:'Cormorant Garamond',serif;
-  font-size:clamp(26px,4.5vw,38px);font-weight:700;
-  color:var(--mid);line-height:1.2;margin-bottom:12px;}
-h2.sec-h.on-dark{color:#fff;}
-.sec-sub{font-size:15px;color:var(--muted);line-height:1.75;max-width:520px;}
-.sec-sub.on-dark{color:rgba(255,255,255,.6);}
-.tamil{font-family:'Noto Serif Tamil',serif;}
+/* HEADER */
+header{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);position:sticky;top:0;z-index:100;border-bottom:1px solid #dcefe0;}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;max-width:1280px;margin:0 auto;gap:20px;}
+.brand{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.brand img{height:48px;width:auto;border-radius:8px;box-shadow:0 2px 8px rgba(31,107,59,.15);}
+.brand-name{font-size:20px;font-weight:800;color:var(--green-deep);letter-spacing:.3px;white-space:nowrap;}
+.brand-name span{color:var(--pink);}
+.nav-links{display:flex;gap:20px;align-items:center;font-weight:600;font-size:14px;color:var(--ink);}
+.nav-links a:hover{color:var(--green);}
+.nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.clock{font-family:'Courier New',monospace;font-size:12px;font-weight:700;color:var(--green-deep);background:var(--green-light);padding:5px 10px;border-radius:50px;white-space:nowrap;}
+.lang-toggle{display:flex;background:var(--green-light);border-radius:50px;padding:3px;}
+.lang-toggle button{border:none;background:none;padding:4px 10px;border-radius:50px;font-weight:700;font-size:12px;cursor:pointer;color:var(--muted);transition:.15s;}
+.lang-toggle button.active{background:var(--green);color:#fff;}
+.btn-login{background:var(--green-deep);color:#fff;padding:8px 18px;border-radius:50px;font-weight:700;font-size:13px;border:none;cursor:pointer;transition:.15s;white-space:nowrap;}
+.btn-login:hover{background:var(--green);}
 
-/* ──────────────────────────────────────────────────────
-   NAVBAR
-─────────────────────────────────────────────────────── */
-.nav{position:fixed;top:0;left:0;right:0;z-index:300;height:62px;
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 24px;
-  background:rgba(9,20,13,.92);backdrop-filter:blur(14px);
-  border-bottom:1px solid rgba(255,255,255,.07);}
-.nav-logo{display:flex;align-items:center;gap:10px;}
-.logo-img{width:46px;height:46px;border-radius:9px;background:#fff;
-  overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.25);flex-shrink:0;}
-.logo-img img{width:100%;height:100%;object-fit:contain;}
-.logo-text{display:flex;flex-direction:column;line-height:1.2;}
-.logo-name{font-family:'Cormorant Garamond',serif;font-size:16.5px;
-  font-weight:700;color:var(--gold);}
-.logo-name em{font-style:normal;color:rgba(255,255,255,.88);}
-.logo-sub{font-size:8px;color:rgba(255,255,255,.38);
-  letter-spacing:1.8px;text-transform:uppercase;}
-.nav-links{display:none;align-items:center;gap:2px;}
-.nav-links a{padding:7px 14px;font-size:13px;font-weight:500;
-  color:rgba(255,255,255,.72);border-radius:6px;transition:all .2s;}
-.nav-links a:hover{color:#fff;background:rgba(255,255,255,.09);}
-.nav-right{display:flex;align-items:center;gap:10px;}
-/* Pink login — the ONE dominant pink use in the nav */
-.btn-login{padding:8px 20px;background:var(--bloom);color:#fff;
-  border-radius:6px;font-size:13px;font-weight:600;
-  transition:opacity .2s,transform .2s;}
-.btn-login:hover{opacity:.87;transform:translateY(-1px);}
-.hbg{background:none;border:none;cursor:pointer;
-  display:flex;flex-direction:column;gap:5px;padding:4px;}
-.hbg span{display:block;width:20px;height:2px;background:#fff;
-  border-radius:2px;transition:.3s;}
-.hbg.open span:nth-child(1){transform:rotate(45deg) translate(5px,5px);}
-.hbg.open span:nth-child(2){opacity:0;}
-.hbg.open span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px);}
-@media(min-width:760px){
-  .nav-links{display:flex;}
-  .hbg{display:none;}
-}
+/* HERO */
+.hero{position:relative;background:linear-gradient(135deg,#eaf6ed 0%,#f3faf4 60%,#fce8f0 100%);padding:70px 20px 80px;overflow:hidden;text-align:center;}
+.hero-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13vw;font-weight:900;color:rgba(46,139,80,.06);white-space:nowrap;pointer-events:none;letter-spacing:-2px;user-select:none;}
+.hero-content{position:relative;z-index:2;max-width:760px;margin:0 auto;}
+.hero h1{font-size:42px;font-weight:900;color:var(--green-deep);line-height:1.15;margin-bottom:16px;}
+.hero h1 span{color:var(--pink);}
+.hero p{font-size:18px;color:var(--muted);margin-bottom:28px;}
+.hero-cta{display:inline-flex;gap:14px;flex-wrap:wrap;justify-content:center;}
+.btn-primary{background:var(--green-deep);color:#fff;padding:14px 32px;border-radius:50px;font-weight:700;font-size:16px;border:none;cursor:pointer;transition:.15s;}
+.btn-primary:hover{background:var(--green);}
+.btn-outline{background:#fff;color:var(--green-deep);padding:14px 32px;border-radius:50px;font-weight:700;font-size:16px;border:2px solid var(--green);cursor:pointer;transition:.15s;}
+.btn-outline:hover{background:var(--green-light);}
 
-/* MOBILE MENU */
-.mob-menu{display:none;position:fixed;inset:0;z-index:290;
-  background:rgba(9,20,13,.97);flex-direction:column;
-  align-items:center;justify-content:center;gap:4px;}
-.mob-menu.open{display:flex;}
-.mob-menu a{font-size:21px;font-weight:500;color:rgba(255,255,255,.78);
-  padding:13px 48px;border-radius:8px;width:260px;text-align:center;transition:.2s;}
-.mob-menu a:hover{background:rgba(255,255,255,.07);color:#fff;}
-.mob-menu .btn-login{font-size:16px;margin-top:16px;
-  padding:13px 48px;width:260px;text-align:center;border-radius:8px;}
+/* SECTION */
+.section{padding:56px 20px;}
+.section-title{text-align:center;font-size:30px;font-weight:800;color:var(--green-deep);margin-bottom:8px;}
+.section-sub{text-align:center;color:var(--muted);margin-bottom:36px;font-size:16px;}
 
-/* ──────────────────────────────────────────────────────
-   ① HERO — Deep paddy green, V3 depth
-─────────────────────────────────────────────────────── */
-.hero{min-height:100svh;display:flex;align-items:center;
-  padding-top:62px;position:relative;overflow:hidden;
-  background:linear-gradient(155deg,#1A3D2B 0%,#0D2419 55%,#061008 100%);}
+/* PRODUCTS */
+.products{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:18px;}
+.product{background:#fff;border-radius:16px;padding:16px;box-shadow:0 4px 18px rgba(31,107,59,.07);border:1px solid #e6f4ea;transition:transform .15s;}
+.product:hover{transform:translateY(-4px);}
+.product-img{font-size:46px;text-align:center;padding:14px 0;background:var(--green-light);border-radius:12px;margin-bottom:12px;}
+.product-name{font-weight:700;font-size:16px;margin-bottom:4px;}
+.product-badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;margin-bottom:8px;}
+.badge-farmer{background:var(--green-light);color:var(--green-deep);}
+.badge-retailer{background:#fff3e0;color:#c2620a;}
+.product-price{font-size:18px;font-weight:800;color:var(--green-deep);}
+.product-rating{font-size:12px;color:#e8a317;margin-top:4px;}
+.product .btn-add{margin-top:10px;width:100%;background:var(--green);color:#fff;border:none;padding:9px;border-radius:50px;font-weight:700;cursor:pointer;font-size:13px;transition:.15s;}
+.product .btn-add:hover{background:var(--green-deep);}
+.prod-loading{grid-column:1/-1;text-align:center;padding:48px 20px;color:var(--muted);font-size:15px;}
+.spin-ring{width:32px;height:32px;border:3px solid var(--green-light);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.prod-empty{grid-column:1/-1;text-align:center;padding:48px 20px;color:var(--muted);}
+.prod-more{display:block;margin:28px auto 0;background:var(--green-light);color:var(--green-deep);border:none;padding:12px 32px;border-radius:50px;font-weight:700;font-size:14px;cursor:pointer;transition:.15s;}
+.prod-more:hover{background:var(--green);color:#fff;}
 
-/* subtle texture dots */
-.hero::before{content:'';position:absolute;inset:0;pointer-events:none;
-  background-image:radial-gradient(rgba(255,255,255,.025) 1px,transparent 1px);
-  background-size:28px 28px;}
-/* right glow */
-.hero::after{content:'';position:absolute;right:-100px;top:-80px;
-  width:480px;height:480px;border-radius:50%;
-  background:radial-gradient(circle,rgba(78,159,61,.12),transparent 68%);
-  pointer-events:none;}
+/* ACHIEVEMENTS */
+.achievements{background:var(--green-deep);color:#fff;}
+.ach-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:30px;text-align:center;}
+.ach-num{font-size:44px;font-weight:900;color:#fff;}
+.ach-num span{color:#9be3b4;}
+.ach-label{font-size:15px;color:#cdeed8;margin-top:4px;}
 
-.hero-body{position:relative;z-index:1;
-  max-width:620px;margin:0 auto;padding:56px 20px 64px;text-align:center;}
-.hero-pill{display:inline-flex;align-items:center;gap:10px;
-  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);
-  border-radius:50px;padding:6px 18px;margin-bottom:28px;}
-.hero-pill .t{font-family:'Noto Serif Tamil',serif;font-size:15px;
-  color:var(--bloom);font-weight:700;} /* pink — brand word in Tamil, contextual */
-.hero-pill .e{font-size:10.5px;color:rgba(255,255,255,.48);
-  letter-spacing:1.5px;text-transform:uppercase;}
-.hero h1{font-family:'Cormorant Garamond',serif;
-  font-size:clamp(34px,6.5vw,56px);font-weight:700;
-  color:#fff;line-height:1.13;margin-bottom:20px;}
-.hero h1 em{font-style:normal;color:var(--sage);} /* leaf green on headline */
-.hero-desc{font-size:clamp(14px,2.5vw,16.5px);color:rgba(255,255,255,.65);
-  line-height:1.8;margin-bottom:36px;}
-.hero-actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;}
-/* Primary CTA — leaf green, not pink */
-.btn-cta{display:inline-flex;align-items:center;gap:8px;
-  padding:14px 30px;border-radius:8px;font-size:15px;font-weight:600;
-  font-family:'Outfit',sans-serif;cursor:pointer;border:none;transition:.22s;}
-.btn-cta.solid{background:var(--leaf);color:#fff;
-  box-shadow:0 4px 18px rgba(78,159,61,.35);}
-.btn-cta.solid:hover{background:#3d8a2e;transform:translateY(-2px);
-  box-shadow:0 8px 26px rgba(78,159,61,.45);}
-.btn-cta.ghost{background:transparent;color:#fff;
-  border:1.5px solid rgba(255,255,255,.32);}
-.btn-cta.ghost:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.6);}
-.hero-proof{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;
-  margin-top:44px;padding-top:28px;border-top:1px solid rgba(255,255,255,.09);}
-.proof-item{display:flex;align-items:center;gap:7px;
-  font-size:12px;color:rgba(255,255,255,.5);font-weight:500;}
-.proof-item .dot{width:6px;height:6px;border-radius:50%;
-  background:var(--sage);flex-shrink:0;}
+/* FOUNDER */
+.ceo{background:#fff;}
+.ceo-card{max-width:860px;margin:0 auto;background:linear-gradient(135deg,#f3faf4,#fff);border-radius:20px;padding:38px;border:1px solid #e6f4ea;display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;}
+.ceo-avatar{width:90px;height:90px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:40px;flex-shrink:0;}
+.ceo-text{flex:1;min-width:240px;}
+.ceo-quote{font-size:17px;color:var(--ink);font-style:italic;line-height:1.7;margin-bottom:14px;}
+.ceo-name{font-weight:800;color:var(--green-deep);font-size:16px;}
+.ceo-role{color:var(--muted);font-size:14px;}
 
-/* ──────────────────────────────────────────────────────
-   ② HOW IT WORKS — Cool mint tint (V1 softness)
-─────────────────────────────────────────────────────── */
-.how{background:var(--mint);padding:72px 0;}
-.how .inner{text-align:center;}
-.how .sec-sub{margin:0 auto 48px;}
-.steps{display:grid;grid-template-columns:1fr;gap:20px;margin-top:40px;}
-@media(min-width:640px){.steps{grid-template-columns:repeat(3,1fr);}}
-.step{background:var(--white);border-radius:14px;padding:28px 24px;
-  border:1.5px solid var(--border);position:relative;text-align:left;
-  box-shadow:var(--shadow-sm);}
-/* step number circle — gradient from forest to leaf */
-.step-n{width:42px;height:42px;border-radius:50%;
-  background:linear-gradient(135deg,var(--forest),var(--leaf));
-  color:#fff;font-size:15px;font-weight:800;
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Outfit',sans-serif;margin-bottom:16px;}
-.step-ico{font-size:28px;margin-bottom:12px;}
-.step h3{font-size:15px;font-weight:700;color:var(--mid);margin-bottom:8px;}
-.step p{font-size:13px;color:var(--muted);line-height:1.72;}
-/* connector arrow between cards on desktop */
-.step-arr{display:none;position:absolute;right:-14px;top:40px;
-  font-size:18px;color:var(--border);z-index:2;}
-.step:last-child .step-arr{display:none;}
-@media(min-width:640px){.step-arr{display:block;}}
+/* FARMER STORIES */
+.stories{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;}
+.story{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 18px rgba(31,107,59,.07);border:1px solid #e6f4ea;}
+.story-top{background:linear-gradient(135deg,var(--green),var(--green-deep));padding:22px;color:#fff;display:flex;align-items:center;gap:14px;}
+.story-avatar{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:26px;}
+.story-name{font-weight:800;font-size:17px;}
+.story-village{font-size:13px;color:#cdeed8;}
+.story-body{padding:20px;color:var(--muted);font-size:14px;line-height:1.7;}
+.story-impact{margin-top:12px;padding-top:12px;border-top:1px solid #eee;font-weight:700;color:var(--pink);font-size:14px;}
 
-/* ──────────────────────────────────────────────────────
-   ③ WHY US — White, clean, 4 cards
-─────────────────────────────────────────────────────── */
-.why{background:var(--white);padding:72px 0;}
-.why-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:40px;}
-@media(min-width:760px){.why-grid{grid-template-columns:repeat(4,1fr);gap:20px;}}
-.why-card{background:var(--warm);border-radius:14px;padding:24px 18px;
-  border:1.5px solid var(--border);transition:.22s;}
-.why-card:hover{border-color:var(--leaf);box-shadow:var(--shadow-md);}
-.why-ico{font-size:30px;margin-bottom:14px;}
-.why-card h3{font-size:14px;font-weight:700;color:var(--mid);
-  line-height:1.35;margin-bottom:7px;}
-.why-card p{font-size:12.5px;color:var(--muted);line-height:1.68;}
-/* Bloom pink on small badge tags — 4 tags, subtle, appropriate */
-.why-tag{display:inline-block;margin-top:13px;font-size:10px;font-weight:700;
-  background:var(--bloom-soft);color:var(--bloom);
-  padding:3px 11px;border-radius:50px;}
+/* FOOTER */
+footer{background:#16321f;color:#cdeed8;padding:46px 20px 24px;}
+.foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:30px;max-width:1200px;margin:0 auto;}
+.foot-brand{font-size:20px;font-weight:800;color:#fff;margin-bottom:10px;}
+.foot-brand span{color:var(--pink);}
+.foot-col h4{color:#fff;font-size:15px;margin-bottom:12px;}
+.foot-col a{display:block;color:#a9cdb5;font-size:14px;margin-bottom:8px;}
+.foot-col a:hover{color:#fff;}
+.foot-bottom{text-align:center;border-top:1px solid #2a4a35;margin-top:30px;padding-top:18px;font-size:13px;color:#88a894;}
 
-/* ──────────────────────────────────────────────────────
-   ④ FARMER STORY — Richest dark, V3 paddy depth
-─────────────────────────────────────────────────────── */
-.story{padding:72px 0;
-  background:linear-gradient(150deg,#1A3D2B 0%,#0E2318 55%,#061008 100%);
-  position:relative;overflow:hidden;}
-.story::before{content:'';position:absolute;inset:0;
-  background-image:radial-gradient(rgba(255,255,255,.02) 1px,transparent 1px);
-  background-size:32px 32px;pointer-events:none;}
-.story-grid{display:grid;grid-template-columns:1fr;gap:40px;align-items:center;}
-@media(min-width:760px){.story-grid{grid-template-columns:1fr 1fr;gap:64px;}}
-.story-left{}
-.story-left .section-tag.on-dark{margin-bottom:10px;}
-.story-left h2{font-family:'Cormorant Garamond',serif;
-  font-size:clamp(26px,4vw,36px);font-weight:700;
-  color:#fff;line-height:1.25;margin-bottom:18px;}
-.story-left p{font-size:14px;color:rgba(255,255,255,.65);
-  line-height:1.85;margin-bottom:14px;}
-.story-left p strong{color:rgba(255,255,255,.9);}
-/* Quote — pink border, ties to the Marutham flower / brand story */
-.story-quote{border-left:3px solid var(--bloom);
-  padding:4px 0 4px 18px;margin:22px 0 28px;}
-.story-quote p{font-family:'Cormorant Garamond',serif;
-  font-size:18px;font-style:italic;
-  color:rgba(255,255,255,.78);line-height:1.65;}
-/* right column */
-.story-right{display:flex;flex-direction:column;gap:14px;}
-/* Tamil brand block */
-.tamil-block{background:rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.1);
-  border-radius:14px;padding:26px 20px;text-align:center;}
-.tamil-word{font-family:'Noto Serif Tamil',serif;font-size:56px;
-  font-weight:700;line-height:1;color:var(--bloom); /* bloom pink: the Marutham flower */
-  margin-bottom:6px;}
-.tamil-meaning{font-size:10px;color:rgba(255,255,255,.38);
-  letter-spacing:2px;text-transform:uppercase;}
-/* stat cards */
-.stat-card{background:rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.1);
-  border-radius:12px;padding:18px 20px;
-  display:flex;align-items:center;gap:16px;}
-.stat-n{font-size:32px;font-weight:800;color:var(--gold); /* harvest gold */
-  font-family:'Outfit',sans-serif;line-height:1;white-space:nowrap;}
-.stat-info h4{font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;}
-.stat-info p{font-size:11.5px;color:rgba(255,255,255,.45);line-height:1.5;}
+/* TOAST */
+.toast-bar{position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-10px);
+  padding:12px 24px;border-radius:50px;font-size:13px;font-weight:600;z-index:9999;
+  display:none;min-width:200px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.2);
+  background:var(--green-deep);color:#fff;transition:transform .3s;}
+.toast-bar.show{display:block;transform:translateX(-50%) translateY(0);}
 
-/* ──────────────────────────────────────────────────────
-   ⑤ FOOTER — Near-black paddy green
-─────────────────────────────────────────────────────── */
-.footer{background:#07120A;padding:52px 0 0;}
-.footer-grid{display:grid;grid-template-columns:1fr;gap:36px;
-  padding-bottom:44px;}
-@media(min-width:640px){
-  .footer-grid{grid-template-columns:1.6fr 1fr 1fr;gap:32px;}}
-/* brand col */
-.ft-logo{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
-.ft-tagline{font-size:13px;color:rgba(255,255,255,.38);
-  line-height:1.75;max-width:220px;margin-bottom:18px;}
-.ft-contact{display:flex;flex-direction:column;gap:9px;}
-.ft-contact-row{display:flex;align-items:flex-start;gap:10px;
-  font-size:12.5px;color:rgba(255,255,255,.48);}
-.ft-contact-row .ico{font-size:14px;margin-top:1px;flex-shrink:0;}
-.ft-social{display:flex;gap:9px;margin-top:18px;}
-.fsoc{width:36px;height:36px;border-radius:8px;
-  background:rgba(255,255,255,.07);
-  display:flex;align-items:center;justify-content:center;
-  font-size:15px;transition:background .2s;}
-.fsoc:hover{background:rgba(203,78,134,.3);}
-/* link cols */
-.ft-col h4{font-size:10px;font-weight:700;color:var(--sage);
-  letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;}
-.ft-col ul{list-style:none;display:flex;flex-direction:column;gap:10px;}
-.ft-col ul li a{font-size:13px;color:rgba(255,255,255,.45);transition:.2s;}
-.ft-col ul li a:hover{color:rgba(255,255,255,.82);}
-/* bottom bar */
-.footer-bar{border-top:1px solid rgba(255,255,255,.07);
-  padding:18px 0;display:flex;flex-wrap:wrap;
-  justify-content:space-between;align-items:center;gap:10px;}
-.ft-copy{font-size:11px;color:rgba(255,255,255,.28);}
-.ft-copy .pk{color:var(--bloom);}
-.ft-legal{display:flex;gap:18px;}
-.ft-legal a{font-size:11px;color:rgba(255,255,255,.28);transition:.2s;}
-.ft-legal a:hover{color:rgba(255,255,255,.7);}
+/* LOGIN NUDGE */
+.login-nudge{display:none;position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+  background:#fff;border:2px solid var(--green-light);border-radius:18px;
+  padding:18px 28px;box-shadow:0 12px 40px rgba(31,107,59,.18);z-index:200;
+  text-align:center;max-width:340px;width:90%;}
+.login-nudge h3{font-size:16px;color:var(--green-deep);margin-bottom:8px;}
+.login-nudge p{font-size:13px;color:var(--muted);margin-bottom:14px;}
+.login-nudge .nn{display:flex;gap:10px;justify-content:center;}
+.nudge-cancel{background:var(--green-light);color:var(--green-deep);border:none;padding:9px 20px;border-radius:50px;font-weight:700;cursor:pointer;font-size:13px;}
+.nudge-go{background:var(--green-deep);color:#fff;border:none;padding:9px 20px;border-radius:50px;font-weight:700;cursor:pointer;font-size:13px;}
 
-/* ──────────────────────────────────────────────────────
-   RESPONSIVE — mobile-first refinements
-─────────────────────────────────────────────────────── */
-@media(max-width:480px){
+@media(max-width:768px){
+  .nav-links{display:none;}
   .hero h1{font-size:30px;}
-  .hero-actions{flex-direction:column;align-items:stretch;}
-  .btn-cta{justify-content:center;}
-  .why-grid{grid-template-columns:1fr;}
-  .story-grid{gap:32px;}
-  .tamil-word{font-size:44px;}
+  .foot-grid{grid-template-columns:1fr 1fr;}
+  .hero-watermark{font-size:22vw;}
 }
-@media(min-width:480px) and (max-width:759px){
-  .hero h1{font-size:38px;}
+@media(max-width:480px){
+  .foot-grid{grid-template-columns:1fr;}
 }
 </style>
 </head>
 <body>
 
-<!-- MOBILE MENU -->
-<div class="mob-menu" id="mobMenu">
-  <a href="#home" onclick="closeMob()">Home</a>
-  <a href="#how" onclick="closeMob()">How It Works</a>
-  <a href="#why" onclick="closeMob()">Why Us</a>
-  <a href="#story" onclick="closeMob()">Our Story</a>
-  <a href="index.html" class="btn-login">Login / Register</a>
+<div id="toastBar" class="toast-bar"></div>
+
+<!-- LOGIN NUDGE -->
+<div class="login-nudge" id="loginNudge">
+  <h3 data-en="Login to place an order" data-ta="ஆர்டர் செய்ய உள்நுழையவும்">Login to place an order</h3>
+  <p data-en="Create a free account to buy fresh produce from local farmers." data-ta="உள்நுழைந்து புதிய காய்கறிகளை வாங்குங்கள்.">Create a free account to buy fresh produce from local farmers.</p>
+  <div class="nn">
+    <button class="nudge-cancel" onclick="closeNudge()" data-en="Cancel" data-ta="ரத்து">Cancel</button>
+    <button class="nudge-go" onclick="goLogin()" data-en="Login / Register" data-ta="உள்நுழைய">Login / Register</button>
+  </div>
 </div>
 
-<!-- ── NAVBAR ── -->
-<nav class="nav">
-  <a href="home.html" class="nav-logo">
-    <div class="logo-img">
-      <img src="img/logo.jpg" alt="Marutham Agrolink">
+<!-- HEADER -->
+<header>
+  <div class="nav">
+    <div class="brand">
+      <img src="img/logo.jpg" alt="Marutham AgroLink">
+      <div class="brand-name">Marutham <span>AgroLink</span></div>
     </div>
-    <div class="logo-text">
-      <div class="logo-name">Marutham <em>Agrolink</em></div>
-      <div class="logo-sub">Farm to Home · Pudukkottai</div>
+    <nav class="nav-links">
+      <a href="#shop" data-en="Shop" data-ta="கடை">Shop</a>
+      <a href="#about" data-en="About" data-ta="எங்களை பற்றி">About</a>
+      <a href="#stories" data-en="Farmer Stories" data-ta="விவசாயி கதைகள்">Farmer Stories</a>
+      <a href="#contact" data-en="Contact" data-ta="தொடர்பு">Contact</a>
+      <a href="#career" data-en="Career" data-ta="வேலைவாய்ப்பு">Career</a>
+    </nav>
+    <div class="nav-right">
+      <span class="clock" id="clock">--:--:-- IST</span>
+      <div class="lang-toggle">
+        <button class="active" id="lang-en" onclick="setLang('en',this)">EN</button>
+        <button id="lang-ta" onclick="setLang('ta',this)">த</button>
+      </div>
+      <button class="btn-login" id="headerLoginBtn" onclick="handleHeaderLogin()"
+        data-en="Login / Register" data-ta="உள்நுழைய">Login / Register</button>
     </div>
-  </a>
-
-  <div class="nav-links">
-    <a href="#home">Home</a>
-    <a href="#how">How It Works</a>
-    <a href="#why">Why Us</a>
-    <a href="#story">Our Story</a>
   </div>
+</header>
 
-  <div class="nav-right">
-    <a href="index.html" class="btn-login">Login</a>
-    <button class="hbg" id="hbg" onclick="toggleMob()" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-  </div>
-</nav>
-
-<!-- ────────────────────────────────────────────────────
-  ① HERO
-     Dark paddy green | leaf green headline accent |
-     Tamil pill with bloom pink (brand word)
-──────────────────────────────────────────────────── -->
+<!-- HERO -->
 <section class="hero" id="home">
-  <div class="hero-body">
-
-    <div class="hero-pill">
-      <span class="t tamil">மருதம்</span>
-      <span class="e">Agrolink · Pudukkottai</span>
-    </div>
-
-    <h1>Farm-Fresh Produce,<br>Delivered to Your Door<br>Every <em>Morning</em></h1>
-
-    <p class="hero-desc">
-      Order directly from farmers and local sellers in Pudukkottai.
-      No middlemen, no cold storage — just honest prices and produce
-      harvested the same day it reaches your kitchen.
+  <div class="hero-watermark">Marutham AgroLink</div>
+  <div class="hero-content">
+    <h1 data-en="Fresh from our farms,<br>straight to your <span>home</span>"
+        data-ta="எங்கள் வயல்களில் இருந்து,<br>நேரடியாக உங்கள் <span>வீட்டிற்கு</span>">
+      Fresh from our farms,<br>straight to your <span>home</span>
+    </h1>
+    <p data-en="Connecting local farmers of Pudukkottai directly with you — fair prices for farmers, fresh produce for families."
+       data-ta="புதுக்கோட்டை விவசாயிகளை உங்களுடன் நேரடியாக இணைக்கிறோம் — விவசாயிகளுக்கு நியாயமான விலை, குடும்பங்களுக்கு புதிய காய்கறிகள்.">
+      Connecting local farmers of Pudukkottai directly with you — fair prices for farmers, fresh produce for families.
     </p>
-
-    <div class="hero-actions">
-      <a href="index.html" class="btn-cta solid">🛒 Shop Fresh</a>
-      <a href="index.html" class="btn-cta ghost">Register as Seller →</a>
-    </div>
-
-    <div class="hero-proof">
-      <div class="proof-item"><div class="dot"></div>Verified Local Farmers</div>
-      <div class="proof-item"><div class="dot"></div>Morning Delivery</div>
-      <div class="proof-item"><div class="dot"></div>Fair Farmer Prices</div>
-      <div class="proof-item"><div class="dot"></div>Serving Pudukkottai</div>
-    </div>
-
-  </div>
-</section>
-
-<!-- ────────────────────────────────────────────────────
-  ② HOW IT WORKS
-     Mint tint bg | white cards | forest→leaf step circles
-──────────────────────────────────────────────────── -->
-<section class="how" id="how">
-  <div class="container inner">
-    <div class="section-tag">Simple &amp; Transparent</div>
-    <h2 class="sec-h">How Marutham Works</h2>
-    <p class="sec-sub">Three steps — from field to your front door, every morning.</p>
-
-    <div class="steps">
-
-      <div class="step">
-        <div class="step-ico">🌾</div>
-        <div class="step-n">01</div>
-        <h3>Farmers List Products</h3>
-        <p>Local farmers and sellers in Pudukkottai list fresh vegetables, fruits, and grains every evening — at prices they set themselves, with no pressure from intermediaries.</p>
-        <div class="step-arr">→</div>
-      </div>
-
-      <div class="step">
-        <div class="step-ico">📱</div>
-        <div class="step-n">02</div>
-        <h3>You Place Your Order</h3>
-        <p>Browse what's available from sellers near you and place your order before midnight. You see exactly which farm your food comes from — full transparency, always.</p>
-        <div class="step-arr">→</div>
-      </div>
-
-      <div class="step">
-        <div class="step-ico">🚚</div>
-        <div class="step-n">03</div>
-        <h3>Delivered Fresh by Morning</h3>
-        <p>Your order is packed at the farm and at your door by early morning — harvested the same day. No cold storage overnight, no week-old supermarket produce.</p>
-      </div>
-
+    <div class="hero-cta">
+      <button class="btn-primary" onclick="document.getElementById('shop').scrollIntoView({behavior:'smooth'})"
+        data-en="Shop Fresh Now" data-ta="இப்போது வாங்குங்கள்">Shop Fresh Now</button>
+      <button class="btn-outline" onclick="goRegisterSeller()"
+        data-en="Become a Seller" data-ta="விற்பனையாளராகுங்கள்">Become a Seller</button>
     </div>
   </div>
 </section>
 
-<!-- ────────────────────────────────────────────────────
-  ③ WHY US
-     White bg | warm card fills | bloom pink only on small tags
-──────────────────────────────────────────────────── -->
-<section class="why" id="why">
+<!-- FRESH TODAY PRODUCTS -->
+<section class="section" id="shop">
   <div class="container">
-    <div class="section-tag">Why Choose Marutham</div>
-    <h2 class="sec-h">Built on Trust, Grown in Pudukkottai</h2>
-    <p class="sec-sub">We do one thing: connect your family directly to the farmer who grew your food.</p>
-
-    <div class="why-grid">
-
-      <div class="why-card">
-        <div class="why-ico">🧑‍🌾</div>
-        <h3>Direct from the Producer</h3>
-        <p>Every product is listed by the farmer or local seller who grew it. You know exactly where your food comes from.</p>
-        <div class="why-tag">Zero Middlemen</div>
+    <h2 class="section-title" data-en="Fresh Today" data-ta="இன்றைய புதிய பொருட்கள்">Fresh Today</h2>
+    <p class="section-sub" data-en="Browse what our farmers harvested today — order requires a free account"
+       data-ta="எங்கள் விவசாயிகள் இன்று அறுவடை செய்ததைப் பாருங்கள்">
+      Browse what our farmers harvested today — order requires a free account
+    </p>
+    <div class="products" id="products-grid">
+      <div class="prod-loading">
+        <div class="spin-ring"></div>
+        <span data-en="Loading fresh products…" data-ta="பொருட்களை ஏற்றுகிறோம்…">Loading fresh products…</span>
       </div>
-
-      <div class="why-card">
-        <div class="why-ico">⚖️</div>
-        <h3>Fair Prices for Farmers</h3>
-        <p>Farmers set their own prices. Our small platform fee is charged to the seller — never marked up on your end.</p>
-        <div class="why-tag">Honest Earnings</div>
-      </div>
-
-      <div class="why-card">
-        <div class="why-ico">🌿</div>
-        <h3>Same-Day Fresh</h3>
-        <p>Harvested in the evening, delivered by morning. No week-old produce, no cold-chain delays — food at its actual best.</p>
-        <div class="why-tag">Harvested Today</div>
-      </div>
-
-      <div class="why-card">
-        <div class="why-ico">📍</div>
-        <h3>Rooted in Pudukkottai</h3>
-        <p>We started here and know this land. Our seller network spans Pudukkottai district and surrounding villages across Tamil Nadu.</p>
-        <div class="why-tag">Hyperlocal</div>
-      </div>
-
     </div>
+    <button class="prod-more" id="viewAllBtn" onclick="handleShopAll()" style="display:none"
+      data-en="View All Products →" data-ta="அனைத்தையும் பார்க்க →">View All Products →</button>
   </div>
 </section>
 
-<!-- ────────────────────────────────────────────────────
-  ④ FARMER STORY
-     Richest dark bg | Tamil in bloom pink (semantic: the flower)
-     Quote border in bloom pink | gold stats
-──────────────────────────────────────────────────── -->
-<section class="story" id="story">
+<!-- ACHIEVEMENTS -->
+<section class="section achievements" id="achievements">
   <div class="container">
-    <div class="story-grid">
-
-      <div class="story-left">
-        <div class="section-tag on-dark">Our Name, Our Roots</div>
-        <h2>Empowering the Farmers<br>of <span class="tamil" style="color:var(--bloom)">மருதம்</span> Land</h2>
-        <p>
-          In Sangam Tamil literature, <strong>மருதம் (Marutham)</strong> is the name for
-          the fertile cropland landscape — paddy fields, flowing rivers, and the
-          pink-flowered Marutham tree that blooms along the banks.
-          It is the <em style="color:rgba(255,255,255,.8)">tinai</em> of abundance,
-          community, and the daily rhythm of the farm.
-        </p>
-        <p>
-          We chose this name because Marutham Agrolink is built on that same idea:
-          the land is rich, the farmers work hard, and the harvest belongs equally
-          to the grower and the family it feeds. Technology should strengthen that
-          bond — not break it with long supply chains and opaque pricing.
-        </p>
-
-        <div class="story-quote">
-          <p>"When a farmer in Pudukkottai earns a fair price, a family in the next
-          village eats well. That loop is all we're trying to close."</p>
-        </div>
-
-        <a href="index.html" class="btn-cta solid">Join the Network →</a>
-      </div>
-
-      <div class="story-right">
-
-        <div class="tamil-block">
-          <div class="tamil-word tamil">மருதம்</div>
-          <div class="tamil-meaning">The Fertile Cropland · Sangam Tamil Landscape</div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-n">500+</div>
-          <div class="stat-info">
-            <h4>Verified Sellers</h4>
-            <p>Farmers and retailers across Pudukkottai district</p>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-n">12K+</div>
-          <div class="stat-info">
-            <h4>Families Served</h4>
-            <p>Households ordering fresh produce every week</p>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-n">₹0</div>
-          <div class="stat-info">
-            <h4>Middleman Markup</h4>
-            <p>Every rupee of markup stays in the farmer's pocket</p>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ────────────────────────────────────────────────────
-  ⑤ FOOTER — Near-black paddy green
-──────────────────────────────────────────────────── -->
-<footer class="footer" id="contact">
-  <div class="container">
-    <div class="footer-grid">
-
-      <!-- Brand col -->
+    <div class="ach-grid">
       <div>
-        <a href="home.html" class="ft-logo">
-          <div class="logo-img">
-            <img src="img/logo.jpg" alt="Marutham Agrolink">
-          </div>
-          <div class="logo-text">
-            <div class="logo-name">Marutham <em>Agrolink</em></div>
-            <div class="logo-sub">Farm to Home · Pudukkottai</div>
-          </div>
-        </a>
-        <p class="ft-tagline">
-          Connecting Tamil Nadu's farmers directly to families —
-          fresh produce, honest prices, every morning.
-        </p>
-        <div class="ft-contact">
-          <div class="ft-contact-row"><span class="ico">📞</span><span>+91 432 22 23456</span></div>
-          <div class="ft-contact-row"><span class="ico">✉️</span><span>hello@maruthamagrolink.in</span></div>
-          <div class="ft-contact-row"><span class="ico">📍</span><span>Pudukkottai, Tamil Nadu — 622 001</span></div>
-          <div class="ft-contact-row"><span class="ico">🕗</span><span>Mon – Sat, 7 AM – 8 PM IST</span></div>
-        </div>
-        <div class="ft-social">
-          <a href="#" class="fsoc" aria-label="Facebook">📘</a>
-          <a href="#" class="fsoc" aria-label="Instagram">📸</a>
-          <a href="#" class="fsoc" aria-label="WhatsApp">💬</a>
-          <a href="#" class="fsoc" aria-label="YouTube">📺</a>
-        </div>
+        <div class="ach-num">250<span>+</span></div>
+        <div class="ach-label" data-en="Active Farmers" data-ta="செயலில் உள்ள விவசாயிகள்">Active Farmers</div>
       </div>
-
-      <!-- Platform col -->
-      <div class="ft-col">
-        <h4>Platform</h4>
-        <ul>
-          <li><a href="index.html">Login</a></li>
-          <li><a href="index.html">Consumer Sign Up</a></li>
-          <li><a href="index.html">Register as Seller</a></li>
-          <li><a href="#how">How It Works</a></li>
-          <li><a href="#why">Why Marutham</a></li>
-        </ul>
+      <div>
+        <div class="ach-num">12<span>k+</span></div>
+        <div class="ach-label" data-en="Orders Delivered" data-ta="வழங்கப்பட்ட ஆர்டர்கள்">Orders Delivered</div>
       </div>
-
-      <!-- Company col -->
-      <div class="ft-col">
-        <h4>Company</h4>
-        <ul>
-          <li><a href="#story">About Us</a></li>
-          <li><a href="#">Careers</a></li>
-          <li><a href="#">Contact Us</a></li>
-          <li><a href="#">Privacy Policy</a></li>
-          <li><a href="#">Terms of Service</a></li>
-          <li><a href="#">Return &amp; Refund Policy</a></li>
-        </ul>
+      <div>
+        <div class="ach-num">98<span>%</span></div>
+        <div class="ach-label" data-en="Happy Customers" data-ta="மகிழ்ச்சியான வாடிக்கையாளர்கள்">Happy Customers</div>
       </div>
-
-    </div>
-
-    <div class="footer-bar">
-      <div class="ft-copy">
-        © 2024 Marutham Agrolink. Made with <span class="pk">🌸</span> in Tamil Nadu.
-      </div>
-      <div class="ft-legal">
-        <a href="#">Privacy</a>
-        <a href="#">Terms</a>
-        <a href="#">Refund Policy</a>
+      <div>
+        <div class="ach-num">1<span> district</span></div>
+        <div class="ach-label" data-en="Serving Pudukkottai" data-ta="புதுக்கோட்டையில் சேவை">Serving Pudukkottai</div>
       </div>
     </div>
-
   </div>
+</section>
+
+<!-- FOUNDER'S MESSAGE -->
+<section class="section ceo" id="about">
+  <div class="container">
+    <h2 class="section-title" data-en="A Message from Our Founder" data-ta="எங்கள் நிறுவனரின் செய்தி">A Message from Our Founder</h2>
+    <p class="section-sub" data-en="Why we built Marutham AgroLink" data-ta="நாங்கள் ஏன் மருதம் அக்ரோலிங்க் உருவாக்கினோம்">Why we built Marutham AgroLink</p>
+    <div class="ceo-card">
+      <div class="ceo-avatar">🌾</div>
+      <div class="ceo-text">
+        <p class="ceo-quote"
+          data-en="&ldquo;In Tamil tradition, Marutham is the fertile farmland — the land of paddy, rivers, and prosperity. We built Marutham AgroLink so that the people who grow our food earn what they truly deserve, and so every family can bring home produce that was in the soil this morning. No middlemen taking the farmer's share. Just fair prices, fresh food, and dignity for the hands that feed us.&rdquo;"
+          data-ta="&ldquo;தமிழ் மரபில், மருதம் என்பது வளமான விவசாய நிலம் — நெல், ஆறுகள், செழிப்பின் நிலம். உணவை வளர்ப்பவர்கள் தகுதியானதைப் பெற வேண்டும் என்பதற்காகவே மருதம் அக்ரோலிங்கை உருவாக்கினோம்.&rdquo;">
+          &ldquo;In Tamil tradition, Marutham is the fertile farmland — the land of paddy, rivers, and prosperity.
+          We built Marutham AgroLink so that the people who grow our food earn what they truly deserve,
+          and so every family can bring home produce that was in the soil this morning.
+          No middlemen taking the farmer's share. Just fair prices, fresh food,
+          and dignity for the hands that feed us.&rdquo;
+        </p>
+        <div class="ceo-name">Ramprakash</div>
+        <div class="ceo-role"
+          data-en="Founder &amp; Managing Director, Marutham AgroLink"
+          data-ta="நிறுவனர் &amp; நிர்வாக இயக்குநர்">
+          Founder &amp; Managing Director, Marutham AgroLink
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FARMER STORIES -->
+<section class="section" id="stories" style="background:var(--green-light);">
+  <div class="container">
+    <h2 class="section-title" data-en="Farmer Stories" data-ta="விவசாயி கதைகள்">Farmer Stories</h2>
+    <p class="section-sub" data-en="Real farmers, real change" data-ta="உண்மையான விவசாயிகள், உண்மையான மாற்றம்">Real farmers, real change</p>
+    <div class="stories">
+      <div class="story">
+        <div class="story-top">
+          <div class="story-avatar">👨‍🌾</div>
+          <div>
+            <div class="story-name">Murugan</div>
+            <div class="story-village" data-en="Karambakkudi" data-ta="கரம்பக்குடி">Karambakkudi</div>
+          </div>
+        </div>
+        <div class="story-body"
+          data-en="For years, traders decided my price at the gate. Now I list my tomatoes in the morning and they reach families the same day — at a price I set."
+          data-ta="பல வருடங்களாக, வியாபாரிகள் என் விலையை முடிவு செய்தனர். இப்போது நான் காலையில் என் தக்காளியை பட்டியலிடுகிறேன்.">
+          For years, traders decided my price at the gate. Now I list my tomatoes in the morning and they reach families the same day — at a price I set.
+          <div class="story-impact" data-en="↑ 35% more income" data-ta="↑ 35% அதிக வருமானம்">↑ 35% more income</div>
+        </div>
+      </div>
+      <div class="story">
+        <div class="story-top">
+          <div class="story-avatar">👩‍🌾</div>
+          <div>
+            <div class="story-name">Lakshmi</div>
+            <div class="story-village" data-en="Thirumayam" data-ta="திருமயம்">Thirumayam</div>
+          </div>
+        </div>
+        <div class="story-body"
+          data-en="I grow greens on a small plot. Marutham gave me customers I could never reach alone. My harvest no longer goes to waste."
+          data-ta="நான் ஒரு சிறிய நிலத்தில் கீரை வளர்க்கிறேன். மருதம் எனக்கு வாடிக்கையாளர்களை கொடுத்தது.">
+          I grow greens on a small plot. Marutham gave me customers I could never reach alone. My harvest no longer goes to waste.
+          <div class="story-impact" data-en="Zero wastage" data-ta="பாழாகாமல்">Zero wastage</div>
+        </div>
+      </div>
+      <div class="story">
+        <div class="story-top">
+          <div class="story-avatar">👨‍🌾</div>
+          <div>
+            <div class="story-name">Selvam</div>
+            <div class="story-village" data-en="Aranthangi" data-ta="அறந்தாங்கி">Aranthangi</div>
+          </div>
+        </div>
+        <div class="story-body"
+          data-en="The payment comes straight to my bank. No waiting, no cuts. My children see farming can be a respectable living again."
+          data-ta="பணம் நேராக என் வங்கிக்கு வருகிறது. காத்திருப்பு இல்லை, வெட்டு இல்லை.">
+          The payment comes straight to my bank. No waiting, no cuts. My children see farming can be a respectable living again.
+          <div class="story-impact" data-en="Paid within 24 hrs" data-ta="24 மணி நேரத்தில் பணம்">Paid within 24 hrs</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer id="contact">
+  <div class="foot-grid">
+    <div>
+      <div class="foot-brand">Marutham <span>AgroLink</span></div>
+      <p style="font-size:14px;max-width:320px;color:#a9cdb5;margin-bottom:14px;"
+        data-en="Linking farmers, empowering markets. Fresh produce direct from the farms of Pudukkottai."
+        data-ta="விவசாயிகளை இணைத்து, சந்தைகளை வலுப்படுத்துகிறோம்.">
+        Linking farmers, empowering markets. Fresh produce direct from the farms of Pudukkottai.
+      </p>
+      <div style="font-size:13px;color:#88a894;line-height:2;">
+        <div>📞 +91 4322 123456</div>
+        <div>✉️ hello@maruthamagrolink.in</div>
+        <div>📍 Pudukkottai, Tamil Nadu — 622 001</div>
+        <div>🕗 Mon – Sat, 7 AM – 8 PM IST</div>
+      </div>
+    </div>
+    <div class="foot-col">
+      <h4 data-en="Explore" data-ta="ஆராயுங்கள்">Explore</h4>
+      <a href="#shop" data-en="Shop Fresh" data-ta="கடை">Shop Fresh</a>
+      <a href="#about" data-en="About Us" data-ta="எங்களை பற்றி">About Us</a>
+      <a href="#stories" data-en="Farmer Stories" data-ta="விவசாயி கதைகள்">Farmer Stories</a>
+      <a href="index.html" data-en="Login" data-ta="உள்நுழைய">Login</a>
+      <a href="index.html" data-en="Register as Seller" data-ta="விற்பனையாளராக">Register as Seller</a>
+    </div>
+    <div class="foot-col" id="career">
+      <h4 data-en="Company" data-ta="நிறுவனம்">Company</h4>
+      <a href="#" data-en="Career" data-ta="வேலைவாய்ப்பு">Career</a>
+      <a href="#contact" data-en="Contact Us" data-ta="தொடர்பு">Contact Us</a>
+      <a href="#" data-en="Customer Care" data-ta="வாடிக்கையாளர் சேவை">Customer Care</a>
+      <a href="#" data-en="How It Works" data-ta="எப்படி செயல்படுகிறது">How It Works</a>
+    </div>
+    <div class="foot-col">
+      <h4 data-en="Legal" data-ta="சட்டம்">Legal</h4>
+      <a href="#" data-en="Privacy Policy" data-ta="தனியுரிமை">Privacy Policy</a>
+      <a href="#" data-en="Terms of Service" data-ta="விதிமுறைகள்">Terms of Service</a>
+      <a href="#" data-en="Refund Policy" data-ta="பணத்திரும்பல்">Refund Policy</a>
+    </div>
+  </div>
+  <div class="foot-bottom">© 2026 Marutham AgroLink Private Limited · Serving Pudukkottai, Tamil Nadu</div>
 </footer>
 
+<script src="js/config.js"></script>
+<script src="js/shared.js"></script>
 <script>
-function toggleMob(){
-  var m=document.getElementById('mobMenu'),h=document.getElementById('hbg');
-  var o=m.classList.toggle('open');
-  h.classList.toggle('open',o);
-  document.body.style.overflow=o?'hidden':'';
+/* ── IST Clock ──────────────────────────────────────────────────── */
+function tick() {
+  var now = new Date();
+  var ist = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (5.5 * 3600000));
+  var h = String(ist.getHours()).padStart(2,'0');
+  var m = String(ist.getMinutes()).padStart(2,'0');
+  var s = String(ist.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent = h + ':' + m + ':' + s + ' IST';
 }
-function closeMob(){
-  document.getElementById('mobMenu').classList.remove('open');
-  document.getElementById('hbg').classList.remove('open');
-  document.body.style.overflow='';
+setInterval(tick, 1000); tick();
+
+/* ── Language Toggle ────────────────────────────────────────────── */
+var _lang = 'en';
+function setLang(lang, btn) {
+  _lang = lang;
+  document.querySelectorAll('.lang-toggle button').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('[data-en]').forEach(function(el) {
+    var t = el.getAttribute('data-' + lang);
+    if (t) el.innerHTML = t;
+  });
+  document.documentElement.lang = lang;
+  /* re-render product buttons in new language */
+  document.querySelectorAll('.btn-add').forEach(function(btn) {
+    var loggedIn = !!localStorage.getItem('ma_token');
+    if (loggedIn) {
+      btn.textContent = lang === 'ta' ? 'இப்போது வாங்குங்கள்' : 'Shop Now';
+    } else {
+      btn.textContent = lang === 'ta' ? 'ஆர்டர் செய்ய உள்நுழைய' : 'Login to Order';
+    }
+  });
 }
+
+/* ── Auth helpers ───────────────────────────────────────────────── */
+function isLoggedIn() {
+  return !!localStorage.getItem('ma_token');
+}
+
+function goLogin() {
+  window.location.href = 'index.html';
+}
+
+function goRegisterSeller() {
+  window.location.href = 'index.html#register-seller';
+}
+
+function handleHeaderLogin() {
+  if (isLoggedIn()) {
+    var user = JSON.parse(localStorage.getItem('ma_user') || 'null');
+    var dest = user && user.role === 'farmer' ? 'farmer.html'
+             : user && user.role === 'admin'  ? 'admin.html'
+             : 'consumer.html';
+    window.location.href = dest;
+  } else {
+    goLogin();
+  }
+}
+
+function handleShopAll() {
+  if (isLoggedIn()) {
+    window.location.href = 'consumer.html';
+  } else {
+    goLogin();
+  }
+}
+
+/* Update header button if logged in */
+(function() {
+  if (isLoggedIn()) {
+    var user = JSON.parse(localStorage.getItem('ma_user') || 'null');
+    var btn = document.getElementById('headerLoginBtn');
+    if (btn && user) {
+      btn.textContent = (user.fname || 'My Account') + ' →';
+    }
+  }
+})();
+
+/* ── Login nudge ────────────────────────────────────────────────── */
+function showNudge() {
+  document.getElementById('loginNudge').style.display = 'block';
+}
+function closeNudge() {
+  document.getElementById('loginNudge').style.display = 'none';
+}
+
+/* ── Toast ──────────────────────────────────────────────────────── */
+var _toastT;
+function toast(msg) {
+  var el = document.getElementById('toastBar');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastT);
+  _toastT = setTimeout(function() { el.classList.remove('show'); }, 3000);
+}
+
+/* ── Emoji map ──────────────────────────────────────────────────── */
+var EMOJI = {
+  'tomato':'🍅','onion':'🧅','potato':'🥔','carrot':'🥕','spinach':'🥬',
+  'brinjal':'🍆','eggplant':'🍆','banana':'🍌','mango':'🥭','coconut':'🥥',
+  'lemon':'🍋','cucumber':'🥒','bitter gourd':'🥒','lady finger':'🥒','okra':'🥒',
+  'corn':'🌽','pumpkin':'🎃','beans':'🫘','peas':'🫛','rice':'🌾','paddy':'🌾',
+  'wheat':'🌾','chilli':'🌶️','pepper':'🌶️','ginger':'🫚','garlic':'🧄',
+  'milk':'🥛','egg':'🥚','groundnut':'🥜','cabbage':'🥬','cauliflower':'🥦',
+  'drumstick':'🥢','turmeric':'🌿','tamarind':'🌿','sugarcane':'🌿',
+  'watermelon':'🍉','papaya':'🍈','guava':'🍐','pomegranate':'🍎','grapes':'🍇',
+  'chicken':'🍗','mutton':'🥩','goat':'🥩','prawn':'🦐','shrimp':'🦐',
+  'fish':'🐟','catfish':'🐟','salmon':'🐟','tuna':'🐟',
+  'curd':'🥣','yogurt':'🥣','dal':'🫘','lentil':'🫘','toor':'🫘',
+  'coriander':'🌿','curry leaves':'🌿','mint':'🌿','curry':'🌿'
+};
+
+function getEmoji(name) {
+  var lower = (name || '').toLowerCase();
+  for (var k in EMOJI) {
+    if (lower.indexOf(k) !== -1) return EMOJI[k];
+  }
+  return '🌿';
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function formatPrice(p) {
+  var prices = p.product_district_prices || [];
+  if (!prices.length) return '—';
+  /* Prefer Pudukkottai price; fall back to first entry */
+  var row = prices.find(function(d) {
+    return d.district && d.district.toLowerCase().indexOf('puduk') !== -1;
+  }) || prices[0];
+  return row && row.market_price
+    ? '₹' + parseFloat(row.market_price).toFixed(0) + '/' + (p.unit || 'unit')
+    : '—';
+}
+
+/* ── Products from API ──────────────────────────────────────────── */
+async function loadProducts() {
+  var grid = document.getElementById('products-grid');
+
+  try {
+    var res = await fetch((window.CONFIG && CONFIG.API_BASE ? CONFIG.API_BASE : '') + '/products?available=true');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    var all = data.products || [];
+
+    if (!all.length) {
+      grid.innerHTML = '<div class="prod-empty">No products available right now. Check back soon! 🌱</div>';
+      return;
+    }
+
+    /* Show up to 10 on homepage */
+    var shown = all.slice(0, 10);
+    var loggedIn = isLoggedIn();
+    var btnLabel = loggedIn
+      ? (_lang === 'ta' ? 'இப்போது வாங்குங்கள்' : 'Shop Now')
+      : (_lang === 'ta' ? 'ஆர்டர் செய்ய உள்நுழைய' : 'Login to Order');
+
+    grid.innerHTML = shown.map(function(p) {
+      var emoji = getEmoji(p.name);
+      var price = formatPrice(p);
+      var rating = p.avg_rating ? '★ ' + p.avg_rating : '';
+      return [
+        '<div class="product">',
+          '<div class="product-img">' + emoji + '</div>',
+          '<span class="product-badge badge-farmer" data-en="Farm Fresh" data-ta="வயல் புதிது">Farm Fresh</span>',
+          '<div class="product-name">' + escHtml(p.name) + '</div>',
+          '<div class="product-price">' + price + '</div>',
+          rating ? '<div class="product-rating">' + rating + '</div>' : '',
+          '<button class="btn-add" onclick="handleOrder(' + escHtml(String(p.id)) + ')">' + btnLabel + '</button>',
+        '</div>'
+      ].join('');
+    }).join('');
+
+    /* Show "View All" if more products exist */
+    if (all.length > 10) {
+      document.getElementById('viewAllBtn').style.display = 'block';
+    }
+  } catch (err) {
+    console.error('Product load error:', err);
+    grid.innerHTML = '<div class="prod-empty">Could not load products. Please try again later.</div>';
+  }
+}
+
+function handleOrder(productId) {
+  if (isLoggedIn()) {
+    window.location.href = 'consumer.html';
+  } else {
+    showNudge();
+  }
+}
+
+/* Load products on page ready */
+loadProducts();
 </script>
 </body>
 </html>
