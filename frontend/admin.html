@@ -1573,7 +1573,7 @@ function renderUserTable() {
   }
 
   var html = '<div class="tbl-wrap"><table class="utbl"><thead><tr>';
-  html += '<th>Name</th><th>Login ID</th><th>Phone</th><th>Role</th><th>District</th><th>Status</th><th>Action</th>';
+  html += '<th>Name</th><th>Login ID</th><th>Phone</th><th>Role</th><th>Gender</th><th>District</th><th>Status</th><th>Action</th>';
   html += '</tr></thead><tbody>';
   list.forEach(function(u) {
     var roleClass = u.role === 'admin' ? 'rb-vc' : (u.role === 'farmer' ? 'rb-fa' : 'rb-co');
@@ -1582,6 +1582,12 @@ function renderUserTable() {
     html += '<td class="mono">' + (u.login_id||'—') + '</td>';
     html += '<td class="mono">' + u.phone + '</td>';
     html += '<td><span class="rbadge ' + roleClass + '">' + (u.admin_role || u.role) + '</span></td>';
+    var genderLabel = u.gender
+      ? (u.gender === 'Female' || u.gender === 'Transgender'
+          ? '<span style="background:#fce4ec;color:#880e4f;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700">' + u.gender + ' 🌸</span>'
+          : u.gender)
+      : '—';
+    html += '<td>' + genderLabel + '</td>';
     html += '<td>' + (u.district||'—') + '</td>';
     var isBlocked = u.status === 'blocked';
     html += '<td><span class="sbadge ' + (isBlocked ? 's-blk' : 's-act') + '">' + (isBlocked ? 'Blocked' : 'Active') + '</span></td>';
