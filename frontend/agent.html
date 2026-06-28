@@ -204,6 +204,24 @@
         <div style="display:flex;justify-content:space-between;font-size:12px">
           <span style="color:#95d5b2">District</span><span style="color:#fff" id="prof-district">—</span>
         </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px">
+          <span style="color:#95d5b2">Gender</span><span style="color:#fff" id="prof-gender">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gender -->
+    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--gold2);margin-bottom:10px">⚧ Gender</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <select id="prof-gender-select"
+          style="flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px 13px;font-size:13px;color:#fff;outline:none;appearance:none">
+          <option value="" style="background:#1a2e1e">— Select Gender —</option>
+          <option value="Male" style="background:#1a2e1e">Male</option>
+          <option value="Female" style="background:#1a2e1e">Female</option>
+          <option value="Transgender" style="background:#1a2e1e">Transgender</option>
+        </select>
+        <button onclick="saveGender()" style="background:var(--gold2);color:#1a2e1e;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">Save</button>
       </div>
     </div>
 
@@ -503,8 +521,10 @@ function openAgentProfile() {
   document.getElementById('prof-role').textContent     = (user.admin_role || 'Delivery Agent') + ' · ' + (user.district || '—');
   document.getElementById('prof-lid').textContent      = user.login_id || '—';
   document.getElementById('prof-phone').textContent    = (user.country_code || '+91') + ' ' + user.phone;
-  document.getElementById('prof-district').textContent = user.district || '—';
-  document.getElementById('prof-vehicle').value        = user.agent_vehicle || '';
+  document.getElementById('prof-district').textContent   = user.district || '—';
+  document.getElementById('prof-gender').textContent     = user.gender || '—';
+  document.getElementById('prof-gender-select').value    = user.gender || '';
+  document.getElementById('prof-vehicle').value          = user.agent_vehicle || '';
   document.getElementById('prof-cpw').value            = '';
   document.getElementById('prof-npw').value            = '';
   document.getElementById('prof-pw-err').style.display = 'none';
@@ -523,6 +543,18 @@ async function saveVehicle() {
     setSession(getToken(), user);
     document.getElementById('agentSub').textContent = (user.admin_role || 'Delivery Agent') + ' · ' + (user.district || '—');
     showToast('Vehicle info saved.', 'ok');
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function saveGender() {
+  var g = document.getElementById('prof-gender-select').value;
+  if (!g) { showToast('Please select a gender.', 'er'); return; }
+  try {
+    var res = await API.patchMe({ gender: g });
+    user = res.user;
+    setSession(getToken(), user);
+    document.getElementById('prof-gender').textContent = user.gender || '—';
+    showToast('Gender saved.', 'ok');
   } catch(e) { showToast(e.message, 'er'); }
 }
 
