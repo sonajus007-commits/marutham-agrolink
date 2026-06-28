@@ -220,20 +220,20 @@ footer{background:#16321f;color:#cdeed8;padding:46px 20px 24px;}
   <div class="container">
     <div class="ach-grid">
       <div>
-        <div class="ach-num">250<span>+</span></div>
-        <div class="ach-label" data-en="Active Farmers" data-ta="செயலில் உள்ள விவசாயிகள்">Active Farmers</div>
+        <div class="ach-num" id="stat-sellers">—</div>
+        <div class="ach-label" data-en="Active Sellers" data-ta="செயலில் உள்ள விற்பனையாளர்கள்">Active Sellers</div>
       </div>
       <div>
-        <div class="ach-num">12<span>k+</span></div>
-        <div class="ach-label" data-en="Orders Delivered" data-ta="வழங்கப்பட்ட ஆர்டர்கள்">Orders Delivered</div>
-      </div>
-      <div>
-        <div class="ach-num">98<span>%</span></div>
+        <div class="ach-num" id="stat-customers">—</div>
         <div class="ach-label" data-en="Happy Customers" data-ta="மகிழ்ச்சியான வாடிக்கையாளர்கள்">Happy Customers</div>
       </div>
       <div>
-        <div class="ach-num">1<span> district</span></div>
-        <div class="ach-label" data-en="Serving Pudukkottai" data-ta="புதுக்கோட்டையில் சேவை">Serving Pudukkottai</div>
+        <div class="ach-num" id="stat-districts">—</div>
+        <div class="ach-label" data-en="Active Districts" data-ta="செயலில் உள்ள மாவட்டங்கள்">Active Districts</div>
+      </div>
+      <div>
+        <div class="ach-num" id="stat-states">—</div>
+        <div class="ach-label" data-en="Active States" data-ta="செயலில் உள்ள மாநிலங்கள்">Active States</div>
       </div>
     </div>
   </div>
@@ -560,6 +560,30 @@ function handleOrder(productId) {
 
 /* Load products on page ready */
 loadProducts();
+
+/* ── Live achievement counters ─────────────────────────────────────── */
+function milestoneDisplay(n, isSmall) {
+  if (isSmall) {
+    // Districts / States: show real count, "+" only when >= 2
+    return n >= 2 ? n + '<span>+</span>' : String(n);
+  }
+  if (n < 10)  return String(n);
+  if (n < 100) return (Math.floor(n / 10)  * 10)  + '<span>+</span>';
+  return           (Math.floor(n / 100) * 100) + '<span>+</span>';
+}
+
+(async function loadStats() {
+  try {
+    var base = (window.CONFIG && CONFIG.API_BASE) ? CONFIG.API_BASE : '';
+    var res  = await fetch(base + '/config/stats');
+    if (!res.ok) return;
+    var d = await res.json();
+    document.getElementById('stat-sellers').innerHTML   = milestoneDisplay(d.activeSellers,  false);
+    document.getElementById('stat-customers').innerHTML = milestoneDisplay(d.happyCustomers, false);
+    document.getElementById('stat-districts').innerHTML = milestoneDisplay(d.activeDistricts, true);
+    document.getElementById('stat-states').innerHTML    = milestoneDisplay(d.activeStates,    true);
+  } catch(e) { /* silently keep "—" placeholders */ }
+})();
 </script>
 </body>
 </html>

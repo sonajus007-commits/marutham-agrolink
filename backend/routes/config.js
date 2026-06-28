@@ -1,4 +1,5 @@
 const express = require('express');
+const supabase = require('../db/supabase');
 const { requireRole } = require('../middleware/auth');
 
 const router = express.Router();
@@ -28,6 +29,29 @@ router.put('/ordering-window', requireRole('admin'), (req, res) => {
   }
   orderingWindow = { open_hour: oh, close_hour: ch };
   res.json({ message: 'Ordering window updated.', ordering_window: orderingWindow });
+});
+
+// ── GET /config/stats  (public — counts only, no personal data) ───────────────
+router.get('/stats', async (_req, res) => {
+  try {
+    const [sellersRes, consumersRes, districtsRes, statesRes] = await Promise.all([
+      supabase.from('users').select('id', { count: 'exact', head: true })
+        .eq('role', 'farmer').eq('status', 'active'),
+      supabase.from('users').select('id', { count: 'exact', head: true })
+        .eq('role', 'consumer').eq('status', 'active'),
+      supabase.from('users').select('district').not('district', 'is', null).neq('district', ''),
+      supabase.from('users').select('state').not('state', 'is', null).neq('state', ''),
+    ]);
+
+    const activeSellers   = sellersRes.count   || 0;
+    const happyCustomers  = consumersRes.count  || 0;
+    const activeDistricts = new Set((districtsRes.data || []).map(r => r.district.trim().toLowerCase())).size;
+    const activeStates    = new Set((statesRes.data    || []).map(r => r.state.trim().toLowerCase())).size;
+
+    res.json({ activeSellers, happyCustomers, activeDistricts, activeStates });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 module.exports = router;
