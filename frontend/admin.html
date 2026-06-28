@@ -2959,16 +2959,17 @@ async function openRegDetail(id) {
       html += '</div>';
     }
 
+    html += '<div style="font-weight:700;font-size:12px;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Subscription</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:14px">';
+    html += row('Plan Selected', r.subscription_plan || '—');
     if (r.approval_status === 'payment_pending' || r.approval_status === 'active') {
-      html += '<div style="font-weight:700;font-size:12px;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Subscription</div>';
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:14px">';
       html += row('Amount', r.subscription_amount ? '₹' + (r.subscription_amount/100).toFixed(0) : '—');
       html += row('Payment Ref', '<span style="font-family:monospace">' + (r.payment_reference || '—') + '</span>');
       html += row('Approved By', r.approved_at ? new Date(r.approved_at).toLocaleString('en-IN') : '—');
       html += row('Payment Confirmed', r.payment_confirmed_at ? new Date(r.payment_confirmed_at).toLocaleString('en-IN') : 'Pending');
       html += row('Subscription Expires', r.subscription_expires_at ? new Date(r.subscription_expires_at).toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'}) : '—');
-      html += '</div>';
     }
+    html += '</div>';
 
     if (r.approval_status === 'rejected' && r.rejection_reason) {
       html += '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;font-size:13px"><strong>Rejection Reason:</strong> ' + r.rejection_reason + '</div>';
@@ -2980,7 +2981,7 @@ async function openRegDetail(id) {
     var actHtml = '';
     if (r.approval_status === 'pending_review') {
       actHtml += '<button class="sbtn" style="background:#dc2626;flex:0;padding:0 18px" onclick="openRejectModal(\'' + r.id + '\',\'' + name.replace(/'/g,'') + '\')">Reject</button>';
-      actHtml += '<button class="sbtn" style="background:#16a34a;flex:0;padding:0 18px" onclick="openApproveModal(\'' + r.id + '\',\'' + name.replace(/'/g,'') + '\',\'' + (r.gender||'') + '\')">Approve & Send Payment Link</button>';
+      actHtml += '<button class="sbtn" style="background:#16a34a;flex:0;padding:0 18px" onclick="openApproveModal(\'' + r.id + '\',\'' + name.replace(/'/g,'') + '\',\'' + (r.gender||'') + '\',\'' + (r.subscription_plan||'') + '\')">Approve & Send Payment Link</button>';
     } else if (r.approval_status === 'payment_pending') {
       actHtml += '<button class="sbtn" style="background:#dc2626;flex:0;padding:0 18px" onclick="openRejectModal(\'' + r.id + '\',\'' + name.replace(/'/g,'') + '\')">Reject</button>';
       actHtml += '<button class="sbtn" style="background:#2563eb;flex:0;padding:0 18px" onclick="doConfirmPayment(\'' + r.id + '\')">Confirm Payment Received</button>';
@@ -2997,22 +2998,35 @@ function closeRegDetail() {
   _currentRegId = null;
 }
 
-function openApproveModal(id, name, gender) {
+var ADMIN_PLAN_FEES = { 'Monthly': 250, 'Quarterly': 700, 'Half Yearly': 1400, 'Yearly': 2800 };
+
+function openApproveModal(id, name, gender, plan) {
   _currentRegId = id;
   document.getElementById('approve-name-lbl').textContent = 'Approving registration for: ' + name;
   document.getElementById('approve-err').style.display = 'none';
-  // Show/hide concession banner and pre-fill amount
-  var isConcession = (gender === 'Female' || gender === 'Transgender');
-  var concBanner = document.getElementById('approve-concession');
+  var isConcession  = (gender === 'Female' || gender === 'Transgender');
+  var subFee        = ADMIN_PLAN_FEES[plan] || 2800;
+  var discount      = isConcession ? Math.round(subFee * 0.5) : 0;
+  var suggested     = 100 + subFee - discount;  // registration ₹100 + subscription
+  var concBanner    = document.getElementById('approve-concession');
   if (concBanner) {
     concBanner.style.display = isConcession ? 'block' : 'none';
     if (isConcession) {
       concBanner.innerHTML = '<strong>🌸 Women & Transgender Concession applies</strong><br>' +
-        'Standard fee: ₹500 → Concession fee: ₹250 (50% off).<br>' +
+        (plan ? 'Plan: ' + plan + ' — Fee: ₹' + subFee + ' → Concession (50%): ₹' + (subFee - discount) + '.' : '') +
+        ' Registration: ₹100.<br>' +
+        '<span style="font-size:10px;opacity:.8">Total pre-filled below. You may override.</span>';
+    }
+  }
+  if (!isConcession && plan) {
+    var planNote = document.getElementById('approve-concession');
+    if (planNote) {
+      planNote.style.display = 'block';
+      planNote.innerHTML = '<strong>📋 Plan: ' + plan + '</strong> — Subscription ₹' + subFee + ' + Registration ₹100 = <strong>₹' + suggested + '</strong><br>' +
         '<span style="font-size:10px;opacity:.8">You may override the amount below.</span>';
     }
   }
-  document.getElementById('approve-amount').value = isConcession ? 250 : 500;
+  document.getElementById('approve-amount').value = suggested;
   document.getElementById('regApproveOverlay').style.display = 'flex';
 }
 function closeApproveModal() {

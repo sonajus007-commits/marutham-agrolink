@@ -239,6 +239,41 @@ async function notifyProfileChangeOutcome(user, status, notes, approverName) {
   }
 }
 
+async function notifySubscriptionExpiring(user, daysLeft) {
+  const name    = [user.fname, user.lname].filter(Boolean).join(' ');
+  const expDate = user.subscription_expires_at
+    ? new Date(user.subscription_expires_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '—';
+  const urgency = daysLeft <= 1 ? '🚨 FINAL REMINDER' : daysLeft <= 5 ? '⚠️ Urgent' : '📅 Reminder';
+  const subject = `${urgency}: Your Marutham Agrolink subscription expires in ${daysLeft} day(s) — ${user.login_id}`;
+  if (user.email) {
+    await sendEmail(user.email, subject, `
+      <p>Dear ${name},</p>
+      <p>This is a ${daysLeft <= 1 ? '<strong>final reminder</strong>' : 'reminder'} that your Marutham Agrolink subscription will expire on <strong>${expDate}</strong> — in <strong>${daysLeft} day(s)</strong>.</p>
+      <p>Please contact the admin team to renew your subscription before the expiry date to avoid account lockout.</p>
+      <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:14px;margin:12px 0">
+        <strong>⚠️ Important:</strong> If your subscription expires, your account will be automatically locked and you will not be able to log in until it is renewed.
+      </div>
+      <p>Login ID: <strong>${user.login_id}</strong></p>
+      <p>Regards,<br><strong>Marutham Agrolink Team</strong></p>
+    `);
+  }
+}
+
+async function notifySubscriptionExpired(user) {
+  const name    = [user.fname, user.lname].filter(Boolean).join(' ');
+  const subject = `Account Locked — Subscription Expired — ${user.login_id}`;
+  if (user.email) {
+    await sendEmail(user.email, subject, `
+      <p>Dear ${name},</p>
+      <p>Your Marutham Agrolink subscription has <strong style="color:#dc2626">expired</strong> and your account has been locked.</p>
+      <p>Please contact the admin team immediately to renew your subscription and restore access.</p>
+      <p>Login ID: <strong>${user.login_id}</strong></p>
+      <p>Regards,<br><strong>Marutham Agrolink Team</strong></p>
+    `);
+  }
+}
+
 module.exports = {
   notifyRegistrationReceived,
   notifyApprovalWithPayment,
@@ -246,4 +281,6 @@ module.exports = {
   notifyRejection,
   notifyProfileChangeRequest,
   notifyProfileChangeOutcome,
+  notifySubscriptionExpiring,
+  notifySubscriptionExpired,
 };

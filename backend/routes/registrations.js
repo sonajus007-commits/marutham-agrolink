@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 
   let query = supabase
     .from('users')
-    .select('id, login_id, fname, lname, phone, email, role, seller_type, gender, district, state, village_town, approval_status, approved_at, rejection_reason, subscription_amount, subscription_expires_at, payment_reference, payment_confirmed_at, created_at, business_name, gst_number, business_type, aadhar, bank_name, bank_account, ifsc')
+    .select('id, login_id, fname, lname, phone, email, role, seller_type, gender, district, state, village_town, approval_status, approved_at, rejection_reason, subscription_amount, subscription_expires_at, subscription_plan, payment_reference, payment_confirmed_at, created_at, business_name, gst_number, business_type, aadhar, bank_name, bank_account, ifsc')
     .eq('role', 'farmer')
     .order('created_at', { ascending: false });
 
@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const { data, error } = await supabase
     .from('users')
-    .select('id, login_id, fname, lname, phone, email, role, seller_type, gender, district, state, village_town, city, pincode, house_no, street1, street2, landmark, approval_status, approved_by, approved_at, rejection_reason, subscription_amount, subscription_expires_at, payment_reference, payment_confirmed_at, created_at, business_name, gst_number, business_type, aadhar, bank_name, bank_account, ifsc, alt_phone')
+    .select('id, login_id, fname, lname, phone, email, role, seller_type, gender, district, state, village_town, city, pincode, house_no, street1, street2, landmark, approval_status, approved_by, approved_at, rejection_reason, subscription_amount, subscription_expires_at, subscription_plan, payment_reference, payment_confirmed_at, created_at, business_name, gst_number, business_type, aadhar, bank_name, bank_account, ifsc, alt_phone')
     .eq('id', req.params.id)
     .eq('role', 'farmer')
     .single();
@@ -76,10 +76,12 @@ router.post('/:id/approve', async (req, res) => {
     return res.status(409).json({ error: `Registration is already in '${applicant.approval_status}' status.` });
   }
 
+  const PLAN_DAYS = { 'Monthly': 30, 'Quarterly': 90, 'Half Yearly': 180, 'Yearly': 365 };
   const paymentRef   = generatePaymentRef();
   const amountPaise  = Math.round(amountRs * 100);
+  const planDays     = PLAN_DAYS[applicant.subscription_plan] || 365;
   const expiresAt    = new Date();
-  expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+  expiresAt.setDate(expiresAt.getDate() + planDays);
 
   const { data: updated, error: updateErr } = await supabase
     .from('users')

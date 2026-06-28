@@ -104,6 +104,8 @@ router.post('/register', async (req, res) => {
     aadhar, bank_name, bank_account, ifsc,
     // farmer (Retailer type)
     seller_type, business_name, gst_number, business_type,
+    // subscription plan chosen at registration
+    subscription_plan,
   } = req.body;
 
   if (!phone || !password || !role || !fname) {
@@ -150,6 +152,7 @@ router.post('/register', async (req, res) => {
     ...(role === 'farmer' && { seller_type }),
     ...(role === 'farmer' && seller_type === 'Farmer'   && { aadhar, bank_name, bank_account, ifsc }),
     ...(role === 'farmer' && seller_type === 'Retailer' && { business_name, gst_number, business_type }),
+    ...(role === 'farmer' && subscription_plan && { subscription_plan }),
   };
 
   const { data: created, error } = await supabase
@@ -228,7 +231,7 @@ router.post('/login', async (req, res) => {
         .update({ status: 'blocked', updated_at: new Date().toISOString() })
         .eq('id', user.id);
       return res.status(403).json({
-        error: 'Your annual subscription has expired. Please contact Marutham Agrolink Head Office to renew.',
+        error: 'Your account is locked due to subscription expiry. Please contact Admin to renew your subscription.',
         subscription_expired: true,
       });
     }

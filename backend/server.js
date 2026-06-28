@@ -4,6 +4,8 @@ const express = require('express');
 const cors    = require('cors');
 const { convertTimestamps } = require('./utils/time');
 const { convertMoney } = require('./utils/money');
+const supabase = require('./db/supabase');
+const notify   = require('./utils/notify');
 
 const app = express();
 app.use(cors());
@@ -65,4 +67,52 @@ app.use(express.static(path.join(__dirname, '../frontend'), { index: 'home.html'
 app.use((_req, res) => res.status(404).json({ error: 'Endpoint not found.' }));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Marutham API listening on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Marutham API listening on port ${PORT}`);
+  scheduleSubscriptionChecks();
+});
+
+// ── Daily subscription expiry checker ─────────────────────────────────────────
+function scheduleSubscriptionChecks() {
+  const REMINDER_DAYS = [10, 5, 1];
+  const MS_PER_DAY    = 24 * 60 * 60 * 1000;
+
+  async function runCheck() {
+    try {
+      const now = new Date();
+
+      // Find all active farmers/retailers
+      const { data: users } = await supabase
+        .from('users')
+        .select('id, fname, lname, email, login_id, role, status, subscription_expires_at')
+        .eq('role', 'farmer')
+        .in('status', ['active'])
+        .not('subscription_expires_at', 'is', null);
+
+      if (!users || users.length === 0) return;
+
+      for (const user of users) {
+        const expiry   = new Date(user.subscription_expires_at);
+        const diffMs   = expiry - now;
+        const diffDays = Math.ceil(diffMs / MS_PER_DAY);
+
+        if (diffDays <= 0) {
+          // Expired — block and notify
+          await supabase.from('users').update({ status: 'blocked' }).eq('id', user.id);
+          try { await notify.notifySubscriptionExpired(user); } catch(e) { console.error('Notify expired error:', e.message); }
+          console.log(`[SUBSCRIPTION] Blocked expired user ${user.login_id}`);
+        } else if (REMINDER_DAYS.includes(diffDays)) {
+          // Reminder day — send reminder
+          try { await notify.notifySubscriptionExpiring(user, diffDays); } catch(e) { console.error('Notify reminder error:', e.message); }
+          console.log(`[SUBSCRIPTION] Reminder sent to ${user.login_id} — ${diffDays} day(s) left`);
+        }
+      }
+    } catch (err) {
+      console.error('[SUBSCRIPTION] Daily check error:', err.message);
+    }
+  }
+
+  // Run once on startup (catches overnight expirations), then every 24 hours
+  runCheck();
+  setInterval(runCheck, MS_PER_DAY);
+}
