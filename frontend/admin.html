@@ -1722,7 +1722,19 @@ function renderUserTable() {
       ? new Date(u.subscription_expires_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})
       : '—';
     var subExpired = u.subscription_expires_at && new Date(u.subscription_expires_at) < new Date();
-    html += '<td style="font-size:11px;' + (subExpired ? 'color:#dc2626;font-weight:700' : '') + '">' + subExp + (subExpired ? ' ⚠' : '') + '</td>';
+    var subDaysLeft = u.subscription_expires_at ? Math.ceil((new Date(u.subscription_expires_at) - new Date()) / 86400000) : null;
+    var subCell = '';
+    if (u.subscription_plan) {
+      subCell += '<span style="display:inline-block;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:50px;padding:1px 7px;font-size:10px;font-weight:700;margin-bottom:3px">' + u.subscription_plan + '</span><br>';
+    }
+    if (subExpired) {
+      subCell += '<span style="color:#dc2626;font-weight:700">' + subExp + ' ⚠</span>';
+    } else if (subDaysLeft !== null && subDaysLeft <= 10) {
+      subCell += '<span style="color:#d97706;font-weight:700">' + subExp + ' (' + subDaysLeft + 'd)</span>';
+    } else {
+      subCell += subExp;
+    }
+    html += '<td style="font-size:11px">' + subCell + '</td>';
     var isBlocked = u.status === 'blocked';
     html += '<td><span class="sbadge ' + (isBlocked ? 's-blk' : 's-act') + '">' + (isBlocked ? 'Blocked' : 'Active') + '</span></td>';
     html += '<td><button class="blkbtn ' + (isBlocked ? 'b-unb' : 'b-blk') + '" onclick="toggleBlock(\'' + u.id + '\',' + isBlocked + ')">';
