@@ -355,6 +355,38 @@ async function renderEarnings() {
 
     var html = '';
 
+    // ── Subscription summary card ─────────────────────────────────────────────
+    if (user.subscription_plan || user.subscription_expires_at) {
+      var subExpAt  = user.subscription_expires_at;
+      var subPlan   = user.subscription_plan || '—';
+      var subExpired = subExpAt && new Date(subExpAt) < new Date();
+      var subDays    = subExpAt ? Math.ceil((new Date(subExpAt) - new Date()) / 86400000) : null;
+      var subExpStr  = subExpAt ? new Date(subExpAt).toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'}) : '—';
+      var subBorderColor = subExpired ? '#dc2626' : (subDays !== null && subDays <= 10 ? '#d97706' : '#16a34a');
+      var subBg          = subExpired ? '#fef2f2' : (subDays !== null && subDays <= 10 ? '#fffbeb' : '#f0fdf4');
+      var subTextColor   = subExpired ? '#991b1b' : (subDays !== null && subDays <= 10 ? '#92400e' : '#166534');
+      var subIcon        = subExpired ? '🔒' : (subDays !== null && subDays <= 10 ? '⚠️' : '✅');
+      var subStatusLabel = subExpired ? 'Expired' : (subDays !== null && subDays <= 10 ? 'Expiring in ' + subDays + ' day' + (subDays === 1 ? '' : 's') : 'Active');
+      html += '<div style="background:' + subBg + ';border:1.5px solid ' + subBorderColor + ';border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:10px">';
+      html += '<div>';
+      html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:' + subTextColor + ';opacity:.7;margin-bottom:3px">📅 Subscription</div>';
+      html += '<div style="font-size:15px;font-weight:800;color:' + subTextColor + '">' + subPlan + '</div>';
+      html += '<div style="font-size:11px;color:' + subTextColor + ';margin-top:2px">Valid until ' + subExpStr + '</div>';
+      html += '</div>';
+      html += '<div style="text-align:right">';
+      html += '<div style="font-size:22px">' + subIcon + '</div>';
+      html += '<div style="font-size:12px;font-weight:700;color:' + subTextColor + ';margin-top:2px">' + subStatusLabel + '</div>';
+      html += '</div>';
+      html += '</div>';
+      if (subExpired || (subDays !== null && subDays <= 10)) {
+        html += '<div style="background:' + subBg + ';border:1px solid ' + subBorderColor + ';border-radius:8px;padding:9px 12px;font-size:12px;color:' + subTextColor + ';margin-bottom:14px">';
+        html += subExpired
+          ? '🔒 <strong>Your account is locked.</strong> Please contact Admin to renew your subscription and restore full access.'
+          : '⚠️ <strong>Subscription expiring soon.</strong> Contact Admin to renew before <strong>' + subExpStr + '</strong> to avoid interruption.';
+        html += '</div>';
+      }
+    }
+
     // ── Summary KPIs ─────────────────────────────────────────────────────────
     html += '<div class="sgrid">';
     html += '<div class="sc" style="border-left:3px solid #1a7a4a"><div class="slbl">Paid Out</div><div class="sval mono" style="color:#1a7a4a">₹' + paidAmt.toFixed(0) + '</div><div class="ssub">Bank transferred</div></div>';
