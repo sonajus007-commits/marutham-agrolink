@@ -79,10 +79,14 @@
 
 <!-- ── PRODUCTS ───────────────────────────────────────────────────────────── -->
 <div class="panel" id="panel-products">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
     <div class="sec-head" style="margin:0"><span class="sh-icon" style="background:#f0faf4">🌾</span> Products Catalogue</div>
-    <button class="add-prod-btn" onclick="openAddProduct()">+ Add Product</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="syncPricesBtn" onclick="syncGovPrices()" style="padding:8px 14px;background:#1d4ed8;color:#fff;border:none;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">⟳ Sync Govt Prices</button>
+      <button class="add-prod-btn" onclick="openAddProduct()">+ Add Product</button>
+    </div>
   </div>
+  <div id="priceSyncStatus" style="display:none;border-radius:8px;padding:9px 12px;font-size:11px;margin-bottom:10px"></div>
   <div class="filt-label" style="font-size:9px;font-weight:800;color:#7a8492;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Group</div>
   <div class="filt-row" id="prodGroupFilter"></div>
   <div id="prodCatSection" style="display:none">
@@ -213,6 +217,7 @@
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px" id="ud-info"></div>
+      <div id="ud-products"></div>
       <div id="ud-edit-form" style="display:none;border-top:1px solid #e5e7eb;padding-top:14px">
         <div class="fsec" style="padding-top:0;border-top:none">Edit Profile</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -708,7 +713,7 @@ function openTab(name, tabEl) {
   document.getElementById('panel-' + name).classList.add('on');
   if (tabEl) tabEl.classList.add('on');
   if (name === 'overview') renderOverview();
-  if (name === 'products') renderProducts();
+  if (name === 'products') { renderProducts(); loadPriceSyncStatus(); }
   if (name === 'orders')   renderAdminOrders();
   if (name === 'users')    renderUsers();
   if (name === 'payouts')  renderPayouts();
@@ -1822,11 +1827,15 @@ async function openUserDetail(id) {
   _udUserId = id;
   document.getElementById('userDetailOverlay').style.display = 'flex';
   document.getElementById('ud-info').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  document.getElementById('ud-products').innerHTML = '';
   document.getElementById('ud-edit-form').style.display = 'none';
   try {
     var res = await API.getUserById(id);
     _udUser = res.user;
     renderUserDetail();
+    if (_udUser.role === 'farmer' || (_udUser.seller_type)) {
+      loadUserListings(id);
+    }
   } catch(e) { document.getElementById('ud-info').innerHTML = '<p style="color:red">' + e.message + '</p>'; }
 }
 
@@ -1902,6 +1911,125 @@ function renderUserDetail() {
 
 function closeUserDetail() {
   document.getElementById('userDetailOverlay').style.display = 'none';
+}
+
+// ── Supported Products (inside user detail overlay) ───────────────────────────
+async function loadUserListings(userId) {
+  var wrap = document.getElementById('ud-products');
+  wrap.innerHTML = '<div style="text-align:center;padding:12px"><div class="spin" style="margin:auto;width:22px;height:22px;border-width:2px"></div></div>';
+  try {
+    var res = await API.getUserListings(userId);
+    var listings = res.listings || [];
+    if (listings.length === 0) {
+      wrap.innerHTML = '<div style="border-top:1px solid #e5e7eb;padding-top:14px"><div class="fsec" style="padding-top:0;border-top:none">Supported Products</div><div style="text-align:center;padding:10px;color:#6b7280;font-size:12px">No product listings yet. Farmer can request products from their app.</div></div>';
+      return;
+    }
+    var html = '<div style="border-top:1px solid #e5e7eb;padding-top:14px">';
+    html += '<div class="fsec" style="padding-top:0;border-top:none">Supported Products</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:8px">';
+    listings.forEach(function(l) {
+      var p = l.product || {};
+      var st = l.listing_status || 'pending';
+      var stStyle = st === 'active'
+        ? 'background:#dcfce7;color:#166534'
+        : st === 'rejected'
+        ? 'background:#fee2e2;color:#991b1b'
+        : 'background:#fef3c7;color:#92400e';
+      var stLabel = st.charAt(0).toUpperCase() + st.slice(1);
+      html += '<div style="background:#f8fafc;border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
+      html += '<div style="flex:1;min-width:120px">';
+      html += '<div style="font-weight:700;font-size:13px">' + (p.name || '—') + '</div>';
+      html += '<div style="font-size:10px;color:#6b7280">' + (p.product_group || '') + (p.code ? ' · ' + p.code : '') + (p.unit ? ' · ' + p.unit : '') + '</div>';
+      if (st === 'rejected' && l.rejection_reason) {
+        html += '<div style="font-size:11px;color:#dc2626;margin-top:2px">Reason: ' + l.rejection_reason + '</div>';
+      }
+      html += '</div>';
+      html += '<span style="padding:3px 10px;border-radius:50px;font-size:10px;font-weight:700;' + stStyle + '">' + stLabel + '</span>';
+      if (st !== 'active') {
+        html += '<button class="sbtn" style="padding:4px 10px;font-size:11px;background:#16a34a;flex:none" onclick="approveUserListing(\'' + l.id + '\',\'' + userId + '\')">Approve</button>';
+      }
+      if (st !== 'rejected') {
+        html += '<button class="sbtn" style="padding:4px 10px;font-size:11px;background:#ef4444;flex:none" onclick="rejectUserListingPrompt(\'' + l.id + '\',\'' + userId + '\')">Reject</button>';
+      }
+      if (st === 'active') {
+        html += '<button class="sbtn" style="padding:4px 10px;font-size:11px;background:#f59e0b;flex:none" onclick="deactivateUserListing(\'' + l.id + '\',\'' + userId + '\')">Deactivate</button>';
+      }
+      html += '</div>';
+    });
+    html += '</div></div>';
+    wrap.innerHTML = html;
+  } catch(e) {
+    wrap.innerHTML = '<div style="color:#dc2626;font-size:12px;padding:8px">Could not load product listings: ' + e.message + '</div>';
+  }
+}
+
+async function approveUserListing(listingId, userId) {
+  try {
+    await API.setListingStatus(listingId, 'active');
+    showToast('Product listing approved — now visible to customers.', 'ok');
+    loadUserListings(userId);
+    loadAdminListings(_lrStatus);
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function deactivateUserListing(listingId, userId) {
+  if (!confirm('Deactivate this listing? It will be hidden from customers.')) return;
+  try {
+    await API.setListingStatus(listingId, 'pending');
+    showToast('Listing deactivated.', 'ok');
+    loadUserListings(userId);
+    loadAdminListings(_lrStatus);
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function rejectUserListingPrompt(listingId, userId) {
+  var reason = prompt('Reason for rejection (shown to farmer):');
+  if (reason === null) return;
+  try {
+    await API.setListingStatus(listingId, 'rejected', reason);
+    showToast('Product listing rejected.', 'ok');
+    loadUserListings(userId);
+    loadAdminListings(_lrStatus);
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+// ── Government price sync ─────────────────────────────────────────────────────
+async function syncGovPrices() {
+  var btn = document.getElementById('syncPricesBtn');
+  btn.disabled = true;
+  btn.textContent = '⟳ Syncing…';
+  try {
+    var res = await API.syncPrices();
+    showToast(res.message || 'Price sync complete.', res.status === 'error' ? 'er' : 'ok');
+    renderPriceSyncStatus(res);
+    renderProducts();
+  } catch(e) { showToast(e.message, 'er'); }
+  finally {
+    btn.disabled = false;
+    btn.textContent = '⟳ Sync Govt Prices';
+  }
+}
+
+async function loadPriceSyncStatus() {
+  try {
+    var res = await API.getPriceSyncStatus();
+    if (res.sync) renderPriceSyncStatus(res.sync);
+  } catch(e) {}
+}
+
+function renderPriceSyncStatus(sync) {
+  if (!sync) return;
+  var el = document.getElementById('priceSyncStatus');
+  if (!el) return;
+  var isErr = sync.status === 'error';
+  var isPart = sync.status === 'partial';
+  var bg    = isErr ? '#fef2f2' : isPart ? '#fffbeb' : '#f0fdf4';
+  var border= isErr ? '#fecaca' : isPart ? '#fde68a' : '#bbf7d0';
+  var color = isErr ? '#991b1b' : isPart ? '#92400e' : '#166534';
+  var icon  = isErr ? '✗' : isPart ? '⚠' : '✓';
+  var dt    = new Date(sync.ran_at).toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  el.style.cssText = 'display:block;background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;padding:9px 12px;font-size:11px;color:' + color + ';margin-bottom:10px';
+  el.innerHTML = '<strong>' + icon + ' Govt Price Sync:</strong> ' + (sync.message || '') + ' <span style="opacity:.7;margin-left:6px">Last run: ' + dt + '</span>';
 }
 
 function toggleUdEditForm() {

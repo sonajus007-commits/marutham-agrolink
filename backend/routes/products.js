@@ -1,6 +1,7 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { syncPrices, getLastSync } = require('../utils/priceSync');
 
 const router = express.Router();
 
@@ -190,6 +191,22 @@ router.put('/:id/prices', requireAuth, requireHeadOffice, async (req, res) => {
   }
 
   res.json({ message: `Saved ${rows.length} district price(s).` });
+});
+
+// ── GET /products/sync-prices/status  (admin only) ───────────────────────────
+router.get('/sync-prices/status', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
+  res.json({ sync: getLastSync() });
+});
+
+// ── POST /products/sync-prices  (Head Office only — manual trigger) ───────────
+router.post('/sync-prices', requireAuth, requireHeadOffice, async (req, res) => {
+  try {
+    const result = await syncPrices();
+    res.json(result);
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ── DELETE /products/:id  (Head Office only) ──────────────────────────────────

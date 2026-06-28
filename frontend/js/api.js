@@ -41,6 +41,9 @@ var API = {
   getUserById: function(id) {
     return apiFetch('GET', '/users/' + id, null, tok());
   },
+  getUserListings: function(id) {
+    return apiFetch('GET', '/users/' + id + '/listings', null, tok());
+  },
   updateUser: function(id, data) {
     return apiFetch('PATCH', '/users/' + id, data, tok());
   },
@@ -99,6 +102,12 @@ var API = {
   },
   deleteProduct: function(id) {
     return apiFetch('DELETE', '/products/' + id, null, tok());
+  },
+  syncPrices: function() {
+    return apiFetch('POST', '/products/sync-prices', {}, tok());
+  },
+  getPriceSyncStatus: function() {
+    return apiFetch('GET', '/products/sync-prices/status', null, tok());
   },
 
   // ── Listings ──────────────────────────────────────────────────────────────

@@ -245,6 +245,20 @@ router.post('/change-requests/:id/confirm-renewal-payment', requireRole('admin')
   res.json({ message: `Renewal confirmed. ${plan} subscription active until ${newExpiry.toDateString()}.` });
 });
 
+// ── GET /users/:id/listings  (admin only — farmer/retailer product listings) ──
+router.get('/:id/listings', requireRole('admin'), async (req, res) => {
+  const { data, error } = await supabase
+    .from('farmer_listings')
+    .select(`
+      id, farmer_price, qty_available, listing_status, rejection_reason, created_at,
+      product:products ( id, name, code, unit, product_group )
+    `)
+    .eq('farmer_id', req.params.id)
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ listings: data || [] });
+});
+
 // ── GET /users/:id ────────────────────────────────────────────────────────────
 router.get('/:id', requireRole('admin'), async (req, res) => {
   const { data, error } = await supabase

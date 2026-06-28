@@ -4,8 +4,9 @@ const express = require('express');
 const cors    = require('cors');
 const { convertTimestamps } = require('./utils/time');
 const { convertMoney } = require('./utils/money');
-const supabase = require('./db/supabase');
-const notify   = require('./utils/notify');
+const supabase  = require('./db/supabase');
+const notify    = require('./utils/notify');
+const { syncPrices } = require('./utils/priceSync');
 
 const app = express();
 app.use(cors());
@@ -70,6 +71,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Marutham API listening on port ${PORT}`);
   scheduleSubscriptionChecks();
+  schedulePriceSync();
 });
 
 // ── Daily subscription expiry checker ─────────────────────────────────────────
@@ -115,4 +117,27 @@ function scheduleSubscriptionChecks() {
   // Run once on startup (catches overnight expirations), then every 24 hours
   runCheck();
   setInterval(runCheck, MS_PER_DAY);
+}
+
+// ── Daily government price sync ───────────────────────────────────────────────
+function schedulePriceSync() {
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+  function msUntil6amIST() {
+    const now = new Date();
+    // IST is UTC+5:30; 6 AM IST = 00:30 UTC
+    const next = new Date(now);
+    next.setUTCHours(0, 30, 0, 0);
+    if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+    return next - now;
+  }
+
+  // Schedule first run at 6 AM IST, then every 24 hours
+  setTimeout(function run() {
+    syncPrices().catch(e => console.error('[PRICE SYNC] Scheduled run error:', e.message));
+    setInterval(() => syncPrices().catch(e => console.error('[PRICE SYNC] Interval error:', e.message)), MS_PER_DAY);
+  }, msUntil6amIST());
+
+  const h = Math.round(msUntil6amIST() / 3600000);
+  console.log(`[PRICE SYNC] Scheduled — first run in ~${h}h (6 AM IST daily)`);
 }
