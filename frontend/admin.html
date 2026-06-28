@@ -1825,18 +1825,25 @@ var _udUser   = null;
 
 async function openUserDetail(id) {
   _udUserId = id;
+  _udUser   = null;
   document.getElementById('userDetailOverlay').style.display = 'flex';
   document.getElementById('ud-info').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
   document.getElementById('ud-products').innerHTML = '';
   document.getElementById('ud-edit-form').style.display = 'none';
+
+  // Load profile and listings independently so one failing doesn't block the other
   try {
     var res = await API.getUserById(id);
     _udUser = res.user;
     renderUserDetail();
-    if (_udUser.role === 'farmer' || (_udUser.seller_type)) {
-      loadUserListings(id);
-    }
-  } catch(e) { document.getElementById('ud-info').innerHTML = '<p style="color:red">' + e.message + '</p>'; }
+  } catch(e) {
+    document.getElementById('ud-info').innerHTML = '<p style="color:red">' + e.message + '</p>';
+  }
+
+  // Show supported products for any seller (role='farmer' covers both farmers and retailers)
+  if (_udUser && _udUser.role === 'farmer') {
+    loadUserListings(id);
+  }
 }
 
 function renderUserDetail() {
@@ -2657,8 +2664,9 @@ function filterFarmers() {
     if (f.phone) html += '<div style="font-size:11px;color:var(--gray);margin-top:6px">📞 ' + f.phone + (f.bank_name ? '  ·  🏦 ' + f.bank_name : '') + '</div>';
     html += '</div>';
 
-    // Block/unblock action
-    html += '<div style="margin-left:auto;padding-left:8px">';
+    // Actions
+    html += '<div style="margin-left:auto;padding-left:8px;display:flex;flex-direction:column;gap:6px;align-items:flex-end">';
+    html += '<button onclick="openUserDetail(\'' + f.id + '\')" style="font-size:11px;padding:6px 12px;border:1.5px solid #c3e6cb;background:#f0faf4;color:var(--forest);border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">View Profile</button>';
     if (isBlocked) {
       html += '<button onclick="toggleFarmerBlock(\'' + f.id + '\',false)" style="font-size:11px;padding:6px 12px;border:1.5px solid #2d6a4f;background:#f0faf4;color:var(--forest);border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">Unblock</button>';
     } else {
