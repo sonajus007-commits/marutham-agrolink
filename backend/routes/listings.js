@@ -26,7 +26,8 @@ router.get('/', async (req, res) => {
       `)
       .eq('product_id', product)
       .eq('listed', true)
-      .eq('listing_status', 'active');
+      .eq('listing_status', 'active')
+      .eq('confirmed', true);
 
     if (error) {
       console.error('GET /listings?product error:', error);
@@ -67,6 +68,7 @@ router.get('/', async (req, res) => {
       `)
       .eq('listed', true)
       .eq('listing_status', 'active')
+      .eq('confirmed', true)
       .in('farmer_id', farmerIds);
 
     if (error) {
