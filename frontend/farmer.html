@@ -128,6 +128,13 @@
       </div>
     </div>
   </div>
+  <div class="card" id="subscription-card">
+    <h3>📅 Subscription</h3>
+    <div class="irow"><span class="ilbl">Plan</span><span class="ival" id="p-sub-plan">—</span></div>
+    <div class="irow"><span class="ilbl">Valid Until</span><span class="ival" id="p-sub-expiry">—</span></div>
+    <div class="irow"><span class="ilbl">Status</span><span class="ival" id="p-sub-status">—</span></div>
+    <div id="p-sub-alert" style="display:none;margin-top:10px;font-size:12px;border-radius:8px;padding:10px 13px;line-height:1.5"></div>
+  </div>
   <div class="card">
     <h3>🔒 Change Password</h3>
     <button class="bedit" onclick="togglePwForm('f')">🔒 Change Password</button>
@@ -897,6 +904,41 @@ function renderProfile() {
   document.getElementById('p-acc').textContent      = user.bank_account ? '••••' + user.bank_account.slice(-4) : '—';
   document.getElementById('p-ifsc').textContent     = user.ifsc || '—';
   document.getElementById('p-aad').textContent      = user.aadhar ? 'XXXX-XXXX-' + user.aadhar.slice(-4) : '—';
+
+  // Subscription card
+  var plan   = user.subscription_plan;
+  var expStr = user.subscription_expires_at;
+  document.getElementById('p-sub-plan').textContent = plan || 'Not set';
+  var alertEl = document.getElementById('p-sub-alert');
+  if (expStr) {
+    var exp      = new Date(expStr);
+    var now      = new Date();
+    var diffDays = Math.ceil((exp - now) / (24 * 60 * 60 * 1000));
+    var expLabel = exp.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+    document.getElementById('p-sub-expiry').textContent = expLabel;
+    if (diffDays <= 0) {
+      document.getElementById('p-sub-status').innerHTML = '<span style="color:#dc2626;font-weight:700">Expired</span>';
+      alertEl.style.display = 'block';
+      alertEl.style.background = '#fef2f2';
+      alertEl.style.border = '1px solid #fca5a5';
+      alertEl.style.color = '#991b1b';
+      alertEl.innerHTML = '🔒 <strong>Your subscription has expired.</strong> Please contact Admin to renew and restore access.';
+    } else if (diffDays <= 10) {
+      document.getElementById('p-sub-status').innerHTML = '<span style="color:#d97706;font-weight:700">Expiring Soon</span>';
+      alertEl.style.display = 'block';
+      alertEl.style.background = '#fffbeb';
+      alertEl.style.border = '1px solid #fcd34d';
+      alertEl.style.color = '#92400e';
+      alertEl.innerHTML = '⚠️ <strong>Expiring in ' + diffDays + ' day' + (diffDays === 1 ? '' : 's') + '.</strong> Please contact Admin to renew before <strong>' + expLabel + '</strong>.';
+    } else {
+      document.getElementById('p-sub-status').innerHTML = '<span style="color:#16a34a;font-weight:700">Active</span>';
+      alertEl.style.display = 'none';
+    }
+  } else {
+    document.getElementById('p-sub-expiry').textContent = '—';
+    document.getElementById('p-sub-status').textContent = '—';
+    alertEl.style.display = 'none';
+  }
 }
 
 function toggleEditForm() {
