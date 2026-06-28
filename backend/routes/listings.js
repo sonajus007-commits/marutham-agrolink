@@ -2,6 +2,7 @@ const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { getFeeForSeller } = require('../utils/fees');
+const notify = require('../utils/notify');
 
 const router = express.Router();
 
@@ -150,7 +151,7 @@ router.post('/', async (req, res) => {
       product_id, farmer_price, qty_available,
       time_available, cutoff_ts, bulk_qty, bulk_disc_pct,
       qty_type, qty_value,
-      listed: true,
+      listed: req.body.listed !== undefined ? Boolean(req.body.listed) : true,
       listing_status: 'pending',
     })
     .select()
@@ -279,6 +280,26 @@ router.patch('/:id/status', async (req, res) => {
     .select()
     .single();
   if (error) return res.status(500).json({ error: error.message });
+
+  // Notify farmer when their product request is approved
+  if (status === 'active') {
+    try {
+      const { data: full } = await supabase
+        .from('farmer_listings')
+        .select(`
+          farmer:users ( id, fname, lname, email, phone, login_id ),
+          product:products ( id, name )
+        `)
+        .eq('id', req.params.id)
+        .single();
+      if (full?.farmer && full?.product) {
+        await notify.notifyProductApproved(full.farmer, full.product);
+      }
+    } catch (e) {
+      console.error('[LISTING APPROVE] Notify error:', e.message);
+    }
+  }
+
   res.json({ message: `Listing ${status}.`, listing: data });
 });
 

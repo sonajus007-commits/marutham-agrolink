@@ -47,9 +47,12 @@
 
 <!-- ── PRODUCTS ───────────────────────────────────────────────────────────── -->
 <div class="panel" id="panel-products">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-    <div class="sec-head" style="margin:0"><span class="sh-icon" style="background:#f0faf4">🌾</span> My Listings</div>
-    <button class="add-prod-btn" onclick="openAddListing()">+ Add Listing</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div class="sec-head" style="margin:0"><span class="sh-icon" style="background:#f0faf4">🌾</span> My Products</div>
+    <div style="display:flex;gap:8px">
+      <button class="add-prod-btn" style="background:#2563eb;font-size:12px;padding:8px 12px" onclick="openRequestProduct()">📋 Request New Product</button>
+      <button class="add-prod-btn" style="font-size:12px;padding:8px 12px" onclick="openAddPriceListing()">💰 Add Price to Sell</button>
+    </div>
   </div>
   <div id="listingList"><div class="spinner"><div class="spin"></div></div></div>
 </div>
@@ -208,6 +211,28 @@
 .rnw-plan-opt.selected { border-color:#1a7a4a;background:#f0fdf4 }
 </style>
 
+<!-- ══════ REQUEST NEW PRODUCT OVERLAY ══════ -->
+<div class="overlay" id="requestProductOverlay">
+  <div class="overlay-hdr">
+    <button class="overlay-back" onclick="closeRequestOverlay()">←</button>
+    <div class="overlay-title">Request New Product</div>
+  </div>
+  <div class="overlay-body">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#1d4ed8">
+      Select a product you want to sell. Admin will review and approve your request.
+      Once approved, use <strong>Add Price to Sell</strong> to set your selling price.
+    </div>
+    <div class="fg">
+      <label class="fl">Product <span class="rq">*</span></label>
+      <select class="fi" id="rp-product">
+        <option value="">— Select a product —</option>
+      </select>
+      <div class="em" id="rp-product-e">Please select a product</div>
+    </div>
+    <button class="sbtn" onclick="submitProductRequest()">📋 Submit Request</button>
+  </div>
+</div>
+
 <!-- ══════ ADD / EDIT LISTING OVERLAY ══════ -->
 <div class="overlay" id="listingOverlay">
   <div class="overlay-hdr">
@@ -333,7 +358,7 @@
       <div style="font-size:10px;color:#5a6472;margin-top:6px">Tap a box to take or choose a photo. Photos are visible to customers during today's order window.</div>
     </div>
 
-    <button class="sbtn" onclick="saveListing()">Save &amp; List Product</button>
+    <button id="listing-save-btn" class="sbtn" onclick="saveListing()">Save &amp; List Product</button>
   </div>
 </div>
 
@@ -361,6 +386,8 @@ var _statusFilter = 'All';
 var _allStatuses  = ['All','Order Placed','Packaged','VCO Verified','Picked Up','Out for Delivery','Delivered','Cancelled'];
 var _editListingId = null;
 var _allSystemProducts = [];
+var _myListings = [];
+var _addPriceMode = false;
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 function openTab(name, tabEl) {
@@ -523,22 +550,24 @@ async function renderListings() {
       API.getListings(),
       API.getProducts({ district: user.district })
     ]);
-    var listings = listRes.listings || [];
+    _myListings = listRes.listings || [];
     _allSystemProducts = prodRes.products || [];
 
-    if (listings.length === 0) {
-      el.innerHTML = '<div class="empty-state"><div class="es-icon">🌾</div><p>No listings yet.<br>Tap "+ Add Listing" to start selling.</p></div>';
+    if (_myListings.length === 0) {
+      el.innerHTML = '<div class="empty-state"><div class="es-icon">🌾</div><p>No products yet.<br>Tap <strong>Request New Product</strong> to get started.</p></div>';
       return;
     }
     var html = '';
-    listings.forEach(function(l) {
-      var p     = l.product || {};
-      var price = parseFloat(l.farmer_price || 0);
-      var emoji = _prodEmoji[p.name] || '🛒';
+    _myListings.forEach(function(l) {
+      var p      = l.product || {};
+      var price  = parseFloat(l.farmer_price || 0);
+      var emoji  = _prodEmoji[p.name] || '🛒';
+      var lstatus = l.listing_status || 'pending';
+      var hasPriced = lstatus === 'active' && price > 0;
 
       html += '<div class="prod-card">';
 
-      // ── Top row: emoji thumb + name + price ──
+      // ── Top row: emoji + name + price ──
       html += '<div class="prod-top">';
       html += '<div style="width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#e8f5e9,#f1f8e9);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;margin-right:12px">' + emoji + '</div>';
       html += '<div style="flex:1">';
@@ -547,14 +576,14 @@ async function renderListings() {
       html += '<div class="prod-path"><span class="prod-chip">' + (p.product_group||'—') + '</span>';
       if (p.category) html += '<span style="font-size:9px;color:var(--gray)">' + p.category + '</span>';
       html += '</div></div>';
-      html += '<div class="prod-price-box"><div class="prod-price">₹' + price.toFixed(0) + '</div>';
-      html += '<div class="prod-unit">/ ' + (p.unit||'unit') + '</div></div>';
+      if (hasPriced) {
+        html += '<div class="prod-price-box"><div class="prod-price">₹' + price.toFixed(0) + '</div>';
+        html += '<div class="prod-unit">/ ' + (p.unit||'unit') + '</div></div>';
+      }
       html += '</div>'; // prod-top
 
-      // ── Details row ──
+      // ── Status badges ──
       html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px">';
-      // Listing status badge
-      var lstatus = l.listing_status || 'pending';
       var lstatusStyle = lstatus === 'active'
         ? 'color:#166534;background:#dcfce7;border:1px solid #86efac'
         : lstatus === 'rejected'
@@ -562,25 +591,45 @@ async function renderListings() {
           : 'color:#92400e;background:#fef3c7;border:1px solid #fcd34d';
       var lstatusLabel = lstatus === 'active' ? '✅ Admin Approved' : lstatus === 'rejected' ? '❌ Rejected' : '⏳ Pending Approval';
       html += '<span style="font-size:10px;font-weight:700;border-radius:6px;padding:2px 8px;' + lstatusStyle + '">' + lstatusLabel + '</span>';
-      if (l.qty_available != null) html += '<span style="font-size:10px;color:var(--gray);background:#f4f4f4;border-radius:6px;padding:2px 7px">' + l.qty_available + ' ' + (p.unit||'') + ' avail</span>';
-      if (l.time_available)        html += '<span style="font-size:10px;color:#7c3aed;background:#f5f0ff;border-radius:6px;padding:2px 7px">Order by ' + l.time_available + '</span>';
-      if (l.bulk_qty && l.bulk_disc_pct) html += '<span style="font-size:10px;color:#1a7a4a;background:#e6f7ed;border-radius:6px;padding:2px 7px">Bulk ' + l.bulk_qty + '+ → ' + l.bulk_disc_pct + '% off</span>';
-      if (!l.listed)               html += '<span style="font-size:10px;color:#c0392b;background:#fde8e8;border-radius:6px;padding:2px 7px">Unlisted</span>';
+      if (hasPriced && l.qty_available != null) html += '<span style="font-size:10px;color:var(--gray);background:#f4f4f4;border-radius:6px;padding:2px 7px">' + l.qty_available + ' ' + (p.unit||'') + ' avail</span>';
+      if (hasPriced && l.time_available)        html += '<span style="font-size:10px;color:#7c3aed;background:#f5f0ff;border-radius:6px;padding:2px 7px">Order by ' + l.time_available + '</span>';
+      if (hasPriced && l.bulk_qty && l.bulk_disc_pct) html += '<span style="font-size:10px;color:#1a7a4a;background:#e6f7ed;border-radius:6px;padding:2px 7px">Bulk ' + l.bulk_qty + '+ → ' + l.bulk_disc_pct + '% off</span>';
+      if (hasPriced && !l.listed) html += '<span style="font-size:10px;color:#c0392b;background:#fde8e8;border-radius:6px;padding:2px 7px">Cutoff passed — update price</span>';
       html += '</div>';
 
-      // ── Action row: Edit | Confirm for Tomorrow | Remove ──
+      // ── Action row ──
       html += '<div class="prod-meta-row" style="border-top:1px solid #eef4ee;padding-top:8px;margin-top:4px">';
-      if (l.confirmed) {
-        html += '<span style="font-size:10px;font-weight:700;color:#1a7a4a;background:#e6f7ed;border-radius:6px;padding:3px 8px">✅ Confirmed</span>';
-      } else if (l.listed) {
-        html += '<button style="font-size:10px;font-weight:700;color:#fff;background:var(--leaf);border:none;border-radius:6px;padding:4px 10px;cursor:pointer" onclick="confirmListing(\'' + l.id + '\')">Confirm for Tomorrow</button>';
-      }
-      html += '<div class="prod-actions">';
-      html += '<a class="prod-link" style="color:var(--leaf)" onclick="openEditListing(\'' + l.id + '\')">Edit</a>';
-      if (l.confirmed) html += '<a class="prod-link" style="color:var(--gray);margin-left:10px" onclick="unconfirmListing(\'' + l.id + '\')">Undo Confirm</a>';
-      html += '<a class="prod-link" style="color:var(--red);margin-left:10px" onclick="deleteListing(\'' + l.id + '\')">Remove</a>';
-      html += '</div></div>'; // prod-meta-row
 
+      if (lstatus === 'pending') {
+        html += '<span style="font-size:11px;color:#92400e">⏳ Awaiting admin approval</span>';
+        html += '<div class="prod-actions"><a class="prod-link" style="color:var(--red)" onclick="deleteListing(\'' + l.id + '\')">Cancel Request</a></div>';
+
+      } else if (lstatus === 'rejected') {
+        if (l.rejection_reason) html += '<span style="font-size:10px;color:#991b1b">' + l.rejection_reason + '</span>';
+        html += '<div class="prod-actions"><a class="prod-link" style="color:var(--red)" onclick="deleteListing(\'' + l.id + '\')">Remove</a></div>';
+
+      } else if (!hasPriced) {
+        // Active but price not yet set
+        html += '<button style="font-size:11px;font-weight:700;color:#fff;background:#2563eb;border:none;border-radius:6px;padding:5px 12px;cursor:pointer" onclick="openAddPriceListing(\'' + (p.id||'') + '\')">💰 Set Selling Price</button>';
+        html += '<div class="prod-actions"><a class="prod-link" style="color:var(--red)" onclick="deleteListing(\'' + l.id + '\')">Remove</a></div>';
+
+      } else {
+        // Active with price — confirm / edit flow
+        if (l.confirmed) {
+          html += '<span style="font-size:10px;font-weight:700;color:#1a7a4a;background:#e6f7ed;border-radius:6px;padding:3px 8px">✅ Confirmed for delivery</span>';
+        } else if (l.listed) {
+          html += '<button style="font-size:10px;font-weight:700;color:#fff;background:var(--leaf);border:none;border-radius:6px;padding:4px 10px;cursor:pointer" onclick="confirmListing(\'' + l.id + '\')">Confirm for Tomorrow</button>';
+        } else {
+          html += '<button style="font-size:10px;font-weight:700;color:#fff;background:#d97706;border:none;border-radius:6px;padding:4px 10px;cursor:pointer" onclick="openAddPriceListing(\'' + (p.id||'') + '\')">Update Price &amp; Re-list</button>';
+        }
+        html += '<div class="prod-actions">';
+        html += '<a class="prod-link" style="color:var(--leaf)" onclick="openEditListing(\'' + l.id + '\')">Edit</a>';
+        if (l.confirmed) html += '<a class="prod-link" style="color:var(--gray);margin-left:10px" onclick="unconfirmListing(\'' + l.id + '\')">Undo Confirm</a>';
+        html += '<a class="prod-link" style="color:var(--red);margin-left:10px" onclick="deleteListing(\'' + l.id + '\')">Remove</a>';
+        html += '</div>';
+      }
+
+      html += '</div>'; // prod-meta-row
       html += '</div>'; // prod-card
     });
     el.innerHTML = html;
@@ -592,6 +641,32 @@ async function renderListings() {
 function onListingProductChange() {
   var pid = document.getElementById('lo-product').value;
   var p   = _allSystemProducts.find(function(x){ return x.id === pid; });
+
+  // In "add price to sell" mode, find the existing listing and pre-fill the form
+  if (_addPriceMode && pid) {
+    var existing = _myListings.find(function(l) {
+      return l.listing_status === 'active' && l.product && l.product.id === pid;
+    });
+    if (existing) {
+      _editListingId = existing.id;
+      var existingPrice = parseFloat(existing.farmer_price || 0);
+      sv('lo-price',     existingPrice > 0 ? existingPrice.toFixed(0) : '');
+      sv('lo-qty',       existing.qty_available != null ? String(existing.qty_available) : '');
+      sv('lo-bulk-qty',  existing.bulk_qty    ? String(existing.bulk_qty)     : '');
+      sv('lo-bulk-disc', existing.bulk_disc_pct ? String(existing.bulk_disc_pct) : '');
+      sv('lo-qty-value', existing.qty_value   ? String(existing.qty_value)    : '');
+      document.getElementById('lo-cutoff').value   = existing.time_available || '8 AM';
+      document.getElementById('lo-qty-type').value = existing.qty_type || 'MOQ';
+      _listingImages = [null, null, null];
+      if (Array.isArray(existing.images)) {
+        existing.images.forEach(function(src, i) { if (i < 3) _listingImages[i] = src || null; });
+      }
+      renderListingImageSlots();
+    } else {
+      _editListingId = null;
+    }
+  }
+
   if (!p) {
     document.getElementById('lo-mkt-ref').style.display = 'none';
     document.getElementById('lo-price-unit').textContent = '/ unit';
@@ -691,26 +766,115 @@ function renderListingImageSlots() {
   }
 }
 
-async function openAddListing() {
+// ── Request New Product ───────────────────────────────────────────────────────
+async function openRequestProduct() {
+  // Refresh listings so we know which products are already requested
+  try {
+    var r = await API.getListings();
+    _myListings = r.listings || [];
+  } catch(e) { /* use cached */ }
+
+  await populateRequestProductSelect();
+  hideErr('rp-product-e');
+  document.getElementById('requestProductOverlay').classList.add('active');
+}
+
+async function populateRequestProductSelect() {
+  try {
+    var r = await API.getProducts({ district: user.district });
+    _allSystemProducts = r.products || [];
+  } catch(e) { /* keep existing */ }
+
+  // Exclude products already requested/listed (any status)
+  var listedProductIds = new Set(
+    _myListings.map(function(l) { return l.product && l.product.id; }).filter(Boolean)
+  );
+
+  var sel = document.getElementById('rp-product');
+  var available = _allSystemProducts.filter(function(p) {
+    return p.available && !listedProductIds.has(p.id);
+  });
+
+  if (available.length === 0) {
+    sel.innerHTML = '<option value="">All available products already requested</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">— Select a product —</option>';
+  available.forEach(function(p) {
+    var opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name + (p.regional_name ? ' — ' + p.regional_name : '') + ' (' + p.unit + ')';
+    sel.appendChild(opt);
+  });
+}
+
+async function submitProductRequest() {
+  var productId = document.getElementById('rp-product').value;
+  if (!productId) { showErr('rp-product-e', 'Please select a product'); return; }
+  hideErr('rp-product-e');
+
+  var cutoffTs = computeCutoffTs('8 AM');
+  try {
+    await API.createListing({
+      product_id:    productId,
+      farmer_price:  0,
+      qty_available: 0,
+      time_available: '8 AM',
+      cutoff_ts:     cutoffTs,
+      listed:        false,
+    });
+    closeRequestOverlay();
+    showToast('Product request submitted! Admin will review it.', 'ok');
+    renderListings();
+  } catch(e) { showToast(e.message, 'er'); }
+}
+
+function closeRequestOverlay() {
+  document.getElementById('requestProductOverlay').classList.remove('active');
+  document.getElementById('rp-product').value = '';
+}
+
+// ── Add Price to Sell (edit an admin-approved listing) ────────────────────────
+async function openAddPriceListing(preSelectProductId) {
+  // Refresh listings to get latest approval status
+  try {
+    var r = await API.getListings();
+    _myListings = r.listings || [];
+  } catch(e) { /* use cached */ }
+
+  var activeListings = _myListings.filter(function(l) { return l.listing_status === 'active'; });
+  if (!activeListings.length) {
+    showToast('No admin-approved products yet. Request a product first.', 'er');
+    return;
+  }
+
+  _addPriceMode = true;
   _editListingId = null;
   _listingImages = [null, null, null];
-  document.getElementById('listingOverlayTitle').textContent = 'Add Listing';
-  await populateProductSelect(null);
-  ['lo-price','lo-qty','lo-bulk-qty','lo-bulk-disc','lo-qty-value'].forEach(function(id){ sv(id,''); });
-  document.getElementById('lo-cutoff').value   = '8 AM';
-  document.getElementById('lo-qty-type').value = 'MOQ';
-  document.getElementById('lo-mkt-ref').style.display    = 'none';
-  document.getElementById('lo-price-preview').style.display = 'none';
-  document.getElementById('lo-bulk-preview').style.display  = 'none';
+  document.getElementById('listingOverlayTitle').textContent = 'Add Price to Sell';
+  document.getElementById('listing-save-btn').textContent = 'Set My Price & List';
+
+  await populateProductSelect(preSelectProductId || null);
+
+  if (!preSelectProductId) {
+    ['lo-price','lo-qty','lo-bulk-qty','lo-bulk-disc','lo-qty-value'].forEach(function(id){ sv(id,''); });
+    document.getElementById('lo-cutoff').value   = '8 AM';
+    document.getElementById('lo-qty-type').value = 'MOQ';
+    document.getElementById('lo-mkt-ref').style.display    = 'none';
+    document.getElementById('lo-price-preview').style.display = 'none';
+    document.getElementById('lo-bulk-preview').style.display  = 'none';
+  }
   renderListingImageSlots();
   hideErr('lo-product-e'); hideErr('lo-price-e'); hideErr('lo-qty-e');
   document.getElementById('listingOverlay').classList.add('active');
 }
 
 async function openEditListing(id) {
+  _addPriceMode = false;
   _editListingId = id;
   _listingImages = [null, null, null];
   document.getElementById('listingOverlayTitle').textContent = 'Edit Listing';
+  document.getElementById('listing-save-btn').textContent = 'Save Changes';
   try {
     var res = await API.getListings();
     var l = (res.listings || []).find(function(x){ return x.id === id; }) || {};
@@ -734,14 +898,31 @@ async function openEditListing(id) {
 }
 
 async function populateProductSelect(selectedId) {
-  // Always fetch with farmer's district so district_price is populated
   try {
     var r = await API.getProducts({ district: user.district });
     _allSystemProducts = r.products || [];
   } catch(e) { /* keep existing list if fetch fails */ }
+
   var sel = document.getElementById('lo-product');
   sel.innerHTML = '<option value="">— Select a product —</option>';
-  _allSystemProducts.filter(function(p){ return p.available; }).forEach(function(p) {
+
+  var productsToShow;
+  if (_addPriceMode) {
+    // Only show products with admin-approved listings for this farmer
+    var activeProductIds = {};
+    _myListings.forEach(function(l) {
+      if (l.listing_status === 'active' && l.product) activeProductIds[l.product.id] = true;
+    });
+    productsToShow = _allSystemProducts.filter(function(p) { return activeProductIds[p.id]; });
+    if (productsToShow.length === 0) {
+      sel.innerHTML = '<option value="">No approved products — request one first</option>';
+      return;
+    }
+  } else {
+    productsToShow = _allSystemProducts.filter(function(p){ return p.available; });
+  }
+
+  productsToShow.forEach(function(p) {
     var opt = document.createElement('option');
     opt.value = p.id;
     opt.textContent = p.name + (p.regional_name ? ' — ' + p.regional_name : '') + ' (' + p.unit + ')';
@@ -752,6 +933,7 @@ async function populateProductSelect(selectedId) {
 }
 
 function closeListingOverlay() {
+  _addPriceMode = false;
   document.getElementById('listingOverlay').classList.remove('active');
 }
 
@@ -766,6 +948,7 @@ async function saveListing() {
   var qtyValue = parseFloat(document.getElementById('lo-qty-value').value);
 
   if (!prodId) { showErr('lo-product-e','Select a product'); return; } hideErr('lo-product-e');
+  if (_addPriceMode && !_editListingId) { showErr('lo-product-e','Select an approved product'); return; }
   if (isNaN(price) || price <= 0) { showErr('lo-price-e','Enter your selling price'); return; } hideErr('lo-price-e');
   if (isNaN(qty)   || qty   <= 0) { showErr('lo-qty-e','Enter available quantity');   return; } hideErr('lo-qty-e');
 
@@ -793,12 +976,13 @@ async function saveListing() {
   try {
     if (_editListingId) {
       await API.updateListing(_editListingId, data);
-      showToast('Listing updated. Customers can see your offer.', 'ok');
+      showToast(_addPriceMode ? 'Price set! Confirm for tomorrow to go live.' : 'Listing updated.', 'ok');
     } else {
       await API.createListing(data);
       showToast('Product listed! Customers can now order.', 'ok');
     }
     closeListingOverlay();
+    document.getElementById('listing-save-btn').textContent = 'Save & List Product';
     renderListings();
   } catch(e) { showToast(e.message, 'er'); }
 }

@@ -218,9 +218,13 @@ router.post('/', async (req, res) => {
       .single();
 
     if (listing) {
+      const newQty = Math.max(0, listing.qty_available - item.qty);
+      const stockUpdate = { qty_available: newQty };
+      // Auto-unlist when stock reaches zero so consumers can't order more
+      if (newQty <= 0) stockUpdate.listed = false;
       await supabase
         .from('farmer_listings')
-        .update({ qty_available: listing.qty_available - item.qty })
+        .update(stockUpdate)
         .eq('farmer_id', item.farmer_id)
         .eq('product_id', item.product_id);
     }

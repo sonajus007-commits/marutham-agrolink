@@ -72,6 +72,7 @@ app.listen(PORT, () => {
   console.log(`Marutham API listening on port ${PORT}`);
   scheduleSubscriptionChecks();
   schedulePriceSync();
+  scheduleListingReset();
 });
 
 // ── Daily subscription expiry checker ─────────────────────────────────────────
@@ -117,6 +118,42 @@ function scheduleSubscriptionChecks() {
   // Run once on startup (catches overnight expirations), then every 24 hours
   runCheck();
   setInterval(runCheck, MS_PER_DAY);
+}
+
+// ── Hourly listing reset — after cutoff, set listed=false, confirmed=false ─────
+function scheduleListingReset() {
+  const INTERVAL = 60 * 60 * 1000; // 1 hour
+
+  async function runReset() {
+    try {
+      const now = new Date().toISOString();
+      // Only reset active listings whose cutoff has passed and are still listed/confirmed
+      const { data, error } = await supabase
+        .from('farmer_listings')
+        .select('id')
+        .eq('listing_status', 'active')
+        .lt('cutoff_ts', now)
+        .or('confirmed.eq.true,listed.eq.true');
+
+      if (error) { console.error('[LISTING RESET] Query error:', error.message); return; }
+      if (!data || data.length === 0) return;
+
+      const ids = data.map(r => r.id);
+      const { error: upErr } = await supabase
+        .from('farmer_listings')
+        .update({ confirmed: false, listed: false })
+        .in('id', ids);
+
+      if (upErr) { console.error('[LISTING RESET] Update error:', upErr.message); return; }
+      console.log(`[LISTING RESET] Reset ${ids.length} listing(s) — cutoff passed, listed=false confirmed=false`);
+    } catch (err) {
+      console.error('[LISTING RESET] Error:', err.message);
+    }
+  }
+
+  runReset();
+  setInterval(runReset, INTERVAL);
+  console.log('[LISTING RESET] Hourly scheduler started');
 }
 
 // ── Daily government price sync ───────────────────────────────────────────────

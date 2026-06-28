@@ -330,6 +330,27 @@ async function notifySubscriptionRenewalOutcome(user, approved, newExpiry, plan)
   }
 }
 
+async function notifyProductApproved(farmer, product) {
+  const name        = `${farmer.fname}${farmer.lname ? ' ' + farmer.lname : ''}`;
+  const productName = product.name;
+
+  await sendEmail(farmer.email, `Product Approved — You can now sell ${productName} on Marutham Agrolink`, `
+    <p>Dear ${name},</p>
+    <p>Great news! Your request to sell <strong>${productName}</strong> has been
+    <span style="color:#16a34a;font-weight:700">APPROVED</span> by the admin team.</p>
+    <p>You can now log in to the Farmer Portal and set your selling price:</p>
+    <p style="margin:16px 0"><strong>My Products → Add Price to Sell → Select "${productName}" → Enter your price</strong></p>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;margin:12px 0">
+      <strong>Login ID:</strong> ${farmer.login_id}
+    </div>
+    <p>Regards,<br><strong>Marutham Agrolink Team</strong></p>
+  `);
+
+  await sendSMS(farmer.phone,
+    `Congrats ${farmer.fname}! Your request to sell ${productName} on Marutham Agrolink is APPROVED. Login: ${farmer.login_id}. Go to My Products > Add Price to Sell. -Marutham Agrolink`
+  );
+}
+
 module.exports = {
   notifyRegistrationReceived,
   notifyApprovalWithPayment,
@@ -342,4 +363,5 @@ module.exports = {
   notifySubscriptionRenewalRequest,
   notifySubscriptionRenewalPaymentPending,
   notifySubscriptionRenewalOutcome,
+  notifyProductApproved,
 };
