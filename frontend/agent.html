@@ -7,15 +7,15 @@
 <link rel="stylesheet" href="css/app.css">
 <style>
 .agent-bg{min-height:100vh;background:#0a1f12;display:flex;flex-direction:column;}
-.agent-hdr{background:linear-gradient(135deg,#1a3d2b,#2d6a4f);padding:14px 16px;
+.agent-hdr{background:rgba(255,255,255,.93);backdrop-filter:blur(8px);padding:10px 16px;
   display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50;
-  box-shadow:0 4px 20px rgba(0,0,0,.35);}
-.agent-status-pill{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);
-  border:1px solid rgba(255,255,255,.2);border-radius:50px;padding:6px 14px;}
-.status-dot{width:9px;height:9px;border-radius:50%;background:#52b788;
-  box-shadow:0 0 0 2px rgba(82,183,136,.4);animation:pulse 1.5s infinite;}
+  border-bottom:1px solid #dcefe0;box-shadow:0 2px 12px rgba(31,107,59,.08);}
+.agent-status-pill{display:flex;align-items:center;gap:6px;background:#eaf6ed;
+  border:1.5px solid #b2d8bb;border-radius:50px;padding:6px 14px;}
+.status-dot{width:9px;height:9px;border-radius:50%;background:#1a7a4a;
+  box-shadow:0 0 0 2px rgba(26,122,74,.25);animation:pulse 1.5s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-.agent-status-text{font-size:11px;font-weight:700;color:#95d5b2;}
+.agent-status-text{font-size:11px;font-weight:700;color:#1a3d2b;}
 .agent-body{flex:1;padding:16px;display:flex;flex-direction:column;gap:14px;}
 
 /* Scan bar */
