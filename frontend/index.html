@@ -3,27 +3,229 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Marutham Agrolink — Login</title>
+<title>Marutham AgroLink — Login &amp; Register</title>
 <link rel="stylesheet" href="css/app.css">
+<style>
+/* ── Light-green homepage theme applied to the login page ── */
+:root{
+  --green-deep:#1f6b3b; --green:#2e8b50; --green-light:#eaf6ed; --green-bg:#f3faf4;
+  --pink:#e85d8a; --pink-soft:#fce4ec;
+}
+
+/* Override body background */
+body{background:var(--green-bg);}
+
+/* ── Sticky header (matches home.html exactly) ── */
+.lp-header{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);
+  position:sticky;top:0;z-index:100;border-bottom:1px solid #dcefe0;}
+.lp-nav{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 24px;max-width:1280px;margin:0 auto;gap:20px;}
+.lp-brand{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;}
+.lp-brand img{height:48px;width:auto;border-radius:8px;
+  box-shadow:0 2px 8px rgba(31,107,59,.15);}
+.lp-brand-name{font-size:20px;font-weight:800;color:var(--green-deep);
+  letter-spacing:.3px;white-space:nowrap;font-family:'Segoe UI',system-ui,sans-serif;}
+.lp-brand-name span{color:var(--pink);}
+.lp-nav-links{display:flex;gap:20px;align-items:center;font-weight:600;
+  font-size:14px;color:#1a2e22;font-family:'Segoe UI',system-ui,sans-serif;}
+.lp-nav-links a{text-decoration:none;color:#1a2e22;}
+.lp-nav-links a:hover{color:var(--green);}
+.lp-nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.lp-clock{font-family:'Courier New',monospace;font-size:12px;font-weight:700;
+  color:var(--green-deep);background:var(--green-light);
+  padding:5px 10px;border-radius:50px;white-space:nowrap;}
+.lp-lang{display:flex;background:var(--green-light);border-radius:50px;padding:3px;}
+.lp-lang button{border:none;background:none;padding:4px 10px;border-radius:50px;
+  font-weight:700;font-size:12px;cursor:pointer;color:#5f7268;transition:.15s;
+  font-family:'Segoe UI',system-ui,sans-serif;}
+.lp-lang button.active{background:var(--green);color:#fff;}
+.lp-home-btn{background:none;border:2px solid var(--green);color:var(--green-deep);
+  padding:7px 16px;border-radius:50px;font-weight:700;font-size:13px;
+  cursor:pointer;text-decoration:none;transition:.15s;white-space:nowrap;
+  font-family:'Segoe UI',system-ui,sans-serif;display:inline-block;}
+.lp-home-btn:hover{background:var(--green);color:#fff;}
+
+/* ── Page body — light green, centered card ── */
+.lp-body{min-height:calc(100vh - 68px);background:var(--green-bg);
+  display:flex;flex-direction:column;align-items:center;
+  padding:40px 16px 60px;position:relative;overflow:hidden;}
+/* subtle watermark */
+.lp-body::before{content:'Marutham AgroLink';position:absolute;
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:11vw;font-weight:900;color:rgba(46,139,80,.04);
+  white-space:nowrap;pointer-events:none;letter-spacing:-2px;user-select:none;}
+
+/* ── Brand block above card ── */
+.lp-brand-block{display:flex;flex-direction:column;align-items:center;
+  gap:6px;margin-bottom:20px;text-align:center;}
+.lp-logo-ring{width:88px;height:88px;border-radius:16px;background:#fff;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  box-shadow:0 4px 18px rgba(31,107,59,.18),0 0 0 3px rgba(46,139,80,.12);}
+.lp-logo-ring img{width:100%;height:100%;object-fit:contain;}
+.lp-wordmark{font-size:24px;font-weight:800;color:var(--green-deep);
+  font-family:'Segoe UI',system-ui,sans-serif;}
+.lp-wordmark span{color:var(--pink);}
+.lp-tagline{font-size:11px;color:#5f7268;letter-spacing:1.5px;
+  text-transform:uppercase;font-family:'Segoe UI',system-ui,sans-serif;}
+
+/* Support bar */
+.lp-support{background:rgba(46,139,80,.07);border:1px solid rgba(46,139,80,.15);
+  border-radius:50px;padding:8px 20px;font-size:11px;color:#5f7268;
+  display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;}
+.lp-support a{color:var(--green-deep);text-decoration:none;font-weight:600;}
+.lp-support a:hover{text-decoration:underline;}
+
+/* Override auth-card to fit light bg */
+.auth-card{width:100%;max-width:480px;background:#fff;border-radius:20px;
+  padding:28px 24px;
+  box-shadow:0 8px 40px rgba(31,107,59,.1),0 0 0 1px rgba(46,139,80,.08);}
+
+/* Override tab styles for light theme */
+.atabs{display:flex;background:var(--green-light);border-radius:50px;padding:4px;
+  margin-bottom:20px;gap:2px;}
+.atab{flex:1;padding:9px;border:none;background:none;border-radius:50px;
+  font-size:14px;font-weight:700;cursor:pointer;color:#5f7268;transition:.15s;
+  font-family:'Segoe UI',system-ui,sans-serif;}
+.atab.on{background:var(--green-deep);color:#fff;}
+
+/* Role row */
+.rrow{display:flex;gap:8px;margin-bottom:18px;}
+.rbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:12px 6px;border:2px solid #dcefe0;border-radius:12px;
+  cursor:pointer;transition:.15s;background:#fafffe;font-size:12px;font-weight:700;
+  color:#5f7268;font-family:'Segoe UI',system-ui,sans-serif;}
+.rbtn.on{border-color:var(--green);background:var(--green-light);color:var(--green-deep);}
+.rbtn:hover:not(.on){border-color:#b2d8bb;background:#f5fbf6;}
+.ri{font-size:22px;display:block;}
+
+/* Login method toggle */
+.lmeth{display:flex;background:var(--green-light);border-radius:50px;padding:3px;
+  margin-bottom:18px;gap:2px;}
+.lmbtn{flex:1;padding:8px;border:none;background:none;border-radius:50px;
+  font-size:13px;font-weight:700;cursor:pointer;color:#5f7268;transition:.15s;
+  font-family:'Segoe UI',system-ui,sans-serif;}
+.lmbtn.on{background:var(--green-deep);color:#fff;}
+
+/* Primary button */
+.sbtn{width:100%;background:var(--green-deep);color:#fff;border:none;
+  padding:13px;border-radius:50px;font-size:15px;font-weight:700;cursor:pointer;
+  margin-top:14px;transition:.15s;font-family:'Segoe UI',system-ui,sans-serif;}
+.sbtn:hover:not(:disabled){background:var(--green);}
+.sbtn:disabled{opacity:.6;cursor:not-allowed;}
+
+/* Form elements */
+.fg{margin-bottom:14px;}
+.fl{display:block;font-size:12px;font-weight:700;color:#1a2e22;margin-bottom:5px;
+  font-family:'Segoe UI',system-ui,sans-serif;}
+.fi{width:100%;padding:10px 13px;border:1.5px solid #dcefe0;border-radius:10px;
+  font-size:14px;color:#1a2e22;background:#fff;outline:none;transition:.15s;
+  font-family:'Segoe UI',system-ui,sans-serif;box-sizing:border-box;}
+.fi:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(46,139,80,.1);}
+.fsec{font-size:11px;font-weight:800;color:var(--green-deep);letter-spacing:1.5px;
+  text-transform:uppercase;margin:18px 0 12px;border-bottom:1.5px solid var(--green-light);
+  padding-bottom:6px;font-family:'Segoe UI',system-ui,sans-serif;}
+.tc2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.em{font-size:11px;color:#c0392b;margin-top:4px;display:none;
+  font-family:'Segoe UI',system-ui,sans-serif;}
+.em.on{display:block;}
+.rq{color:var(--pink);}
+.op{color:#8ea89a;font-weight:400;}
+.pww{position:relative;}
+.pww .fi{padding-right:44px;}
+.peye{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;font-size:16px;color:#8ea89a;}
+.pwrules{display:none;margin-top:8px;padding:10px 12px;background:var(--green-light);
+  border-radius:8px;}
+.pwrules.on{display:block;}
+.pwr{display:flex;align-items:center;gap:6px;font-size:11px;color:#8ea89a;
+  margin-bottom:4px;font-family:'Segoe UI',system-ui,sans-serif;}
+.pwr.ok{color:var(--green);}
+.pwr .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.phrow{display:flex;gap:6px;}
+.ccsel{padding:10px 6px;border:1.5px solid #dcefe0;border-radius:10px;
+  font-size:13px;background:#fff;color:#1a2e22;outline:none;flex-shrink:0;
+  font-family:'Segoe UI',system-ui,sans-serif;}
+.ccsel:focus{border-color:var(--green);}
+.otprow{display:flex;gap:8px;}
+.otpbtn{padding:10px 14px;background:var(--green-deep);color:#fff;border:none;
+  border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
+  font-family:'Segoe UI',system-ui,sans-serif;transition:.15s;}
+.otpbtn:hover:not(:disabled){background:var(--green);}
+.otpbtn:disabled{opacity:.6;cursor:not-allowed;}
+.otptmr{font-size:11px;color:var(--green-deep);margin-top:4px;}
+.otptmr.on{display:block;}
+.forgotlnk{text-align:right;margin-top:4px;}
+.forgotlnk a{font-size:12px;color:var(--green-deep);font-weight:600;cursor:pointer;
+  font-family:'Segoe UI',system-ui,sans-serif;}
+.forgotlnk a:hover{text-decoration:underline;}
+.asw{text-align:center;margin-top:14px;font-size:13px;color:#5f7268;
+  font-family:'Segoe UI',system-ui,sans-serif;}
+.alnk{color:var(--green-deep);font-weight:700;cursor:pointer;}
+.alnk:hover{text-decoration:underline;}
+.info-box{background:var(--green-light);border:1.5px solid #b2d8bb;border-radius:12px;
+  padding:16px;font-size:13px;color:#1a2e22;line-height:1.6;
+  font-family:'Segoe UI',system-ui,sans-serif;}
+
+/* Login ID display */
+.lid-box{background:var(--green-light);border:2px solid var(--green);
+  border-radius:14px;padding:18px 20px;text-align:center;}
+.lid-lbl{font-size:11px;color:#5f7268;font-weight:700;letter-spacing:1px;
+  text-transform:uppercase;margin-bottom:6px;}
+.lid-val{font-size:22px;font-weight:800;color:var(--green-deep);
+  font-family:'Courier New',monospace;word-break:break-all;}
+.lid-note{font-size:11px;color:#5f7268;margin-top:6px;}
+
+/* Overlays stay dark (success/pending screens) */
+.overlay{display:none;position:fixed;inset:0;z-index:500;}
+.overlay.active{display:block;}
+</style>
 </head>
 <body>
 <div id="toast" class="toast"></div>
 
-<div class="auth-bg">
-  <a href="home.html" style="color:rgba(255,255,255,.45);font-size:12px;font-weight:600;
-    text-decoration:none;margin-bottom:4px;display:block;text-align:center;
-    letter-spacing:.5px;transition:.2s;" onmouseover="this.style.color='rgba(255,255,255,.8)'"
-    onmouseout="this.style.color='rgba(255,255,255,.45)'">← Back to Marutham AgroLink</a>
-  <div class="brand">
-    <div class="logo-ring"><img src="img/logo.jpg" alt="Marutham Agrolink"></div>
-    <div class="logo-name">Marutham <span>Agrolink</span></div>
-    <div class="logo-tag">மருதம் அக்ரோலிங்க் · Farm to Home</div>
+<!-- ── STICKY HEADER ── -->
+<header class="lp-header">
+  <div class="lp-nav">
+    <a href="home.html" class="lp-brand">
+      <img src="img/logo.jpg" alt="Marutham AgroLink">
+      <div class="lp-brand-name">Marutham <span>AgroLink</span></div>
+    </a>
+    <div class="lp-nav-links">
+      <a href="home.html#shop">Shop</a>
+      <a href="home.html#about">About</a>
+      <a href="home.html#stories">Farmer Stories</a>
+      <a href="home.html#contact">Contact</a>
+    </div>
+    <div class="lp-nav-right">
+      <span class="lp-clock" id="lpClock">--:--:-- IST</span>
+      <div class="lp-lang">
+        <button id="lang-en" class="active" onclick="setLang('en',this)">EN</button>
+        <button id="lang-ta" onclick="setLang('ta',this)">த</button>
+      </div>
+      <a href="home.html" class="lp-home-btn">← Home</a>
+    </div>
   </div>
-  <div class="auth-support">
+</header>
+
+<!-- ── PAGE BODY ── -->
+<div class="lp-body">
+
+  <!-- Brand block -->
+  <div class="lp-brand-block">
+    <div class="lp-logo-ring">
+      <img src="img/logo.jpg" alt="Marutham AgroLink">
+    </div>
+    <div class="lp-wordmark">Marutham <span>AgroLink</span></div>
+    <div class="lp-tagline">மருதம் அக்ரோலிங்க் · Farm to Home</div>
+  </div>
+
+  <!-- Support contacts -->
+  <div class="lp-support">
     <span>📞 <a href="tel:+914322123456">+91 4322 123456</a></span>
     <span>✉️ <a href="mailto:support@maruthamagrolink.in">support@maruthamagrolink.in</a></span>
   </div>
 
+  <!-- ── AUTH CARD ── -->
   <div class="auth-card">
     <!-- Login / Register tabs -->
     <div class="atabs">
@@ -31,7 +233,7 @@
       <button class="atab"    id="tab-reg"   onclick="swTab('reg')">Register</button>
     </div>
 
-    <!-- Role selector (register tab only — login routes by role from server) -->
+    <!-- Role selector (register tab only) -->
     <div class="rrow" id="rrow" style="display:none">
       <div class="rbtn on" id="rb-consumer" onclick="setRole('consumer')"><span class="ri">🛒</span>Consumer</div>
       <div class="rbtn"    id="rb-farmer"   onclick="setRole('farmer')"><span class="ri">👨‍🌾</span>Seller</div>
@@ -64,7 +266,7 @@
       </div>
 
       <div id="lm-otp-fields" style="display:none">
-        <div style="font-size:11px;color:var(--gray);margin-bottom:8px">OTP login requires a phone number (10 digits)</div>
+        <div style="font-size:11px;color:#5f7268;margin-bottom:8px">OTP login requires a phone number (10 digits)</div>
         <div class="fg">
           <div class="otprow">
             <input class="fi" id="l-otp" type="text" placeholder="6-digit OTP" maxlength="6" oninput="numOnly(this)">
@@ -83,8 +285,8 @@
     <div id="fForgot" style="display:none">
       <div style="text-align:center;margin-bottom:18px;">
         <div style="font-size:32px;margin-bottom:8px;">🔑</div>
-        <div style="font-size:16px;font-weight:700;color:var(--forest);">Reset Password</div>
-        <div style="font-size:12px;color:var(--gray);margin-top:4px;">Enter your registered phone number</div>
+        <div style="font-size:16px;font-weight:700;color:var(--green-deep);">Reset Password</div>
+        <div style="font-size:12px;color:#5f7268;margin-top:4px;">Enter your registered phone number</div>
       </div>
       <div class="fg">
         <label class="fl">Registered Phone Number <span class="rq">*</span></label>
@@ -254,9 +456,8 @@
             </select></div>
         </div>
 
-        <!-- Farmer: Aadhaar + bank details -->
         <div id="f-kyc-farmer">
-          <div class="fsec">Bank & KYC Details</div>
+          <div class="fsec">Bank &amp; KYC Details</div>
           <div class="fg"><label class="fl">Aadhaar Number <span class="rq">*</span></label>
             <input class="fi" id="f-aad" type="text" placeholder="12-digit Aadhaar" maxlength="12" oninput="numOnly(this)">
             <div class="em" id="f-aad-e">Enter valid 12-digit Aadhaar</div></div>
@@ -274,7 +475,6 @@
             <div class="em" id="f-ifsc-e">Enter valid IFSC</div></div>
         </div>
 
-        <!-- Retailer: GST + business details -->
         <div id="f-kyc-retailer" style="display:none">
           <div class="fsec">Business Details</div>
           <div class="fg"><label class="fl">Business / Shop Name <span class="rq">*</span></label>
@@ -321,33 +521,34 @@
         <button class="sbtn" id="f-submit-btn" onclick="doRegister('farmer')">✅ Create Farmer Account</button>
       </div>
 
-      <!-- ADMIN (view-only notice) -->
+      <!-- ADMIN -->
       <div id="fd-admin" style="display:none">
         <div class="info-box" style="margin-top:8px;">
-          <strong>Admin accounts</strong> are created by the Head Office and assigned by system administrators. Please contact <a href="mailto:support@maruthamagrolink.in" style="color:var(--leaf)">support@maruthamagrolink.in</a> if you need access.
+          <strong>Admin accounts</strong> are created by the Head Office and assigned by system administrators.
+          Please contact <a href="mailto:support@maruthamagrolink.in" style="color:var(--green-deep)">support@maruthamagrolink.in</a> if you need access.
         </div>
         <div class="asw" style="margin-top:18px;"><span class="alnk" onclick="swTab('login');setRole('admin')">Already have an account? Login →</span></div>
       </div>
 
     </div><!-- /fReg -->
   </div><!-- /auth-card -->
-</div><!-- /auth-bg -->
+</div><!-- /lp-body -->
 
 <!-- Registration success overlay (consumer) -->
 <div class="overlay" id="regSuccessOverlay">
   <div style="min-height:100vh;background:radial-gradient(ellipse at 20% 50%,#0f2d1c 0%,#1a3d2b 40%,#0a1f12 100%);
     display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;">
     <div style="font-size:56px;margin-bottom:16px;">🎉</div>
-    <div style="font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--gold2);font-weight:700;text-align:center;margin-bottom:8px;">
+    <div style="font-family:'Segoe UI',sans-serif;font-size:26px;color:#e9c46a;font-weight:800;text-align:center;margin-bottom:8px;">
       Account Created!
     </div>
-    <div style="font-size:13px;color:var(--mint);text-align:center;margin-bottom:24px;">Your Login ID has been generated</div>
-    <div class="lid-box" style="width:100%;max-width:340px;">
-      <div class="lid-lbl">Your Login ID</div>
-      <div class="lid-val" id="success-lid">—</div>
-      <div class="lid-note">Use your phone number or this ID to login</div>
+    <div style="font-size:13px;color:#a8d5a2;text-align:center;margin-bottom:24px;">Your Login ID has been generated</div>
+    <div class="lid-box" style="width:100%;max-width:340px;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);">
+      <div class="lid-lbl" style="color:rgba(255,255,255,.5);">Your Login ID</div>
+      <div class="lid-val" id="success-lid" style="color:#fff;">—</div>
+      <div class="lid-note" style="color:rgba(255,255,255,.4);">Use your phone number or this ID to login</div>
     </div>
-    <button class="sbtn" style="max-width:340px;margin-top:20px;" onclick="goToDashboard()">
+    <button class="sbtn" style="max-width:340px;margin-top:20px;background:var(--green);" onclick="goToDashboard()">
       Continue to Dashboard →
     </button>
   </div>
@@ -358,24 +559,25 @@
   <div style="min-height:100vh;background:radial-gradient(ellipse at 20% 50%,#0f2d1c 0%,#1a3d2b 40%,#0a1f12 100%);
     display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;">
     <div style="font-size:56px;margin-bottom:16px;">📋</div>
-    <div style="font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--gold2);font-weight:700;text-align:center;margin-bottom:8px;">
+    <div style="font-size:26px;color:#e9c46a;font-weight:800;text-align:center;margin-bottom:8px;">
       Application Submitted!
     </div>
-    <div style="font-size:14px;color:var(--mint);text-align:center;margin-bottom:20px;">Your registration is under review</div>
-    <div class="lid-box" style="width:100%;max-width:360px;">
-      <div class="lid-lbl">Your Login ID</div>
-      <div class="lid-val" id="pending-lid">—</div>
-      <div class="lid-note">Keep this safe — you will need it to login once approved</div>
+    <div style="font-size:14px;color:#a8d5a2;text-align:center;margin-bottom:20px;">Your registration is under review</div>
+    <div class="lid-box" style="width:100%;max-width:360px;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);">
+      <div class="lid-lbl" style="color:rgba(255,255,255,.5);">Your Login ID</div>
+      <div class="lid-val" id="pending-lid" style="color:#fff;">—</div>
+      <div class="lid-note" style="color:rgba(255,255,255,.4);">Keep this safe — you will need it to login once approved</div>
     </div>
-    <div style="width:100%;max-width:360px;margin-top:16px;background:rgba(255,255,255,0.07);border-radius:12px;padding:16px;font-size:13px;color:var(--mint);line-height:1.7">
-      <div style="font-weight:700;color:var(--gold2);margin-bottom:8px">What happens next?</div>
+    <div style="width:100%;max-width:360px;margin-top:16px;background:rgba(255,255,255,.07);border-radius:12px;padding:16px;font-size:13px;color:#a8d5a2;line-height:1.7">
+      <div style="font-weight:700;color:#e9c46a;margin-bottom:8px">What happens next?</div>
       <div>1. Our Head Office team will review your details</div>
       <div>2. You will receive an email / SMS once reviewed</div>
       <div>3. If approved, a payment link will be sent to you</div>
       <div>4. Complete the subscription payment to activate your account</div>
       <div>5. Your login credentials will be confirmed after payment</div>
     </div>
-    <button class="sbtn" style="max-width:360px;margin-top:20px;background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.2);" onclick="document.getElementById('regPendingOverlay').classList.remove('active')">
+    <button class="sbtn" style="max-width:360px;margin-top:20px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);"
+      onclick="document.getElementById('regPendingOverlay').classList.remove('active')">
       Back to Login
     </button>
   </div>
@@ -385,6 +587,17 @@
 <script src="js/shared.js"></script>
 <script src="js/api.js"></script>
 <script>
+/* ── IST Clock ── */
+(function tick() {
+  var now = new Date();
+  var ist = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (5.5 * 3600000));
+  var h = String(ist.getHours()).padStart(2,'0');
+  var m = String(ist.getMinutes()).padStart(2,'0');
+  var s = String(ist.getSeconds()).padStart(2,'0');
+  document.getElementById('lpClock').textContent = h + ':' + m + ':' + s + ' IST';
+  setTimeout(tick, 1000);
+})();
+
 registerPwRules('c-pw',  ['c-r1','c-r2','c-r3','c-r4']);
 registerPwRules('f-pw',  ['f-r1','f-r2','f-r3','f-r4']);
 registerPwRules('fp-np', ['fp-r1','fp-r2','fp-r3','fp-r4']);
@@ -411,16 +624,13 @@ function updateDistricts(prefix) {
   sel.innerHTML = dists.map(function(d){ return '<option value="' + d + '">' + d + '</option>'; }).join('');
 }
 
-// Redirect if already logged in
 (function() {
   var u = getUser();
   if (u && getToken()) redirectUser(u);
-  // Populate district dropdowns on load
   updateDistricts('c');
   updateDistricts('f');
 })();
 
-// ── Tab / role UI ─────────────────────────────────────────────────────────────
 function swTab(tab) {
   aTab = tab;
   document.getElementById('fLogin').style.display  = tab === 'login' ? 'block' : 'none';
@@ -479,7 +689,6 @@ function showLogin() {
   document.getElementById('fLogin').style.display  = 'block';
 }
 
-// ── OTP timer ─────────────────────────────────────────────────────────────────
 function startOtpTimer(btnId, timerId, resetLabel) {
   var btn = document.getElementById(btnId), tmr = document.getElementById(timerId);
   btn.disabled = true; tmr.classList.add('on');
@@ -492,7 +701,6 @@ function startOtpTimer(btnId, timerId, resetLabel) {
   }, 1000);
 }
 
-// ── OTP login ─────────────────────────────────────────────────────────────────
 async function sendLoginOTP() {
   var ph = document.getElementById('l-phone').value.trim();
   if (!/^\d{10}$/.test(ph)) { showToast('Enter your 10-digit phone number first', 'er'); return; }
@@ -509,7 +717,6 @@ async function sendLoginOTP() {
   }
 }
 
-// ── Forgot password ───────────────────────────────────────────────────────────
 async function doForgotStep() {
   var btn = document.getElementById('fp-btn');
   if (forgotStep === 1) {
@@ -527,9 +734,7 @@ async function doForgotStep() {
       forgotStep = 2;
     } catch(e) {
       showToast(e.message, 'er');
-    } finally {
-      btn.disabled = false;
-    }
+    } finally { btn.disabled = false; }
   } else if (forgotStep === 2) {
     var entered = document.getElementById('fp-otp').value.trim();
     if (!entered || entered.length < 6) { showToast('Enter the 6-digit OTP', 'er'); return; }
@@ -550,9 +755,7 @@ async function doForgotStep() {
       setTimeout(showLogin, 1200);
     } catch(e) {
       showToast(e.message, 'er');
-    } finally {
-      btn.disabled = false; btn.textContent = 'Reset Password';
-    }
+    } finally { btn.disabled = false; btn.textContent = 'Reset Password'; }
   }
 }
 
@@ -571,15 +774,12 @@ async function resendForgotOTP() {
   }
 }
 
-// ── LOGIN ─────────────────────────────────────────────────────────────────────
 async function doLogin() {
   var identifier = document.getElementById('l-phone').value.trim();
   if (!identifier) { showErr('l-phone-e', 'Enter your phone number or Login ID'); return; }
   hideErr('l-phone-e');
-
   var btn = document.getElementById('login-btn');
   btn.disabled = true; btn.textContent = 'Logging in…';
-
   try {
     var res;
     if (loginMethod === 'otp') {
@@ -618,18 +818,11 @@ function redirectUser(u) {
   showToast('Unknown role — contact support', 'er');
 }
 
-// ── REGISTER ──────────────────────────────────────────────────────────────────
 async function doRegister(role) {
   var p = role.charAt(0);
   var ok = true;
-
-  var fn  = gv(p + '-fn');
-  var ph  = gv(p + '-ph');
-  var s1  = gv(p + '-s1');
-  var cy  = gv(p + '-cy');
-  var pn  = gv(p + '-pn');
-  var pw  = gv(p + '-pw');
-  var cpw = gv(p + '-cpw');
+  var fn  = gv(p + '-fn'), ph  = gv(p + '-ph'), s1  = gv(p + '-s1');
+  var cy  = gv(p + '-cy'), pn  = gv(p + '-pn'), pw  = gv(p + '-pw'), cpw = gv(p + '-cpw');
   var di  = document.getElementById(p + '-di').value;
   var st  = document.getElementById(p + '-st').value;
 
@@ -649,10 +842,10 @@ async function doRegister(role) {
       var aad  = gv('f-aad'), bn = gv('f-bn'), bac = gv('f-bac'), bac2 = gv('f-bac2'), ifsc = gv('f-ifsc');
       var fvt  = gv('f-vt');
       if (!fvt)  { showErr('f-vt-e',  'Required for farmers'); ok=false; }  else hideErr('f-vt-e');
-      if (!/^\d{12}$/.test(aad))          { showErr('f-aad-e',  'Enter valid 12-digit Aadhaar'); ok=false; }     else hideErr('f-aad-e');
-      if (!bn)                             { showErr('f-bn-e',   'Required'); ok=false; }                         else hideErr('f-bn-e');
-      if (bac.length < 9 || bac.length > 18) { showErr('f-bac-e','Enter valid account number'); ok=false; }      else hideErr('f-bac-e');
-      if (bac !== bac2)                    { showErr('f-bac2-e', 'Account numbers do not match'); ok=false; }     else hideErr('f-bac2-e');
+      if (!/^\d{12}$/.test(aad))             { showErr('f-aad-e',  'Enter valid 12-digit Aadhaar'); ok=false; } else hideErr('f-aad-e');
+      if (!bn)                               { showErr('f-bn-e',   'Required'); ok=false; }                     else hideErr('f-bn-e');
+      if (bac.length < 9 || bac.length > 18){ showErr('f-bac-e','Enter valid account number'); ok=false; }      else hideErr('f-bac-e');
+      if (bac !== bac2)                      { showErr('f-bac2-e', 'Account numbers do not match'); ok=false; } else hideErr('f-bac2-e');
       if (ifsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc.toUpperCase())) { showErr('f-ifsc-e','Enter valid IFSC'); ok=false; } else hideErr('f-ifsc-e');
     } else {
       var bname = gv('f-bname'), gst = gv('f-gst');
@@ -693,11 +886,9 @@ async function doRegister(role) {
   try {
     var res = await API.register(body);
     if (role === 'farmer') {
-      // Farmers/retailers go into pending review — do not auto-login
       document.getElementById('pending-lid').textContent = res.login_id || '—';
       document.getElementById('regPendingOverlay').classList.add('active');
     } else {
-      // Consumers are immediately active — auto-login
       var loginRes = await API.login(ph, pw);
       setSession(loginRes.token, loginRes.user);
       _pendingUser = loginRes.user;
