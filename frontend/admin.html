@@ -231,29 +231,31 @@
           <div class="fg"><label class="fl">State</label><input class="fi" id="ud-state" type="text"></div>
           <div class="fg"><label class="fl">Pincode</label><input class="fi" id="ud-pincode" type="text"></div>
         </div>
-        <div class="fsec">Bank &amp; Business Details</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="fg"><label class="fl">Bank Name</label><input class="fi" id="ud-bank" type="text"></div>
-          <div class="fg"><label class="fl">Account No</label><input class="fi" id="ud-acc" type="text"></div>
-          <div class="fg"><label class="fl">IFSC</label><input class="fi" id="ud-ifsc" type="text" style="text-transform:uppercase"></div>
-          <div class="fg"><label class="fl">GST Number</label><input class="fi" id="ud-gst" type="text"></div>
-          <div class="fg" style="grid-column:span 2"><label class="fl">Business Name</label><input class="fi" id="ud-bizname" type="text"></div>
-        </div>
-        <div class="fsec">Subscription</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="fg">
-            <label class="fl">Subscription Plan</label>
-            <select class="fi" id="ud-subplan">
-              <option value="">— Not set —</option>
-              <option value="Monthly">Monthly (30 days)</option>
-              <option value="Quarterly">Quarterly (90 days)</option>
-              <option value="Half Yearly">Half Yearly (180 days)</option>
-              <option value="Yearly">Yearly (365 days)</option>
-            </select>
+        <div id="ud-seller-fields" style="display:none">
+          <div class="fsec">Bank &amp; Business Details</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="fg"><label class="fl">Bank Name</label><input class="fi" id="ud-bank" type="text"></div>
+            <div class="fg"><label class="fl">Account No</label><input class="fi" id="ud-acc" type="text"></div>
+            <div class="fg"><label class="fl">IFSC</label><input class="fi" id="ud-ifsc" type="text" style="text-transform:uppercase"></div>
+            <div class="fg"><label class="fl">GST Number</label><input class="fi" id="ud-gst" type="text"></div>
+            <div class="fg" style="grid-column:span 2"><label class="fl">Business Name</label><input class="fi" id="ud-bizname" type="text"></div>
           </div>
-          <div class="fg">
-            <label class="fl">Subscription Expires On</label>
-            <input class="fi" id="ud-subexp" type="date">
+          <div class="fsec">Subscription</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="fg">
+              <label class="fl">Subscription Plan</label>
+              <select class="fi" id="ud-subplan">
+                <option value="">— Not set —</option>
+                <option value="Monthly">Monthly (30 days)</option>
+                <option value="Quarterly">Quarterly (90 days)</option>
+                <option value="Half Yearly">Half Yearly (180 days)</option>
+                <option value="Yearly">Yearly (365 days)</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label class="fl">Subscription Expires On</label>
+              <input class="fi" id="ud-subexp" type="date">
+            </div>
           </div>
         </div>
         <div class="ea" style="margin-top:14px">
@@ -1730,23 +1732,25 @@ function renderUserTable() {
       : '—';
     html += '<td>' + genderLabel + '</td>';
     html += '<td>' + (u.district||'—') + '</td>';
-    var subExp = u.subscription_expires_at
-      ? new Date(u.subscription_expires_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})
-      : '—';
-    var subExpired = u.subscription_expires_at && new Date(u.subscription_expires_at) < new Date();
-    var subDaysLeft = u.subscription_expires_at ? Math.ceil((new Date(u.subscription_expires_at) - new Date()) / 86400000) : null;
     var subCell = '';
-    if (u.subscription_plan) {
-      subCell += '<span style="display:inline-block;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:50px;padding:1px 7px;font-size:10px;font-weight:700;margin-bottom:3px">' + u.subscription_plan + '</span><br>';
+    if (u.role === 'farmer') {
+      var subExp = u.subscription_expires_at
+        ? new Date(u.subscription_expires_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})
+        : '—';
+      var subExpired  = u.subscription_expires_at && new Date(u.subscription_expires_at) < new Date();
+      var subDaysLeft = u.subscription_expires_at ? Math.ceil((new Date(u.subscription_expires_at) - new Date()) / 86400000) : null;
+      if (u.subscription_plan) {
+        subCell += '<span style="display:inline-block;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:50px;padding:1px 7px;font-size:10px;font-weight:700;margin-bottom:3px">' + u.subscription_plan + '</span><br>';
+      }
+      if (subExpired) {
+        subCell += '<span style="color:#dc2626;font-weight:700">' + subExp + ' ⚠</span>';
+      } else if (subDaysLeft !== null && subDaysLeft <= 10) {
+        subCell += '<span style="color:#d97706;font-weight:700">' + subExp + ' (' + subDaysLeft + 'd)</span>';
+      } else {
+        subCell += subExp;
+      }
     }
-    if (subExpired) {
-      subCell += '<span style="color:#dc2626;font-weight:700">' + subExp + ' ⚠</span>';
-    } else if (subDaysLeft !== null && subDaysLeft <= 10) {
-      subCell += '<span style="color:#d97706;font-weight:700">' + subExp + ' (' + subDaysLeft + 'd)</span>';
-    } else {
-      subCell += subExp;
-    }
-    html += '<td style="font-size:11px">' + subCell + '</td>';
+    html += '<td style="font-size:11px">' + (subCell || '<span style="color:#d1d5db">—</span>') + '</td>';
     var isBlocked = u.status === 'blocked';
     html += '<td><span class="sbadge ' + (isBlocked ? 's-blk' : 's-act') + '">' + (isBlocked ? 'Blocked' : 'Active') + '</span></td>';
     html += '<td><button class="blkbtn ' + (isBlocked ? 'b-unb' : 'b-blk') + '" onclick="toggleBlock(\'' + u.id + '\',' + isBlocked + ')">';
@@ -1781,19 +1785,21 @@ function renderUserDetail() {
   var roleClass = u.role === 'admin' ? 'rb-vc' : (u.role === 'farmer' ? 'rb-fa' : 'rb-co');
   document.getElementById('ud-role-badge').className = 'rbadge ' + roleClass;
   document.getElementById('ud-role-badge').textContent = u.admin_role || u.seller_type || u.role;
-  var subExp = u.subscription_expires_at;
   var subBadge = '';
-  if (u.subscription_plan) {
-    subBadge += '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:50px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;margin-right:6px">📅 ' + u.subscription_plan + '</span>';
-  }
-  if (subExp) {
-    var isExpired = new Date(subExp) < new Date();
-    var daysLeft  = Math.ceil((new Date(subExp) - new Date()) / 86400000);
-    var expStr    = new Date(subExp).toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'});
-    var expColor  = isExpired ? '#fef2f2;color:#dc2626' : (daysLeft <= 10 ? '#fffbeb;color:#92400e' : '#f0fdf4;color:#16a34a');
-    var expLabel  = isExpired ? '⚠ Expired ' : (daysLeft <= 10 ? '⚠ Expires ' : '✓ Valid till ');
-    var dayNote   = (!isExpired && daysLeft <= 10) ? ' (' + daysLeft + 'd left)' : '';
-    subBadge += '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:50px;background:' + expColor + '">' + expLabel + expStr + dayNote + '</span>';
+  if (u.role === 'farmer') {
+    var subExp = u.subscription_expires_at;
+    if (u.subscription_plan) {
+      subBadge += '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:50px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;margin-right:6px">📅 ' + u.subscription_plan + '</span>';
+    }
+    if (subExp) {
+      var isExpired = new Date(subExp) < new Date();
+      var daysLeft  = Math.ceil((new Date(subExp) - new Date()) / 86400000);
+      var expStr    = new Date(subExp).toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'});
+      var expColor  = isExpired ? '#fef2f2;color:#dc2626' : (daysLeft <= 10 ? '#fffbeb;color:#92400e' : '#f0fdf4;color:#16a34a');
+      var expLabel  = isExpired ? '⚠ Expired ' : (daysLeft <= 10 ? '⚠ Expires ' : '✓ Valid till ');
+      var dayNote   = (!isExpired && daysLeft <= 10) ? ' (' + daysLeft + 'd left)' : '';
+      subBadge += '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:50px;background:' + expColor + '">' + expLabel + expStr + dayNote + '</span>';
+    }
   }
   document.getElementById('ud-sub-badge').innerHTML = subBadge;
 
@@ -1856,14 +1862,18 @@ function toggleUdEditForm() {
   document.getElementById('ud-district').value= u.district || '';
   document.getElementById('ud-state').value   = u.state || '';
   document.getElementById('ud-pincode').value = u.pincode || '';
-  document.getElementById('ud-bank').value    = u.bank_name || '';
-  document.getElementById('ud-acc').value     = u.bank_account || '';
-  document.getElementById('ud-ifsc').value    = u.ifsc || '';
-  document.getElementById('ud-gst').value     = u.gst_number || '';
-  document.getElementById('ud-bizname').value = u.business_name || '';
-  document.getElementById('ud-subplan').value = u.subscription_plan || '';
-  document.getElementById('ud-subexp').value  = u.subscription_expires_at
-    ? u.subscription_expires_at.slice(0, 10) : '';
+  var isSellerEdit = u.role === 'farmer';
+  document.getElementById('ud-seller-fields').style.display = isSellerEdit ? '' : 'none';
+  if (isSellerEdit) {
+    document.getElementById('ud-bank').value    = u.bank_name || '';
+    document.getElementById('ud-acc').value     = u.bank_account || '';
+    document.getElementById('ud-ifsc').value    = u.ifsc || '';
+    document.getElementById('ud-gst').value     = u.gst_number || '';
+    document.getElementById('ud-bizname').value = u.business_name || '';
+    document.getElementById('ud-subplan').value = u.subscription_plan || '';
+    document.getElementById('ud-subexp').value  = u.subscription_expires_at
+      ? u.subscription_expires_at.slice(0, 10) : '';
+  }
   form.style.display = '';
 }
 
