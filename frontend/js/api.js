@@ -62,6 +62,9 @@ var API = {
   submitProfileChangeRequest: function(data) {
     return apiFetch('POST', '/auth/profile-change-request', data, tok());
   },
+  submitRenewalRequest: function(plan) {
+    return apiFetch('POST', '/auth/subscription-renewal', { plan }, tok());
+  },
   getMyChangeRequests: function() {
     return apiFetch('GET', '/auth/my-change-request', null, tok());
   },

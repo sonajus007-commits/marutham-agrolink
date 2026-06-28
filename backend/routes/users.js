@@ -107,7 +107,41 @@ router.post('/change-requests/:id/approve', requireRole('admin'), async (req, re
   if (crErr || !cr) return res.status(404).json({ error: 'Change request not found.' });
   if (cr.status !== 'pending') return res.status(409).json({ error: 'Request already reviewed.' });
 
-  // Apply changes to user profile
+  const PLAN_DAYS = { 'Monthly': 30, 'Quarterly': 90, 'Half Yearly': 180, 'Yearly': 365 };
+
+  if (cr.requested_changes && cr.requested_changes.subscription_renewal) {
+    // ── Subscription renewal: compute new expiry, reactivate user ────────────
+    const plan = cr.requested_changes.new_plan;
+    const planDays = PLAN_DAYS[plan] || 365;
+    const { data: currentUser } = await supabase.from('users').select('subscription_expires_at').eq('id', cr.user_id).single();
+    const now         = new Date();
+    const currentExp  = currentUser?.subscription_expires_at ? new Date(currentUser.subscription_expires_at) : null;
+    const baseDate    = (currentExp && currentExp > now) ? currentExp : now;
+    const newExpiry   = new Date(baseDate);
+    newExpiry.setDate(newExpiry.getDate() + planDays);
+
+    const { error: upErr } = await supabase.from('users').update({
+      subscription_plan:        plan,
+      subscription_expires_at:  newExpiry.toISOString(),
+      status:                   'active',
+      updated_at:               now.toISOString(),
+    }).eq('id', cr.user_id);
+    if (upErr) return res.status(500).json({ error: upErr.message });
+
+    await supabase.from('profile_change_requests').update({
+      status: 'approved', reviewed_at: now.toISOString(),
+      reviewed_by: req.user.id, reviewer_name: req.user.fname, notes: req.body.notes || null,
+    }).eq('id', req.params.id);
+
+    try {
+      const { data: u } = await supabase.from('users').select('fname,lname,email,login_id').eq('id', cr.user_id).single();
+      if (u) await notify.notifySubscriptionRenewalOutcome(u, true, newExpiry.toISOString(), plan);
+    } catch(e) { console.error('Notify error:', e.message); }
+
+    return res.json({ message: `Subscription renewed (${plan}) and user reactivated until ${newExpiry.toDateString()}.` });
+  }
+
+  // ── Regular profile change (bank/business fields) ─────────────────────────
   const { error: upErr } = await supabase
     .from('users')
     .update({ ...cr.requested_changes, updated_at: new Date().toISOString() })
@@ -151,7 +185,13 @@ router.post('/change-requests/:id/reject', requireRole('admin'), async (req, res
 
   try {
     const { data: u } = await supabase.from('users').select('fname,lname,email,login_id').eq('id', cr.user_id).single();
-    if (u) await notify.notifyProfileChangeOutcome(u, 'rejected', req.body.notes, req.user.fname);
+    if (u) {
+      if (cr.requested_changes && cr.requested_changes.subscription_renewal) {
+        await notify.notifySubscriptionRenewalOutcome(u, false, null, cr.requested_changes.new_plan);
+      } else {
+        await notify.notifyProfileChangeOutcome(u, 'rejected', req.body.notes, req.user.fname);
+      }
+    }
   } catch(e) { console.error('Notify error:', e.message); }
 
   res.json({ message: 'Change request rejected.' });

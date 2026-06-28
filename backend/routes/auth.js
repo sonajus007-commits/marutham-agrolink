@@ -524,6 +524,50 @@ router.post('/profile-change-request', requireAuth, async (req, res) => {
   res.status(201).json({ message: 'Change request submitted. The Head Office team will review it shortly.', request });
 });
 
+// ── POST /auth/subscription-renewal ──────────────────────────────────────────
+const VALID_PLANS = ['Monthly', 'Quarterly', 'Half Yearly', 'Yearly'];
+
+router.post('/subscription-renewal', requireAuth, async (req, res) => {
+  if (req.user.role !== 'farmer') {
+    return res.status(403).json({ error: 'Only farmer/retailer accounts can request subscription renewal.' });
+  }
+  const { plan } = req.body;
+  if (!plan || !VALID_PLANS.includes(plan)) {
+    return res.status(400).json({ error: 'A valid plan is required: Monthly, Quarterly, Half Yearly, or Yearly.' });
+  }
+
+  const { data: existing } = await supabase
+    .from('profile_change_requests')
+    .select('id, requested_changes')
+    .eq('user_id', req.user.id)
+    .eq('status', 'pending')
+    .maybeSingle();
+  if (existing) {
+    const isRenewal = existing.requested_changes && existing.requested_changes.subscription_renewal;
+    return res.status(409).json({
+      error: isRenewal
+        ? 'You already have a pending renewal request. Please wait for it to be reviewed.'
+        : 'You already have a pending change request. Please wait for it to be reviewed first.',
+    });
+  }
+
+  const { data: request, error } = await supabase
+    .from('profile_change_requests')
+    .insert({
+      user_id:            req.user.id,
+      login_id:           req.user.login_id,
+      fname:              req.user.fname,
+      requested_changes:  { subscription_renewal: true, new_plan: plan },
+    })
+    .select()
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+
+  try { await notify.notifySubscriptionRenewalRequest(req.user, plan); } catch(e) { console.error('Notify error:', e.message); }
+
+  res.status(201).json({ message: 'Renewal request submitted. The Head Office team will review it shortly.', request });
+});
+
 // ── GET /auth/my-change-request ───────────────────────────────────────────────
 router.get('/my-change-request', requireAuth, async (req, res) => {
   const { data, error } = await supabase

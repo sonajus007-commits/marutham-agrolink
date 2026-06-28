@@ -274,6 +274,44 @@ async function notifySubscriptionExpired(user) {
   }
 }
 
+async function notifySubscriptionRenewalRequest(user, plan) {
+  const name       = [user.fname, user.lname].filter(Boolean).join(' ');
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const subject    = `Subscription Renewal Request — ${name} (${user.login_id})`;
+  if (adminEmail) {
+    await sendEmail(adminEmail, subject, `
+      <p>A subscription renewal request has been submitted.</p>
+      <p><strong>Name:</strong> ${name}<br>
+      <strong>Login ID:</strong> ${user.login_id}<br>
+      <strong>Requested Plan:</strong> ${plan}</p>
+      <p>Please log in to the admin panel → Change Requests to review and approve.</p>
+      <p>Regards,<br><strong>Marutham Agrolink System</strong></p>
+    `);
+  }
+}
+
+async function notifySubscriptionRenewalOutcome(user, approved, newExpiry, plan) {
+  const name = [user.fname, user.lname].filter(Boolean).join(' ');
+  if (approved) {
+    const expStr = new Date(newExpiry).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+    await sendEmail(user.email, `Subscription Renewed — Active until ${expStr}`, `
+      <p>Dear ${name},</p>
+      <p>Your <strong>${plan}</strong> subscription has been <strong style="color:#16a34a">renewed and is now active</strong>.</p>
+      <p>Valid until: <strong>${expStr}</strong></p>
+      <p>Login ID: <strong>${user.login_id}</strong></p>
+      <p>Regards,<br><strong>Marutham Agrolink Team</strong></p>
+    `);
+  } else {
+    await sendEmail(user.email, `Subscription Renewal Request — Not Approved`, `
+      <p>Dear ${name},</p>
+      <p>Your subscription renewal request has not been approved at this time.</p>
+      <p>Please contact the admin team for more details.</p>
+      <p>Login ID: <strong>${user.login_id}</strong></p>
+      <p>Regards,<br><strong>Marutham Agrolink Team</strong></p>
+    `);
+  }
+}
+
 module.exports = {
   notifyRegistrationReceived,
   notifyApprovalWithPayment,
@@ -283,4 +321,6 @@ module.exports = {
   notifyProfileChangeOutcome,
   notifySubscriptionExpiring,
   notifySubscriptionExpired,
+  notifySubscriptionRenewalRequest,
+  notifySubscriptionRenewalOutcome,
 };

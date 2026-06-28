@@ -1990,13 +1990,21 @@ async function loadChangeRequests(status) {
     var LABELS = { bank_name:'Bank Name', bank_account:'Account No', ifsc:'IFSC', gst_number:'GST', business_name:'Business Name', business_type:'Business Type' };
     var html = '';
     list.forEach(function(r) {
-      var changes = Object.entries(r.requested_changes || {}).map(function(e) {
-        return '<span style="font-size:11px;background:#fff;border:1px solid #bfdbfe;border-radius:50px;padding:2px 8px;margin:2px;display:inline-block">' + (LABELS[e[0]]||e[0]) + ': <strong>' + e[1] + '</strong></span>';
-      }).join('');
+      var isRenewal = r.requested_changes && r.requested_changes.subscription_renewal;
+      var changes;
+      if (isRenewal) {
+        changes = '<span style="font-size:11px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:50px;padding:2px 8px;margin:2px;display:inline-block">🔄 Renewal Plan: <strong>' + (r.requested_changes.new_plan || '—') + '</strong></span>';
+      } else {
+        changes = Object.entries(r.requested_changes || {}).map(function(e) {
+          return '<span style="font-size:11px;background:#fff;border:1px solid #bfdbfe;border-radius:50px;padding:2px 8px;margin:2px;display:inline-block">' + (LABELS[e[0]]||e[0]) + ': <strong>' + e[1] + '</strong></span>';
+        }).join('');
+      }
       var dt = new Date(r.requested_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'});
       html += '<div style="background:#fff;border-radius:10px;padding:12px;margin-bottom:10px;border:1px solid #bfdbfe">';
       html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">';
-      html += '<div><div style="font-weight:700;color:#1e3a5f">' + (r.fname||'User') + ' <span class="mono" style="font-size:11px;color:#6b7280">' + r.login_id + '</span></div>';
+      html += '<div><div style="font-weight:700;color:#1e3a5f">' + (r.fname||'User') + ' <span class="mono" style="font-size:11px;color:#6b7280">' + r.login_id + '</span>';
+      if (isRenewal) html += ' <span style="font-size:10px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:1px 7px;border-radius:50px;font-weight:700">🔄 Renewal</span>';
+      html += '</div>';
       html += '<div style="font-size:11px;color:#6b7280;margin-top:2px">' + dt + '</div>';
       if (r.subscription_plan) {
         var crSubExpired = r.subscription_expires_at && new Date(r.subscription_expires_at) < new Date();
@@ -2051,10 +2059,22 @@ function openCrReview(id) {
       crUserHtml += '</div>';
     }
     document.getElementById('cr-review-user').innerHTML = crUserHtml;
-    var changes = Object.entries(r.requested_changes || {}).map(function(e) {
-      return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid #fde68a">'
-        + '<span style="color:#92400e">' + (LABELS[e[0]]||e[0]) + '</span><strong>' + e[1] + '</strong></div>';
-    }).join('');
+    var isRenewal = r.requested_changes && r.requested_changes.subscription_renewal;
+    var changes;
+    if (isRenewal) {
+      document.getElementById('cr-review-title').textContent = 'Review Renewal Request';
+      changes = '<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px 14px;text-align:center">'
+        + '<div style="font-size:12px;color:#166534;font-weight:700;margin-bottom:4px">🔄 Subscription Renewal</div>'
+        + '<div style="font-size:18px;font-weight:800;color:#1a3d2b">' + (r.requested_changes.new_plan || '—') + '</div>'
+        + '<div style="font-size:11px;color:#166534;margin-top:4px">Approving will extend the subscription from the current expiry date (or today if already expired) and reactivate the account.</div>'
+        + '</div>';
+    } else {
+      document.getElementById('cr-review-title').textContent = 'Review Change Request';
+      changes = Object.entries(r.requested_changes || {}).map(function(e) {
+        return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid #fde68a">'
+          + '<span style="color:#92400e">' + (LABELS[e[0]]||e[0]) + '</span><strong>' + e[1] + '</strong></div>';
+      }).join('');
+    }
     document.getElementById('cr-review-changes').innerHTML = changes;
     document.getElementById('cr-review-notes').value = '';
     document.getElementById('crReviewOverlay').style.display = 'flex';

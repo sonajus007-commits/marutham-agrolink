@@ -129,11 +129,15 @@
     </div>
   </div>
   <div class="card" id="subscription-card">
-    <h3>📅 Subscription</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 style="margin:0">📅 Subscription</h3>
+      <button id="p-sub-renew-btn" onclick="openRenewalModal()" style="display:none;background:#1a7a4a;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">🔄 Renew</button>
+    </div>
     <div class="irow"><span class="ilbl">Plan</span><span class="ival" id="p-sub-plan">—</span></div>
     <div class="irow"><span class="ilbl">Valid Until</span><span class="ival" id="p-sub-expiry">—</span></div>
     <div class="irow"><span class="ilbl">Status</span><span class="ival" id="p-sub-status">—</span></div>
     <div id="p-sub-alert" style="display:none;margin-top:10px;font-size:12px;border-radius:8px;padding:10px 13px;line-height:1.5"></div>
+    <div id="p-sub-pending" style="display:none;margin-top:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:9px 12px;font-size:12px;color:#1d4ed8">⏳ <strong>Renewal request pending</strong> — Head Office is reviewing your request.</div>
   </div>
   <div class="card">
     <h3>🔒 Change Password</h3>
@@ -160,6 +164,49 @@
     </div>
   </div>
 </div>
+
+<!-- ══════ SUBSCRIPTION RENEWAL MODAL ══════ -->
+<div id="renewalModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeRenewalModal()">
+  <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:480px;padding:24px 20px 32px;box-shadow:0 -4px 24px rgba(0,0,0,.15)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:800;color:#1a3d2b">🔄 Renew Subscription</div>
+      <button onclick="closeRenewalModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280">✕</button>
+    </div>
+    <div style="background:#f0fdf4;border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:#166534">
+      Current plan: <strong id="rnw-current-plan">—</strong> · Valid until <strong id="rnw-current-expiry">—</strong>
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Select New Plan</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="rnw-plan-grid">
+        <label class="rnw-plan-opt" data-plan="Monthly" data-fee="250" onclick="selectRenewalPlan(this)">
+          <div style="font-weight:700;font-size:13px">Monthly</div>
+          <div style="font-size:11px;color:#6b7280">₹250 · 30 days</div>
+        </label>
+        <label class="rnw-plan-opt" data-plan="Quarterly" data-fee="700" onclick="selectRenewalPlan(this)">
+          <div style="font-weight:700;font-size:13px">Quarterly</div>
+          <div style="font-size:11px;color:#6b7280">₹700 · 90 days</div>
+        </label>
+        <label class="rnw-plan-opt" data-plan="Half Yearly" data-fee="1400" onclick="selectRenewalPlan(this)">
+          <div style="font-weight:700;font-size:13px">Half Yearly</div>
+          <div style="font-size:11px;color:#6b7280">₹1,400 · 180 days</div>
+        </label>
+        <label class="rnw-plan-opt" data-plan="Yearly" data-fee="2800" onclick="selectRenewalPlan(this)">
+          <div style="font-weight:700;font-size:13px">Yearly</div>
+          <div style="font-size:11px;color:#6b7280">₹2,800 · 365 days</div>
+        </label>
+      </div>
+    </div>
+    <div id="rnw-selected-info" style="display:none;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;margin-bottom:12px"></div>
+    <div id="rnw-err" style="display:none;color:#dc2626;font-size:12px;margin-bottom:10px"></div>
+    <button id="rnw-submit-btn" onclick="submitRenewal()" style="width:100%;padding:13px;background:#1a7a4a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer" disabled>Select a plan to continue</button>
+    <div style="font-size:11px;color:#6b7280;text-align:center;margin-top:10px">After submitting, the Head Office team will review and confirm your renewal. You'll be notified by email.</div>
+  </div>
+</div>
+<style>
+.rnw-plan-opt { display:block;border:2px solid #e5e7eb;border-radius:10px;padding:10px 12px;cursor:pointer;transition:border-color .15s,background .15s }
+.rnw-plan-opt:hover { border-color:#1a7a4a;background:#f0fdf4 }
+.rnw-plan-opt.selected { border-color:#1a7a4a;background:#f0fdf4 }
+</style>
 
 <!-- ══════ ADD / EDIT LISTING OVERLAY ══════ -->
 <div class="overlay" id="listingOverlay">
@@ -379,10 +426,11 @@ async function renderEarnings() {
       html += '</div>';
       html += '</div>';
       if (subExpired || (subDays !== null && subDays <= 10)) {
-        html += '<div style="background:' + subBg + ';border:1px solid ' + subBorderColor + ';border-radius:8px;padding:9px 12px;font-size:12px;color:' + subTextColor + ';margin-bottom:14px">';
-        html += subExpired
-          ? '🔒 <strong>Your account is locked.</strong> Please contact Admin to renew your subscription and restore full access.'
-          : '⚠️ <strong>Subscription expiring soon.</strong> Contact Admin to renew before <strong>' + subExpStr + '</strong> to avoid interruption.';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;background:' + subBg + ';border:1px solid ' + subBorderColor + ';border-radius:8px;padding:9px 12px;font-size:12px;color:' + subTextColor + ';margin-bottom:14px;gap:10px">';
+        html += '<span>' + (subExpired
+          ? '🔒 <strong>Your account is locked.</strong> Contact Admin to renew and restore access.'
+          : '⚠️ <strong>Subscription expiring soon.</strong> Renew before <strong>' + subExpStr + '</strong>.') + '</span>';
+        html += '<button onclick="openRenewalModal()" style="flex-shrink:0;background:#1a7a4a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">🔄 Renew</button>';
         html += '</div>';
       }
     }
@@ -971,6 +1019,11 @@ function renderProfile() {
     document.getElementById('p-sub-status').textContent = '—';
     alertEl.style.display = 'none';
   }
+  // Show Renew button for sellers with a subscription
+  if (plan || expStr) {
+    document.getElementById('p-sub-renew-btn').style.display = '';
+  }
+  checkPendingRenewal();
 }
 
 function toggleEditForm() {
@@ -1013,6 +1066,79 @@ function toggleBankForm() {
     sv('edit-acc',  user.bank_account || '');
     sv('edit-ifsc', user.ifsc         || '');
   }
+}
+
+// ── Subscription renewal modal ────────────────────────────────────────────────
+var _renewalSelectedPlan = null;
+
+function openRenewalModal() {
+  var plan   = user.subscription_plan || '—';
+  var expAt  = user.subscription_expires_at;
+  var expStr = expAt ? new Date(expAt).toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'}) : '—';
+  document.getElementById('rnw-current-plan').textContent   = plan;
+  document.getElementById('rnw-current-expiry').textContent = expStr;
+  _renewalSelectedPlan = null;
+  document.querySelectorAll('.rnw-plan-opt').forEach(function(el) { el.classList.remove('selected'); });
+  document.getElementById('rnw-selected-info').style.display = 'none';
+  document.getElementById('rnw-err').style.display = 'none';
+  document.getElementById('rnw-submit-btn').disabled = true;
+  document.getElementById('rnw-submit-btn').textContent = 'Select a plan to continue';
+  document.getElementById('renewalModal').style.display = 'flex';
+}
+
+function closeRenewalModal() {
+  document.getElementById('renewalModal').style.display = 'none';
+}
+
+function selectRenewalPlan(el) {
+  document.querySelectorAll('.rnw-plan-opt').forEach(function(o) { o.classList.remove('selected'); });
+  el.classList.add('selected');
+  _renewalSelectedPlan = el.dataset.plan;
+  var fee = el.dataset.fee;
+  var info = document.getElementById('rnw-selected-info');
+  info.style.display = 'block';
+  info.innerHTML = 'Selected: <strong>' + _renewalSelectedPlan + '</strong> · Fee: <strong>₹' + fee + '</strong>. Please pay to Admin and submit. Your account will be activated once payment is confirmed.';
+  var btn = document.getElementById('rnw-submit-btn');
+  btn.disabled = false;
+  btn.textContent = 'Submit Renewal Request';
+}
+
+async function submitRenewal() {
+  if (!_renewalSelectedPlan) return;
+  var btn = document.getElementById('rnw-submit-btn');
+  var errEl = document.getElementById('rnw-err');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+  errEl.style.display = 'none';
+  try {
+    await API.submitRenewalRequest(_renewalSelectedPlan);
+    closeRenewalModal();
+    showToast('Renewal request submitted! Head Office will review and activate your account.', 'ok');
+    document.getElementById('p-sub-renew-btn').style.display = 'none';
+    document.getElementById('p-sub-pending').style.display = 'block';
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Submit Renewal Request';
+  }
+}
+
+async function checkPendingRenewal() {
+  try {
+    var res = await API.getMyChangeRequests();
+    var pendingRenewal = (res.requests || []).find(function(r) {
+      return r.status === 'pending' && r.requested_changes && r.requested_changes.subscription_renewal;
+    });
+    var pendingEl = document.getElementById('p-sub-pending');
+    var renewBtn  = document.getElementById('p-sub-renew-btn');
+    if (pendingRenewal) {
+      pendingEl.style.display = 'block';
+      renewBtn.style.display  = 'none';
+    } else {
+      pendingEl.style.display = 'none';
+    }
+  } catch(e) { /* non-critical */ }
 }
 
 async function checkPendingChangeRequest() {
