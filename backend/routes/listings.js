@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
       .select(`
         id, farmer_price, qty_available, listed, confirmed,
         time_available, cutoff_ts, bulk_qty, bulk_disc_pct, qty_type, qty_value,
-        farmer:users ( id, fname, lname, village_town, district, seller_type ),
+        farmer:users ( id, fname, lname, village_town, district, seller_type, status ),
         product:products ( id, code, name, unit, platform_fee_pct )
       `)
       .eq('product_id', product)
@@ -35,12 +35,15 @@ router.get('/', async (req, res) => {
       return res.status(500).json({ error: 'Could not fetch listings.' });
     }
 
-    // Compute consumer_price and fee_pct per listing so clients can display the right price
-    const enriched = (data || []).map(l => {
-      const feePct       = getFeeForSeller(l.farmer?.seller_type);
-      const consumerPrice = Math.round(l.farmer_price * (1 + feePct / 100));
-      return { ...l, fee_pct: feePct, consumer_price: consumerPrice };
-    });
+    // Only include listings from active (non-blocked) farmers
+    const enriched = (data || [])
+      .filter(l => l.farmer?.status === 'active')
+      .map(l => {
+        const feePct        = getFeeForSeller(l.farmer?.seller_type);
+        const consumerPrice = Math.round(l.farmer_price * (1 + feePct / 100));
+        const { status: _s, ...farmerPublic } = l.farmer; // strip status from response
+        return { ...l, farmer: farmerPublic, fee_pct: feePct, consumer_price: consumerPrice };
+      });
 
     return res.json({ listings: enriched });
   }
@@ -48,11 +51,12 @@ router.get('/', async (req, res) => {
   // Consumer browsing: ?district=X returns all active listings from farmers in that district
   const { district } = req.query;
   if (district) {
-    // Step 1: find farmer IDs in this district
+    // Step 1: find only active (non-blocked) farmer IDs in this district
     const { data: farmerRows } = await supabase
       .from('users')
       .select('id')
       .eq('role', 'farmer')
+      .eq('status', 'active')
       .ilike('district', district);
 
     const farmerIds = (farmerRows || []).map(f => f.id);
