@@ -158,6 +158,10 @@ body{background:var(--green-bg);}
 .forgotlnk a{font-size:12px;color:var(--green-deep);font-weight:600;cursor:pointer;
   font-family:'Segoe UI',system-ui,sans-serif;}
 .forgotlnk a:hover{text-decoration:underline;}
+.lauth-toggle{text-align:center;margin:14px 0 2px;}
+.lauth-toggle a{font-size:13px;color:var(--green-deep);font-weight:700;cursor:pointer;
+  font-family:'Segoe UI',system-ui,sans-serif;}
+.lauth-toggle a:hover{text-decoration:underline;}
 .asw{text-align:center;margin-top:14px;font-size:13px;color:#5f7268;
   font-family:'Segoe UI',system-ui,sans-serif;}
 .alnk{color:var(--green-deep);font-weight:700;cursor:pointer;}
@@ -227,12 +231,6 @@ body{background:var(--green-bg);}
 
   <!-- ── AUTH CARD ── -->
   <div class="auth-card">
-    <!-- Login / Register tabs -->
-    <div class="atabs">
-      <button class="atab on" id="tab-login" onclick="swTab('login')">Login</button>
-      <button class="atab"    id="tab-reg"   onclick="swTab('reg')">Register</button>
-    </div>
-
     <!-- Role selector (register tab only) -->
     <div class="rrow" id="rrow" style="display:none">
       <div class="rbtn on" id="rb-consumer" onclick="setRole('consumer')"><span class="ri">🛒</span>Consumer</div>
@@ -242,11 +240,6 @@ body{background:var(--green-bg);}
 
     <!-- ══════ LOGIN FORM ══════ -->
     <div id="fLogin">
-      <div class="lmeth">
-        <button class="lmbtn on" id="lm-pw"  onclick="setLoginMethod('pw')">🔐 Password</button>
-        <button class="lmbtn"    id="lm-otp" onclick="setLoginMethod('otp')">📱 OTP Login</button>
-      </div>
-
       <div class="fg">
         <label class="fl">Phone Number or Login ID <span class="rq">*</span></label>
         <input class="fi" id="l-phone" type="text" placeholder="9876543210 or CNTNPDK_KAVA01" autocomplete="username">
@@ -275,6 +268,10 @@ body{background:var(--green-bg);}
           <div class="otptmr" id="l-otpt"></div>
           <div class="em" id="l-otp-e">Incorrect OTP</div>
         </div>
+      </div>
+
+      <div class="lauth-toggle">
+        <a id="otp-toggle-link" onclick="toggleLoginMethod()">📱 Login with OTP instead</a>
       </div>
 
       <button class="sbtn" id="login-btn" onclick="doLogin()">Login →</button>
@@ -720,8 +717,6 @@ function swTab(tab) {
   document.getElementById('fReg').style.display    = tab === 'reg'   ? 'block' : 'none';
   document.getElementById('fForgot').style.display = 'none';
   document.getElementById('rrow').style.display    = tab === 'reg'   ? 'flex'  : 'none';
-  document.getElementById('tab-login').classList.toggle('on', tab === 'login');
-  document.getElementById('tab-reg').classList.toggle('on',   tab === 'reg');
   if (tab === 'reg') setRole(aRole);
 }
 function setRole(role) {
@@ -778,10 +773,14 @@ function updatePlanTotal() {
 }
 function setLoginMethod(m) {
   loginMethod = m;
-  document.getElementById('lm-pw').classList.toggle('on',  m === 'pw');
-  document.getElementById('lm-otp').classList.toggle('on', m === 'otp');
   document.getElementById('lm-pw-fields').style.display  = m === 'pw'  ? 'block' : 'none';
   document.getElementById('lm-otp-fields').style.display = m === 'otp' ? 'block' : 'none';
+  document.getElementById('otp-toggle-link').innerHTML   = m === 'pw'
+    ? '📱 Login with OTP instead'
+    : '🔐 Login with password instead';
+}
+function toggleLoginMethod() {
+  setLoginMethod(loginMethod === 'pw' ? 'otp' : 'pw');
 }
 function showForgot() {
   document.getElementById('fLogin').style.display  = 'none';
