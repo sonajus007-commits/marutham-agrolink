@@ -311,6 +311,34 @@ router.get('/:id', async (req, res) => {
     return res.status(403).json({ error: 'You can only view your own orders.' });
   }
 
+  // Consumer contact + address (for delivery display and for falling back when
+  // the order didn't capture a delivery_address, e.g. pre-migration orders).
+  if (order.consumer_id) {
+    const { data: consumer } = await supabase
+      .from('users')
+      .select('phone, country_code, house_no, street1, street2, landmark, village_town, city, district, pincode, state')
+      .eq('id', order.consumer_id)
+      .single();
+    if (consumer) {
+      order.consumer_phone = `${consumer.country_code || '+91'} ${consumer.phone}`;
+      if (!order.delivery_address) {
+        order.delivery_address = {
+          label:        'Registered address',
+          house_no:     consumer.house_no,
+          street1:      consumer.street1,
+          street2:      consumer.street2,
+          landmark:     consumer.landmark,
+          village_town: consumer.village_town,
+          city:         consumer.city,
+          district:     consumer.district,
+          pincode:      consumer.pincode,
+          state:        consumer.state,
+          phone:        consumer.phone,
+        };
+      }
+    }
+  }
+
   // Fetch items
   const { data: items } = await supabase
     .from('order_items')

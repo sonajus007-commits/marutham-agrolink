@@ -1137,6 +1137,16 @@ async function openOrderDetail(orderId) {
     html += '<div class="irow"><span class="ilbl">Your Payout</span><span class="ival" style="color:var(--green);font-weight:800">' + fmt(o.farmer_payout||0) + '</span></div>';
     html += '</div>';
 
+    // Delivery address (where the order is headed)
+    var da     = o.delivery_address;
+    var daText = (da && typeof da === 'object') ? buildAddress(da) : (da || '');
+    html += '<div class="card"><h3>📍 Delivery Address</h3>';
+    if (da && da.label) html += '<div style="font-size:11px;font-weight:700;color:var(--forest);margin-bottom:3px">' + da.label + '</div>';
+    html += '<div style="font-size:12px;color:#374151;line-height:1.55">' + (daText || '—') + '</div>';
+    var daPhone = (da && da.phone) || o.consumer_phone;
+    if (daPhone) html += '<div style="font-size:11px;color:var(--gray);margin-top:4px">📞 ' + daPhone + '</div>';
+    html += '</div>';
+
     html += '<div class="card"><h3>🌿 Items to Pack</h3>';
     items.forEach(function(item) {
       html += '<div class="irow"><span class="ilbl">' + item.name + '<br><span style="font-size:10px;color:var(--gray)">' + item.qty + ' ' + (item.unit||'') + ' × ' + fmt(item.farmer_price||item.price) + '</span></span>';

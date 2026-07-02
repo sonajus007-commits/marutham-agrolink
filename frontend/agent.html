@@ -6,8 +6,8 @@
 <title>Marutham Agrolink — Delivery Agent</title>
 <link rel="stylesheet" href="css/app.css">
 <style>
-.agent-bg{min-height:100vh;background:#0a1f12;display:flex;flex-direction:column;}
-.agent-hdr{background:rgba(255,255,255,.93);backdrop-filter:blur(8px);padding:10px 16px;
+.agent-bg{min-height:100vh;background:#f3faf4;display:flex;flex-direction:column;}
+.agent-hdr{background:#fff;padding:10px 16px;
   display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50;
   border-bottom:1px solid #dcefe0;box-shadow:0 2px 12px rgba(31,107,59,.08);}
 .agent-status-pill{display:flex;align-items:center;gap:6px;background:#eaf6ed;
@@ -19,47 +19,48 @@
 .agent-body{flex:1;padding:16px;display:flex;flex-direction:column;gap:14px;}
 
 /* Scan bar */
-.scan-bar{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);
-  border-radius:14px;padding:14px;}
-.scan-bar-label{font-size:9px;color:#95d5b2;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:8px;}
+.scan-bar{background:#fff;border:1px solid #e6efe6;border-radius:14px;padding:14px;
+  box-shadow:0 2px 10px rgba(31,107,59,.06);}
+.scan-bar-label{font-size:9px;color:var(--leaf);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:8px;}
 .scan-input-row{display:flex;gap:8px;}
-.scan-input{flex:1;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.15);
-  border-radius:10px;padding:10px 14px;color:#fff;font-family:'JetBrains Mono',monospace;
+.scan-input{flex:1;background:#f3faf4;border:1.5px solid #dde8dd;
+  border-radius:10px;padding:10px 14px;color:var(--forest);font-family:'JetBrains Mono',monospace;
   font-size:13px;font-weight:700;outline:none;}
-.scan-input::placeholder{color:rgba(255,255,255,.3);font-family:'Outfit',sans-serif;font-weight:400;}
-.scan-input:focus{border-color:var(--gold2);}
-.scan-go{background:var(--gold);color:#1a3d2b;border:none;border-radius:10px;padding:10px 18px;
+.scan-input::placeholder{color:#9aa8a0;font-family:'Outfit',sans-serif;font-weight:400;}
+.scan-input:focus{border-color:var(--leaf);box-shadow:0 0 0 3px rgba(78,159,61,.12);}
+.scan-go{background:var(--forest);color:#fff;border:none;border-radius:10px;padding:10px 18px;
   font-size:13px;font-weight:800;cursor:pointer;font-family:'Outfit',sans-serif;white-space:nowrap;}
-.scan-go:disabled{background:#374151;color:#6b7280;cursor:not-allowed;}
+.scan-go:disabled{background:#cbd5c9;color:#8a978c;cursor:not-allowed;}
 
 /* Queue sections */
-.q-section{border-radius:16px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.3);}
-.q-section-verify  {background:linear-gradient(135deg,#1e3a5f,#1d4ed8);}
-.q-section-pickup  {background:linear-gradient(135deg,#4c1d95,#7c3aed);}
-.q-section-transit {background:linear-gradient(135deg,#78350f,#d97706);}
-.q-section-deliver {background:linear-gradient(135deg,#1a3d2b,#2d6a4f);}
+.q-section{border-radius:16px;padding:16px;background:#fff;border:1px solid #eef4ee;
+  border-left-width:4px;box-shadow:0 4px 16px rgba(31,107,59,.06);}
+.q-section-verify  {border-left-color:#1d4ed8;}
+.q-section-pickup  {border-left-color:#7c3aed;}
+.q-section-transit {border-left-color:#d97706;}
+.q-section-deliver {border-left-color:#2d6a4f;}
 .queue-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
-.queue-label{font-size:10px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;}
-.queue-count{background:rgba(255,255,255,.9);color:#1a3d2b;font-size:11px;font-weight:800;padding:3px 10px;border-radius:50px;}
+.queue-label{font-size:11px;color:var(--forest);text-transform:uppercase;letter-spacing:1.2px;font-weight:800;}
+.queue-count{background:var(--forest);color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:50px;}
 
-.delv-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+.delv-card{background:#f8fdf8;border:1px solid #eef4ee;
   border-radius:12px;padding:14px;margin-bottom:10px;}
 .delv-card:last-child{margin-bottom:0;}
-.delv-code{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--gold2);}
-.delv-name{font-size:14px;font-weight:700;color:#fff;margin-top:3px;}
-.delv-addr{font-size:11px;color:rgba(255,255,255,.6);margin-top:3px;line-height:1.5;}
+.delv-code{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--leaf);}
+.delv-name{font-size:14px;font-weight:700;color:var(--forest);margin-top:3px;}
+.delv-addr{font-size:11px;color:var(--gray);margin-top:3px;line-height:1.5;}
 .delv-meta{display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;
-  border-top:1px solid rgba(255,255,255,.1);}
-.delv-pay{font-size:13px;font-weight:800;color:var(--gold2);}
+  border-top:1px solid #eef4ee;}
+.delv-pay{font-size:13px;font-weight:800;color:var(--forest);}
 .delv-method{font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;}
-.dm-cod{background:rgba(244,162,97,.2);color:#f4a261;}
-.dm-upi{background:rgba(82,183,136,.2);color:#95d5b2;}
-.delv-btn{margin-left:auto;background:rgba(255,255,255,.9);color:#1a3d2b;border:none;border-radius:50px;
+.dm-cod{background:#fff7ed;color:#c2620a;}
+.dm-upi{background:#e6f7ed;color:#1a7a4a;}
+.delv-btn{margin-left:auto;background:var(--forest);color:#fff;border:none;border-radius:50px;
   padding:7px 16px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Outfit',sans-serif;}
-.delv-btn:disabled{background:rgba(255,255,255,.2);color:rgba(255,255,255,.4);cursor:not-allowed;}
+.delv-btn:disabled{background:#cbd5c9;color:#8a978c;cursor:not-allowed;}
 
 /* Deliver action sheet */
-.deliver-sheet{position:fixed;inset:0;background:#0a1f12;z-index:300;
+.deliver-sheet{position:fixed;inset:0;background:#f3faf4;z-index:300;
   display:none;flex-direction:column;overflow-y:auto;}
 .deliver-sheet.active{display:flex;}
 .deliver-hdr{background:linear-gradient(135deg,#1a3d2b,#2d6a4f);padding:14px 16px;
@@ -81,24 +82,25 @@
   box-shadow:0 8px 24px rgba(120,53,15,.4);}
 .confirm-btn.btn-blue{background:linear-gradient(135deg,#1e3a5f,#1d4ed8);
   box-shadow:0 8px 24px rgba(29,78,216,.4);}
-.confirm-btn:disabled{background:#374151;cursor:not-allowed;box-shadow:none;}
+.confirm-btn:disabled{background:#cbd5c9;color:#8a978c;cursor:not-allowed;box-shadow:none;}
 
 /* Route toggle */
 .route-toggle{display:flex;gap:8px;margin-bottom:14px;}
-.route-btn{flex:1;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.12);
-  border-radius:10px;padding:10px;text-align:center;cursor:pointer;color:rgba(255,255,255,.6);
+.route-btn{flex:1;background:#fff;border:1.5px solid #dde8dd;
+  border-radius:10px;padding:10px;text-align:center;cursor:pointer;color:var(--gray);
   font-size:12px;font-weight:700;font-family:'Outfit',sans-serif;transition:all .15s;}
-.route-btn.on{background:rgba(255,255,255,.12);border-color:var(--gold2);color:var(--gold2);}
+.route-btn.on{background:#f0f9ec;border-color:var(--leaf);color:var(--forest);box-shadow:inset 0 0 0 1px var(--leaf);}
 
 /* Stats */
 .agent-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
-.astat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
-  border-radius:12px;padding:12px;text-align:center;}
-.astat-val{font-size:20px;font-weight:800;color:var(--gold2);font-family:'JetBrains Mono',monospace;}
-.astat-lbl{font-size:9px;color:#95d5b2;text-transform:uppercase;letter-spacing:1px;margin-top:4px;font-weight:700;}
+.astat{background:#fff;border:1px solid #eef4ee;
+  border-radius:12px;padding:12px;text-align:center;box-shadow:0 2px 10px rgba(31,107,59,.05);}
+.astat-val{font-size:20px;font-weight:800;color:var(--forest);font-family:'JetBrains Mono',monospace;}
+.astat-lbl{font-size:9px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-top:4px;font-weight:700;}
 
-.done-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
-  border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px;}
+.done-card{background:#fff;border:1px solid #eef4ee;
+  border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px;
+  box-shadow:0 2px 8px rgba(31,107,59,.05);}
 </style>
 </head>
 <body class="agent-bg">
@@ -119,7 +121,7 @@
       <button id="lang-en" class="active" onclick="setLang('en',this)">EN</button>
       <button id="lang-ta" onclick="setLang('ta',this)">த</button>
     </div>
-    <button class="hbtn" onclick="openAgentProfile()" style="margin-right:6px;background:rgba(255,255,255,.12)">👤</button>
+    <button class="hbtn" onclick="openAgentProfile()" style="margin-right:6px">👤</button>
     <button class="hbtn" onclick="doLogout()">Exit</button>
   </div>
 </div>
@@ -130,12 +132,12 @@
   <!-- Agent identity + clock -->
   <div style="display:flex;justify-content:space-between;align-items:center;">
     <div>
-      <div style="font-size:18px;font-weight:800;color:var(--gold2)" id="agentName">Agent</div>
-      <div style="font-size:11px;color:#95d5b2" id="agentSub">—</div>
+      <div style="font-size:18px;font-weight:800;color:var(--forest)" id="agentName">Agent</div>
+      <div style="font-size:11px;color:var(--gray)" id="agentSub">—</div>
     </div>
     <div style="text-align:right">
       <div class="liveclk" id="liveClock">--</div>
-      <div style="font-size:10px;color:#95d5b2;margin-top:3px">IST</div>
+      <div style="font-size:10px;color:var(--gray);margin-top:3px">IST</div>
     </div>
   </div>
 
@@ -158,14 +160,14 @@
 
   <!-- Dynamic queue sections -->
   <div id="queueSections">
-    <div style="text-align:center;padding:20px;color:rgba(255,255,255,.4);font-size:13px">
+    <div style="text-align:center;padding:20px;color:var(--gray);font-size:13px">
       Loading orders…
     </div>
   </div>
 
   <!-- Delivered today -->
   <div id="deliveredSection" style="display:none">
-    <div style="color:#95d5b2;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">
+    <div style="color:var(--forest);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">
       ✅ Completed Today
     </div>
     <div id="deliveredList"></div>
@@ -191,64 +193,64 @@
   <div class="deliver-body" style="padding:16px;display:flex;flex-direction:column;gap:14px">
 
     <!-- Identity card -->
-    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:16px">
-      <div style="font-size:18px;font-weight:800;color:var(--gold2)" id="prof-name">—</div>
-      <div style="font-size:11px;color:#95d5b2;margin-top:2px" id="prof-role">—</div>
+    <div style="background:#fff;border:1px solid #eef4ee;border-radius:14px;padding:16px">
+      <div style="font-size:18px;font-weight:800;color:var(--forest)" id="prof-name">—</div>
+      <div style="font-size:11px;color:var(--gray);margin-top:2px" id="prof-role">—</div>
       <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
         <div style="display:flex;justify-content:space-between;font-size:12px">
-          <span style="color:#95d5b2">Login ID</span><span class="mono" style="color:#fff;font-weight:700" id="prof-lid">—</span>
+          <span style="color:var(--gray)">Login ID</span><span class="mono" style="color:var(--forest);font-weight:700" id="prof-lid">—</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:12px">
-          <span style="color:#95d5b2">Phone</span><span class="mono" style="color:#fff" id="prof-phone">—</span>
+          <span style="color:var(--gray)">Phone</span><span class="mono" style="color:var(--forest)" id="prof-phone">—</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:12px">
-          <span style="color:#95d5b2">District</span><span style="color:#fff" id="prof-district">—</span>
+          <span style="color:var(--gray)">District</span><span style="color:var(--forest)" id="prof-district">—</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:12px">
-          <span style="color:#95d5b2">Gender</span><span style="color:#fff" id="prof-gender">—</span>
+          <span style="color:var(--gray)">Gender</span><span style="color:var(--forest)" id="prof-gender">—</span>
         </div>
       </div>
     </div>
 
     <!-- Gender -->
-    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:16px">
-      <div style="font-size:13px;font-weight:700;color:var(--gold2);margin-bottom:10px">⚧ Gender</div>
+    <div style="background:#fff;border:1px solid #eef4ee;border-radius:14px;padding:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--forest);margin-bottom:10px">⚧ Gender</div>
       <div style="display:flex;gap:10px;align-items:center">
         <select id="prof-gender-select"
-          style="flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px 13px;font-size:13px;color:#fff;outline:none;appearance:none">
-          <option value="" style="background:#1a2e1e">— Select Gender —</option>
-          <option value="Male" style="background:#1a2e1e">Male</option>
-          <option value="Female" style="background:#1a2e1e">Female</option>
-          <option value="Transgender" style="background:#1a2e1e">Transgender</option>
+          style="flex:1;background:#f3faf4;border:1.5px solid #dde8dd;border-radius:10px;padding:10px 13px;font-size:13px;color:var(--forest);outline:none;appearance:none">
+          <option value="">— Select Gender —</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Transgender">Transgender</option>
         </select>
-        <button onclick="saveGender()" style="background:var(--gold2);color:#1a2e1e;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">Save</button>
+        <button onclick="saveGender()" style="background:var(--forest);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">Save</button>
       </div>
     </div>
 
     <!-- Vehicle info -->
-    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:16px">
-      <div style="font-size:13px;font-weight:700;color:var(--gold2);margin-bottom:10px">🛵 Vehicle</div>
+    <div style="background:#fff;border:1px solid #eef4ee;border-radius:14px;padding:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--forest);margin-bottom:10px">🛵 Vehicle</div>
       <div style="display:flex;gap:10px;align-items:center">
         <input id="prof-vehicle" type="text" placeholder="e.g. TN 38 AB 1234 — Bike"
-          style="flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px 13px;font-size:13px;color:#fff;outline:none">
-        <button onclick="saveVehicle()" style="background:var(--gold2);color:#1a2e1e;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">Save</button>
+          style="flex:1;background:#f3faf4;border:1.5px solid #dde8dd;border-radius:10px;padding:10px 13px;font-size:13px;color:var(--forest);outline:none">
+        <button onclick="saveVehicle()" style="background:var(--forest);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">Save</button>
       </div>
     </div>
 
     <!-- Change password -->
-    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:16px">
-      <div style="font-size:13px;font-weight:700;color:var(--gold2);margin-bottom:10px">🔒 Change Password</div>
+    <div style="background:#fff;border:1px solid #eef4ee;border-radius:14px;padding:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--forest);margin-bottom:10px">🔒 Change Password</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <input id="prof-cpw" type="password" placeholder="Current password"
-          style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px 13px;font-size:13px;color:#fff;outline:none">
+          style="background:#f3faf4;border:1.5px solid #dde8dd;border-radius:10px;padding:10px 13px;font-size:13px;color:var(--forest);outline:none">
         <input id="prof-npw" type="password" placeholder="New password (min 6 chars)"
-          style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px 13px;font-size:13px;color:#fff;outline:none">
-        <div id="prof-pw-err" style="display:none;font-size:11px;color:#f87171;padding:4px 0"></div>
-        <button onclick="agentChangePw()" style="background:var(--gold2);color:#1a2e1e;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;width:100%">Update Password</button>
+          style="background:#f3faf4;border:1.5px solid #dde8dd;border-radius:10px;padding:10px 13px;font-size:13px;color:var(--forest);outline:none">
+        <div id="prof-pw-err" style="display:none;font-size:11px;color:#c0392b;padding:4px 0"></div>
+        <button onclick="agentChangePw()" style="background:var(--forest);color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;width:100%">Update Password</button>
       </div>
     </div>
 
-    <button onclick="doLogout()" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25);border-radius:12px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;width:100%">Sign Out</button>
+    <button onclick="doLogout()" style="background:#fdeaea;color:#c0392b;border:1px solid #f5c6c6;border-radius:12px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;width:100%">Sign Out</button>
   </div>
 </div>
 
@@ -296,7 +298,7 @@ async function loadOrders() {
     renderDelivered();
   } catch(e) {
     document.getElementById('queueSections').innerHTML =
-      '<div style="text-align:center;padding:20px;color:rgba(255,255,255,.5)">' + e.message + '</div>';
+      '<div style="text-align:center;padding:20px;color:var(--gray)">' + e.message + '</div>';
   }
 }
 
@@ -336,7 +338,7 @@ function renderQueueSections() {
   }
 
   if (!html) {
-    html = '<div style="text-align:center;padding:32px;color:rgba(255,255,255,.4);font-size:13px">' +
+    html = '<div style="text-align:center;padding:32px;color:var(--gray);font-size:13px">' +
            '<div style="font-size:40px;margin-bottom:12px">🎉</div>All clear — nothing pending!</div>';
   }
 
@@ -422,10 +424,14 @@ async function openDeliverSheet(orderId) {
     }
 
     // Address + call
+    var da = o.delivery_address;
+    var daText = (da && typeof da === 'object') ? buildAddress(da) : (da || '');
     html += '<div class="card" style="margin-bottom:14px"><h3>📍 Delivery Address</h3>';
-    html += '<div style="font-size:13px;line-height:1.8;color:var(--forest)">' + (o.delivery_address || '—') + '</div>';
-    if (o.consumer_phone) {
-      html += '<a href="tel:' + o.consumer_phone + '" style="display:inline-block;margin-top:10px;background:var(--greenbg);color:var(--green);padding:8px 18px;border-radius:50px;font-size:12px;font-weight:700;text-decoration:none">📞 Call Customer</a>';
+    html += '<div style="font-size:12px;font-weight:700;color:var(--forest);margin-bottom:3px">' + (o.consumer_name || 'Consumer') + (da && da.label ? ' · ' + da.label : '') + '</div>';
+    html += '<div style="font-size:13px;line-height:1.7;color:var(--forest)">' + (daText || '—') + '</div>';
+    var callPhone = (da && da.phone) || o.consumer_phone;
+    if (callPhone) {
+      html += '<a href="tel:' + callPhone + '" style="display:inline-block;margin-top:10px;background:var(--greenbg);color:var(--green);padding:8px 18px;border-radius:50px;font-size:12px;font-weight:700;text-decoration:none">📞 Call Customer</a>';
     }
     html += '</div>';
 
@@ -504,11 +510,11 @@ function renderDelivered() {
     html += '<div class="done-card">';
     html += '<div style="font-size:18px">✅</div>';
     html += '<div style="flex:1">';
-    html += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--gold2)">' + (o.code || o.id.slice(0,8).toUpperCase()) + '</div>';
-    html += '<div style="font-size:12px;color:rgba(255,255,255,.7)">' + (o.consumer_name || 'Consumer') + '</div>';
+    html += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--leaf)">' + (o.code || o.id.slice(0,8).toUpperCase()) + '</div>';
+    html += '<div style="font-size:12px;color:var(--gray)">' + (o.consumer_name || 'Consumer') + '</div>';
     html += '</div>';
     html += '<div style="text-align:right">';
-    html += '<div style="font-weight:800;color:#95d5b2">' + fmt(o.total) + '</div>';
+    html += '<div style="font-weight:800;color:var(--forest)">' + fmt(o.total) + '</div>';
     html += '<span class="delv-method ' + mClass + '" style="margin-top:3px;display:inline-block">' + (o.pay_method === 'Cash on Delivery' ? 'COD' : 'UPI') + '</span>';
     html += '</div></div>';
   });
