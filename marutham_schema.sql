@@ -131,6 +131,7 @@ create table if not exists orders (
   consumer_name    text,
   district         text,
   village          text,                         -- fulfilment village (farmer's)
+  delivery_address jsonb,                         -- chosen/entered delivery address; null = use consumer profile address
 
   -- money (all paise)
   item_total       integer not null default 0,

@@ -113,6 +113,7 @@
     <div class="sec-head"><span class="sh-icon" style="background:#e6f7ed">🛒</span> Your Cart</div>
     <div id="cartItems"></div>
     <div id="cartSummary"></div>
+    <div id="cartCheckout"></div>
   </div>
 </div>
 
@@ -1018,7 +1019,10 @@ function renderProducts() {
     html += '<div class="prod-meta-row">';
     if (p.exotic) html += '<span class="prod-badge" style="background:#fff1f2;color:#be123c">🌶 Perishable</span>';
     if (bestOffer && bestOffer.time_available) html += '<span style="font-size:10px;color:#7c3aed">Order by ' + bestOffer.time_available + '</span>';
-    if (bestOffer && bestOffer.qty_available)  html += '<span style="font-size:10px;color:var(--gray)">' + bestOffer.qty_available + ' ' + (p.unit||'') + ' avail</span>';
+    if (bestOffer && bestOffer.qty_available)  {
+      var availLeft = Math.max(0, Number(bestOffer.qty_available) - cartQty);
+      html += '<span style="font-size:10px;color:' + (availLeft <= 0 ? '#c0392b' : 'var(--gray)') + '">' + availLeft + ' ' + (p.unit||'') + ' avail' + (cartQty > 0 ? ' (' + cartQty + ' in cart)' : '') + '</span>';
+    }
     if (bestOffer && bestOffer.bulk_qty && bestOffer.bulk_disc_pct) {
       html += '<span style="font-size:10px;color:var(--leaf);font-weight:700">Bulk ' + bestOffer.bulk_qty + '+ → ' + bestOffer.bulk_disc_pct + '% off</span>';
     }
@@ -1050,6 +1054,16 @@ function renderProducts() {
 function getCartQty(productId) {
   var item = _cart.find(function(i) { return i.product_id === productId; });
   return item ? item.qty : 0;
+}
+
+// Available stock for the offer backing a cart item (or the best offer of a product)
+function offerAvailable(productId, listingId) {
+  var offers = _offersByProduct[productId] || [];
+  var o = listingId ? offers.find(function(x){ return x.id === listingId; }) : null;
+  if (!o && offers.length) {
+    o = offers.reduce(function(b, x){ return parseFloat(x.farmer_price) < parseFloat(b.farmer_price) ? x : b; });
+  }
+  return o && o.qty_available != null ? Number(o.qty_available) : Infinity;
 }
 
 function addToCart(productId) {
@@ -1094,7 +1108,12 @@ function changeQty(productId, delta) {
   var idx = _cart.findIndex(function(i) { return i.product_id === productId; });
   if (idx === -1) return;
   var step = unitStep(_cart[idx].unit || 'pcs');
-  _cart[idx].qty = Math.round((_cart[idx].qty + delta * step) * 100) / 100;
+  var next = Math.round((_cart[idx].qty + delta * step) * 100) / 100;
+  if (delta > 0) {
+    var avail = offerAvailable(productId, _cart[idx].listing_id);
+    if (next > avail) { showToast('Only ' + avail + ' ' + (_cart[idx].unit || '') + ' available', 'er'); return; }
+  }
+  _cart[idx].qty = next;
   if (_cart[idx].qty <= 0) _cart.splice(idx, 1);
   saveCart();
   renderProducts();
@@ -1107,7 +1126,7 @@ function saveCart() {
 
 function updateCartBar() {
   var total = _cart.reduce(function(s, i) { return s + parseFloat(i.price || 0) * i.qty; }, 0);
-  var count = _cart.reduce(function(s, i) { return s + i.qty; }, 0);
+  var count = _cart.length;   // number of distinct products added, not summed quantity
   var bar  = document.getElementById('cartBar');
   var badge = document.getElementById('cartBadge');
   if (bar)   bar.style.display = count > 0 ? 'block' : 'none';
@@ -1142,17 +1161,26 @@ function reorderItems(itemsJson) {
 }
 
 async function renderCart() {
+  updateCartBar();
+  if (_cart.length === 0) { renderCartItems(); return; }
+  await resolveCartFarmers();
+  renderCartItems();
+  renderCartSummary();
+  renderCheckout();
+}
+
+// Builds just the item list (safe to re-run on quantity changes without touching checkout)
+function renderCartItems() {
   var el    = document.getElementById('cartItems');
   var sumEl = document.getElementById('cartSummary');
-  updateCartBar();
 
   if (_cart.length === 0) {
     el.innerHTML = '<div class="empty-state"><div class="es-icon">🛒</div><p>Your cart is empty.<br>Browse the shop to add items.</p></div>';
-    sumEl.innerHTML = '';
+    if (sumEl) sumEl.innerHTML = '';
+    var ck = document.getElementById('cartCheckout');
+    if (ck) ck.innerHTML = '';
     return;
   }
-
-  await resolveCartFarmers();
 
   var html = '';
   _cart.forEach(function(item, idx) {
@@ -1181,7 +1209,7 @@ async function renderCart() {
     html += '<input id="cart-inp-' + idx + '" type="text" value="' + item.qty + '" oninput="changeQtyCartInput(' + idx + ',this.value)" style="width:42px;border:1.5px solid #dde8dd;border-radius:7px;text-align:center;font-size:12px;font-weight:700;padding:4px 2px;font-family:inherit">';
     html += '<button class="qty-btn" onclick="changeQtyCart(' + idx + ',1)">+</button>';
     html += '</div>';
-    html += '<div style="font-weight:700;font-size:14px;color:var(--forest)">₹' + lineTotal.toFixed(0) + '</div>';
+    html += '<div id="cart-line-' + idx + '" style="font-weight:700;font-size:14px;color:var(--forest)">₹' + lineTotal.toFixed(0) + '</div>';
     html += '<a style="font-size:10px;color:#c0392b;font-weight:700;cursor:pointer;text-decoration:underline;display:block;margin-top:3px" onclick="removeCartItem(' + idx + ')">Remove</a>';
     html += '</div></div>';
 
@@ -1195,8 +1223,13 @@ async function renderCart() {
     html += '</div>';
   });
   el.innerHTML = html;
+}
 
-  // ── Bill summary ──────────────────────────────────────────────────────────
+// ── Bill summary (recomputed on every quantity change) ────────────────────────
+function renderCartSummary() {
+  var sumEl = document.getElementById('cartSummary');
+  if (!sumEl) return;
+
   var itemSubtotal = _cart.reduce(function(s, i) { return s + parseFloat(i.price || 0) * i.qty; }, 0);
 
   // Compute market fee = sum of platform fee portions (price - farmer_share)
@@ -1244,41 +1277,102 @@ async function renderCart() {
   sumHtml += '<div style="border-top:2px solid #2d6a4f;margin:10px 0"></div>';
   sumHtml += '<div class="irow"><span class="ilbl" style="font-size:14px;font-weight:700;color:var(--forest)">Grand Total</span><span class="ival" style="font-size:16px;font-weight:700;color:var(--forest)">₹' + grandTotal.toFixed(0) + '</span></div>';
   sumHtml += '</div>';
-
-  // Delivery address picker
-  var addrs = (user.delivery_addresses || []);
-  sumHtml += '<div class="fg"><label class="fl">Delivery Address <span class="rq">*</span></label>';
-  if (addrs.length > 0) {
-    sumHtml += '<select class="fi" id="addrPicker">';
-    addrs.forEach(function(a, i) {
-      var line = a.label + ': ' + [a.house_no, a.street1, a.landmark, a.village_town, a.pincode].filter(Boolean).join(', ');
-      sumHtml += '<option value="' + i + '"' + (a.is_default ? ' selected' : '') + '>' + line + '</option>';
-    });
-    sumHtml += '<option value="profile">📍 Use profile address</option>';
-    sumHtml += '</select>';
-  } else {
-    sumHtml += '<div style="font-size:11px;color:var(--gray);padding:8px;background:#f8f9fa;border-radius:8px">📍 Using your profile address. Add saved addresses in Profile tab.</div>';
-    sumHtml += '<input type="hidden" id="addrPicker" value="profile">';
-  }
-  sumHtml += '</div>';
-
-  sumHtml += '<div class="fg"><label class="fl">Payment Method <span class="rq">*</span></label>';
-  sumHtml += '<select class="fi" id="payMethod">';
-  sumHtml += '<option value="Cash on Delivery">Cash on Delivery</option>';
-  sumHtml += '<option value="UPI">UPI</option>';
-  sumHtml += '<option value="Card">Card</option>';
-  sumHtml += '</select></div>';
-  sumHtml += '<button class="sbtn" onclick="placeOrder()">Place Order →</button>';
   sumEl.innerHTML = sumHtml;
+}
+
+// ── Delivery address + payment + place-order (rendered once per cart open) ─────
+function renderCheckout() {
+  var el = document.getElementById('cartCheckout');
+  if (!el) return;
+  var addrs = (user.delivery_addresses || []);
+
+  var html = '<div class="fg"><label class="fl">Delivery Address <span class="rq">*</span></label>';
+  html += '<select class="fi" id="addrPicker" onchange="onAddrPickerChange()">';
+  addrs.forEach(function(a, i) {
+    var line = a.label + ': ' + [a.house_no, a.street1, a.landmark, a.village_town, a.pincode].filter(Boolean).join(', ');
+    html += '<option value="' + i + '"' + (a.is_default ? ' selected' : '') + '>' + line + '</option>';
+  });
+  html += '<option value="profile"' + (addrs.length === 0 ? ' selected' : '') + '>📍 Profile address</option>';
+  html += '<option value="new">➕ Deliver to a different address…</option>';
+  html += '</select>';
+  // Full detail of the chosen saved / profile address
+  html += '<div id="addrDetail" style="font-size:11px;color:var(--forest);line-height:1.55;margin-top:6px;padding:9px 11px;background:#f8fdf8;border:1px solid #eef4ee;border-radius:9px"></div>';
+  // Manual new-address form (shown only when "different address" chosen)
+  html += '<div id="newAddrForm" style="display:none;margin-top:8px;border:1px dashed #cfe3cf;border-radius:10px;padding:12px">';
+  html += '<div class="fg"><label class="fl">House / Flat / Door No.</label><input class="fi" id="new-house" type="text"></div>';
+  html += '<div class="fg"><label class="fl">Street / Area <span class="rq">*</span></label><input class="fi" id="new-street1" type="text"></div>';
+  html += '<div class="fg"><label class="fl">Landmark</label><input class="fi" id="new-landmark" type="text" placeholder="Near school, temple…"></div>';
+  html += '<div class="fg"><label class="fl">Village / Town <span class="rq">*</span></label><input class="fi" id="new-village" type="text"></div>';
+  html += '<div class="fg"><label class="fl">Pincode</label><input class="fi" id="new-pincode" type="text" maxlength="6" oninput="numOnly(this)"></div>';
+  html += '<div class="fg"><label class="fl">Contact Phone</label><input class="fi" id="new-phone" type="text" maxlength="10" oninput="numOnly(this)" value="' + (user.phone || '') + '"></div>';
+  html += '</div>';
+  html += '</div>';
+
+  html += '<div class="fg"><label class="fl">Payment Method <span class="rq">*</span></label>';
+  html += '<select class="fi" id="payMethod">';
+  html += '<option value="Cash on Delivery">Cash on Delivery</option>';
+  html += '<option value="UPI">UPI</option>';
+  html += '<option value="Card">Card</option>';
+  html += '</select></div>';
+  html += '<button class="sbtn" onclick="placeOrder()">Place Order →</button>';
+  el.innerHTML = html;
+  onAddrPickerChange();
+}
+
+function addrText(v) {
+  var addrs = (user.delivery_addresses || []);
+  if (v === 'profile') return buildAddress(user) || '⚠️ No profile address on file — add one in the Profile tab.';
+  if (v === 'new') return '';
+  var a = addrs[parseInt(v)];
+  if (!a) return '';
+  return a.label + ': ' + [a.house_no, a.street1, a.landmark, a.village_town, a.pincode].filter(Boolean).join(', ');
+}
+
+function onAddrPickerChange() {
+  var picker = document.getElementById('addrPicker');
+  if (!picker) return;
+  var v      = picker.value;
+  var form   = document.getElementById('newAddrForm');
+  var detail = document.getElementById('addrDetail');
+  if (v === 'new') {
+    if (form)   form.style.display = 'block';
+    if (detail) detail.style.display = 'none';
+  } else {
+    if (form)   form.style.display = 'none';
+    if (detail) { detail.style.display = 'block'; detail.innerHTML = '📦 <b>Deliver to:</b> ' + addrText(v); }
+  }
+}
+
+// Reads and validates the manual "different address" form; returns null if invalid.
+function collectNewAddress() {
+  var gv = function(id){ var e = document.getElementById(id); return e ? e.value.trim() : ''; };
+  var street1 = gv('new-street1');
+  var village = gv('new-village');
+  if (!street1 && !village) { showToast('Enter at least a street or village for the new address.', 'er'); return null; }
+  return {
+    label:        'Other',
+    house_no:     gv('new-house'),
+    street1:      street1,
+    landmark:     gv('new-landmark'),
+    village_town: village,
+    pincode:      gv('new-pincode'),
+    phone:        gv('new-phone'),
+  };
 }
 
 function changeQtyCart(idx, delta) {
   if (idx < 0 || idx >= _cart.length) return;
   var step = unitStep(_cart[idx].unit || 'pcs');
-  _cart[idx].qty = Math.round((_cart[idx].qty + delta * step) * 100) / 100;
+  var next = Math.round((_cart[idx].qty + delta * step) * 100) / 100;
+  if (delta > 0) {
+    var avail = offerAvailable(_cart[idx].product_id, _cart[idx].listing_id);
+    if (next > avail) { showToast('Only ' + avail + ' ' + (_cart[idx].unit || '') + ' available', 'er'); return; }
+  }
+  _cart[idx].qty = next;
   if (_cart[idx].qty <= 0) _cart.splice(idx, 1);
   saveCart();
-  renderCart();
+  renderCartItems();      // preserve the checkout section (address/payment selections)
+  renderCartSummary();
   renderProducts();
   updateCartBar();
 }
@@ -1286,18 +1380,24 @@ function changeQtyCart(idx, delta) {
 function changeQtyCartInput(idx, val) {
   if (idx < 0 || idx >= _cart.length) return;
   var v = parseFloat(val);
-  if (!isNaN(v) && v > 0) {
-    if (!unitAllowsDecimal(_cart[idx].unit)) v = Math.round(v);
-    _cart[idx].qty = Math.round(v * 100) / 100;
-    saveCart();
-    updateCartBar();
-  }
+  if (isNaN(v) || v <= 0) return;   // wait for a valid number; don't clobber mid-typing
+  if (!unitAllowsDecimal(_cart[idx].unit)) v = Math.round(v);
+  var avail = offerAvailable(_cart[idx].product_id, _cart[idx].listing_id);
+  if (v > avail) { v = avail; showToast('Only ' + avail + ' ' + (_cart[idx].unit || '') + ' available', 'er'); var inp = document.getElementById('cart-inp-' + idx); if (inp) inp.value = v; }
+  _cart[idx].qty = Math.round(v * 100) / 100;
+  // Auto-recalculate this line's total and the full bill summary
+  var lineEl = document.getElementById('cart-line-' + idx);
+  if (lineEl) lineEl.textContent = '₹' + (parseFloat(_cart[idx].price) * _cart[idx].qty).toFixed(0);
+  saveCart();
+  renderCartSummary();
+  updateCartBar();
 }
 
 function removeCartItem(idx) {
   _cart.splice(idx, 1);
   saveCart();
-  renderCart();
+  renderCartItems();      // preserve the checkout section (address/payment selections)
+  renderCartSummary();
   renderProducts();
   updateCartBar();
 }
@@ -1333,15 +1433,24 @@ async function placeOrder() {
   var items = _cart.map(function(i) {
     return { product_id: i.product_id, farmer_id: i.farmer_id, qty: i.qty };
   });
+
+  // Resolve delivery address BEFORE disabling the button, so validation can bail out cleanly
+  var addrPicker = document.getElementById('addrPicker');
+  var selectedAddr = null;
+  if (addrPicker) {
+    var v = addrPicker.value;
+    if (v === 'new') {
+      selectedAddr = collectNewAddress();
+      if (!selectedAddr) return;   // invalid form; toast already shown
+    } else if (v !== 'profile') {
+      selectedAddr = (user.delivery_addresses || [])[parseInt(v)] || null;
+    }
+    // 'profile' → leave null; backend falls back to the registered profile address
+  }
+
   var btn = document.querySelector('#panel-cart .sbtn');
   btn.disabled = true; btn.textContent = 'Placing order…';
   try {
-    var addrPicker = document.getElementById('addrPicker');
-    var selectedAddr = null;
-    if (addrPicker && addrPicker.value !== 'profile') {
-      var idx = parseInt(addrPicker.value);
-      selectedAddr = (user.delivery_addresses || [])[idx] || null;
-    }
     var res = await API.placeOrder({ items: items, pay_method: payMethod, delivery_fee: getDeliveryFee(), delivery_address: selectedAddr });
     _cart = [];
     saveCart();
@@ -1465,6 +1574,19 @@ async function openOrderDetail(orderId) {
     html += '<div class="irow"><span class="ilbl">Placed On</span><span class="ival">' + fmtDate(o.created_at) + '</span></div>';
     html += '<div class="irow"><span class="ilbl">Payment</span><span class="ival">' + o.pay_method + ' · <span style="color:' + (o.pay_status==='paid'?'#1a7a4a':'#f4a261') + '">' + o.pay_status + '</span></span></div>';
     if (o.delivered_at) html += '<div class="irow"><span class="ilbl">Delivered</span><span class="ival">' + fmtDate(o.delivered_at) + '</span></div>';
+    html += '</div>';
+
+    // Delivery address (per-order address if chosen at checkout, else profile address)
+    var da = o.delivery_address;
+    html += '<div class="card"><h3>📍 Delivery Address</h3>';
+    if (da) {
+      if (da.label) html += '<div style="font-size:11px;font-weight:700;color:var(--forest);margin-bottom:3px">' + da.label + '</div>';
+      html += '<div style="font-size:12px;color:#374151;line-height:1.55">' + (buildAddress(da) || '—') + '</div>';
+      if (da.phone) html += '<div style="font-size:11px;color:var(--gray);margin-top:4px">📞 ' + da.phone + '</div>';
+    } else {
+      html += '<div style="font-size:12px;color:#374151;line-height:1.55">' + (buildAddress(user) || '—') + '</div>';
+      html += '<div style="font-size:10px;color:var(--gray);margin-top:4px">Your registered profile address</div>';
+    }
     html += '</div>';
 
     // Items
