@@ -102,34 +102,30 @@ async function notifyRegistrationReceived(applicant) {
   }
 }
 
-async function notifyApprovalWithPayment(applicant, subscriptionAmountPaise) {
+async function notifyApprovalWithPayment(applicant) {
   const name = `${applicant.fname}${applicant.lname ? ' ' + applicant.lname : ''}`;
   const type = applicant.seller_type || 'Seller';
-  const amountRs = (subscriptionAmountPaise / 100).toFixed(2);
+  const loginUrl = process.env.APP_URL || 'http://localhost:3000';
 
   // To applicant via email
-  await sendEmail(applicant.email, `Marutham Agrolink — Application Approved! Complete Payment to Activate`, `
+  await sendEmail(applicant.email, `Marutham Agrolink — Application Approved! Log in and Choose Your Plan`, `
     <p>Dear ${name},</p>
     <p>Congratulations! Your <strong>${type}</strong> application on <strong>Marutham Agrolink</strong> has been <span style="color:#16a34a;font-weight:700">APPROVED</span>.</p>
-    <p>To activate your account, please complete your annual subscription payment:</p>
-    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:16px;margin:16px 0">
-      <div style="font-size:24px;font-weight:700;color:#c2410c">₹${amountRs}</div>
-      <div style="color:#6b7280;font-size:13px;margin-top:4px">Annual Subscription Fee</div>
-      <div style="margin-top:12px;font-size:14px"><strong>Payment Reference:</strong> <span style="font-family:monospace;background:#fff3e0;padding:4px 8px;border-radius:4px;font-weight:700">${applicant.payment_reference}</span></div>
+    <p>Your login is now active. To start selling, please log in and complete your subscription payment — choose the plan that suits you and pay online. A one-time registration charge of <strong>₹100</strong> applies on your first activation.</p>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:16px 0">
+      <table style="border-collapse:collapse;width:100%">
+        <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;width:130px">Login ID</td><td style="font-weight:700;font-family:monospace;font-size:15px">${applicant.login_id}</td></tr>
+        <tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Registered Phone</td><td>${applicant.phone}</td></tr>
+      </table>
     </div>
-    ${paymentDetailsBlock()}
-    <p><strong>Important:</strong> Please include your Payment Reference <strong>${applicant.payment_reference}</strong> in the transfer remarks. Your account will be activated within 24 hours of payment confirmation.</p>
-    <table style="border-collapse:collapse;width:100%;max-width:400px;margin:16px 0">
-      <tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Your Login ID</td><td style="font-weight:700;font-family:monospace">${applicant.login_id}</td></tr>
-      <tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Registered Phone</td><td>${applicant.phone}</td></tr>
-    </table>
-    <p>Once payment is confirmed, you will receive your login credentials and can begin using the platform.</p>
+    <p style="margin:16px 0"><a href="${loginUrl}" style="background:#16a34a;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:700">Log in &amp; Choose Your Plan</a></p>
+    <p>Log in with your Login ID / phone number and password (or OTP). You'll be prompted to select a subscription plan and pay — once payment succeeds, your product listings go live for selling.</p>
     <p>Regards,<br><strong>Marutham Agrolink Head Office</strong></p>
   `);
 
   // To applicant via SMS
   await sendSMS(applicant.phone,
-    `Congrats ${applicant.fname}! Your Marutham Agrolink ${type} application is APPROVED. Pay Rs.${amountRs} (Ref: ${applicant.payment_reference}) to ${process.env.BANK_UPI_ID || 'our bank account'}. Login ID: ${applicant.login_id}. Account activates after payment. -Marutham Agrolink`
+    `Congrats ${applicant.fname}! Your Marutham Agrolink ${type} application is APPROVED. Login ID: ${applicant.login_id}. Log in at ${loginUrl} and pay your subscription (+ one-time Rs.100) to start selling. -Marutham Agrolink`
   );
 }
 

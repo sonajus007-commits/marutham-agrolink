@@ -46,30 +46,67 @@ router.get('/', requireRole('admin'), async (req, res) => {
   }
 });
 
-// ── PATCH /users/:id/block ────────────────────────────────────────────────────
-router.patch('/:id/block', requireRole('admin'), async (req, res) => {
-  const { id } = req.params;
+const ACCOUNT_STATUSES = ['active', 'suspended', 'blocked'];
+
+// Shared status-change logic: validates, updates, and records history.
+async function changeUserStatus(adminId, targetId, newStatus, reason) {
+  if (!ACCOUNT_STATUSES.includes(newStatus)) {
+    return { code: 400, body: { error: `status must be one of: ${ACCOUNT_STATUSES.join(', ')}.` } };
+  }
+  if (newStatus === 'blocked' && (!reason || !reason.trim())) {
+    return { code: 400, body: { error: 'A reason is required to block a user.' } };
+  }
+
+  const { data: target, error: fErr } = await supabase
+    .from('users').select('id, fname, status').eq('id', targetId).single();
+  if (fErr || !target) return { code: 404, body: { error: 'User not found.' } };
+  if (target.status === newStatus) {
+    return { code: 409, body: { error: `User is already ${newStatus}.` } };
+  }
+
+  const update = { status: newStatus, updated_at: new Date().toISOString() };
+  if (newStatus === 'blocked') update.block_reason = reason.trim();
+  if (newStatus === 'active')  update.block_reason = null;
+
   const { data, error } = await supabase
-    .from('users')
-    .update({ status: 'blocked', updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select('id,fname')
-    .single();
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ message: 'User blocked.', user: data });
+    .from('users').update(update).eq('id', targetId)
+    .select('id, fname, status, block_reason').single();
+  if (error) return { code: 500, body: { error: error.message } };
+
+  await supabase.from('user_status_history').insert({
+    user_id: targetId, old_status: target.status, new_status: newStatus,
+    reason: reason && reason.trim() ? reason.trim() : null, changed_by: adminId,
+  }).then(() => {}, () => {});
+
+  return { code: 200, body: { message: `User status changed to ${newStatus}.`, user: data } };
+}
+
+// ── PATCH /users/:id/status ───────────────────────────────────────────────────
+// Body: { status: 'active'|'suspended'|'blocked', reason }.  Reason required for block.
+router.patch('/:id/status', requireRole('admin'), async (req, res) => {
+  const result = await changeUserStatus(req.user.id, req.params.id, req.body.status, req.body.reason);
+  res.status(result.code).json(result.body);
 });
 
-// ── PATCH /users/:id/unblock ──────────────────────────────────────────────────
-router.patch('/:id/unblock', requireRole('admin'), async (req, res) => {
-  const { id } = req.params;
+// ── GET /users/:id/status-history ─────────────────────────────────────────────
+router.get('/:id/status-history', requireRole('admin'), async (req, res) => {
   const { data, error } = await supabase
-    .from('users')
-    .update({ status: 'active', updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select('id,fname')
-    .single();
+    .from('user_status_history')
+    .select('id, old_status, new_status, reason, created_at, changer:users!user_status_history_changed_by_fkey (fname, lname, login_id)')
+    .eq('user_id', req.params.id)
+    .order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ message: 'User unblocked.', user: data });
+  res.json({ history: data || [] });
+});
+
+// ── PATCH /users/:id/block  &  /unblock  (kept for backward compatibility) ─────
+router.patch('/:id/block', requireRole('admin'), async (req, res) => {
+  const result = await changeUserStatus(req.user.id, req.params.id, 'blocked', req.body.reason);
+  res.status(result.code).json(result.body);
+});
+router.patch('/:id/unblock', requireRole('admin'), async (req, res) => {
+  const result = await changeUserStatus(req.user.id, req.params.id, 'active', req.body.reason);
+  res.status(result.code).json(result.body);
 });
 
 // ── GET /users/change-requests ────────────────────────────────────────────────
@@ -81,7 +118,7 @@ router.get('/change-requests', requireRole('admin'), async (req, res) => {
   const status = req.query.status || 'pending';
   const { data, error } = await supabase
     .from('profile_change_requests')
-    .select('*, user:users(subscription_plan, subscription_expires_at)')
+    .select('*, user:users!profile_change_requests_user_id_fkey(subscription_plan, subscription_expires_at)')
     .eq('status', status)
     .order('requested_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });

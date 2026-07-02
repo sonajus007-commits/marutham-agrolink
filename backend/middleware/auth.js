@@ -17,24 +17,35 @@ async function requireAuth(req, res, next) {
 
   const { data: user, error } = await supabase
     .from('users')
-    .select('id, login_id, phone, role, admin_role, status, approval_status, payment_reference, fname, lname, email, district, state, village_town, vco_city, district_assign, agent_vehicle')
+    .select('id, login_id, phone, role, admin_role, status, block_reason, approval_status, payment_reference, payment_confirmed_at, seller_type, gender, subscription_plan, subscription_amount, subscription_expires_at, registration_charge, fname, lname, email, district, state, village_town, vco_city, district_assign, agent_vehicle')
     .eq('id', payload.sub)
     .single();
 
   if (error || !user) return res.status(401).json({ error: 'User not found.' });
-  if (user.status === 'blocked') return res.status(403).json({ error: 'Account is blocked.' });
 
+  // Blocked accounts cannot access anything.
+  if (user.status === 'blocked') {
+    return res.status(403).json({
+      error: `Your account has been blocked.${user.block_reason ? ' Reason: ' + user.block_reason + '.' : ''} Please contact Admin to unblock your account.`,
+      account_status: 'blocked',
+    });
+  }
+
+  // Sellers must be past the pre-approval gate. NOTE: 'suspended' status is
+  // intentionally allowed through — a suspended seller can log in and reach the
+  // subscription payment endpoints; the frontend restricts them to the payment
+  // screen until they pay.
   if (user.role === 'farmer') {
     if (user.approval_status === 'pending_review') {
       return res.status(403).json({ error: 'Your registration is still under review.', approval_status: 'pending_review' });
-    }
-    if (user.approval_status === 'payment_pending') {
-      return res.status(403).json({ error: 'Please complete your subscription payment to access your account.', approval_status: 'payment_pending', payment_reference: user.payment_reference });
     }
     if (user.approval_status === 'rejected') {
       return res.status(403).json({ error: 'Your registration was not approved. Please contact support.', approval_status: 'rejected' });
     }
   }
+
+  // Signal to routes/frontend that a suspended seller still owes payment.
+  user.needs_payment = user.role === 'farmer' && user.status === 'suspended';
 
   req.user = user;
   next();

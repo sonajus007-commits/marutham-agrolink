@@ -245,13 +245,29 @@ var API = {
   getRegistration: function(id) {
     return apiFetch('GET', '/registrations/' + id, null, tok());
   },
-  approveRegistration: function(id, subscription_amount) {
-    return apiFetch('POST', '/registrations/' + id + '/approve', { subscription_amount }, tok());
+  approveRegistration: function(id) {
+    return apiFetch('POST', '/registrations/' + id + '/approve', {}, tok());
   },
   rejectRegistration: function(id, reason) {
     return apiFetch('POST', '/registrations/' + id + '/reject', { reason }, tok());
   },
   confirmPayment: function(id) {
     return apiFetch('POST', '/registrations/' + id + '/confirm-payment', {}, tok());
+  },
+
+  // ── Subscription (seller self-service payment) ───────────────────────────
+  getSubscriptionPlans: function() {
+    return apiFetch('GET', '/subscription/plans', null, tok());
+  },
+  paySubscription: function(plan) {
+    return apiFetch('POST', '/subscription/pay', { plan }, tok());
+  },
+
+  // ── Account status (admin: Active / Suspended / Blocked + history) ────────
+  setUserStatus: function(id, status, reason) {
+    return apiFetch('PATCH', '/users/' + id + '/status', { status, reason: reason || '' }, tok());
+  },
+  getUserStatusHistory: function(id) {
+    return apiFetch('GET', '/users/' + id + '/status-history', null, tok());
   },
 };

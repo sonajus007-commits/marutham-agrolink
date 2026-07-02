@@ -589,7 +589,7 @@ body{background:var(--green-bg);}
           <div style="display:flex;justify-content:space-between;margin-bottom:4px">
             <span style="opacity:.8" id="f-plan-label">Subscription</span><span id="f-plan-fee">—</span>
           </div>
-          <div id="f-concession-row" style="display:none;display:flex;justify-content:space-between;margin-bottom:4px;color:#86efac">
+          <div id="f-concession-row" style="display:none;justify-content:space-between;margin-bottom:4px;color:#86efac">
             <span>🌸 Concession (50%)</span><span id="f-concession-amt">—</span>
           </div>
           <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,.2);padding-top:8px;margin-top:4px;font-weight:800;font-size:15px">
@@ -907,7 +907,11 @@ async function doLogin() {
       res = await API.login(identifier, pw);
     }
     setSession(res.token, res.user);
-    showToast('Welcome back, ' + res.user.fname + '!', 'ok');
+    if (res.needs_payment) {
+      showToast('Login successful. Complete your subscription payment to start selling.', 'ok');
+    } else {
+      showToast('Welcome back, ' + res.user.fname + '!', 'ok');
+    }
     setTimeout(function() { redirectUser(res.user); }, 600);
   } catch(e) {
     showToast(e.message, 'er');

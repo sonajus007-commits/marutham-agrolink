@@ -269,10 +269,14 @@
           <button class="sbtn" style="background:var(--muted);color:var(--text)" onclick="toggleUdEditForm()">Cancel</button>
         </div>
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="ud-status-actions">
         <button class="sbtn" style="flex:0;padding:0 18px" id="ud-edit-btn" onclick="toggleUdEditForm()">✏️ Edit</button>
-        <button class="sbtn" id="ud-block-btn" style="flex:0;padding:0 18px;background:#ef4444" onclick="udToggleBlock()">Block</button>
+        <button class="sbtn" style="flex:0;padding:0 14px;background:#16a34a" id="ud-status-active"  onclick="udSetStatus('active')">✓ Active</button>
+        <button class="sbtn" style="flex:0;padding:0 14px;background:#d97706" id="ud-status-suspended" onclick="udSetStatus('suspended')">⏸ Suspend</button>
+        <button class="sbtn" style="flex:0;padding:0 14px;background:#ef4444" id="ud-status-blocked" onclick="udSetStatus('blocked')">⛔ Block</button>
+        <button class="sbtn" style="flex:0;padding:0 14px;background:#475569" id="ud-history-btn" onclick="udShowHistory()">🕘 History</button>
       </div>
+      <div id="ud-history" style="display:none;margin-top:12px"></div>
     </div>
   </div>
 </div>
@@ -406,15 +410,15 @@
       <div id="approve-concession" style="display:none;padding:10px 14px;
         background:linear-gradient(135deg,#fce4ec,#f8bbd0);
         border:1.5px solid #e85d8a;border-radius:10px;font-size:12px;color:#880e4f;line-height:1.6"></div>
-      <div class="fg">
-        <label class="fl">Annual Subscription Amount (₹) <span class="rq">*</span></label>
-        <input class="fi" id="approve-amount" type="number" min="1" step="1" placeholder="e.g. 500">
-        <div style="font-size:11px;color:var(--gray);margin-top:4px">This amount will be sent to the applicant for payment activation.</div>
+      <div style="font-size:12px;color:var(--text);background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;line-height:1.6">
+        On approval, the applicant's <strong>login is activated</strong> and they'll receive an email/SMS to log in.
+        They select their own subscription plan and pay online (plan fee + a one-time <strong>₹100</strong> registration charge).
+        Their listings go live for selling only after payment succeeds.
       </div>
       <div class="em" id="approve-err" style="display:none;margin:0"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="sbtn" style="background:var(--muted);color:var(--text);flex:0;padding:0 20px" onclick="closeApproveModal()">Cancel</button>
-        <button class="sbtn" id="approve-btn" onclick="submitApprove()" style="flex:0;padding:0 24px;background:#16a34a">Approve & Send Payment Link</button>
+        <button class="sbtn" id="approve-btn" onclick="submitApprove()" style="flex:0;padding:0 24px;background:#16a34a">Approve &amp; Activate Login</button>
       </div>
     </div>
   </div>
@@ -1809,10 +1813,8 @@ function renderUserTable() {
       }
     }
     html += '<td style="font-size:11px">' + (subCell || '<span style="color:#d1d5db">—</span>') + '</td>';
-    var isBlocked = u.status === 'blocked';
-    html += '<td><span class="sbadge ' + (isBlocked ? 's-blk' : 's-act') + '">' + (isBlocked ? 'Blocked' : 'Active') + '</span></td>';
-    html += '<td><button class="blkbtn ' + (isBlocked ? 'b-unb' : 'b-blk') + '" onclick="toggleBlock(\'' + u.id + '\',' + isBlocked + ')">';
-    html += (isBlocked ? 'Unblock' : 'Block') + '</button></td>';
+    html += '<td>' + statusPill(u.status || 'active') + '</td>';
+    html += '<td><button class="blkbtn b-blk" style="background:#475569" onclick="openUserDetail(\'' + u.id + '\')">Manage</button></td>';
     html += '</tr>';
   });
   html += '</tbody></table></div>';
@@ -1877,7 +1879,7 @@ function renderUserDetail() {
   }
   var info = '';
   info += infoRow('Gender', u.gender);
-  info += infoRow('Status', '<span class="sbadge ' + (u.status === 'blocked' ? 's-blk' : 's-act') + '">' + (u.status || 'active') + '</span>');
+  info += infoRow('Status', statusPill(u.status) + (u.status === 'blocked' && u.block_reason ? '<div style="font-size:11px;color:#991b1b;margin-top:4px">Reason: ' + u.block_reason + '</div>' : ''));
   info += infoRow('District', u.district);
   info += infoRow('State', u.state);
   info += infoRow('Village/Town', u.village_town);
@@ -1906,14 +1908,32 @@ function renderUserDetail() {
   }
   document.getElementById('ud-info').innerHTML = info;
 
-  var isBlocked = u.status === 'blocked';
-  var blockBtn = document.getElementById('ud-block-btn');
-  blockBtn.textContent = isBlocked ? 'Unblock' : 'Block';
-  blockBtn.style.background = isBlocked ? '#16a34a' : '#ef4444';
+  // Highlight the current status; dim the button that matches it (no-op action).
+  var cur = u.status || 'active';
+  ['active','suspended','blocked'].forEach(function(s){
+    var b = document.getElementById('ud-status-' + s);
+    if (!b) return;
+    var isCur = (s === cur);
+    b.style.opacity = isCur ? '0.5' : '1';
+    b.style.outline = isCur ? '2px solid #1a3d2b' : 'none';
+    b.disabled = isCur;
+    b.style.cursor = isCur ? 'default' : 'pointer';
+  });
+  document.getElementById('ud-history').style.display = 'none';
 
   var isHO = (user.admin_role === 'Head Office' || user.admin_role === 'State Head');
   document.getElementById('ud-edit-btn').style.display = isHO ? '' : 'none';
-  blockBtn.style.display = '';
+}
+
+// Coloured status pill used in the detail modal and history.
+function statusPill(status) {
+  var map = {
+    active:    { bg:'#dcfce7', fg:'#166534', label:'Active' },
+    suspended: { bg:'#ffedd5', fg:'#9a3412', label:'Suspended' },
+    blocked:   { bg:'#fee2e2', fg:'#991b1b', label:'Blocked' },
+  };
+  var c = map[status] || map.active;
+  return '<span style="display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:50px;background:' + c.bg + ';color:' + c.fg + '">' + c.label + '</span>';
 }
 
 function closeUserDetail() {
@@ -2094,18 +2114,54 @@ async function saveUserDetail() {
   } catch(e) { showToast(e.message, 'er'); }
 }
 
-async function udToggleBlock() {
-  var isBlocked = _udUser.status === 'blocked';
-  if (!confirm((isBlocked ? 'Unblock' : 'Block') + ' this user?')) return;
+async function udSetStatus(status) {
+  if (_udUser.status === status) return;
+  var reason = '';
+  if (status === 'blocked') {
+    reason = prompt('Enter a reason for blocking this user (required):', '');
+    if (reason === null) return;              // cancelled
+    if (!reason.trim()) { showToast('A reason is required to block a user.', 'er'); return; }
+  } else {
+    var labels = { active: 'activate', suspended: 'suspend' };
+    if (!confirm('Are you sure you want to ' + labels[status] + ' this user?')) return;
+    reason = prompt('Optional note for this change (leave blank to skip):', '') || '';
+  }
   try {
-    if (isBlocked) await API.unblockUser(_udUserId);
-    else await API.blockUser(_udUserId);
+    await API.setUserStatus(_udUserId, status, reason.trim());
     var res = await API.getUserById(_udUserId);
     _udUser = res.user;
     renderUserDetail();
     renderUsers();
-    showToast('User ' + (isBlocked ? 'unblocked' : 'blocked') + '.', 'ok');
+    showToast('Status changed to ' + status + '.', 'ok');
   } catch(e) { showToast(e.message, 'er'); }
+}
+
+async function udShowHistory() {
+  var panel = document.getElementById('ud-history');
+  if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  panel.innerHTML = '<div style="text-align:center;padding:10px"><div class="spin" style="margin:auto;width:20px;height:20px;border-width:2px"></div></div>';
+  try {
+    var res = await API.getUserStatusHistory(_udUserId);
+    var rows = res.history || [];
+    if (!rows.length) { panel.innerHTML = '<div style="font-size:12px;color:#6b7280;padding:8px">No status changes recorded yet.</div>'; return; }
+    var html = '<div style="font-size:12px;font-weight:700;color:#1a3d2b;margin-bottom:8px">🕘 Status Change History</div>';
+    rows.forEach(function(h){
+      var when = new Date(h.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      var who  = h.changer ? (h.changer.fname + (h.changer.lname ? ' ' + h.changer.lname : '')) : 'System';
+      html += '<div style="background:#f8fafc;border-radius:8px;padding:9px 11px;margin-bottom:7px">' +
+        '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
+          (h.old_status ? statusPill(h.old_status) + '<span style="color:#9ca3af">→</span>' : '') + statusPill(h.new_status) +
+          '<span style="font-size:11px;color:#6b7280;margin-left:auto">' + when + '</span>' +
+        '</div>' +
+        (h.reason ? '<div style="font-size:12px;color:#374151;margin-top:5px">' + h.reason + '</div>' : '') +
+        '<div style="font-size:11px;color:#9ca3af;margin-top:3px">by ' + who + '</div>' +
+      '</div>';
+    });
+    panel.innerHTML = html;
+  } catch(e) {
+    panel.innerHTML = '<div style="font-size:12px;color:#dc2626;padding:8px">' + (e.message || 'Could not load history.') + '</div>';
+  }
 }
 
 // ── CHANGE REQUESTS ───────────────────────────────────────────────────────────
@@ -2555,9 +2611,15 @@ function filterConsumers() {
 }
 
 async function toggleConsumerBlock(id, block) {
+  var reason = '';
+  if (block) {
+    reason = prompt('Enter a reason for blocking this consumer (required):', '');
+    if (reason === null) return;
+    if (!reason.trim()) { showToast('A reason is required to block a user.', 'er'); return; }
+  }
   try {
-    if (block) await API.blockConsumer(id);
-    else       await API.unblockConsumer(id);
+    // Uses the unified status endpoint so the change is recorded in history.
+    await API.setUserStatus(id, block ? 'blocked' : 'active', reason.trim());
     var c = _allConsumers.find(function(x){ return x.id === id; });
     if (c) c.status = block ? 'blocked' : 'active';
     filterConsumers();
@@ -2681,9 +2743,15 @@ function filterFarmers() {
 }
 
 async function toggleFarmerBlock(id, block) {
+  var reason = '';
+  if (block) {
+    reason = prompt('Enter a reason for blocking this farmer (required):', '');
+    if (reason === null) return;
+    if (!reason.trim()) { showToast('A reason is required to block a user.', 'er'); return; }
+  }
   try {
-    if (block) await API.blockFarmer(id);
-    else       await API.unblockFarmer(id);
+    // Uses the unified status endpoint so the change is recorded in history.
+    await API.setUserStatus(id, block ? 'blocked' : 'active', reason.trim());
     var f = _allFarmers.find(function(x){ return x.id === id; });
     if (f) f.status = block ? 'blocked' : 'active';
     filterFarmers(); // re-render without refetching
@@ -3365,11 +3433,13 @@ function openApproveModal(id, name, gender, plan) {
     var planNote = document.getElementById('approve-concession');
     if (planNote) {
       planNote.style.display = 'block';
-      planNote.innerHTML = '<strong>📋 Plan: ' + plan + '</strong> — Subscription ₹' + subFee + ' + Registration ₹100 = <strong>₹' + suggested + '</strong><br>' +
-        '<span style="font-size:10px;opacity:.8">You may override the amount below.</span>';
+      planNote.style.background = 'linear-gradient(135deg,#e0f2fe,#bae6fd)';
+      planNote.style.borderColor = '#38bdf8';
+      planNote.style.color = '#075985';
+      planNote.innerHTML = '<strong>📋 Chosen at registration: ' + plan + '</strong><br>' +
+        '<span style="font-size:10px;opacity:.8">The applicant confirms &amp; pays for their plan after logging in.</span>';
     }
   }
-  document.getElementById('approve-amount').value = suggested;
   document.getElementById('regApproveOverlay').style.display = 'flex';
 }
 function closeApproveModal() {
@@ -3377,26 +3447,20 @@ function closeApproveModal() {
 }
 
 async function submitApprove() {
-  var amount = parseFloat(document.getElementById('approve-amount').value);
   var err = document.getElementById('approve-err');
   var btn = document.getElementById('approve-btn');
   err.style.display = 'none';
-  if (!amount || amount <= 0) {
-    err.textContent = 'Please enter a valid subscription amount in rupees.';
-    err.style.display = 'block';
-    return;
-  }
   btn.disabled = true; btn.textContent = 'Processing…';
   try {
-    var res = await API.approveRegistration(_currentRegId, amount);
+    await API.approveRegistration(_currentRegId);
     closeApproveModal();
     closeRegDetail();
-    showToast('Approved! Payment notification sent. Ref: ' + res.payment_reference, 'ok');
+    showToast('Approved! The applicant can now log in and pay to activate.', 'ok');
     loadRegistrations();
   } catch(e) {
     err.textContent = e.message;
     err.style.display = 'block';
-    btn.disabled = false; btn.textContent = 'Approve & Send Payment Link';
+    btn.disabled = false; btn.textContent = 'Approve & Activate Login';
   }
 }
 

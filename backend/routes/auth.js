@@ -91,6 +91,48 @@ function safeUser(u) {
   return rest;
 }
 
+// If a seller's subscription has lapsed, drop them to 'suspended' so they can
+// still log in and renew (renewals pay the plan fee only — no ₹100). Mutates
+// `user` in place and records the change. Returns true if it suspended them.
+async function maybeSuspendOnExpiry(user) {
+  if (user.role === 'farmer' && user.status === 'active' && user.subscription_expires_at
+      && new Date(user.subscription_expires_at) < new Date()) {
+    await supabase.from('users')
+      .update({ status: 'suspended', updated_at: new Date().toISOString() })
+      .eq('id', user.id);
+    await supabase.from('user_status_history').insert({
+      user_id: user.id, old_status: 'active', new_status: 'suspended',
+      reason: 'Subscription expired', changed_by: null,
+    }).then(() => {}, () => {});
+    user.status = 'suspended';
+    return true;
+  }
+  return false;
+}
+
+// Decide whether a user may log in. Returns either
+//   { ok: true, needsPayment }  — issue a token
+//   { ok: false, code, body }   — reject with this status/body
+// Applies to BOTH password and OTP login so the rules stay in one place.
+function evaluateAccess(user) {
+  if (user.role === 'farmer') {
+    if (user.approval_status === 'pending_review') {
+      return { ok: false, code: 403, body: { error: 'Your registration is under review by our team. You will be notified once approved.', approval_status: 'pending_review' } };
+    }
+    if (user.approval_status === 'rejected') {
+      return { ok: false, code: 403, body: { error: `Your registration was not approved. ${user.rejection_reason ? 'Reason: ' + user.rejection_reason : 'Please contact support.'}`, approval_status: 'rejected' } };
+    }
+  }
+  if (user.status === 'blocked') {
+    return { ok: false, code: 403, body: {
+      error: `Your account has been blocked.${user.block_reason ? ' Reason: ' + user.block_reason + '.' : ''} Please contact Admin to unblock your account.`,
+      account_status: 'blocked',
+    } };
+  }
+  // 'suspended' sellers may log in, but must pay before the home page unlocks.
+  return { ok: true, needsPayment: user.role === 'farmer' && user.status === 'suspended' };
+}
+
 // ── POST /auth/register ───────────────────────────────────────────────────────
 router.post('/register', async (req, res) => {
   const {
@@ -202,47 +244,25 @@ router.post('/login', async (req, res) => {
   if (error || !user) {
     return res.status(401).json({ error: 'Invalid phone number or password.' });
   }
-  if (user.status === 'blocked') {
-    return res.status(403).json({ error: 'Your account has been blocked. Contact support.' });
-  }
 
-  // Seller-specific approval gate
-  if (user.role === 'farmer') {
-    if (user.approval_status === 'pending_review') {
-      return res.status(403).json({ error: 'Your registration is under review by our team. You will be notified once approved.', approval_status: 'pending_review' });
-    }
-    if (user.approval_status === 'payment_pending') {
-      return res.status(403).json({ error: `Your application is approved! Please complete the subscription payment (Ref: ${user.payment_reference}) to activate your account.`, approval_status: 'payment_pending', payment_reference: user.payment_reference });
-    }
-    if (user.approval_status === 'rejected') {
-      return res.status(403).json({ error: `Your registration was not approved. ${user.rejection_reason ? 'Reason: ' + user.rejection_reason : 'Please contact support.'}`, approval_status: 'rejected' });
-    }
-  }
-
+  // Verify credentials before revealing any account-state details.
   const passwordOk = await bcrypt.compare(password, user.password_hash);
   if (!passwordOk) {
     return res.status(401).json({ error: 'Invalid phone number or password.' });
   }
 
-  // Auto-block farmer/retailer if subscription has expired
-  if (user.role === 'farmer' && user.subscription_expires_at) {
-    if (new Date(user.subscription_expires_at) < new Date()) {
-      await supabase.from('users')
-        .update({ status: 'blocked', updated_at: new Date().toISOString() })
-        .eq('id', user.id);
-      return res.status(403).json({
-        error: 'Your account is locked due to subscription expiry. Please contact Admin to renew your subscription.',
-        subscription_expired: true,
-      });
-    }
-  }
+  // Lapsed subscription → suspend (they can still log in to renew).
+  await maybeSuspendOnExpiry(user);
+
+  const access = evaluateAccess(user);
+  if (!access.ok) return res.status(access.code).json(access.body);
 
   const token = signToken(user.id);
-
   res.json({
     message: 'Login successful.',
     token,
     user: safeUser(user),
+    needs_payment: access.needsPayment,
   });
 });
 
@@ -296,12 +316,19 @@ router.post('/verify-otp', async (req, res) => {
     .eq('phone', phone)
     .single();
 
-  const token = signToken(user.id);
+  if (!user) return res.status(401).json({ error: 'Account not found.' });
 
+  // Lapsed subscription → suspend, then apply the same access gate as password login.
+  await maybeSuspendOnExpiry(user);
+  const access = evaluateAccess(user);
+  if (!access.ok) return res.status(access.code).json(access.body);
+
+  const token = signToken(user.id);
   res.json({
     message: 'OTP verified. Login successful.',
     token,
     user: safeUser(user),
+    needs_payment: access.needsPayment,
   });
 });
 

@@ -134,7 +134,7 @@
   <div class="card" id="subscription-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <h3 style="margin:0">📅 Subscription</h3>
-      <button id="p-sub-renew-btn" onclick="openRenewalModal()" style="display:none;background:#1a7a4a;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">🔄 Renew</button>
+      <button id="p-sub-renew-btn" onclick="openSubscriptionModal(false)" style="display:none;background:#1a7a4a;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">🔄 Renew</button>
     </div>
     <div class="irow"><span class="ilbl">Plan</span><span class="ival" id="p-sub-plan">—</span></div>
     <div class="irow"><span class="ilbl">Valid Until</span><span class="ival" id="p-sub-expiry">—</span></div>
@@ -169,7 +169,7 @@
 </div>
 
 <!-- ══════ SUBSCRIPTION RENEWAL MODAL ══════ -->
-<div id="renewalModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeRenewalModal()">
+<div id="renewalModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeRenewalModal()">
   <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:480px;padding:24px 20px 32px;box-shadow:0 -4px 24px rgba(0,0,0,.15)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <div style="font-size:16px;font-weight:800;color:#1a3d2b">🔄 Renew Subscription</div>
@@ -382,6 +382,9 @@ startClock('liveClock');
 document.getElementById('userBadge').textContent  = user.fname;
 document.getElementById('heroName').textContent   = 'Welcome, ' + user.fname + '!';
 
+// Suspended sellers are restricted to the subscription payment screen until they pay.
+enforcePaymentGate();
+
 var _statusFilter = 'All';
 var _allStatuses  = ['All','Order Placed','Packaged','VCO Verified','Picked Up','Out for Delivery','Delivered','Cancelled'];
 var _editListingId = null;
@@ -399,6 +402,144 @@ function openTab(name, tabEl) {
   if (name === 'products') renderListings();
   if (name === 'orders')   renderOrders();
   if (name === 'profile')  { renderProfile(); checkPendingChangeRequest(); }
+}
+
+// ── Subscription payment gate ───────────────────────────────────────────────
+// A suspended seller (just approved, or subscription expired) can log in but is
+// held on a blocking payment screen — they cannot reach the home page until the
+// payment succeeds. Also reused (non-blocking, closable) as the "Renew" flow.
+var _subSelectedPlan = null;
+
+function rupees(paise) {
+  return '₹' + (paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+async function enforcePaymentGate() {
+  // Trust the server for the current status (admin may have changed it).
+  try {
+    var res = await API.getMe();
+    if (res && res.user) { user = res.user; setSession(getToken(), user); }
+  } catch (e) {
+    // requireAuth rejects blocked/pending/rejected sellers — end the session.
+    showToast(e.message || 'Your session has ended.', 'er');
+    setTimeout(doLogout, 1800);
+    return;
+  }
+  if (user.status === 'suspended') openSubscriptionModal(true);
+}
+
+async function openSubscriptionModal(blocking) {
+  _subSelectedPlan = null;
+  var existing = document.getElementById('subGate');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'subGate';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:4000;background:rgba(12,35,22,.78);display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.innerHTML =
+    '<div style="background:#fff;border-radius:18px;max-width:460px;width:100%;max-height:94vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.35)">' +
+      '<div style="background:linear-gradient(135deg,#1a7a4a,#15803d);color:#fff;padding:20px 22px;border-radius:18px 18px 0 0;position:relative">' +
+        (blocking ? '' : '<button onclick="closeSubscriptionModal()" style="position:absolute;top:14px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer">×</button>') +
+        '<div style="font-size:19px;font-weight:800">' + (blocking ? '🔒 Activate Your Account' : '🔄 Renew Subscription') + '</div>' +
+        '<div style="font-size:13px;opacity:.9;margin-top:4px">' + (blocking ? 'Choose a plan and pay to start selling your products.' : 'Extend your subscription to keep selling.') + '</div>' +
+      '</div>' +
+      '<div style="padding:20px 22px">' +
+        '<div id="subGateBody"><div class="spinner"><div class="spin"></div></div></div>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  document.body.style.overflow = 'hidden';
+
+  try {
+    var data = await API.getSubscriptionPlans();
+    renderSubscriptionPlans(data);
+  } catch (e) {
+    document.getElementById('subGateBody').innerHTML =
+      '<div style="color:#dc2626;text-align:center;padding:20px">Could not load plans. ' + (e.message || '') + '</div>';
+  }
+}
+
+function closeSubscriptionModal() {
+  var el = document.getElementById('subGate');
+  if (el) el.remove();
+  document.body.style.overflow = '';
+}
+
+function renderSubscriptionPlans(data) {
+  var regCharge = data.registration_charge || 0;
+  var regApplies = data.registration_charge_applies;
+  var concession = data.concession_pct || 0;
+  var html = '';
+
+  if (concession > 0) {
+    html += '<div style="background:linear-gradient(135deg,#fce4ec,#f8bbd0);border:1px solid #e85d8a;border-radius:10px;padding:9px 12px;margin-bottom:12px;font-size:12px;color:#880e4f">🌸 <strong>Women &amp; Transgender concession:</strong> ' + concession + '% off the plan fee (already applied below).</div>';
+  }
+
+  data.plans.forEach(function(p) {
+    var strike = (p.base_amount && p.base_amount !== p.amount)
+      ? '<span style="text-decoration:line-through;color:#9ca3af;font-weight:500;font-size:12px;margin-right:6px">' + rupees(p.base_amount) + '</span>' : '';
+    html +=
+      '<label style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:2px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:pointer" ' +
+        'onclick="selectSubPlan(\'' + p.name + '\', ' + p.amount + ', ' + regCharge + ', this)">' +
+        '<div style="display:flex;align-items:center;gap:10px">' +
+          '<input type="radio" name="subplan" style="accent-color:#15803d;width:18px;height:18px">' +
+          '<div><div style="font-weight:700;color:#1a3d2b">' + p.name + '</div>' +
+          '<div style="font-size:12px;color:#6b7280">' + p.days + ' days validity</div></div>' +
+        '</div>' +
+        '<div style="font-weight:800;color:#15803d">' + strike + rupees(p.amount) + '</div>' +
+      '</label>';
+  });
+
+  html +=
+    '<div id="subGateSummary" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;margin-top:6px;display:none">' +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Plan fee</span><span id="sumPlan">—</span></div>' +
+      (regApplies ? '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Registration charge (one-time)</span><span>' + rupees(regCharge) + '</span></div>' : '') +
+      '<div style="display:flex;justify-content:space-between;font-weight:800;color:#15803d;border-top:1px dashed #86efac;padding-top:8px;margin-top:4px"><span>Total payable</span><span id="sumTotal">—</span></div>' +
+    '</div>' +
+    (regApplies ? '' : '<div style="font-size:12px;color:#6b7280;margin-top:8px">✓ Your one-time registration charge is already paid — renewals are plan fee only.</div>') +
+    '<button id="subPayBtn" disabled onclick="submitSubscriptionPayment()" ' +
+      'style="width:100%;margin-top:16px;background:#cbd5e1;color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:800;cursor:not-allowed">Select a plan to continue</button>';
+
+  document.getElementById('subGateBody').innerHTML = html;
+}
+
+function selectSubPlan(name, amount, regCharge, labelEl) {
+  _subSelectedPlan = name;
+  document.querySelectorAll('#subGate label').forEach(function(l){ l.style.borderColor = '#e5e7eb'; l.style.background = '#fff'; });
+  labelEl.style.borderColor = '#15803d';
+  labelEl.style.background = '#f0fdf4';
+  labelEl.querySelector('input').checked = true;
+
+  var total = amount + (regCharge || 0);
+  document.getElementById('subGateSummary').style.display = 'block';
+  document.getElementById('sumPlan').textContent  = rupees(amount);
+  document.getElementById('sumTotal').textContent = rupees(total);
+
+  var btn = document.getElementById('subPayBtn');
+  btn.disabled = false;
+  btn.style.background = '#15803d';
+  btn.style.cursor = 'pointer';
+  btn.textContent = 'Pay ' + rupees(total) + ' & Activate';
+}
+
+async function submitSubscriptionPayment() {
+  if (!_subSelectedPlan) return;
+  var btn = document.getElementById('subPayBtn');
+  btn.disabled = true;
+  btn.textContent = 'Processing payment…';
+  btn.style.background = '#94a3b8';
+  try {
+    var res = await API.paySubscription(_subSelectedPlan);
+    if (res.user) { user = res.user; setSession(getToken(), user); }
+    closeSubscriptionModal();
+    showToast('Payment successful — your account is now active!', 'ok');
+    setTimeout(function(){ window.location.reload(); }, 1200);
+  } catch (e) {
+    btn.disabled = false;
+    btn.style.background = '#15803d';
+    btn.textContent = 'Retry Payment';
+    showToast(e.message || 'Payment failed. Please try again.', 'er');
+  }
 }
 
 // ── EARNINGS ──────────────────────────────────────────────────────────────────
@@ -457,7 +598,7 @@ async function renderEarnings() {
         html += '<span>' + (subExpired
           ? '🔒 <strong>Your account is locked.</strong> Contact Admin to renew and restore access.'
           : '⚠️ <strong>Subscription expiring soon.</strong> Renew before <strong>' + subExpStr + '</strong>.') + '</span>';
-        html += '<button onclick="openRenewalModal()" style="flex-shrink:0;background:#1a7a4a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">🔄 Renew</button>';
+        html += '<button onclick="openSubscriptionModal(false)" style="flex-shrink:0;background:#1a7a4a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">🔄 Renew</button>';
         html += '</div>';
       }
     }
@@ -1196,14 +1337,14 @@ function renderProfile() {
       alertEl.style.background = '#fef2f2';
       alertEl.style.border = '1px solid #fca5a5';
       alertEl.style.color = '#991b1b';
-      alertEl.innerHTML = '🔒 <strong>Your subscription has expired.</strong> Please contact Admin to renew and restore access.';
+      alertEl.innerHTML = '🔒 <strong>Your subscription has expired.</strong> Use the <strong>Renew</strong> button to pay and restore selling access.';
     } else if (diffDays <= 10) {
       document.getElementById('p-sub-status').innerHTML = '<span style="color:#d97706;font-weight:700">Expiring Soon</span>';
       alertEl.style.display = 'block';
       alertEl.style.background = '#fffbeb';
       alertEl.style.border = '1px solid #fcd34d';
       alertEl.style.color = '#92400e';
-      alertEl.innerHTML = '⚠️ <strong>Expiring in ' + diffDays + ' day' + (diffDays === 1 ? '' : 's') + '.</strong> Please contact Admin to renew before <strong>' + expLabel + '</strong>.';
+      alertEl.innerHTML = '⚠️ <strong>Expiring in ' + diffDays + ' day' + (diffDays === 1 ? '' : 's') + '.</strong> Tap <strong>Renew</strong> to pay before <strong>' + expLabel + '</strong>.';
     } else {
       document.getElementById('p-sub-status').innerHTML = '<span style="color:#16a34a;font-weight:700">Active</span>';
       alertEl.style.display = 'none';

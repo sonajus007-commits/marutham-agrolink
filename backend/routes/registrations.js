@@ -57,13 +57,11 @@ router.get('/:id', async (req, res) => {
 });
 
 // ── POST /registrations/:id/approve ───────────────────────────────────────────
-// Body: { subscription_amount }  (in rupees, will convert to paise)
+// Approving activates the seller's LOGIN and moves them to 'suspended': they can
+// log in but are restricted to the subscription payment screen until they pick a
+// plan and pay (plan fee + one-time ₹100 registration charge). No amount needed
+// here — the seller selects their plan themselves.
 router.post('/:id/approve', async (req, res) => {
-  const amountRs = parseFloat(req.body.subscription_amount);
-  if (!amountRs || amountRs <= 0) {
-    return res.status(400).json({ error: 'subscription_amount (in rupees) is required and must be > 0.' });
-  }
-
   const { data: applicant, error: fetchErr } = await supabase
     .from('users')
     .select('*')
@@ -76,23 +74,15 @@ router.post('/:id/approve', async (req, res) => {
     return res.status(409).json({ error: `Registration is already in '${applicant.approval_status}' status.` });
   }
 
-  const PLAN_DAYS = { 'Monthly': 30, 'Quarterly': 90, 'Half Yearly': 180, 'Yearly': 365 };
-  const paymentRef   = generatePaymentRef();
-  const amountPaise  = Math.round(amountRs * 100);
-  const planDays     = PLAN_DAYS[applicant.subscription_plan] || 365;
-  const expiresAt    = new Date();
-  expiresAt.setDate(expiresAt.getDate() + planDays);
-
+  const nowIso = new Date().toISOString();
   const { data: updated, error: updateErr } = await supabase
     .from('users')
     .update({
-      approval_status:        'payment_pending',
-      approved_by:             req.user.id,
-      approved_at:             new Date().toISOString(),
-      subscription_amount:     amountPaise,
-      subscription_expires_at: expiresAt.toISOString(),
-      payment_reference:       paymentRef,
-      updated_at:              new Date().toISOString(),
+      approval_status: 'approved',
+      status:          'suspended',   // login allowed, payment screen only
+      approved_by:     req.user.id,
+      approved_at:     nowIso,
+      updated_at:      nowIso,
     })
     .eq('id', req.params.id)
     .select()
@@ -103,16 +93,19 @@ router.post('/:id/approve', async (req, res) => {
     return res.status(500).json({ error: 'Could not approve registration.' });
   }
 
+  await supabase.from('user_status_history').insert({
+    user_id: req.params.id, old_status: applicant.status, new_status: 'suspended',
+    reason: 'Registration approved — awaiting subscription payment', changed_by: req.user.id,
+  }).then(() => {}, () => {});
+
   try {
-    await notify.notifyApprovalWithPayment(updated, amountPaise);
+    await notify.notifyApprovalWithPayment(updated);
   } catch (e) {
     console.error('Notification error (approve):', e.message);
   }
 
   res.json({
-    message: `Registration approved. Payment notification sent to ${applicant.fname}.`,
-    payment_reference: paymentRef,
-    subscription_amount: amountRs,
+    message: `Registration approved. ${applicant.fname} can now log in and pay to activate their account.`,
     registration: updated,
   });
 });
