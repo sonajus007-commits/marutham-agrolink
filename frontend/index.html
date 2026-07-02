@@ -250,7 +250,7 @@ body{background:var(--green-bg);}
         <div class="fg">
           <label class="fl">Password <span class="rq">*</span></label>
           <div class="pww">
-            <input class="fi" id="l-pw" type="password" placeholder="Your password">
+            <input class="fi" id="l-pw" type="password" placeholder="Your password" onkeydown="if(event.key==='Enter'){event.preventDefault();doLogin();}">
             <button class="peye" onclick="togglePw('l-pw',this)">👁</button>
           </div>
           <div class="em" id="l-pw-e">Invalid credentials</div>
@@ -262,7 +262,7 @@ body{background:var(--green-bg);}
         <div style="font-size:11px;color:#5f7268;margin-bottom:8px">OTP login requires a phone number (10 digits)</div>
         <div class="fg">
           <div class="otprow">
-            <input class="fi" id="l-otp" type="text" placeholder="6-digit OTP" maxlength="6" oninput="numOnly(this)">
+            <input class="fi" id="l-otp" type="text" placeholder="6-digit OTP" maxlength="6" oninput="numOnly(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();doLogin();}">
             <button class="otpbtn" id="l-sotpb" onclick="sendLoginOTP()">Send OTP</button>
           </div>
           <div class="otptmr" id="l-otpt"></div>
