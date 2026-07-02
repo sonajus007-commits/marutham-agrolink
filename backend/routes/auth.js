@@ -85,6 +85,24 @@ function signToken(userId) {
   return jwt.sign({ sub: userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
 }
 
+// Record a login attempt (success or failure) for audit/quality tracing.
+// Best-effort — never blocks or fails the login flow.
+async function logLogin(req, { user_id = null, login_id = null, method, outcome }) {
+  try {
+    const xff = (req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+    const ip  = xff || (req.socket && req.socket.remoteAddress) || null;
+    await supabase.from('user_login_history').insert({
+      user_id, login_id, method,
+      success: outcome === 'success',
+      outcome,
+      ip_address: ip,
+      user_agent: req.headers['user-agent'] || null,
+    });
+  } catch (e) {
+    console.error('Login history log error:', e.message);
+  }
+}
+
 function safeUser(u) {
   // Strip password_hash before returning to client
   const { password_hash, ...rest } = u;
@@ -242,12 +260,14 @@ router.post('/login', async (req, res) => {
     .maybeSingle();
 
   if (error || !user) {
+    await logLogin(req, { login_id: phone, method: 'password', outcome: 'invalid_credentials' });
     return res.status(401).json({ error: 'Invalid phone number or password.' });
   }
 
   // Verify credentials before revealing any account-state details.
   const passwordOk = await bcrypt.compare(password, user.password_hash);
   if (!passwordOk) {
+    await logLogin(req, { user_id: user.id, login_id: user.login_id, method: 'password', outcome: 'invalid_credentials' });
     return res.status(401).json({ error: 'Invalid phone number or password.' });
   }
 
@@ -255,7 +275,13 @@ router.post('/login', async (req, res) => {
   await maybeSuspendOnExpiry(user);
 
   const access = evaluateAccess(user);
-  if (!access.ok) return res.status(access.code).json(access.body);
+  if (!access.ok) {
+    const outcome = user.status === 'blocked' ? 'blocked' : (user.approval_status || 'rejected');
+    await logLogin(req, { user_id: user.id, login_id: user.login_id, method: 'password', outcome });
+    return res.status(access.code).json(access.body);
+  }
+
+  await logLogin(req, { user_id: user.id, login_id: user.login_id, method: 'password', outcome: 'success' });
 
   const token = signToken(user.id);
   res.json({
@@ -306,7 +332,10 @@ router.post('/verify-otp', async (req, res) => {
     otpStore.delete(phone);
     return res.status(400).json({ error: 'OTP has expired. Request a new one.' });
   }
-  if (record.otp !== otp) return res.status(400).json({ error: 'Incorrect OTP.' });
+  if (record.otp !== otp) {
+    await logLogin(req, { login_id: phone, method: 'otp', outcome: 'otp_invalid' });
+    return res.status(400).json({ error: 'Incorrect OTP.' });
+  }
 
   otpStore.delete(phone);
 
@@ -316,12 +345,21 @@ router.post('/verify-otp', async (req, res) => {
     .eq('phone', phone)
     .single();
 
-  if (!user) return res.status(401).json({ error: 'Account not found.' });
+  if (!user) {
+    await logLogin(req, { login_id: phone, method: 'otp', outcome: 'invalid_credentials' });
+    return res.status(401).json({ error: 'Account not found.' });
+  }
 
   // Lapsed subscription → suspend, then apply the same access gate as password login.
   await maybeSuspendOnExpiry(user);
   const access = evaluateAccess(user);
-  if (!access.ok) return res.status(access.code).json(access.body);
+  if (!access.ok) {
+    const outcome = user.status === 'blocked' ? 'blocked' : (user.approval_status || 'rejected');
+    await logLogin(req, { user_id: user.id, login_id: user.login_id, method: 'otp', outcome });
+    return res.status(access.code).json(access.body);
+  }
+
+  await logLogin(req, { user_id: user.id, login_id: user.login_id, method: 'otp', outcome: 'success' });
 
   const token = signToken(user.id);
   res.json({

@@ -99,6 +99,36 @@ router.get('/:id/status-history', requireRole('admin'), async (req, res) => {
   res.json({ history: data || [] });
 });
 
+// ── GET /users/:id/audit-log ──────────────────────────────────────────────────
+// Full record-change history from the DB audit trigger. Head Office / State Head only.
+router.get('/:id/audit-log', requireRole('admin'), async (req, res) => {
+  if (!isHeadOffice(req.user)) return res.status(403).json({ error: 'Head Office access required.' });
+  const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+  const { data, error } = await supabase
+    .from('user_audit_log')
+    .select('id, action, changed_fields, row_snapshot, changed_at, changed_by')
+    .eq('user_id', req.params.id)
+    .order('changed_at', { ascending: false })
+    .limit(limit);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ audit: data || [] });
+});
+
+// ── GET /users/:id/login-history ──────────────────────────────────────────────
+// Login attempts (success + failure) for this user. Head Office / State Head only.
+router.get('/:id/login-history', requireRole('admin'), async (req, res) => {
+  if (!isHeadOffice(req.user)) return res.status(403).json({ error: 'Head Office access required.' });
+  const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+  const { data, error } = await supabase
+    .from('user_login_history')
+    .select('id, method, success, outcome, ip_address, user_agent, created_at')
+    .eq('user_id', req.params.id)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ logins: data || [] });
+});
+
 // ── PATCH /users/:id/block  &  /unblock  (kept for backward compatibility) ─────
 router.patch('/:id/block', requireRole('admin'), async (req, res) => {
   const result = await changeUserStatus(req.user.id, req.params.id, 'blocked', req.body.reason);

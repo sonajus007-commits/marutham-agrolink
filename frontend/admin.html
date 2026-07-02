@@ -2136,32 +2136,115 @@ async function udSetStatus(status) {
   } catch(e) { showToast(e.message, 'er'); }
 }
 
-async function udShowHistory() {
+var _udHistTab = 'status';
+function udShowHistory() {
   var panel = document.getElementById('ud-history');
   if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
   panel.style.display = 'block';
-  panel.innerHTML = '<div style="text-align:center;padding:10px"><div class="spin" style="margin:auto;width:20px;height:20px;border-width:2px"></div></div>';
+  udHistoryTab('status');
+}
+
+function udHistTabBar(active) {
+  var tabs = [['status','🕘 Status'],['profile','✏️ Profile Changes'],['logins','🔐 Logins']];
+  return '<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">' +
+    tabs.map(function(t){
+      var on = t[0] === active;
+      return '<button onclick="udHistoryTab(\'' + t[0] + '\')" style="font-size:11px;padding:5px 12px;border-radius:50px;border:1px solid ' +
+        (on ? '#1a3d2b' : '#d1d5db') + ';background:' + (on ? '#1a3d2b' : '#fff') + ';color:' + (on ? '#fff' : '#374151') +
+        ';cursor:pointer;font-weight:700">' + t[1] + '</button>';
+    }).join('') + '</div>';
+}
+
+async function udHistoryTab(which) {
+  _udHistTab = which;
+  var panel = document.getElementById('ud-history');
+  panel.innerHTML = udHistTabBar(which) +
+    '<div id="ud-hist-body"><div style="text-align:center;padding:10px"><div class="spin" style="margin:auto;width:20px;height:20px;border-width:2px"></div></div></div>';
+  var body = document.getElementById('ud-hist-body');
   try {
-    var res = await API.getUserStatusHistory(_udUserId);
-    var rows = res.history || [];
-    if (!rows.length) { panel.innerHTML = '<div style="font-size:12px;color:#6b7280;padding:8px">No status changes recorded yet.</div>'; return; }
-    var html = '<div style="font-size:12px;font-weight:700;color:#1a3d2b;margin-bottom:8px">🕘 Status Change History</div>';
-    rows.forEach(function(h){
-      var when = new Date(h.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
-      var who  = h.changer ? (h.changer.fname + (h.changer.lname ? ' ' + h.changer.lname : '')) : 'System';
-      html += '<div style="background:#f8fafc;border-radius:8px;padding:9px 11px;margin-bottom:7px">' +
-        '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
-          (h.old_status ? statusPill(h.old_status) + '<span style="color:#9ca3af">→</span>' : '') + statusPill(h.new_status) +
-          '<span style="font-size:11px;color:#6b7280;margin-left:auto">' + when + '</span>' +
-        '</div>' +
-        (h.reason ? '<div style="font-size:12px;color:#374151;margin-top:5px">' + h.reason + '</div>' : '') +
-        '<div style="font-size:11px;color:#9ca3af;margin-top:3px">by ' + who + '</div>' +
-      '</div>';
-    });
-    panel.innerHTML = html;
+    if (which === 'status') {
+      body.innerHTML = renderStatusHistory((await API.getUserStatusHistory(_udUserId)).history || []);
+    } else if (which === 'profile') {
+      body.innerHTML = renderAuditLog((await API.getUserAuditLog(_udUserId)).audit || []);
+    } else {
+      body.innerHTML = renderLoginHistory((await API.getUserLoginHistory(_udUserId)).logins || []);
+    }
   } catch(e) {
-    panel.innerHTML = '<div style="font-size:12px;color:#dc2626;padding:8px">' + (e.message || 'Could not load history.') + '</div>';
+    var hint = /Head Office/.test(e.message || '') ? ' Profile changes & login history are visible to Head Office / State Head only.' : '';
+    body.innerHTML = '<div style="font-size:12px;color:#dc2626;padding:8px">' + (e.message || 'Could not load.') + hint + '</div>';
   }
+}
+
+function renderStatusHistory(rows) {
+  if (!rows.length) return '<div style="font-size:12px;color:#6b7280;padding:8px">No status changes recorded yet.</div>';
+  return rows.map(function(h){
+    var when = new Date(h.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    var who  = h.changer ? (h.changer.fname + (h.changer.lname ? ' ' + h.changer.lname : '')) : 'System';
+    return '<div style="background:#f8fafc;border-radius:8px;padding:9px 11px;margin-bottom:7px">' +
+      '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
+        (h.old_status ? statusPill(h.old_status) + '<span style="color:#9ca3af">→</span>' : '') + statusPill(h.new_status) +
+        '<span style="font-size:11px;color:#6b7280;margin-left:auto">' + when + '</span>' +
+      '</div>' +
+      (h.reason ? '<div style="font-size:12px;color:#374151;margin-top:5px">' + h.reason + '</div>' : '') +
+      '<div style="font-size:11px;color:#9ca3af;margin-top:3px">by ' + who + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function auditVal(v) {
+  if (v === null || v === undefined) return '—';
+  if (typeof v === 'object') return JSON.stringify(v);
+  return String(v);
+}
+
+function renderAuditLog(rows) {
+  if (!rows.length) return '<div style="font-size:12px;color:#6b7280;padding:8px">No record changes captured yet. (Requires the audit migration; changes are recorded from then on.)</div>';
+  return rows.map(function(a){
+    var when = new Date(a.changed_at).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    var head = a.action === 'INSERT' ? '<span style="color:#166534;font-weight:700">Account created</span>'
+             : a.action === 'DELETE' ? '<span style="color:#991b1b;font-weight:700">Account deleted</span>'
+             : '<span style="color:#1e3a5f;font-weight:700">Updated</span>';
+    var detail = '';
+    if (a.action === 'UPDATE' && a.changed_fields) {
+      detail = Object.keys(a.changed_fields).map(function(f){
+        var c = a.changed_fields[f];
+        return '<div style="font-size:12px;margin-top:4px"><strong>' + f + ':</strong> ' +
+          '<span style="color:#9ca3af;text-decoration:line-through">' + auditVal(c.old) + '</span> → ' +
+          '<span style="color:#166534">' + auditVal(c.new) + '</span></div>';
+      }).join('');
+    }
+    return '<div style="background:#f8fafc;border-radius:8px;padding:9px 11px;margin-bottom:7px">' +
+      '<div style="display:flex;gap:6px;align-items:center"><div>' + head + '</div>' +
+      '<span style="font-size:11px;color:#6b7280;margin-left:auto">' + when + '</span></div>' +
+      detail +
+    '</div>';
+  }).join('');
+}
+
+function renderLoginHistory(rows) {
+  if (!rows.length) return '<div style="font-size:12px;color:#6b7280;padding:8px">No login attempts recorded yet.</div>';
+  var OUT = {
+    success:{bg:'#dcfce7',fg:'#166534',label:'Success'},
+    invalid_credentials:{bg:'#fee2e2',fg:'#991b1b',label:'Invalid'},
+    otp_invalid:{bg:'#fee2e2',fg:'#991b1b',label:'Wrong OTP'},
+    blocked:{bg:'#fef2f2',fg:'#b91c1c',label:'Blocked'},
+    pending_review:{bg:'#fef9c3',fg:'#854d0e',label:'Pending review'},
+    approved:{bg:'#ffedd5',fg:'#9a3412',label:'Awaiting payment'},
+    rejected:{bg:'#fee2e2',fg:'#991b1b',label:'Rejected'}
+  };
+  return rows.map(function(l){
+    var when = new Date(l.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    var o = OUT[l.outcome] || {bg:'#e5e7eb',fg:'#374151',label:(l.outcome||'—')};
+    var ua = (l.user_agent || '').slice(0, 60);
+    return '<div style="background:#f8fafc;border-radius:8px;padding:9px 11px;margin-bottom:7px">' +
+      '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
+        '<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:50px;background:' + o.bg + ';color:' + o.fg + '">' + o.label + '</span>' +
+        '<span style="font-size:11px;color:#374151;text-transform:uppercase">' + (l.method || '') + '</span>' +
+        '<span style="font-size:11px;color:#6b7280;margin-left:auto">' + when + '</span>' +
+      '</div>' +
+      '<div style="font-size:11px;color:#6b7280;margin-top:4px">IP: ' + (l.ip_address || '—') + (ua ? ' · ' + ua : '') + '</div>' +
+    '</div>';
+  }).join('');
 }
 
 // ── CHANGE REQUESTS ───────────────────────────────────────────────────────────

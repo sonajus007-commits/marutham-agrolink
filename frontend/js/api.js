@@ -270,4 +270,10 @@ var API = {
   getUserStatusHistory: function(id) {
     return apiFetch('GET', '/users/' + id + '/status-history', null, tok());
   },
+  getUserAuditLog: function(id) {
+    return apiFetch('GET', '/users/' + id + '/audit-log', null, tok());
+  },
+  getUserLoginHistory: function(id) {
+    return apiFetch('GET', '/users/' + id + '/login-history', null, tok());
+  },
 };
