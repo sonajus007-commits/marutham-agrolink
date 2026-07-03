@@ -264,15 +264,19 @@ function renderPipelineHTML(nodes, opts) {
   html += '<div style="display:flex">';
   nodes.forEach(function(node, i) {
     var done = node.status === 'done', active = node.status === 'active', skipped = node.status === 'skipped';
-    var dotBg = done ? '#1a7a4a' : active ? activeColor : '#e2e8f0';
-    var dotBd = done ? '#1a7a4a' : active ? activeColor : '#cbd5e1';
-    var lblCl = done ? '#1a7a4a' : active ? activeColor : '#94a3b8';
+    // Delivered is the terminal success state — show it green (done-style), not orange.
+    var green = done || (active && node.label === 'Delivered');
+    var dotBg = green ? '#1a7a4a' : active ? activeColor : '#e2e8f0';
+    var dotBd = green ? '#1a7a4a' : active ? activeColor : '#cbd5e1';
+    var lblCl = green ? '#1a7a4a' : active ? activeColor : '#94a3b8';
+    var glow  = green && active ? 'box-shadow:0 0 0 4px rgba(26,122,74,.22);'
+              : active          ? 'box-shadow:0 0 0 4px rgba(244,162,97,.22);' : '';
 
     html += '<div style="width:' + NODE_W + 'px;display:flex;flex-direction:column;align-items:center;flex-shrink:0">';
     html += '<div style="display:flex;align-items:center;width:100%;height:22px">';
     html += (i > 0) ? _pipeConn(_pipeGap(nodes, i - 1)) : '<div style="flex:1"></div>';
-    html += '<div style="width:20px;height:20px;border-radius:50%;background:' + dotBg + ';border:2px ' + (skipped ? 'dashed' : 'solid') + ' ' + dotBd + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;' + (skipped ? 'opacity:.55;' : '') + (active ? 'box-shadow:0 0 0 4px rgba(244,162,97,.22);' : '') + '">';
-    html += done ? '<span style="font-size:10px;color:#fff">✓</span>' : (active ? '<span style="font-size:7px;color:#fff">●</span>' : '');
+    html += '<div style="width:20px;height:20px;border-radius:50%;background:' + dotBg + ';border:2px ' + (skipped ? 'dashed' : 'solid') + ' ' + dotBd + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;' + (skipped ? 'opacity:.55;' : '') + glow + '">';
+    html += green ? '<span style="font-size:10px;color:#fff">✓</span>' : (active ? '<span style="font-size:7px;color:#fff">●</span>' : '');
     html += '</div>';
     html += (i < N - 1) ? _pipeConn(_pipeGap(nodes, i)) : '<div style="flex:1"></div>';
     html += '</div>';
