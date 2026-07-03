@@ -160,7 +160,7 @@
       <div class="fg"><label class="fl">Phone <span class="rq">*</span></label>
         <input class="fi" id="cs-ph" type="tel" placeholder="10-digit phone" maxlength="10" oninput="numOnly(this)"></div>
       <div class="fg"><label class="fl">Role <span class="rq">*</span></label>
-        <select class="fi" id="cs-role">
+        <select class="fi" id="cs-role" onchange="csRoleChanged()">
           <option value="">— Select role —</option>
           <option value="VCO">VCO (Verification Officer)</option>
           <option value="Delivery Agent">Delivery Agent</option>
@@ -180,6 +180,9 @@
         <div class="fg"><label class="fl">District <span class="rq">*</span></label>
           <select class="fi" id="cs-di"></select></div>
       </div>
+      <div class="fg"><label class="fl">Village/Town <span class="rq" id="cs-vt-rq" style="display:none">*</span></label>
+        <input class="fi" id="cs-vt" type="text" placeholder="e.g. Ponnamaravathi">
+        <div style="font-size:11px;color:var(--gray);margin-top:4px">Village/Town this staff covers. Required for VCO &amp; Delivery Agent — it decides which orders they handle.</div></div>
       <div class="fg"><label class="fl">Temporary Password <span class="rq">*</span></label>
         <div class="pww">
           <input class="fi" id="cs-pw" type="password" placeholder="Min 6 characters">
@@ -196,6 +199,19 @@
         <button class="sbtn" style="background:var(--muted);color:var(--text);flex:0;padding:0 20px" onclick="closeCreateStaff()">Cancel</button>
         <button class="sbtn" id="cs-btn" onclick="submitCreateStaff()" style="flex:0;padding:0 24px">Create Account</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── HUB DISPATCH OVERLAY ──────────────────────────────────────────────── -->
+<div class="overlay" id="hubDispatchOverlay" style="display:none" onclick="if(event.target===this)closeHubDispatch()">
+  <div class="obox" style="max-width:420px">
+    <div class="ohdr">
+      <span class="otitle">🚀 Dispatch from Hub</span>
+      <button class="cls" onclick="closeHubDispatch()">✕</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px" id="hd-body">
+      <div class="spinner"><div class="spin"></div></div>
     </div>
   </div>
 </div>
@@ -2462,6 +2478,12 @@ function closeCreateStaff() {
   document.getElementById('createStaffOverlay').style.display = 'none';
 }
 
+function csRoleChanged() {
+  var role = document.getElementById('cs-role').value;
+  var needsVillage = (role === 'VCO' || role === 'Delivery Agent');
+  document.getElementById('cs-vt-rq').style.display = needsVillage ? '' : 'none';
+}
+
 function updateCsDistrictList() {
   var state = document.getElementById('cs-st').value;
   var dists = _stateDistricts[state] || [];
@@ -2478,6 +2500,7 @@ async function submitCreateStaff() {
   var role = document.getElementById('cs-role').value;
   var st   = document.getElementById('cs-st').value;
   var di   = document.getElementById('cs-di').value;
+  var vt   = document.getElementById('cs-vt').value.trim();
   var pw   = document.getElementById('cs-pw').value;
 
   var errEl = document.getElementById('cs-err');
@@ -2488,13 +2511,14 @@ async function submitCreateStaff() {
   if (!gd) { gdEl.style.display = 'block'; return; }
   if (!/^\d{10}$/.test(ph)) { errEl.textContent = 'Enter a valid 10-digit phone number.'; errEl.style.display = 'block'; return; }
   if (!role) { errEl.textContent = 'Select a role.'; errEl.style.display = 'block'; return; }
+  if ((role === 'VCO' || role === 'Delivery Agent') && !vt) { errEl.textContent = 'Village/Town is required for VCO and Delivery Agent.'; errEl.style.display = 'block'; return; }
   if (pw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
 
   var btn = document.getElementById('cs-btn');
   btn.disabled = true; btn.textContent = 'Creating…';
 
   try {
-    var res = await API.createStaff({ fname: fn, lname: ln, gender: gd, phone: ph, password: pw, admin_role: role, state: st, district: di });
+    var res = await API.createStaff({ fname: fn, lname: ln, gender: gd, phone: ph, password: pw, admin_role: role, state: st, district: di, village_town: vt });
     document.getElementById('cs-lid').textContent = res.login_id;
     document.getElementById('cs-success').style.display = 'block';
     btn.textContent = 'Add Another';
@@ -2504,6 +2528,7 @@ async function submitCreateStaff() {
       document.getElementById('cs-fn').value = '';
       document.getElementById('cs-gd').value = '';
       document.getElementById('cs-ph').value = '';
+      document.getElementById('cs-vt').value = '';
       document.getElementById('cs-pw').value = '';
       btn.textContent = 'Create Account';
       btn.onclick = submitCreateStaff;
@@ -2893,9 +2918,11 @@ async function renderHubQueue() {
       if (o.item_count) {
         h += '<div style="font-size:11px;color:var(--gray);margin-bottom:10px">' + o.item_count + ' item(s)</div>';
       }
-      h += '<button class="sbtn" style="padding:10px;font-size:13px" onclick="hubAction(\'' + o.id + '\',\'' + action + '\')">' +
-           (action === 'checkin' ? '✓ Mark Arrived at Hub' : '🚀 Dispatch — Out for Delivery') +
-           '</button>';
+      if (action === 'checkin') {
+        h += '<button class="sbtn" style="padding:10px;font-size:13px" onclick="hubAction(\'' + o.id + '\',\'checkin\')">✓ Mark Arrived at Hub</button>';
+      } else {
+        h += '<button class="sbtn" style="padding:10px;font-size:13px" onclick="openHubDispatch(\'' + o.id + '\')">🚀 Dispatch — Out for Delivery</button>';
+      }
       h += '</div>';
       return h;
     }
@@ -2922,6 +2949,71 @@ async function renderHubQueue() {
 
   } catch(e) {
     transitWrap.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+  }
+}
+
+var _hdOrderId = null;
+var _hdAgentId = '';
+async function openHubDispatch(orderId) {
+  _hdOrderId = orderId;
+  _hdAgentId = '';
+  document.getElementById('hubDispatchOverlay').style.display = 'flex';
+  document.getElementById('hd-body').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var elig = await API.getEligibleAgents(orderId, 'delivery');
+    var matched = elig.matched || [];
+    var all     = elig.all || [];
+    if (matched.length >= 1) _hdAgentId = matched[0].id;
+
+    var others = all.filter(function(a){ return !matched.some(function(m){ return m.id === a.id; }); });
+    var html = '';
+    html += '<div style="font-size:12px;color:#64748b">Delivery village: <b style="color:var(--forest)">' + (elig.village || '—') + '</b></div>';
+    if (matched.length) {
+      html += '<div style="font-size:12px;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 10px">✓ ' +
+        matched.length + ' delivery agent' + (matched.length > 1 ? 's' : '') + ' cover this village — auto-selected.</div>';
+    } else {
+      html += '<div style="font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px">No agent is tagged to this village. Pick one manually.</div>';
+    }
+    html += '<div class="fg"><label class="fl">Delivery Agent</label><select class="fi" id="hd-agent" onchange="_hdAgentId=this.value">';
+    html += '<option value="">— Assign later —</option>';
+    if (matched.length) {
+      html += '<optgroup label="Covers this village">';
+      matched.forEach(function(a){
+        html += '<option value="' + a.id + '"' + (a.id === _hdAgentId ? ' selected' : '') + '>' +
+          a.name + (a.vehicle ? ' · ' + a.vehicle : '') + '</option>';
+      });
+      html += '</optgroup>';
+    }
+    if (others.length) {
+      html += '<optgroup label="Other agents in district">';
+      others.forEach(function(a){ html += '<option value="' + a.id + '">' + a.name + (a.vehicle ? ' · ' + a.vehicle : '') + '</option>'; });
+      html += '</optgroup>';
+    }
+    html += '</select></div>';
+    html += '<div style="display:flex;gap:10px;justify-content:flex-end">' +
+      '<button class="sbtn" style="background:var(--muted);color:var(--text);flex:0;padding:0 20px" onclick="closeHubDispatch()">Cancel</button>' +
+      '<button class="sbtn" id="hd-btn" style="flex:0;padding:0 20px" onclick="confirmHubDispatch()">🚀 Dispatch</button></div>';
+    document.getElementById('hd-body').innerHTML = html;
+  } catch(e) {
+    document.getElementById('hd-body').innerHTML = '<div style="color:#c0392b;font-size:13px">' + e.message + '</div>';
+  }
+}
+
+function closeHubDispatch() {
+  document.getElementById('hubDispatchOverlay').style.display = 'none';
+}
+
+async function confirmHubDispatch() {
+  var btn = document.getElementById('hd-btn');
+  btn.disabled = true; btn.textContent = '⏳…';
+  try {
+    var res = await API.dispatchFromHub(_hdOrderId, _hdAgentId);
+    showToast(res.message || 'Dispatched for delivery.', 'ok');
+    closeHubDispatch();
+    renderHubQueue();
+  } catch(e) {
+    showToast(e.message, 'er');
+    btn.disabled = false; btn.textContent = '🚀 Dispatch';
   }
 }
 

@@ -184,6 +184,15 @@
   <div class="deliver-body" id="sheetContent"></div>
 </div>
 
+<!-- VCO verify sheet: choose route + assign collection agent -->
+<div class="deliver-sheet" id="verifySheet">
+  <div class="deliver-hdr">
+    <button class="overlay-back" onclick="closeVerifySheet()">←</button>
+    <div class="overlay-title" id="verifyTitle">Verify Order</div>
+  </div>
+  <div class="deliver-body" id="verifyContent" style="padding:16px"></div>
+</div>
+
 <!-- PROFILE SHEET -->
 <div class="deliver-sheet" id="profileSheet">
   <div class="deliver-hdr">
@@ -235,6 +244,19 @@
           style="flex:1;background:#f3faf4;border:1.5px solid #dde8dd;border-radius:10px;padding:10px 13px;font-size:13px;color:var(--forest);outline:none">
         <button onclick="saveVehicle()" style="background:var(--forest);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">Save</button>
       </div>
+    </div>
+
+    <!-- Service villages (Delivery Agent only) -->
+    <div id="prof-villages-card" style="display:none;background:#fff;border:1px solid #eef4ee;border-radius:14px;padding:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--forest);margin-bottom:4px">📍 Villages / Towns I Cover</div>
+      <div style="font-size:11px;color:var(--gray);margin-bottom:10px">You'll be auto-suggested for orders in these villages — for collection and delivery.</div>
+      <div id="prof-village-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input id="prof-village-input" type="text" placeholder="Add a village/town" onkeydown="if(event.key==='Enter'){event.preventDefault();addServiceVillage();}"
+          style="flex:1;background:#f3faf4;border:1.5px solid #dde8dd;border-radius:10px;padding:10px 13px;font-size:13px;color:var(--forest);outline:none">
+        <button onclick="addServiceVillage()" style="background:#eef7ea;color:var(--forest);border:1px solid #cfe6c4;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer">Add</button>
+      </div>
+      <button onclick="saveServiceVillages()" style="margin-top:10px;background:var(--forest);color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;width:100%">Save Villages</button>
     </div>
 
     <!-- Change password -->
@@ -360,6 +382,8 @@ function queueSection(title, orders, action, sectionClass, btnLabel) {
     html += '<span class="delv-method ' + mClass + '">' + (o.pay_method || 'UPI') + '</span>';
     if (action === 'deliver') {
       html += '<button class="delv-btn" onclick="openDeliverSheet(\'' + o.id + '\')">' + btnLabel + '</button>';
+    } else if (action === 'verify') {
+      html += '<button class="delv-btn" onclick="openVerifySheet(\'' + o.id + '\')">' + btnLabel + '</button>';
     } else {
       html += '<button class="delv-btn" id="btn-' + o.id + '" onclick="quickScan(\'' + o.id + '\',\'' + action + '\',this)">' + btnLabel + '</button>';
     }
@@ -381,6 +405,104 @@ async function quickScan(orderId, action, btn) {
     showToast(e.message, 'er');
     btn.disabled = false;
     btn.textContent = action === 'verify' ? '✓ Verify' : action === 'pickup' ? '⬆ Pick Up' : '→ Out for Delivery';
+  }
+}
+
+// ── VCO verify sheet: route + collection agent ────────────────────────────────
+var _verifyOrderId = null;
+var _verifyRoute   = 'direct';
+var _verifyAgentId = '';
+
+async function openVerifySheet(orderId) {
+  _verifyOrderId = orderId;
+  _verifyRoute   = 'direct';
+  _verifyAgentId = '';
+  document.getElementById('verifySheet').classList.add('active');
+  document.getElementById('verifyContent').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var ordRes = await API.getOrder(orderId);
+    var o = ordRes.order;
+    var elig = await API.getEligibleAgents(orderId, 'collection');
+    document.getElementById('verifyTitle').textContent = o.code || 'Verify Order';
+
+    var matched = elig.matched || [];
+    var all     = elig.all || [];
+    // Pre-select the single obvious match; otherwise leave for manual choice.
+    if (matched.length >= 1) _verifyAgentId = matched[0].id;
+
+    var html = '';
+    html += '<div class="card" style="margin-bottom:14px">';
+    html += '<div style="font-size:13px;font-weight:800;color:var(--forest)">' + escapeHtml(o.consumer_name || 'Consumer') + '</div>';
+    html += '<div style="font-size:12px;color:var(--gray);margin-top:2px">Fulfilment village: <b>' + escapeHtml(o.village || '—') + '</b></div>';
+    html += '</div>';
+
+    // Route choice
+    html += '<div style="font-size:12px;font-weight:700;color:var(--forest);margin-bottom:8px">Delivery route</div>';
+    html += '<div class="route-toggle">';
+    html += '<div class="route-btn on" id="v-route-direct" onclick="setVerifyRoute(\'direct\')">🛵 Direct Delivery<br><span style="font-size:9px;font-weight:400">to consumer</span></div>';
+    html += '<div class="route-btn" id="v-route-hub" onclick="setVerifyRoute(\'hub\')">🏭 Transit to Hub<br><span style="font-size:9px;font-weight:400">via hub</span></div>';
+    html += '</div>';
+
+    // Agent choice
+    html += '<div style="font-size:12px;font-weight:700;color:var(--forest);margin:6px 0 8px">Collection agent</div>';
+    if (matched.length) {
+      html += '<div style="font-size:11px;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 10px;margin-bottom:8px">✓ ' +
+        matched.length + ' agent' + (matched.length > 1 ? 's' : '') + ' cover this village — auto-selected.</div>';
+    } else {
+      html += '<div style="font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;margin-bottom:8px">No agent is tagged to this village. Pick one manually.</div>';
+    }
+    html += '<select id="v-agent" onchange="_verifyAgentId=this.value" ' +
+      'style="width:100%;background:#f3faf4;border:1.5px solid #dde8dd;border-radius:10px;padding:11px 13px;font-size:13px;color:var(--forest);outline:none;appearance:none">';
+    html += '<option value="">— Assign later —</option>';
+    if (matched.length) {
+      html += '<optgroup label="Covers this village">';
+      matched.forEach(function(a){
+        html += '<option value="' + a.id + '"' + (a.id === _verifyAgentId ? ' selected' : '') + '>' +
+          escapeHtml(a.name) + (a.vehicle ? ' · ' + escapeHtml(a.vehicle) : '') + '</option>';
+      });
+      html += '</optgroup>';
+    }
+    var others = all.filter(function(a){ return !matched.some(function(m){ return m.id === a.id; }); });
+    if (others.length) {
+      html += '<optgroup label="Other agents in district">';
+      others.forEach(function(a){
+        html += '<option value="' + a.id + '">' + escapeHtml(a.name) + (a.vehicle ? ' · ' + escapeHtml(a.vehicle) : '') + '</option>';
+      });
+      html += '</optgroup>';
+    }
+    html += '</select>';
+
+    html += '<button id="v-confirm" onclick="confirmVerify()" ' +
+      'style="margin-top:16px;background:var(--forest);color:#fff;border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:800;cursor:pointer;width:100%">✓ Verify & Assign</button>';
+
+    document.getElementById('verifyContent').innerHTML = html;
+  } catch(e) {
+    document.getElementById('verifyContent').innerHTML =
+      '<div style="text-align:center;padding:24px;color:#c0392b;font-size:13px">' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function setVerifyRoute(route) {
+  _verifyRoute = route;
+  document.getElementById('v-route-direct').classList.toggle('on', route === 'direct');
+  document.getElementById('v-route-hub').classList.toggle('on', route === 'hub');
+}
+
+function closeVerifySheet() {
+  document.getElementById('verifySheet').classList.remove('active');
+}
+
+async function confirmVerify() {
+  var btn = document.getElementById('v-confirm');
+  btn.disabled = true; btn.textContent = '⏳ Verifying…';
+  try {
+    var res = await API.verifyOrder(_verifyOrderId, { route: _verifyRoute, agent_id: _verifyAgentId || undefined });
+    showToast(res.message || 'Order verified.', 'ok');
+    closeVerifySheet();
+    await loadOrders();
+  } catch(e) {
+    showToast(e.message, 'er');
+    btn.disabled = false; btn.textContent = '✓ Verify & Assign';
   }
 }
 
@@ -534,7 +656,54 @@ function openAgentProfile() {
   document.getElementById('prof-cpw').value            = '';
   document.getElementById('prof-npw').value            = '';
   document.getElementById('prof-pw-err').style.display = 'none';
+  // Service villages — Delivery Agents only
+  document.getElementById('prof-villages-card').style.display = _isVCO ? 'none' : 'block';
+  if (!_isVCO) {
+    _serviceVillages = Array.isArray(user.service_villages) ? user.service_villages.slice() : [];
+    renderServiceVillageChips();
+    document.getElementById('prof-village-input').value = '';
+  }
   document.getElementById('profileSheet').classList.add('active');
+}
+
+var _serviceVillages = [];
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+function renderServiceVillageChips() {
+  var box = document.getElementById('prof-village-chips');
+  if (!_serviceVillages.length) {
+    box.innerHTML = '<span style="font-size:12px;color:var(--gray)">No villages added yet.</span>';
+    return;
+  }
+  box.innerHTML = _serviceVillages.map(function(v, i) {
+    return '<span style="display:inline-flex;align-items:center;gap:6px;background:#eef7ea;color:var(--forest);' +
+      'border:1px solid #cfe6c4;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:600">' +
+      escapeHtml(v) + '<span onclick="removeServiceVillage(' + i + ')" style="cursor:pointer;font-weight:800">✕</span></span>';
+  }).join('');
+}
+function addServiceVillage() {
+  var inp = document.getElementById('prof-village-input');
+  var v = inp.value.trim();
+  if (!v) return;
+  var exists = _serviceVillages.some(function(x){ return x.toLowerCase() === v.toLowerCase(); });
+  if (!exists) _serviceVillages.push(v);
+  inp.value = '';
+  renderServiceVillageChips();
+}
+function removeServiceVillage(i) {
+  _serviceVillages.splice(i, 1);
+  renderServiceVillageChips();
+}
+async function saveServiceVillages() {
+  try {
+    var res = await API.patchMe({ service_villages: _serviceVillages });
+    user = res.user;
+    setSession(getToken(), user);
+    showToast('Service villages saved.', 'ok');
+  } catch(e) { showToast(e.message, 'er'); }
 }
 
 function closeAgentProfile() {

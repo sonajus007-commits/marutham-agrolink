@@ -116,7 +116,7 @@ router.get('/', async (req, res) => {
 
   // VCO sees only returns from their village
   if (req.user.admin_role === 'VCO') {
-    query = query.eq('order.village', req.user.vco_city);
+    query = query.eq('order.village', req.user.village_town || req.user.vco_city);
   } else if (['District Manager', 'Hub Incharge'].includes(req.user.admin_role)) {
     query = query.eq('order.district', req.user.district_assign || req.user.district);
   }

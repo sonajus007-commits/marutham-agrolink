@@ -447,12 +447,16 @@ router.post('/create-staff', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'Admin access required.' });
   }
 
-  const { fname, lname, phone, password, admin_role, district, state, gender } = req.body;
+  const { fname, lname, phone, password, admin_role, district, state, gender, village_town } = req.body;
   if (!fname || !phone || !password || !admin_role) {
     return res.status(400).json({ error: 'fname, phone, password, and admin_role are required.' });
   }
   if (password.length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+  }
+  // Village/Town decides which orders a VCO / Delivery Agent handles — required for those roles.
+  if ((admin_role === 'VCO' || admin_role === 'Delivery Agent') && !village_town) {
+    return res.status(400).json({ error: 'village_town is required for VCO and Delivery Agent.' });
   }
 
   const allowed = CREATABLE_BY[req.user.admin_role] || [];
@@ -479,6 +483,9 @@ router.post('/create-staff', requireAuth, async (req, res) => {
     state: state || req.user.state,
     country: 'India',
     country_code: '+91',
+    // Keep both fields in sync: village_town is the canonical address field (editable
+    // everywhere); vco_city is what the VCO order query historically reads.
+    ...(village_town ? { village_town, vco_city: village_town } : {}),
   };
 
   const { data: created, error } = await supabase
@@ -521,6 +528,7 @@ router.patch('/me', requireAuth, async (req, res) => {
     'house_no', 'street1', 'street2', 'landmark',
     'village_town', 'city', 'district', 'pincode', 'state',
     'agent_vehicle',                                   // agent vehicle
+    'service_villages',                                // Delivery Agent: villages they cover (text[])
     'delivery_addresses',                              // consumer address book (JSONB array)
   ];
 

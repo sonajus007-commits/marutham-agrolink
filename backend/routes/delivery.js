@@ -142,25 +142,104 @@ router.post('/:id/scan', async (req, res) => {
   const { stage } = order;
   let result;
 
-  // VCO scans a Packaged order → VCO Verified
+  // VCO scans a Packaged order → VCO Verified.
+  // At verification the VCO also chooses the route (direct / hub) and, optionally,
+  // assigns the collection Delivery Agent (auto-matched by village, manual fallback).
   if ((adminRole === 'VCO' || u.role === 'admin') && stage === 1) {
     if (adminRole !== 'VCO' && adminRole !== 'Head Office' && adminRole !== 'State Head' && adminRole !== 'Regional Manager' && adminRole !== 'District Manager') {
       // Delivery Agents should not do VCO verify
       return res.status(403).json({ error: 'Only VCO or senior admins can verify packaged orders.' });
     }
-    result = await advanceStage(order, `VCO ${req.user.fname}`);
 
-  // Delivery Agent (or admin) scans VCO Verified → Picked Up + assign agent + auto-route
+    const { agent_id, route } = req.body;
+    const extra = {};
+
+    if (route !== undefined) {
+      if (route !== 'direct' && route !== 'hub') {
+        return res.status(400).json({ error: "route must be 'direct' or 'hub'." });
+      }
+      extra.route = route;
+      extra.route_auto = route;
+    }
+
+    let assignedName = null;
+    if (agent_id) {
+      const { data: agent } = await supabase
+        .from('users')
+        .select('id, fname, lname, phone, agent_vehicle, role, admin_role')
+        .eq('id', agent_id)
+        .single();
+      if (!agent || agent.role !== 'admin' || agent.admin_role !== 'Delivery Agent') {
+        return res.status(400).json({ error: 'Selected user is not a Delivery Agent.' });
+      }
+      assignedName = agent.fname + (agent.lname ? ' ' + agent.lname : '');
+      extra.agent_id      = agent.id;
+      extra.agent_name    = assignedName;
+      extra.agent_phone   = agent.phone;
+      extra.agent_vehicle = agent.agent_vehicle || null;
+    }
+
+    result = await advanceStage(order, `VCO ${req.user.fname}`, extra);
+
+    if (!result.error && assignedName) {
+      await supabase.from('order_history').insert({
+        order_id: order.id,
+        label:    'Agent Assigned',
+        note:     `${assignedName} assigned by VCO ${req.user.fname}.`,
+      });
+    }
+
+  // Delivery Agent (or admin) scans VCO Verified → Picked Up.
+  // Preserve the VCO-chosen route and any pre-assigned agent.
   } else if (stage === 2) {
-    const autoRoute = 'direct'; // default; can be overridden via PATCH /route
+    const keepRoute = order.route || 'direct';
     result = await advanceStage(order, `Agent ${req.user.fname}`, {
-      agent_id:     u.id,
-      agent_name:   `${u.fname}${u.lname ? ' ' + u.lname : ''}`,
-      agent_phone:  u.phone,
-      agent_vehicle: u.agent_vehicle || null,
-      route:        autoRoute,
-      route_auto:   autoRoute,
+      agent_id:     order.agent_id   || u.id,
+      agent_name:   order.agent_name || `${u.fname}${u.lname ? ' ' + u.lname : ''}`,
+      agent_phone:  order.agent_phone || u.phone,
+      agent_vehicle: order.agent_vehicle || u.agent_vehicle || null,
+      route:        keepRoute,
+      route_auto:   order.route_auto || keepRoute,
     });
+
+  // Hub dispatch: an order At Hub (hub route, stage 5) → Out for Delivery.
+  // The Hub Incharge assigns the last-mile Delivery Agent (auto-matched to the
+  // consumer's delivery village, manual fallback) before dispatching.
+  } else if (order.route === 'hub' && stage === 5) {
+    const isHubStaff = adminRole === 'Hub Incharge' || adminRole === 'Head Office'
+      || adminRole === 'State Head' || adminRole === 'Regional Manager' || adminRole === 'District Manager';
+    if (!isHubStaff) {
+      return res.status(403).json({ error: 'Only the Hub Incharge or senior admins can dispatch from the hub.' });
+    }
+
+    const { agent_id } = req.body;
+    const extra = {};
+    let assignedName = null;
+    if (agent_id) {
+      const { data: agent } = await supabase
+        .from('users')
+        .select('id, fname, lname, phone, agent_vehicle, role, admin_role')
+        .eq('id', agent_id)
+        .single();
+      if (!agent || agent.role !== 'admin' || agent.admin_role !== 'Delivery Agent') {
+        return res.status(400).json({ error: 'Selected user is not a Delivery Agent.' });
+      }
+      assignedName = agent.fname + (agent.lname ? ' ' + agent.lname : '');
+      extra.agent_id      = agent.id;
+      extra.agent_name    = assignedName;
+      extra.agent_phone   = agent.phone;
+      extra.agent_vehicle = agent.agent_vehicle || null;
+    }
+
+    result = await advanceStage(order, `Hub ${req.user.fname}`, extra);
+
+    if (!result.error && assignedName) {
+      await supabase.from('order_history').insert({
+        order_id: order.id,
+        label:    'Delivery Agent Assigned',
+        note:     `${assignedName} assigned for last-mile by ${req.user.fname} (${req.user.admin_role}).`,
+      });
+    }
 
   // Delivery Agent (or admin) advances an in-progress order
   } else if (stage >= 3) {
@@ -286,6 +365,61 @@ router.post('/:id/assign', async (req, res) => {
   });
 
   res.json({ message: `Agent ${agentName} assigned.`, order: updated });
+});
+
+// ── GET /orders/:id/eligible-agents  (VCO/admin — agents to assign) ───────────
+// Returns Delivery Agents whose service villages cover the relevant village.
+// `leg=collection` (default) matches the order's fulfilment village (farmer side);
+// `leg=delivery` matches the consumer's delivery village (hub → doorstep).
+router.get('/:id/eligible-agents', async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required.' });
+  }
+
+  const { data: order, error: oe } = await supabase
+    .from('orders')
+    .select('id, village, delivery_village, district')
+    .eq('id', req.params.id)
+    .single();
+  if (oe || !order) return res.status(404).json({ error: 'Order not found.' });
+
+  // collection leg → farmer-side fulfilment village (VCO assigns pickup agent).
+  // delivery leg → consumer-side delivery village (Hub Incharge assigns last-mile
+  // agent); falls back to the fulfilment village if none was captured.
+  const leg = req.query.leg === 'delivery' ? 'delivery' : 'collection';
+  const village = leg === 'delivery'
+    ? (order.delivery_village || order.village)
+    : order.village;
+
+  // All Delivery Agents in the order's district — the manual-fallback list.
+  const { data: all, error: ae } = await supabase
+    .from('users')
+    .select('id, fname, lname, phone, agent_vehicle, village_town, service_villages, district')
+    .eq('role', 'admin')
+    .eq('admin_role', 'Delivery Agent')
+    .eq('district', order.district)
+    .eq('status', 'active');
+  if (ae) return res.status(500).json({ error: ae.message });
+
+  // Auto-match: agents whose service_villages include this village.
+  const matched = (all || []).filter(a =>
+    village && Array.isArray(a.service_villages) && a.service_villages.includes(village)
+  );
+
+  const shape = a => ({
+    id: a.id,
+    name: a.fname + (a.lname ? ' ' + a.lname : ''),
+    phone: a.phone,
+    vehicle: a.agent_vehicle || '',
+    service_villages: a.service_villages || [],
+  });
+
+  res.json({
+    leg,
+    village: village || null,
+    matched: matched.map(shape),
+    all: (all || []).map(shape),
+  });
 });
 
 // ── GET /orders/:id/track  (consumer who owns it, or any staff) ───────────────

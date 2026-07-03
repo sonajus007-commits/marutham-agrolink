@@ -162,6 +162,11 @@ router.post('/', async (req, res) => {
     return res.status(500).json({ error: 'Could not generate order code. Ensure the code_counters migration has been applied.' });
   }
 
+  // Delivery-side village (consumer): chosen delivery address, else profile village.
+  // Drives the hub → doorstep agent matching (Phase C), distinct from the farmer's
+  // fulfilment `village` above.
+  const deliveryVillage = (delivery_address && delivery_address.village_town) || req.user.village_town || null;
+
   // ── 4. Insert order ───────────────────────────────────────────────────────
   const { data: order, error: orderErr } = await supabase
     .from('orders')
@@ -171,6 +176,7 @@ router.post('/', async (req, res) => {
       consumer_name: `${req.user.fname}${req.user.lname ? ' ' + req.user.lname : ''}`,
       district:      fulfilmentDistrict,
       village:       fulfilmentVillage,
+      delivery_village: deliveryVillage,
       item_total, handling, market_fee, delivery, total, saved,
       pay_method,
       pay_status:    pay_method === 'Cash on Delivery' ? 'pending' : 'paid',
@@ -240,7 +246,7 @@ router.get('/', async (req, res) => {
 
   let query = supabase
     .from('orders')
-    .select('id, code, consumer_name, district, village, total, status, stage, route, pay_method, pay_status, created_at, agent_name')
+    .select('id, code, consumer_name, district, village, delivery_village, total, status, stage, route, pay_method, pay_status, created_at, agent_name')
     .order('created_at', { ascending: false });
 
   if (u.role === 'consumer') {
@@ -261,7 +267,9 @@ router.get('/', async (req, res) => {
     const role = u.admin_role;
 
     if (role === 'VCO') {
-      query = query.eq('village', u.vco_city);
+      // Match on the VCO's village. village_town is the canonical field (editable
+      // in profile/admin edit); vco_city is a legacy fallback for older records.
+      query = query.eq('village', u.village_town || u.vco_city);
 
     } else if (role === 'District Manager' || role === 'Hub Incharge') {
       query = query.eq('district', u.district_assign || u.district);

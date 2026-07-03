@@ -163,6 +163,16 @@ var API = {
   assignAgent: function(id, agentId) {
     return apiFetch('POST', '/orders/' + id + '/assign', { agent_id: agentId }, tok());
   },
+  getEligibleAgents: function(id, leg) {
+    var qs = leg ? '?leg=' + encodeURIComponent(leg) : '';
+    return apiFetch('GET', '/orders/' + id + '/eligible-agents' + qs, null, tok());
+  },
+  verifyOrder: function(id, data) {
+    return apiFetch('POST', '/orders/' + id + '/scan', data || {}, tok());
+  },
+  dispatchFromHub: function(id, agentId) {
+    return apiFetch('POST', '/orders/' + id + '/scan', { agent_id: agentId || undefined }, tok());
+  },
   getAgents: function(district) {
     var qs = district ? '?district=' + encodeURIComponent(district) : '';
     return apiFetch('GET', '/users' + qs, null, tok());

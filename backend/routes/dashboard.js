@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
   // Build scope filter for orders
   let orderFilter = {};
   if (adminRole === 'VCO') {
-    orderFilter = { village: u.vco_city };
+    orderFilter = { village: u.village_town || u.vco_city };
   } else if (['District Manager', 'Hub Incharge'].includes(adminRole)) {
     orderFilter = { district: u.district_assign || u.district };
   } else if (adminRole === 'Delivery Agent') {
