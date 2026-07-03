@@ -290,11 +290,12 @@ document.getElementById('agentSub').textContent  =
     ? 'VCO · ' + (user.vco_city || user.village_town || user.district || '—')
     : 'Delivery Agent · ' + (user.district || '—');
 
-var _toVerify  = [];   // Packaged — VCO to verify
-var _toPickUp  = [];   // VCO Verified — agent to pick up
-var _inTransit = [];   // Picked Up — agent to advance to Out for Delivery
-var _toDeliver = [];   // Out for Delivery — agent to deliver
-var _delivered = [];   // Delivered today
+var _toVerify   = [];  // Packaged — VCO to verify
+var _toPickUp   = [];  // VCO Verified — agent to pick up
+var _inTransit  = [];  // Picked Up — agent to advance to Out for Delivery
+var _toDeliver  = [];  // Out for Delivery — agent to deliver
+var _inProgress = [];  // Order Placed / In Transit / At Hub — view only (no action here)
+var _delivered  = [];  // Delivered today
 
 var _isVCO = (user.admin_role === 'VCO');
 
@@ -314,6 +315,7 @@ async function loadOrders() {
     _toPickUp  = orders.filter(function(o){ return o.status === 'VCO Verified'     && !o.cancelled; });
     _inTransit = orders.filter(function(o){ return o.status === 'Picked Up'        && !o.cancelled; });
     _toDeliver = orders.filter(function(o){ return o.status === 'Out for Delivery' && !o.cancelled; });
+    _inProgress = orders.filter(function(o){ return ['Order Placed','In Transit','At Hub'].indexOf(o.status) !== -1 && !o.cancelled; });
     _delivered = orders.filter(function(o){ return o.status === 'Delivered'; });
     renderStats();
     renderQueueSections();
@@ -359,6 +361,10 @@ function renderQueueSections() {
     html += queueSection('🛵 Deliver', _toDeliver, 'deliver', 'q-section-deliver', 'Deliver →');
   }
 
+  if (_inProgress.length > 0) {
+    html += queueSection('🚚 In Progress', _inProgress, 'view', 'q-section-transit', '');
+  }
+
   if (!html) {
     html = '<div style="text-align:center;padding:32px;color:var(--gray);font-size:13px">' +
            '<div style="font-size:40px;margin-bottom:12px">🎉</div>All clear — nothing pending!</div>';
@@ -373,19 +379,21 @@ function queueSection(title, orders, action, sectionClass, btnLabel) {
   html += '<div class="queue-count">' + orders.length + '</div></div>';
   orders.forEach(function(o) {
     var mClass = o.pay_method === 'Cash on Delivery' ? 'dm-cod' : 'dm-upi';
-    html += '<div class="delv-card">';
+    html += '<div class="delv-card" onclick="openOrderView(\'' + o.id + '\')" style="cursor:pointer">';
     html += '<div class="delv-code">' + (o.code || o.id.slice(0,8).toUpperCase()) + '</div>';
     html += '<div class="delv-name">' + (o.consumer_name || 'Consumer') + '</div>';
     if (o.delivery_address) html += '<div class="delv-addr">' + o.delivery_address + '</div>';
     html += '<div class="delv-meta">';
     html += '<div class="delv-pay">' + fmt(o.total) + '</div>';
     html += '<span class="delv-method ' + mClass + '">' + (o.pay_method || 'UPI') + '</span>';
-    if (action === 'deliver') {
-      html += '<button class="delv-btn" onclick="openDeliverSheet(\'' + o.id + '\')">' + btnLabel + '</button>';
+    if (action === 'view') {
+      html += '<span style="font-size:11px;color:var(--leaf);font-weight:700">View →</span>';
+    } else if (action === 'deliver') {
+      html += '<button class="delv-btn" onclick="event.stopPropagation();openDeliverSheet(\'' + o.id + '\')">' + btnLabel + '</button>';
     } else if (action === 'verify') {
-      html += '<button class="delv-btn" onclick="openVerifySheet(\'' + o.id + '\')">' + btnLabel + '</button>';
+      html += '<button class="delv-btn" onclick="event.stopPropagation();openVerifySheet(\'' + o.id + '\')">' + btnLabel + '</button>';
     } else {
-      html += '<button class="delv-btn" id="btn-' + o.id + '" onclick="quickScan(\'' + o.id + '\',\'' + action + '\',this)">' + btnLabel + '</button>';
+      html += '<button class="delv-btn" id="btn-' + o.id + '" onclick="event.stopPropagation();quickScan(\'' + o.id + '\',\'' + action + '\',this)">' + btnLabel + '</button>';
     }
     html += '</div></div>';
   });
@@ -405,6 +413,68 @@ async function quickScan(orderId, action, btn) {
     showToast(e.message, 'er');
     btn.disabled = false;
     btn.textContent = action === 'verify' ? '✓ Verify' : action === 'pickup' ? '⬆ Pick Up' : '→ Out for Delivery';
+  }
+}
+
+// ── Read-only order view (any status) ─────────────────────────────────────────
+async function openOrderView(orderId) {
+  document.getElementById('deliverSheet').classList.add('active');
+  document.getElementById('sheetTitle').textContent = 'Order';
+  document.getElementById('sheetContent').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res = await API.getOrder(orderId);
+    var o = res.order, items = res.items || [], hist = res.history || [];
+    document.getElementById('sheetTitle').textContent = o.code || 'Order';
+
+    var html = '';
+    // Unified tracker
+    html += '<div class="card" style="padding:14px 10px;margin-bottom:12px">' + renderPipelineHTML(buildPipeline(o.route || 'direct', o.status)) + '</div>';
+
+    // Consumer + status
+    html += '<div class="card" style="margin-bottom:12px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">';
+    html += '<span style="font-weight:800;color:var(--forest)">' + (o.consumer_name || 'Consumer') + '</span>';
+    html += '<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:#eef7ea;color:var(--forest)">' + o.status + '</span>';
+    html += '</div>';
+    if (o.consumer_phone) html += '<div style="font-size:12px;color:var(--gray);margin-top:6px">📞 ' + o.consumer_phone + '</div>';
+    var da = o.delivery_address;
+    var daText = (da && typeof da === 'object') ? buildAddress(da) : (da || '');
+    if (daText) html += '<div style="font-size:12px;color:var(--gray);margin-top:4px">📍 ' + daText + '</div>';
+    html += '</div>';
+
+    // Assigned agent
+    if (o.agent_name) {
+      html += '<div class="card" style="margin-bottom:12px"><div style="font-size:11px;color:var(--gray);font-weight:600">🛵 Delivery Agent</div>';
+      html += '<div style="font-size:13px;font-weight:700;color:var(--forest);margin-top:2px">' + o.agent_name + (o.agent_vehicle ? ' · ' + o.agent_vehicle : '') + '</div></div>';
+    }
+
+    // Items
+    html += '<div class="card" style="margin-bottom:12px"><h3>🌿 Items</h3>';
+    items.forEach(function(it) {
+      html += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid #f0f4f0">';
+      html += '<span>' + (it.name || 'Item') + ' × ' + it.qty + (it.unit ? ' ' + it.unit : '') + '</span>';
+      html += '<span style="font-weight:600">' + fmt((it.price || 0) * it.qty) + '</span></div>';
+    });
+    html += '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:800;color:var(--forest);margin-top:8px"><span>Total</span><span>' + fmt(o.total) + '</span></div>';
+    html += '<div style="font-size:11px;color:var(--gray);margin-top:4px">' + (o.pay_method || 'UPI') + (o.pay_status ? ' · ' + o.pay_status : '') + '</div>';
+    html += '</div>';
+
+    // Timeline
+    if (hist.length) {
+      html += '<div class="card"><h3>📍 Timeline</h3>';
+      hist.forEach(function(h) {
+        html += '<div style="padding:6px 0;border-bottom:1px solid #f0f4f0">';
+        html += '<div style="font-size:12px;font-weight:700;color:var(--forest)">' + h.label + (h.ts ? ' <span style="font-weight:400;color:var(--gray);font-size:10px">· ' + fmtDate(h.ts) + '</span>' : '') + '</div>';
+        if (h.note) html += '<div style="font-size:11px;color:var(--gray)">' + h.note + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    document.getElementById('sheetContent').innerHTML = html;
+  } catch(e) {
+    document.getElementById('sheetContent').innerHTML =
+      '<div style="text-align:center;padding:24px;color:#c0392b;font-size:13px">' + e.message + '</div>';
   }
 }
 
@@ -629,7 +699,7 @@ function renderDelivered() {
   var html = '';
   _delivered.forEach(function(o) {
     var mClass = o.pay_method === 'Cash on Delivery' ? 'dm-cod' : 'dm-upi';
-    html += '<div class="done-card">';
+    html += '<div class="done-card" onclick="openOrderView(\'' + o.id + '\')" style="cursor:pointer">';
     html += '<div style="font-size:18px">✅</div>';
     html += '<div style="flex:1">';
     html += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--leaf)">' + (o.code || o.id.slice(0,8).toUpperCase()) + '</div>';
