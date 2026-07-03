@@ -275,6 +275,29 @@
   </div>
 </div>
 
+<!-- PAYMENT METHOD POPUP -->
+<div id="paymentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:700;overflow-y:auto;padding:20px 12px" onclick="if(event.target===this)closePaymentModal()">
+  <div style="max-width:400px;margin:8vh auto 0;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.4)">
+    <div style="background:linear-gradient(135deg,#2d6a4f,#1a3d2b);padding:18px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:18px;color:#fff;font-weight:800">Payment</div>
+        <div style="font-size:11px;color:#95d5b2;margin-top:2px">Choose how you'd like to pay</div>
+      </div>
+      <button onclick="closePaymentModal()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:50px;padding:6px 13px;font-size:12px;font-weight:700;cursor:pointer">Close</button>
+    </div>
+    <div style="padding:18px">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:11px;color:#7a8492">Amount payable</div>
+        <div style="font-size:28px;font-weight:800;color:#2d6a4f" id="pay-amount">—</div>
+      </div>
+      <div id="pay-methods"></div>
+      <div style="font-size:10px;color:#9aa4b2;text-align:center;margin:10px 0">Demo payment — secure online payment (Razorpay) will be enabled at launch.</div>
+      <div id="pay-err" style="display:none;font-size:11px;color:#c0392b;text-align:center;margin-bottom:8px"></div>
+      <button id="pay-btn" onclick="confirmPayment()" style="width:100%;background:#1a3d2b;color:#fff;border:none;border-radius:50px;padding:14px;font-size:15px;font-weight:800;cursor:pointer">Pay Now</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/config.js"></script>
 <script src="js/shared.js"></script>
 <script src="js/api.js"></script>
@@ -795,10 +818,10 @@ function clearShopSearch() {
 }
 
 // ── LOCATION FILTER ───────────────────────────────────────────────────────────
-// Delivery fee tiers — edit these three values to adjust rates.
-var _DELIVERY_FEE_HOME    = 30;   // same district as consumer's home
-var _DELIVERY_FEE_STATE   = 50;   // different district, same state
-var _DELIVERY_FEE_CROSS   = 80;   // cross-state
+// Delivery is value-based (matches the server): flat ₹25 below the free
+// threshold, FREE at/above it. The server is authoritative — this is for display.
+var FREE_DELIVERY_MIN = 150;  // ₹ — free delivery at/above this item total
+var DELIVERY_FLAT     = 25;   // ₹ — charged below the threshold
 
 function initLocation() {
   _homeState    = user.state    || 'Tamil Nadu';
@@ -807,11 +830,7 @@ function initLocation() {
   _shopDistrict = _homeDistrict;
 }
 
-function getDeliveryFee() {
-  if (!_homeDistrict || _shopDistrict === _homeDistrict) return _DELIVERY_FEE_HOME;
-  if (_shopState === _homeState) return _DELIVERY_FEE_STATE;
-  return _DELIVERY_FEE_CROSS;
-}
+function getDeliveryFee() { return cartBill().delivery; }
 
 function renderLocationFilter() {
   var stateEl = document.getElementById('shopStateSelect');
@@ -828,14 +847,13 @@ function renderLocationFilter() {
     return '<option value="' + d + '"' + (d === _shopDistrict ? ' selected' : '') + '>' + d + '</option>';
   }).join('');
 
-  var fee   = getDeliveryFee();
   var label = _shopDistrict === _homeDistrict
     ? '📍 Your home district'
     : _shopState === _homeState
       ? '🚚 Different district, same state'
       : '🚛 Cross-state delivery';
   var noteEl = document.getElementById('deliveryFeeNote');
-  if (noteEl) noteEl.textContent = label + ' — Delivery ₹' + fee;
+  if (noteEl) noteEl.textContent = label + ' · Free delivery over ₹' + FREE_DELIVERY_MIN;
 }
 
 async function onShopStateChange(state) {
@@ -1215,54 +1233,45 @@ function renderCartItems() {
   el.innerHTML = html;
 }
 
+// Bill computation — mirrors the server's order-placement math exactly:
+//  · item total excludes handling (server bakes only the platform fee into price)
+//  · handling  = highest handling among EXOTIC items, charged once
+//  · market fee = flat ₹10 when the cart spans 2+ farmers
+//  · delivery  = ₹25 below ₹150, FREE at ₹150+
+function cartBill() {
+  function prodOf(i){ return _allProducts.find(function(x){ return x.id === i.product_id; }) || {}; }
+  function hdlOf(i){ var dp = prodOf(i).district_price; return dp ? (parseFloat(dp.handling) || 0) : 0; }
+  var itemSubtotal = _cart.reduce(function(s, i){ return s + Math.max(0, parseFloat(i.price || 0) - hdlOf(i)) * i.qty; }, 0);
+  var handling = _cart.reduce(function(mx, i){ return prodOf(i).exotic ? Math.max(mx, hdlOf(i)) : mx; }, 0);
+  var farmers = {}; _cart.forEach(function(i){ if (i.farmer_id) farmers[i.farmer_id] = 1; });
+  var marketFee = Object.keys(farmers).length >= 2 ? 10 : 0;
+  var delivery  = itemSubtotal <= 0 ? 0 : (itemSubtotal >= FREE_DELIVERY_MIN ? 0 : DELIVERY_FLAT);
+  var savings = _cart.reduce(function(s, i) {
+    var dp = prodOf(i).district_price;
+    if (!dp) return s;
+    var paidNoHdl = parseFloat(i.price) - hdlOf(i);
+    return s + Math.max(0, parseFloat(dp.market_price) - paidNoHdl) * i.qty;
+  }, 0);
+  return { itemSubtotal: itemSubtotal, handling: handling, marketFee: marketFee,
+           delivery: delivery, savings: savings, total: itemSubtotal + handling + marketFee + delivery };
+}
+
 // ── Bill summary (recomputed on every quantity change) ────────────────────────
 function renderCartSummary() {
   var sumEl = document.getElementById('cartSummary');
   if (!sumEl) return;
 
-  var itemSubtotal = _cart.reduce(function(s, i) { return s + parseFloat(i.price || 0) * i.qty; }, 0);
-
-  // Compute market fee = sum of platform fee portions (price - farmer_share)
-  var totalMarketFee = _cart.reduce(function(s, i) {
-    var p      = _allProducts.find(function(x){ return x.id === i.product_id; }) || {};
-    var feePct = p.platform_fee_pct || 5;
-    var dp     = p.district_price;
-    var hdl    = dp ? parseFloat(dp.handling) : 0;
-    var unitP  = parseFloat(i.price);
-    var farmerR = unitP / (1 + feePct / 100);
-    return s + (unitP - hdl - farmerR) * i.qty;
-  }, 0);
-
-  var totalHandling = _cart.reduce(function(s, i) {
-    var p  = _allProducts.find(function(x){ return x.id === i.product_id; }) || {};
-    var dp = p.district_price;
-    return s + (dp ? parseFloat(dp.handling) : 0);
-  }, 0);
-
-  var deliveryFee = getDeliveryFee();
-  var grandTotal  = itemSubtotal + deliveryFee;
-
-  // Savings vs govt market price
-  var savings = _cart.reduce(function(s, i) {
-    var p   = _allProducts.find(function(x){ return x.id === i.product_id; }) || {};
-    var dp  = p.district_price;
-    if (!dp) return s;
-    var mktP = parseFloat(dp.market_price);
-    var paid = parseFloat(i.price);
-    return s + Math.max(0, mktP - paid) * i.qty;
-  }, 0);
+  var b = cartBill();
+  var itemSubtotal = b.itemSubtotal, handlingOnce = b.handling, marketFee = b.marketFee,
+      deliveryFee  = b.delivery, savings = b.savings, grandTotal = b.total;
 
   var sumHtml = '<div style="background:#f8fdf8;border-radius:14px;padding:14px;margin-bottom:14px">';
   sumHtml += '<div style="font-size:12px;font-weight:700;color:var(--forest);margin-bottom:10px">Bill Summary</div>';
   sumHtml += '<div class="irow"><span class="ilbl">Item Total</span><span class="ival">₹' + itemSubtotal.toFixed(0) + '</span></div>';
-  if (totalMarketFee > 0.5) sumHtml += '<div class="irow" style="font-size:11px"><span class="ilbl" style="color:var(--gray)">  incl. Market Fee</span><span class="ival" style="color:var(--gray)">₹' + totalMarketFee.toFixed(0) + '</span></div>';
-  if (totalHandling > 0) sumHtml += '<div class="irow" style="font-size:11px"><span class="ilbl" style="color:var(--gray)">  incl. Handling</span><span class="ival" style="color:var(--gray)">₹' + totalHandling.toFixed(0) + '</span></div>';
-  var deliveryNote = _shopDistrict === _homeDistrict
-    ? '(same district)'
-    : _shopState === _homeState
-      ? '(different district)'
-      : '(cross-state)';
-  sumHtml += '<div class="irow"><span class="ilbl">Delivery Fee <span style="font-size:10px;color:var(--gray)">' + deliveryNote + '</span></span><span class="ival">₹' + deliveryFee.toFixed(0) + '</span></div>';
+  if (handlingOnce > 0) sumHtml += '<div class="irow"><span class="ilbl">Handling charges</span><span class="ival">₹' + handlingOnce.toFixed(0) + '</span></div>';
+  if (marketFee > 0)    sumHtml += '<div class="irow"><span class="ilbl">Market fee <span style="font-size:10px;color:var(--gray)">(multiple farmers)</span></span><span class="ival">₹' + marketFee.toFixed(0) + '</span></div>';
+  sumHtml += '<div class="irow"><span class="ilbl">Delivery</span><span class="ival">' + (deliveryFee === 0 ? '<span style="color:#1a7a4a;font-weight:700">FREE</span>' : '₹' + deliveryFee.toFixed(0)) + '</span></div>';
+  if (itemSubtotal > 0 && itemSubtotal < 150) sumHtml += '<div style="font-size:10px;color:#c2620a;margin:2px 0 0">Add ₹' + (150 - itemSubtotal).toFixed(0) + ' more for FREE delivery</div>';
   if (savings > 0) sumHtml += '<div class="irow" style="color:#1a7a4a;font-weight:700"><span class="ilbl">🎉 You Save</span><span class="ival">₹' + savings.toFixed(0) + ' vs Govt Rate</span></div>';
   sumHtml += '<div style="border-top:2px solid #2d6a4f;margin:10px 0"></div>';
   sumHtml += '<div class="irow"><span class="ilbl" style="font-size:14px;font-weight:700;color:var(--forest)">Grand Total</span><span class="ival" style="font-size:16px;font-weight:700;color:var(--forest)">₹' + grandTotal.toFixed(0) + '</span></div>';
@@ -1298,13 +1307,7 @@ function renderCheckout() {
   html += '</div>';
   html += '</div>';
 
-  html += '<div class="fg"><label class="fl">Payment Method <span class="rq">*</span></label>';
-  html += '<select class="fi" id="payMethod">';
-  html += '<option value="Cash on Delivery">Cash on Delivery</option>';
-  html += '<option value="UPI">UPI</option>';
-  html += '<option value="Card">Card</option>';
-  html += '</select></div>';
-  html += '<button class="sbtn" onclick="placeOrder()">Place Order →</button>';
+  html += '<button class="sbtn" onclick="proceedToPay()">Proceed to Pay →</button>';
   el.innerHTML = html;
   onAddrPickerChange();
 }
@@ -1410,21 +1413,20 @@ async function resolveCartFarmers() {
   } catch(e) { /* non-fatal */ }
 }
 
-async function placeOrder() {
-  var ws = orderingWindowStatus();
-  if (!ws.open) {
-    showToast('Ordering is closed. ' + ws.msg, 'er'); return;
-  }
-  var unresolved = _cart.filter(function(i) { return !i.farmer_id; });
-  if (unresolved.length > 0) {
-    showToast('Some items have no available farmers. Please remove them.', 'er'); return;
-  }
-  var payMethod = document.getElementById('payMethod').value;
-  var items = _cart.map(function(i) {
-    return { product_id: i.product_id, farmer_id: i.farmer_id, qty: i.qty };
-  });
+var _pendingOrder = null;      // { items, address } awaiting payment
+var selectedPayMethod = 'UPI';
 
-  // Resolve delivery address BEFORE disabling the button, so validation can bail out cleanly
+// Validate the cart + address, then open the payment popup.
+function proceedToPay() {
+  var ws = orderingWindowStatus();
+  if (!ws.open) { showToast('Ordering is closed. ' + ws.msg, 'er'); return; }
+  if (_cart.length === 0) { showToast('Your cart is empty.', 'er'); return; }
+  var unresolved = _cart.filter(function(i) { return !i.farmer_id; });
+  if (unresolved.length > 0) { showToast('Some items have no available farmers. Please remove them.', 'er'); return; }
+
+  var items = _cart.map(function(i) { return { product_id: i.product_id, farmer_id: i.farmer_id, qty: i.qty }; });
+
+  // Resolve delivery address up front so validation can bail out cleanly
   var addrPicker = document.getElementById('addrPicker');
   var selectedAddr = null;
   if (addrPicker) {
@@ -1438,18 +1440,60 @@ async function placeOrder() {
     // 'profile' → leave null; backend falls back to the registered profile address
   }
 
-  var btn = document.querySelector('#panel-cart .sbtn');
+  _pendingOrder = { items: items, address: selectedAddr };
+  openPaymentModal();
+}
+
+function openPaymentModal() {
+  selectedPayMethod = 'UPI';
+  document.getElementById('pay-amount').textContent = fmt(cartBill().total);
+  var er = document.getElementById('pay-err'); if (er) er.style.display = 'none';
+  renderPayMethods();
+  document.getElementById('paymentModal').style.display = 'block';
+}
+function closePaymentModal() { document.getElementById('paymentModal').style.display = 'none'; }
+function selectPayMethod(m) { selectedPayMethod = m; renderPayMethods(); }
+
+function renderPayMethods() {
+  var methods = [
+    { id: 'UPI',              label: 'UPI',                 desc: 'GPay, PhonePe, Paytm',        icon: '📱' },
+    { id: 'Card',             label: 'Credit / Debit Card', desc: 'Visa, Mastercard, RuPay',     icon: '💳' },
+    { id: 'Cash on Delivery', label: 'Cash on Delivery',    desc: 'Pay when your order arrives', icon: '💵' }
+  ];
+  var h = '';
+  methods.forEach(function(m) {
+    var on = selectedPayMethod === m.id;
+    h += '<div onclick="selectPayMethod(\'' + m.id + '\')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;border:2px solid ' + (on ? '#2d6a4f' : '#e3e8e3') + ';background:' + (on ? '#f0faf4' : '#fff') + ';border-radius:12px;margin-bottom:10px;cursor:pointer">';
+    h += '<div style="font-size:22px">' + m.icon + '</div>';
+    h += '<div style="flex:1"><div style="font-size:13px;font-weight:700;color:#1a3d2b">' + m.label + '</div><div style="font-size:10px;color:#7a8492">' + m.desc + '</div></div>';
+    h += '<div style="width:20px;height:20px;border-radius:50%;border:2px solid ' + (on ? '#2d6a4f' : '#cbd5cb') + ';display:flex;align-items:center;justify-content:center">' + (on ? '<div style="width:10px;height:10px;border-radius:50%;background:#2d6a4f"></div>' : '') + '</div>';
+    h += '</div>';
+  });
+  document.getElementById('pay-methods').innerHTML = h;
+  document.getElementById('pay-btn').textContent = selectedPayMethod === 'Cash on Delivery' ? 'Place Order (COD)' : 'Pay Now';
+}
+
+async function confirmPayment() {
+  if (!_pendingOrder) return;
+  var btn = document.getElementById('pay-btn');
   btn.disabled = true; btn.textContent = 'Placing order…';
   try {
-    var res = await API.placeOrder({ items: items, pay_method: payMethod, delivery_fee: getDeliveryFee(), delivery_address: selectedAddr });
-    _cart = [];
-    saveCart();
-    updateCartBar();
+    var res = await API.placeOrder({
+      items:            _pendingOrder.items,
+      pay_method:       selectedPayMethod,
+      delivery_fee:     getDeliveryFee(),
+      delivery_address: _pendingOrder.address
+    });
+    _cart = []; saveCart(); updateCartBar();
+    _pendingOrder = null;
+    closePaymentModal();
     showToast('Order placed! ' + res.order.code, 'ok');
     setTimeout(function() { openTab('orders', document.getElementById('tab-orders')); }, 800);
   } catch(e) {
-    showToast(e.message, 'er');
-    btn.disabled = false; btn.textContent = 'Place Order →';
+    var er = document.getElementById('pay-err');
+    if (er) { er.textContent = e.message; er.style.display = 'block'; }
+    btn.disabled = false;
+    renderPayMethods();
   }
 }
 
@@ -1538,6 +1582,16 @@ async function openOrderDetail(orderId) {
     }
     html += '</div>';
 
+    // Order QR — present to the delivery agent for scanning
+    if (res.qr_svg) {
+      html += '<div class="card" style="text-align:center">';
+      html += '<h3>📷 Order QR</h3>';
+      html += '<div style="display:inline-block;background:#fff;padding:8px;border-radius:12px;line-height:0">' + res.qr_svg + '</div>';
+      html += '<div style="font-family:var(--mono,monospace);font-size:13px;font-weight:700;color:var(--forest);margin-top:6px">' + (o.code || '') + '</div>';
+      html += '<div style="font-size:10px;color:var(--gray);margin-top:2px">Show this to your delivery agent</div>';
+      html += '</div>';
+    }
+
     // Order info
     html += '<div class="card">';
     html += '<h3>📋 Order Info</h3>';
@@ -1591,8 +1645,10 @@ async function openOrderDetail(orderId) {
     // Price breakdown
     html += '<div class="card"><h3>💰 Price Breakdown</h3>';
     html += '<div class="irow"><span class="ilbl">Item Total</span><span class="ival">' + fmt(o.item_total) + '</span></div>';
-    if (parseFloat(o.handling) > 0) html += '<div class="irow"><span class="ilbl">Handling</span><span class="ival">' + fmt(o.handling) + '</span></div>';
-    if (parseFloat(o.delivery) > 0) html += '<div class="irow"><span class="ilbl">Delivery</span><span class="ival">' + fmt(o.delivery) + '</span></div>';
+    if (parseFloat(o.handling) > 0) html += '<div class="irow"><span class="ilbl">Handling charges</span><span class="ival">' + fmt(o.handling) + '</span></div>';
+    var _mff = parseFloat(o.total) - parseFloat(o.item_total) - parseFloat(o.handling) - parseFloat(o.delivery);
+    if (_mff > 0.005) html += '<div class="irow"><span class="ilbl">Market fee <span style="font-size:10px;color:var(--gray)">(multiple farmers)</span></span><span class="ival">' + fmt(_mff) + '</span></div>';
+    html += '<div class="irow"><span class="ilbl">Delivery</span><span class="ival">' + (parseFloat(o.delivery) > 0 ? fmt(o.delivery) : '<span style="color:#1a7a4a;font-weight:700">FREE</span>') + '</span></div>';
     html += '<div class="irow"><span class="ilbl" style="font-weight:700">Total</span><span class="ival" style="font-size:15px;color:var(--forest)">' + fmt(o.total) + '</span></div>';
     if (o.saved && parseFloat(o.saved) > 0) html += '<div class="irow"><span class="ilbl" style="color:var(--green)">💚 You Saved</span><span class="ival" style="color:var(--green)">' + fmt(o.saved) + '</span></div>';
     html += '</div>';

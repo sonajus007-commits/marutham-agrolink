@@ -1,5 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const QRCode = require('qrcode');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { generateOrderCode } = require('../utils/codeGen');
@@ -74,7 +75,7 @@ router.post('/', async (req, res) => {
     // Fetch product details
     const { data: product } = await supabase
       .from('products')
-      .select('id, code, name, unit, platform_fee_pct, available')
+      .select('id, code, name, unit, platform_fee_pct, available, exotic')
       .eq('id', product_id)
       .single();
 
@@ -138,17 +139,33 @@ router.post('/', async (req, res) => {
       _lineTotal: lineTotal,
       _lineFarmerTotal: lineFarmerTotal,
       _handling: handling,
+      _exotic: !!product.exotic,
       _saved: savedLine,
     });
   }
 
-  // ── 2. Aggregate order totals ─────────────────────────────────────────────
+  // ── 2. Aggregate order totals (all paise) ──────────────────────────────────
   const item_total = resolvedItems.reduce((s, i) => s + i._lineTotal, 0);
-  const handling   = resolvedItems.reduce((s, i) => s + i._handling, 0);
+
+  // Handling: charged ONCE per order — the highest district handling among the
+  // cart's exotic items (not per-line, not per-unit). Non-exotic items = no handling.
+  const handling = resolvedItems.reduce((mx, i) => (i._exotic ? Math.max(mx, i._handling) : mx), 0);
+
+  // Platform-fee revenue (consumer markup over farmer price). Already baked into
+  // item_total via consumerPrice — recorded here for revenue reporting only.
   const market_fee = resolvedItems.reduce((s, i) => s + (i._lineTotal - i._lineFarmerTotal), 0);
-  const delivery   = Math.round((parseFloat(clientDeliveryFee) || 30) * 100); // ₹30 default, in paise
-  const saved      = resolvedItems.reduce((s, i) => s + i._saved, 0);
-  const total      = item_total + handling + delivery;
+
+  // Market fee: flat ₹10, charged once, only when the cart spans 2+ farmers.
+  // Folded into total (not a stored column) — derivable as total−item_total−handling−delivery.
+  const distinctFarmers  = new Set(resolvedItems.map(i => i.farmer_id)).size;
+  const multiFarmerFee   = distinctFarmers >= 2 ? 1000 : 0;
+
+  // Delivery: computed on the SERVER (client value ignored) — flat ₹25 below ₹150,
+  // FREE at ₹150 and above.
+  const delivery = item_total === 0 ? 0 : (item_total >= 15000 ? 0 : 2500);
+
+  const saved = resolvedItems.reduce((s, i) => s + i._saved, 0);
+  const total = item_total + handling + delivery + multiFarmerFee;
 
   // ── 3. Generate order code (atomic via DB function) ─────────────────────
   if (!req.user.district) {
@@ -194,7 +211,7 @@ router.post('/', async (req, res) => {
   }
 
   // ── 5. Insert order items (strip internal _fields) ────────────────────────
-  const itemRows = resolvedItems.map(({ _lineTotal, _lineFarmerTotal, _handling, _saved, ...rest }) => ({
+  const itemRows = resolvedItems.map(({ _lineTotal, _lineFarmerTotal, _handling, _exotic, _saved, ...rest }) => ({
     ...rest,
     order_id: order.id,
   }));
@@ -367,7 +384,18 @@ router.get('/:id', async (req, res) => {
     { expiresIn: '7d' }
   );
 
-  res.json({ order, items, history, qr_token });
+  // Scannable QR (SVG) encoding the order code — agents scan it to advance the order.
+  let qr_svg = null;
+  try {
+    qr_svg = await QRCode.toString(order.code, {
+      type: 'svg', margin: 1, width: 168,
+      color: { dark: '#0d1f16', light: '#ffffff' },
+    });
+  } catch (e) {
+    console.error('QR generation failed:', e.message);
+  }
+
+  res.json({ order, items, history, qr_token, qr_svg });
 });
 
 // ── POST /orders/:id/cancel  (consumer or admin) ──────────────────────────────

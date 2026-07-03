@@ -423,12 +423,21 @@ async function openOrderView(orderId) {
   document.getElementById('sheetContent').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
   try {
     var res = await API.getOrder(orderId);
-    var o = res.order, items = res.items || [], hist = res.history || [];
+    var o = res.order, items = res.items || [], hist = res.history || [], qr = res.qr_svg;
     document.getElementById('sheetTitle').textContent = o.code || 'Order';
 
     var html = '';
     // Unified tracker
     html += '<div class="card" style="padding:14px 10px;margin-bottom:12px">' + renderPipelineHTML(buildPipeline(o.route || 'direct', o.status)) + '</div>';
+
+    // Scannable order QR
+    if (qr) {
+      html += '<div class="card" style="margin-bottom:12px;text-align:center">';
+      html += '<div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:8px">📷 Order QR — scan to advance</div>';
+      html += '<div style="display:inline-block;background:#fff;padding:8px;border-radius:12px;line-height:0">' + qr + '</div>';
+      html += '<div style="font-family:monospace;font-size:13px;font-weight:800;color:var(--forest);margin-top:6px">' + (o.code || '') + '</div>';
+      html += '</div>';
+    }
 
     // Consumer + status
     html += '<div class="card" style="margin-bottom:12px">';
@@ -455,7 +464,13 @@ async function openOrderView(orderId) {
       html += '<span>' + (it.name || 'Item') + ' × ' + it.qty + (it.unit ? ' ' + it.unit : '') + '</span>';
       html += '<span style="font-weight:600">' + fmt((it.price || 0) * it.qty) + '</span></div>';
     });
-    html += '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:800;color:var(--forest);margin-top:8px"><span>Total</span><span>' + fmt(o.total) + '</span></div>';
+    var _brk = 'display:flex;justify-content:space-between;font-size:12px;color:var(--gray);padding:3px 0';
+    html += '<div style="' + _brk + ';margin-top:6px"><span>Item Total</span><span>' + fmt(o.item_total) + '</span></div>';
+    if (parseFloat(o.handling) > 0) html += '<div style="' + _brk + '"><span>Handling charges</span><span>' + fmt(o.handling) + '</span></div>';
+    var _mff = parseFloat(o.total) - parseFloat(o.item_total) - parseFloat(o.handling) - parseFloat(o.delivery);
+    if (_mff > 0.005) html += '<div style="' + _brk + '"><span>Market fee (multiple farmers)</span><span>' + fmt(_mff) + '</span></div>';
+    html += '<div style="' + _brk + '"><span>Delivery</span><span>' + (parseFloat(o.delivery) > 0 ? fmt(o.delivery) : 'FREE') + '</span></div>';
+    html += '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:800;color:var(--forest);margin-top:6px;border-top:1px solid #eef4ee;padding-top:6px"><span>Total</span><span>' + fmt(o.total) + '</span></div>';
     html += '<div style="font-size:11px;color:var(--gray);margin-top:4px">' + (o.pay_method || 'UPI') + (o.pay_status ? ' · ' + o.pay_status : '') + '</div>';
     html += '</div>';
 
