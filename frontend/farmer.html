@@ -78,6 +78,7 @@
     <div class="irow"><span class="ilbl">Phone</span><span class="ival mono" id="p-phone">—</span></div>
     <div class="irow"><span class="ilbl">Email</span><span class="ival" id="p-email">—</span></div>
     <div class="irow"><span class="ilbl">District</span><span class="ival" id="p-district">—</span></div>
+    <div class="irow"><span class="ilbl">Taluk</span><span class="ival" id="p-taluk">—</span></div>
     <div class="irow"><span class="ilbl">Village</span><span class="ival" id="p-village">—</span></div>
     <div class="irow"><span class="ilbl">Address</span><span class="ival" id="p-addr" style="font-size:11px;line-height:1.5">—</span></div>
     <button class="bedit" onclick="toggleEditForm()">✏️ Edit Profile</button>
@@ -92,9 +93,12 @@
         </select></div>
       <div class="fg"><label class="fl">Email</label><input class="fi" id="edit-email" type="email"></div>
       <div class="fg"><label class="fl">Street Line 1</label><input class="fi" id="edit-s1" type="text"></div>
+      <div class="fg"><label class="fl">State</label><select class="fi" id="edit-st" onchange="onEditStateChange()"></select></div>
+      <div class="fg"><label class="fl">District</label><select class="fi" id="edit-di" onchange="onEditDistrictChange()"></select></div>
+      <div class="fg"><label class="fl">Taluk</label><select class="fi" id="edit-tk"></select></div>
       <div class="fg"><label class="fl">Village / Town</label><input class="fi" id="edit-vt" type="text"></div>
       <div class="fg"><label class="fl">City</label><input class="fi" id="edit-city" type="text"></div>
-      <div class="fg"><label class="fl">Pincode</label><input class="fi" id="edit-pn" type="text" maxlength="6" oninput="numOnly(this)"></div>
+      <div class="fg"><label class="fl">Pincode <span class="rq">*</span></label><input class="fi" id="edit-pn" type="text" maxlength="6" oninput="numOnly(this)"></div>
       <div class="ea">
         <button class="bsave" onclick="saveProfile()">Save Changes</button>
         <button class="bcanc" onclick="toggleEditForm()">Cancel</button>
@@ -1313,6 +1317,7 @@ function renderProfile() {
   document.getElementById('p-phone').textContent    = (user.country_code||'+91') + ' ' + user.phone;
   document.getElementById('p-email').textContent    = user.email || '—';
   document.getElementById('p-district').textContent = user.district || '—';
+  document.getElementById('p-taluk').textContent    = user.taluk || '—';
   document.getElementById('p-village').textContent  = user.village_town || '—';
   document.getElementById('p-addr').textContent     = buildAddress(user);
   document.getElementById('p-bank').textContent     = user.bank_name || '—';
@@ -1371,17 +1376,38 @@ function toggleEditForm() {
     sv('edit-vt',    user.village_town || '');
     sv('edit-city',  user.city || '');
     sv('edit-pn',    user.pincode || '');
+    loadLocations().then(function() {
+      fillStateSelect(document.getElementById('edit-st'), user.state || '');
+      fillDistrictSelect(document.getElementById('edit-di'), user.state || '', user.district || '');
+      fillTalukSelect(document.getElementById('edit-tk'), user.state || '', user.district || '', user.taluk || '');
+    });
   }
 }
 
+function onEditStateChange() {
+  var st = document.getElementById('edit-st').value;
+  fillDistrictSelect(document.getElementById('edit-di'), st, '');
+  fillTalukSelect(document.getElementById('edit-tk'), st, '', '');
+}
+function onEditDistrictChange() {
+  var st = document.getElementById('edit-st').value;
+  var di = document.getElementById('edit-di').value;
+  fillTalukSelect(document.getElementById('edit-tk'), st, di, '');
+}
+
 async function saveProfile() {
+  var pn = gv('edit-pn');
+  if (!/^\d{6}$/.test(pn)) { showToast('A valid 6-digit pincode is required.', 'er'); return; }
   var data = {
     gender:       document.getElementById('edit-gender').value || undefined,
     email:        gv('edit-email') || undefined,
     street1:      gv('edit-s1')    || undefined,
+    state:        document.getElementById('edit-st').value || undefined,
+    district:     document.getElementById('edit-di').value || undefined,
+    taluk:        document.getElementById('edit-tk').value || undefined,
     village_town: gv('edit-vt')    || undefined,
     city:         gv('edit-city')  || undefined,
-    pincode:      gv('edit-pn')    || undefined,
+    pincode:      pn               || undefined,
   };
   try {
     var res = await API.patchMe(data);

@@ -365,24 +365,24 @@ body{background:var(--green-bg);}
         <div class="fg"><label class="fl">Village / Town <span class="op">(optional)</span></label>
           <input class="fi" id="c-vt" type="text" placeholder="Village or Town name"></div>
         <div class="tc2">
+          <div class="fg"><label class="fl">State <span class="rq">*</span></label>
+            <select class="fi" id="c-st" onchange="onStateChange('c')"></select>
+            <div class="em" id="c-st-e">Select a state</div></div>
+          <div class="fg"><label class="fl">District <span class="rq">*</span></label>
+            <select class="fi" id="c-di" onchange="onDistrictChange('c')"></select>
+            <div class="em" id="c-di-e">Select a district</div></div>
+        </div>
+        <div class="tc2">
+          <div class="fg"><label class="fl">Taluk <span class="rq">*</span></label>
+            <select class="fi" id="c-tk"></select>
+            <div class="em" id="c-tk-e">Select a taluk</div></div>
           <div class="fg"><label class="fl">City <span class="rq">*</span></label>
             <input class="fi" id="c-cy" type="text" placeholder="City">
             <div class="em" id="c-cy-e">Required</div></div>
-          <div class="fg"><label class="fl">District <span class="rq">*</span></label>
-            <select class="fi" id="c-di"></select></div>
         </div>
-        <div class="tc2">
-          <div class="fg"><label class="fl">Pincode <span class="rq">*</span></label>
-            <input class="fi" id="c-pn" type="text" placeholder="6-digit PIN" maxlength="6" oninput="numOnly(this)">
-            <div class="em" id="c-pn-e">Enter 6-digit pincode</div></div>
-          <div class="fg"><label class="fl">State <span class="rq">*</span></label>
-            <select class="fi" id="c-st" onchange="updateDistricts('c')">
-              <option value="Tamil Nadu" selected>Tamil Nadu</option>
-              <option value="Karnataka">Karnataka</option>
-              <option value="Kerala">Kerala</option>
-              <option value="Andhra Pradesh">Andhra Pradesh</option>
-            </select></div>
-        </div>
+        <div class="fg"><label class="fl">Pincode <span class="rq">*</span></label>
+          <input class="fi" id="c-pn" type="text" placeholder="6-digit PIN" maxlength="6" oninput="numOnly(this)">
+          <div class="em" id="c-pn-e">Enter 6-digit pincode</div></div>
         <div class="fsec">Security</div>
         <div class="fg"><label class="fl">Password <span class="rq">*</span></label>
           <div class="pww">
@@ -460,24 +460,24 @@ body{background:var(--green-bg);}
           <input class="fi" id="f-vt" type="text" placeholder="Village or Town">
           <div class="em" id="f-vt-e">Required for sellers</div></div>
         <div class="tc2">
+          <div class="fg"><label class="fl">State <span class="rq">*</span></label>
+            <select class="fi" id="f-st" onchange="onStateChange('f')"></select>
+            <div class="em" id="f-st-e">Select a state</div></div>
+          <div class="fg"><label class="fl">District <span class="rq">*</span></label>
+            <select class="fi" id="f-di" onchange="onDistrictChange('f')"></select>
+            <div class="em" id="f-di-e">Select a district</div></div>
+        </div>
+        <div class="tc2">
+          <div class="fg"><label class="fl">Taluk <span class="rq">*</span></label>
+            <select class="fi" id="f-tk"></select>
+            <div class="em" id="f-tk-e">Select a taluk</div></div>
           <div class="fg"><label class="fl">City <span class="rq">*</span></label>
             <input class="fi" id="f-cy" type="text" placeholder="City">
             <div class="em" id="f-cy-e">Required</div></div>
-          <div class="fg"><label class="fl">District <span class="rq">*</span></label>
-            <select class="fi" id="f-di"></select></div>
         </div>
-        <div class="tc2">
-          <div class="fg"><label class="fl">Pincode <span class="rq">*</span></label>
-            <input class="fi" id="f-pn" type="text" placeholder="6-digit PIN" maxlength="6" oninput="numOnly(this)">
-            <div class="em" id="f-pn-e">Enter 6-digit pincode</div></div>
-          <div class="fg"><label class="fl">State <span class="rq">*</span></label>
-            <select class="fi" id="f-st" onchange="updateDistricts('f')">
-              <option value="Tamil Nadu" selected>Tamil Nadu</option>
-              <option value="Karnataka">Karnataka</option>
-              <option value="Kerala">Kerala</option>
-              <option value="Andhra Pradesh">Andhra Pradesh</option>
-            </select></div>
-        </div>
+        <div class="fg"><label class="fl">Pincode <span class="rq">*</span></label>
+          <input class="fi" id="f-pn" type="text" placeholder="6-digit PIN" maxlength="6" oninput="numOnly(this)">
+          <div class="em" id="f-pn-e">Enter 6-digit pincode</div></div>
 
         <div id="f-kyc-farmer">
           <div class="fsec">Bank &amp; KYC Details</div>
@@ -690,25 +690,28 @@ var forgotStep  = 1;
 var _otpTimers  = {};
 var _pendingUser = null;
 
-var _stateDistricts = {
-  'Tamil Nadu':     ['Pudukkottai','Tiruchirappalli','Thanjavur','Madurai','Chennai','Coimbatore','Salem','Tirunelveli','Sivaganga','Dindigul','Namakkal','Erode','Vellore','Tiruppur'],
-  'Karnataka':      ['Bengaluru','Mysuru','Hubli','Mangaluru','Belagavi','Ballari','Tumkur','Shivamogga'],
-  'Kerala':         ['Thiruvananthapuram','Kochi','Kozhikode','Thrissur','Kannur','Kollam','Palakkad'],
-  'Andhra Pradesh': ['Vijayawada','Visakhapatnam','Guntur','Nellore','Kurnool','Tirupati'],
-};
-
-function updateDistricts(prefix) {
+// Cascading State ▸ District ▸ Taluk, driven by real /locations data.
+function onStateChange(prefix) {
   var state = document.getElementById(prefix + '-st').value;
-  var dists = _stateDistricts[state] || [];
-  var sel   = document.getElementById(prefix + '-di');
-  sel.innerHTML = dists.map(function(d){ return '<option value="' + d + '">' + d + '</option>'; }).join('');
+  fillDistrictSelect(document.getElementById(prefix + '-di'), state, '');
+  fillTalukSelect(document.getElementById(prefix + '-tk'), state, '', '');
+}
+function onDistrictChange(prefix) {
+  var state = document.getElementById(prefix + '-st').value;
+  var dist  = document.getElementById(prefix + '-di').value;
+  fillTalukSelect(document.getElementById(prefix + '-tk'), state, dist, '');
 }
 
 (function() {
   var u = getUser();
   if (u && getToken()) redirectUser(u);
-  updateDistricts('c');
-  updateDistricts('f');
+  loadLocations().then(function() {
+    ['c', 'f'].forEach(function(p) {
+      fillStateSelect(document.getElementById(p + '-st'), '');
+      fillDistrictSelect(document.getElementById(p + '-di'), '', '');
+      fillTalukSelect(document.getElementById(p + '-tk'), '', '', '');
+    });
+  });
 })();
 
 function swTab(tab) {
@@ -939,11 +942,17 @@ async function doRegister(role) {
   var gd  = document.getElementById(p + '-gd') ? document.getElementById(p + '-gd').value : '';
   var di  = document.getElementById(p + '-di').value;
   var st  = document.getElementById(p + '-st').value;
+  var tk  = document.getElementById(p + '-tk').value;
 
   if (!fn) { showErr(p+'-fn-e','Required'); ok=false; } else hideErr(p+'-fn-e');
   if (!gd) { showErr(p+'-gd-e','Please select your gender'); ok=false; } else hideErr(p+'-gd-e');
   if (!/^\d{10}$/.test(ph)) { showErr(p+'-ph-e','Enter valid 10-digit number'); ok=false; } else hideErr(p+'-ph-e');
   if (!s1) { showErr(p+'-s1-e','Required'); ok=false; } else hideErr(p+'-s1-e');
+  if (!st) { showErr(p+'-st-e','Select a state'); ok=false; } else hideErr(p+'-st-e');
+  if (!di) { showErr(p+'-di-e','Select a district'); ok=false; } else hideErr(p+'-di-e');
+  // Taluk required only when the chosen district actually lists taluks.
+  var _hasTaluks = (_locTree && st && di && _locTree[st] && (_locTree[st][di]||[]).length > 0);
+  if (_hasTaluks && !tk) { showErr(p+'-tk-e','Select a taluk'); ok=false; } else hideErr(p+'-tk-e');
   if (!cy) { showErr(p+'-cy-e','Required'); ok=false; } else hideErr(p+'-cy-e');
   if (!/^\d{6}$/.test(pn)) { showErr(p+'-pn-e','Enter 6-digit pincode'); ok=false; } else hideErr(p+'-pn-e');
   if (!isStrongPw(pw)) { showErr(p+'-pw-e','Does not meet requirements'); ok=false; } else hideErr(p+'-pw-e');
@@ -984,7 +993,7 @@ async function doRegister(role) {
     gender: gd || undefined,
     house_no: gv(p+'-hn'), street1: s1, street2: gv(p+'-s2'),
     landmark: gv(p+'-lm'), village_town: gv(p+'-vt'),
-    city: cy, district: di, pincode: pn, state: st, country: 'India',
+    city: cy, taluk: tk, district: di, pincode: pn, state: st, country: 'India',
     country_code: document.getElementById(p+'-cc').value,
   };
   if (role === 'farmer') {

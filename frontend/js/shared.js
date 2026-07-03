@@ -203,6 +203,36 @@ function downloadCSV(filename, headers, rows) {
   URL.revokeObjectURL(url);
 }
 
+// ── Location cascade (State ▸ District ▸ Taluk) from /locations ───────────────
+var _locTree = null;
+function loadLocations() {
+  if (_locTree) return Promise.resolve(_locTree);
+  var base = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE) ? CONFIG.API_BASE : '';
+  return fetch(base + '/locations')
+    .then(function(r){ return r.json(); })
+    .then(function(d){ _locTree = d.tree || {}; return _locTree; })
+    .catch(function(){ _locTree = _locTree || {}; return _locTree; });
+}
+function locStates() { return _locTree ? Object.keys(_locTree).sort() : []; }
+function fillStateSelect(sel, selected) {
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Select State —</option>' +
+    locStates().map(function(s){ return '<option value="' + s + '"' + (s === selected ? ' selected' : '') + '>' + s + '</option>'; }).join('');
+}
+function fillDistrictSelect(sel, state, selected) {
+  if (!sel) return;
+  var ds = (_locTree && _locTree[state]) ? Object.keys(_locTree[state]).sort() : [];
+  sel.innerHTML = '<option value="">— Select District —</option>' +
+    ds.map(function(d){ return '<option value="' + d + '"' + (d === selected ? ' selected' : '') + '>' + d + '</option>'; }).join('');
+}
+function fillTalukSelect(sel, state, district, selected) {
+  if (!sel) return;
+  var ts = (_locTree && _locTree[state] && _locTree[state][district]) ? _locTree[state][district].slice().sort() : [];
+  if (!ts.length) { sel.innerHTML = '<option value="">— (no taluks listed) —</option>'; return; }
+  sel.innerHTML = '<option value="">— Select Taluk —</option>' +
+    ts.map(function(t){ return '<option value="' + t + '"' + (t === selected ? ' selected' : '') + '>' + t + '</option>'; }).join('');
+}
+
 // ── Address builder ───────────────────────────────────────────────────────────
 function buildAddress(u) {
   return [u.house_no, u.street1, u.street2, u.landmark, u.village_town,

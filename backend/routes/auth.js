@@ -159,7 +159,7 @@ router.post('/register', async (req, res) => {
     gender,
     country_code,
     house_no, street1, street2, landmark,
-    village_town, city, district, pincode, state, country,
+    village_town, city, taluk, district, pincode, state, country,
     // farmer (Farmer type)
     aadhar, bank_name, bank_account, ifsc,
     // farmer (Retailer type)
@@ -182,6 +182,10 @@ router.post('/register', async (req, res) => {
   }
   if (password.length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+  }
+  // Pincode is mandatory — it drives delivery tracking.
+  if (!/^\d{6}$/.test(String(pincode || ''))) {
+    return res.status(400).json({ error: 'A valid 6-digit pincode is required.' });
   }
 
   const { data: existing } = await supabase
@@ -206,7 +210,7 @@ router.post('/register', async (req, res) => {
     gender: gender || null,
     country_code: country_code || '+91',
     house_no, street1, street2, landmark,
-    village_town, city, district, pincode,
+    village_town, city, taluk, district, pincode,
     state, country: country || 'India',
     approval_status,
     ...(role === 'farmer' && { seller_type }),
@@ -447,7 +451,7 @@ router.post('/create-staff', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'Admin access required.' });
   }
 
-  const { fname, lname, phone, password, admin_role, district, state, gender, village_town } = req.body;
+  const { fname, lname, phone, password, admin_role, district, state, gender, village_town, taluk, city, pincode } = req.body;
   if (!fname || !phone || !password || !admin_role) {
     return res.status(400).json({ error: 'fname, phone, password, and admin_role are required.' });
   }
@@ -483,6 +487,9 @@ router.post('/create-staff', requireAuth, async (req, res) => {
     state: state || req.user.state,
     country: 'India',
     country_code: '+91',
+    ...(taluk ? { taluk } : {}),
+    ...(city ? { city } : {}),
+    ...(pincode ? { pincode } : {}),
     // Keep both fields in sync: village_town is the canonical address field (editable
     // everywhere); vco_city is what the VCO order query historically reads.
     ...(village_town ? { village_town, vco_city: village_town } : {}),
@@ -526,7 +533,7 @@ router.patch('/me', requireAuth, async (req, res) => {
     'fname', 'lname', 'email', 'alt_phone',
     'gender',
     'house_no', 'street1', 'street2', 'landmark',
-    'village_town', 'city', 'district', 'pincode', 'state',
+    'village_town', 'city', 'taluk', 'district', 'pincode', 'state',
     'agent_vehicle',                                   // agent vehicle
     'service_villages',                                // Delivery Agent: villages they cover (text[])
     'delivery_addresses',                              // consumer address book (JSONB array)

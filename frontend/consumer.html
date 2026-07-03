@@ -184,9 +184,17 @@
         <input class="fi" id="addr-street1" type="text"></div>
       <div class="fg"><label class="fl">Landmark</label>
         <input class="fi" id="addr-landmark" type="text" placeholder="Near school, temple…"></div>
+      <div class="fg"><label class="fl">State <span class="rq">*</span></label>
+        <select class="fi" id="addr-state" onchange="onAddrStateChange()"></select></div>
+      <div class="fg"><label class="fl">District <span class="rq">*</span></label>
+        <select class="fi" id="addr-district" onchange="onAddrDistrictChange()"></select></div>
+      <div class="fg"><label class="fl">Taluk</label>
+        <select class="fi" id="addr-taluk"></select></div>
       <div class="fg"><label class="fl">Village / Town</label>
         <input class="fi" id="addr-village" type="text"></div>
-      <div class="fg"><label class="fl">Pincode</label>
+      <div class="fg"><label class="fl">City</label>
+        <input class="fi" id="addr-city" type="text"></div>
+      <div class="fg"><label class="fl">Pincode <span class="rq">*</span></label>
         <input class="fi" id="addr-pincode" type="text" maxlength="6" oninput="numOnly(this)"></div>
       <div class="em" id="addr-err" style="display:none;margin-bottom:4px"></div>
       <div class="ea">
@@ -1301,8 +1309,12 @@ function renderCheckout() {
   html += '<div class="fg"><label class="fl">House / Flat / Door No.</label><input class="fi" id="new-house" type="text"></div>';
   html += '<div class="fg"><label class="fl">Street / Area <span class="rq">*</span></label><input class="fi" id="new-street1" type="text"></div>';
   html += '<div class="fg"><label class="fl">Landmark</label><input class="fi" id="new-landmark" type="text" placeholder="Near school, temple…"></div>';
+  html += '<div class="fg"><label class="fl">State <span class="rq">*</span></label><select class="fi" id="new-state" onchange="onNewStateChange()"></select></div>';
+  html += '<div class="fg"><label class="fl">District <span class="rq">*</span></label><select class="fi" id="new-district" onchange="onNewDistrictChange()"></select></div>';
+  html += '<div class="fg"><label class="fl">Taluk</label><select class="fi" id="new-taluk"></select></div>';
   html += '<div class="fg"><label class="fl">Village / Town <span class="rq">*</span></label><input class="fi" id="new-village" type="text"></div>';
-  html += '<div class="fg"><label class="fl">Pincode</label><input class="fi" id="new-pincode" type="text" maxlength="6" oninput="numOnly(this)"></div>';
+  html += '<div class="fg"><label class="fl">City</label><input class="fi" id="new-city" type="text"></div>';
+  html += '<div class="fg"><label class="fl">Pincode <span class="rq">*</span></label><input class="fi" id="new-pincode" type="text" maxlength="6" oninput="numOnly(this)"></div>';
   html += '<div class="fg"><label class="fl">Contact Phone</label><input class="fi" id="new-phone" type="text" maxlength="10" oninput="numOnly(this)" value="' + (user.phone || '') + '"></div>';
   html += '</div>';
   html += '</div>';
@@ -1310,6 +1322,11 @@ function renderCheckout() {
   html += '<button class="sbtn" onclick="proceedToPay()">Proceed to Pay →</button>';
   el.innerHTML = html;
   onAddrPickerChange();
+  loadLocations().then(function() {
+    fillStateSelect(document.getElementById('new-state'), '');
+    fillDistrictSelect(document.getElementById('new-district'), '', '');
+    fillTalukSelect(document.getElementById('new-taluk'), '', '', '');
+  });
 }
 
 function addrText(v) {
@@ -1336,19 +1353,39 @@ function onAddrPickerChange() {
   }
 }
 
+function onNewStateChange() {
+  var st = document.getElementById('new-state').value;
+  fillDistrictSelect(document.getElementById('new-district'), st, '');
+  fillTalukSelect(document.getElementById('new-taluk'), st, '', '');
+}
+function onNewDistrictChange() {
+  var st = document.getElementById('new-state').value;
+  var di = document.getElementById('new-district').value;
+  fillTalukSelect(document.getElementById('new-taluk'), st, di, '');
+}
+
 // Reads and validates the manual "different address" form; returns null if invalid.
 function collectNewAddress() {
   var gv = function(id){ var e = document.getElementById(id); return e ? e.value.trim() : ''; };
   var street1 = gv('new-street1');
   var village = gv('new-village');
+  var state   = gv('new-state');
+  var district= gv('new-district');
+  var pincode = gv('new-pincode');
   if (!street1 && !village) { showToast('Enter at least a street or village for the new address.', 'er'); return null; }
+  if (!state || !district) { showToast('Select state and district for the new address.', 'er'); return null; }
+  if (!/^\d{6}$/.test(pincode)) { showToast('A valid 6-digit pincode is required for the new address.', 'er'); return null; }
   return {
     label:        'Other',
     house_no:     gv('new-house'),
     street1:      street1,
     landmark:     gv('new-landmark'),
     village_town: village,
-    pincode:      gv('new-pincode'),
+    city:         gv('new-city'),
+    state:        state,
+    district:     district,
+    taluk:        gv('new-taluk'),
+    pincode:      pincode,
     phone:        gv('new-phone'),
   };
 }
@@ -1829,10 +1866,27 @@ function openAddrForm(idx) {
   sv('addr-street1', a.street1  || '');
   sv('addr-landmark',a.landmark || '');
   sv('addr-village', a.village_town || '');
+  sv('addr-city',    a.city || '');
   sv('addr-pincode', a.pincode  || '');
+  loadLocations().then(function() {
+    fillStateSelect(document.getElementById('addr-state'), a.state || '');
+    fillDistrictSelect(document.getElementById('addr-district'), a.state || '', a.district || '');
+    fillTalukSelect(document.getElementById('addr-taluk'), a.state || '', a.district || '', a.taluk || '');
+  });
   document.getElementById('addrErr') && (document.getElementById('addrErr').style.display = 'none');
   document.getElementById('addrForm').style.display = 'block';
   document.getElementById('addr-label').focus();
+}
+
+function onAddrStateChange() {
+  var st = document.getElementById('addr-state').value;
+  fillDistrictSelect(document.getElementById('addr-district'), st, '');
+  fillTalukSelect(document.getElementById('addr-taluk'), st, '', '');
+}
+function onAddrDistrictChange() {
+  var st = document.getElementById('addr-state').value;
+  var di = document.getElementById('addr-district').value;
+  fillTalukSelect(document.getElementById('addr-taluk'), st, di, '');
 }
 
 function closeAddrForm() {
@@ -1846,11 +1900,16 @@ async function saveAddr() {
   var street1 = gv('addr-street1');
   var village = gv('addr-village');
   var pincode = gv('addr-pincode');
+  var state   = document.getElementById('addr-state').value;
+  var district= document.getElementById('addr-district').value;
+  var taluk   = document.getElementById('addr-taluk').value;
   var err     = document.getElementById('addr-err');
   if (!street1 && !village) { err.textContent = 'Enter at least a street or village.'; err.style.display = 'block'; return; }
+  if (!state || !district) { err.textContent = 'Select state and district.'; err.style.display = 'block'; return; }
+  if (!/^\d{6}$/.test(pincode)) { err.textContent = 'A valid 6-digit pincode is required.'; err.style.display = 'block'; return; }
   err.style.display = 'none';
   var addrs = JSON.parse(JSON.stringify(user.delivery_addresses || []));
-  var entry = { label, house_no: house, street1, landmark: gv('addr-landmark'), village_town: village, pincode, is_default: false };
+  var entry = { label, house_no: house, street1, landmark: gv('addr-landmark'), village_town: village, city: gv('addr-city'), state: state, district: district, taluk: taluk, pincode, is_default: false };
   if (_editAddrIdx !== null) {
     entry.is_default = addrs[_editAddrIdx].is_default;
     addrs[_editAddrIdx] = entry;

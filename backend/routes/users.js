@@ -330,7 +330,7 @@ router.get('/:id/listings', requireRole('admin'), async (req, res) => {
 router.get('/:id', requireRole('admin'), async (req, res) => {
   const { data, error } = await supabase
     .from('users')
-    .select('id,login_id,fname,lname,phone,alt_phone,email,role,admin_role,seller_type,gender,status,approval_status,district,state,village_town,city,pincode,street1,street2,house_no,landmark,bank_name,bank_account,ifsc,gst_number,business_name,business_type,aadhar,subscription_expires_at,subscription_plan,subscription_amount,created_at,updated_at')
+    .select('id,login_id,fname,lname,phone,alt_phone,email,role,admin_role,seller_type,gender,status,approval_status,district,state,village_town,city,taluk,pincode,street1,street2,house_no,landmark,bank_name,bank_account,ifsc,gst_number,business_name,business_type,aadhar,subscription_expires_at,subscription_plan,subscription_amount,created_at,updated_at')
     .eq('id', req.params.id)
     .single();
   if (error) return res.status(404).json({ error: 'User not found.' });
@@ -341,7 +341,7 @@ router.get('/:id', requireRole('admin'), async (req, res) => {
 // Admin direct edit — Head Office can update any field; others limited
 const ADMIN_EDITABLE = [
   'fname', 'lname', 'email', 'alt_phone', 'gender', 'phone',
-  'house_no', 'street1', 'street2', 'landmark', 'village_town', 'city', 'district', 'pincode', 'state',
+  'house_no', 'street1', 'street2', 'landmark', 'village_town', 'city', 'taluk', 'district', 'pincode', 'state',
   'bank_name', 'bank_account', 'ifsc',
   'gst_number', 'business_name', 'business_type',
   'aadhar', 'agent_vehicle',

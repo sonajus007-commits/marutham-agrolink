@@ -216,6 +216,9 @@
           <span style="color:var(--gray)">District</span><span style="color:var(--forest)" id="prof-district">—</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:12px">
+          <span style="color:var(--gray)">Taluk</span><span style="color:var(--forest)" id="prof-taluk">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px">
           <span style="color:var(--gray)">Gender</span><span style="color:var(--forest)" id="prof-gender">—</span>
         </div>
       </div>
@@ -735,6 +738,7 @@ function openAgentProfile() {
   document.getElementById('prof-lid').textContent      = user.login_id || '—';
   document.getElementById('prof-phone').textContent    = (user.country_code || '+91') + ' ' + user.phone;
   document.getElementById('prof-district').textContent   = user.district || '—';
+  var _pt = document.getElementById('prof-taluk'); if (_pt) _pt.textContent = user.taluk || '—';
   document.getElementById('prof-gender').textContent     = user.gender || '—';
   document.getElementById('prof-gender-select').value    = user.gender || '';
   document.getElementById('prof-vehicle').value          = user.agent_vehicle || '';

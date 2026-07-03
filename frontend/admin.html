@@ -171,14 +171,15 @@
         </select></div>
       <div class="tc2">
         <div class="fg"><label class="fl">State <span class="rq">*</span></label>
-          <select class="fi" id="cs-st" onchange="updateCsDistrictList()">
-            <option value="Tamil Nadu">Tamil Nadu</option>
-            <option value="Karnataka">Karnataka</option>
-            <option value="Kerala">Kerala</option>
-            <option value="Andhra Pradesh">Andhra Pradesh</option>
-          </select></div>
+          <select class="fi" id="cs-st" onchange="onCsStateChange()"></select></div>
         <div class="fg"><label class="fl">District <span class="rq">*</span></label>
-          <select class="fi" id="cs-di"></select></div>
+          <select class="fi" id="cs-di" onchange="onCsDistrictChange()"></select></div>
+      </div>
+      <div class="tc2">
+        <div class="fg"><label class="fl">Taluk <span class="rq">*</span></label>
+          <select class="fi" id="cs-tk"></select></div>
+        <div class="fg"><label class="fl">Pincode <span class="rq">*</span></label>
+          <input class="fi" id="cs-pn" type="text" placeholder="6-digit PIN" maxlength="6" oninput="numOnly(this)"></div>
       </div>
       <div class="fg"><label class="fl">Village/Town <span class="rq" id="cs-vt-rq" style="display:none">*</span></label>
         <input class="fi" id="cs-vt" type="text" placeholder="e.g. Ponnamaravathi">
@@ -250,6 +251,7 @@
             </select>
           </div>
           <div class="fg"><label class="fl">District</label><input class="fi" id="ud-district" type="text"></div>
+          <div class="fg"><label class="fl">Taluk</label><input class="fi" id="ud-taluk" type="text"></div>
           <div class="fg"><label class="fl">State</label><input class="fi" id="ud-state" type="text"></div>
           <div class="fg"><label class="fl">Pincode</label><input class="fi" id="ud-pincode" type="text"></div>
         </div>
@@ -1899,6 +1901,7 @@ function renderUserDetail() {
   info += infoRow('Gender', u.gender);
   info += infoRow('Status', statusPill(u.status) + (u.status === 'blocked' && u.block_reason ? '<div style="font-size:11px;color:#991b1b;margin-top:4px">Reason: ' + u.block_reason + '</div>' : ''));
   info += infoRow('District', u.district);
+  info += infoRow('Taluk', u.taluk);
   info += infoRow('State', u.state);
   info += infoRow('Village/Town', u.village_town);
   info += infoRow('City', u.city);
@@ -2088,6 +2091,7 @@ function toggleUdEditForm() {
   document.getElementById('ud-altphone').value= u.alt_phone || '';
   document.getElementById('ud-gender').value  = u.gender || '';
   document.getElementById('ud-district').value= u.district || '';
+  document.getElementById('ud-taluk').value   = u.taluk || '';
   document.getElementById('ud-state').value   = u.state || '';
   document.getElementById('ud-pincode').value = u.pincode || '';
   // Bank/business fields only relevant for sellers
@@ -2112,6 +2116,7 @@ async function saveUserDetail() {
     alt_phone:document.getElementById('ud-altphone').value.trim()|| undefined,
     gender:   document.getElementById('ud-gender').value         || undefined,
     district: document.getElementById('ud-district').value.trim()|| undefined,
+    taluk:    document.getElementById('ud-taluk').value.trim()   || undefined,
     state:    document.getElementById('ud-state').value.trim()   || undefined,
     pincode:  document.getElementById('ud-pincode').value.trim() || undefined,
     bank_name:   document.getElementById('ud-bank').value.trim()    || undefined,
@@ -2463,15 +2468,20 @@ function openCreateStaff() {
   document.getElementById('cs-ph').value = '';
   document.getElementById('cs-role').value = '';
   document.getElementById('cs-pw').value = '';
+  document.getElementById('cs-tk').innerHTML = '';
+  document.getElementById('cs-pn').value = '';
+  document.getElementById('cs-vt').value = '';
   document.getElementById('cs-gd-e').style.display = 'none';
   document.getElementById('cs-err').style.display = 'none';
   document.getElementById('cs-success').style.display = 'none';
   document.getElementById('cs-btn').disabled = false;
   document.getElementById('cs-btn').textContent = 'Create Account';
-  // Pre-select admin's own state/district
-  document.getElementById('cs-st').value = user.state || 'Tamil Nadu';
-  updateCsDistrictList();
-  if (user.district) document.getElementById('cs-di').value = user.district;
+  loadLocations().then(function() {
+    var stSel = document.getElementById('cs-st');
+    fillStateSelect(stSel, user.state || '');
+    fillDistrictSelect(document.getElementById('cs-di'), stSel.value, user.district || '');
+    onCsDistrictChange();
+  });
   document.getElementById('createStaffOverlay').style.display = 'flex';
   setTimeout(function(){ document.getElementById('cs-fn').focus(); }, 80);
 }
@@ -2486,12 +2496,15 @@ function csRoleChanged() {
   document.getElementById('cs-vt-rq').style.display = needsVillage ? '' : 'none';
 }
 
-function updateCsDistrictList() {
-  var state = document.getElementById('cs-st').value;
-  var dists = _stateDistricts[state] || [];
-  document.getElementById('cs-di').innerHTML = dists.map(function(d){
-    return '<option value="' + d + '">' + d + '</option>';
-  }).join('');
+function onCsStateChange() {
+  var st = document.getElementById('cs-st').value;
+  fillDistrictSelect(document.getElementById('cs-di'), st, '');
+  fillTalukSelect(document.getElementById('cs-tk'), st, '', '');
+}
+function onCsDistrictChange() {
+  var st = document.getElementById('cs-st').value;
+  var di = document.getElementById('cs-di').value;
+  fillTalukSelect(document.getElementById('cs-tk'), st, di, '');
 }
 
 async function submitCreateStaff() {
@@ -2502,6 +2515,8 @@ async function submitCreateStaff() {
   var role = document.getElementById('cs-role').value;
   var st   = document.getElementById('cs-st').value;
   var di   = document.getElementById('cs-di').value;
+  var tk   = document.getElementById('cs-tk').value;
+  var pn   = document.getElementById('cs-pn').value.trim();
   var vt   = document.getElementById('cs-vt').value.trim();
   var pw   = document.getElementById('cs-pw').value;
 
@@ -2513,6 +2528,11 @@ async function submitCreateStaff() {
   if (!gd) { gdEl.style.display = 'block'; return; }
   if (!/^\d{10}$/.test(ph)) { errEl.textContent = 'Enter a valid 10-digit phone number.'; errEl.style.display = 'block'; return; }
   if (!role) { errEl.textContent = 'Select a role.'; errEl.style.display = 'block'; return; }
+  if (!st) { errEl.textContent = 'Select a state.'; errEl.style.display = 'block'; return; }
+  if (!di) { errEl.textContent = 'Select a district.'; errEl.style.display = 'block'; return; }
+  var _hasTaluks = (_locTree && _locTree[st] && (_locTree[st][di]||[]).length > 0);
+  if (_hasTaluks && !tk) { errEl.textContent = 'Select a taluk.'; errEl.style.display = 'block'; return; }
+  if (!/^\d{6}$/.test(pn)) { errEl.textContent = 'Enter a valid 6-digit pincode.'; errEl.style.display = 'block'; return; }
   if ((role === 'VCO' || role === 'Delivery Agent') && !vt) { errEl.textContent = 'Village/Town is required for VCO and Delivery Agent.'; errEl.style.display = 'block'; return; }
   if (pw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
 
@@ -2520,7 +2540,7 @@ async function submitCreateStaff() {
   btn.disabled = true; btn.textContent = 'Creating…';
 
   try {
-    var res = await API.createStaff({ fname: fn, lname: ln, gender: gd, phone: ph, password: pw, admin_role: role, state: st, district: di, village_town: vt });
+    var res = await API.createStaff({ fname: fn, lname: ln, gender: gd, phone: ph, password: pw, admin_role: role, state: st, district: di, taluk: tk, pincode: pn, village_town: vt });
     document.getElementById('cs-lid').textContent = res.login_id;
     document.getElementById('cs-success').style.display = 'block';
     btn.textContent = 'Add Another';
@@ -2531,6 +2551,7 @@ async function submitCreateStaff() {
       document.getElementById('cs-gd').value = '';
       document.getElementById('cs-ph').value = '';
       document.getElementById('cs-vt').value = '';
+      document.getElementById('cs-pn').value = '';
       document.getElementById('cs-pw').value = '';
       btn.textContent = 'Create Account';
       btn.onclick = submitCreateStaff;
@@ -3525,6 +3546,7 @@ async function openRegDetail(id) {
     html += row('Village/Town', r.village_town);
     html += row('City', r.city);
     html += row('District', r.district);
+    html += row('Taluk', r.taluk);
     html += row('State', r.state);
     html += row('Pincode', r.pincode);
     html += row('House / Street', [r.house_no, r.street1, r.street2].filter(Boolean).join(', '));
