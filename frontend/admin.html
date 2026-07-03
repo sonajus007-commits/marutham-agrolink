@@ -631,15 +631,12 @@
         <select class="fi" id="po-price-state" onchange="onModalPriceStateChange()"></select>
         <select class="fi" id="po-price-district" onchange="loadModalPriceForSel()"></select>
       </div>
-      <div style="display:flex;gap:8px;align-items:stretch">
-        <div style="position:relative;flex:1">
-          <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;color:#7a8492;font-weight:700">₹</span>
-          <input class="fi" id="po-price-val" type="text" placeholder="Price" oninput="storeModalPrice()" style="padding-left:32px">
-        </div>
-        <button type="button" onclick="syncPriceStub()" style="background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:8px;padding:0 14px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Sync API</button>
+      <div style="position:relative">
+        <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;color:#7a8492;font-weight:700">₹</span>
+        <input class="fi" id="po-price-val" type="text" placeholder="Price" oninput="storeModalPrice()" style="padding-left:32px">
       </div>
       <div class="em" id="po-price-e">Enter at least one district price</div>
-      <div style="font-size:10px;color:#5a6472;margin-top:4px">Select state + district, enter price. Repeat for each district. Stored separately per district.</div>
+      <div style="font-size:10px;color:#5a6472;margin-top:4px">Select state + district, enter price. Repeat for each district. Use the <strong>⟳ Sync Govt Prices</strong> button on the Products page to pull official rates.</div>
       <div id="po-price-saved" style="font-size:10px;color:#1a7a4a;font-weight:700;margin-top:5px"></div>
     </div>
 
@@ -1194,16 +1191,6 @@ function updatePriceSavedNote() {
   el.textContent = keys.length ? 'Prices saved for ' + keys.length + ' district(s).' : '';
 }
 
-function syncPriceStub() {
-  var st   = document.getElementById('po-price-state').value;
-  var dt   = document.getElementById('po-price-district').value;
-  var base = 25 + Math.floor(Math.random() * 50);
-  document.getElementById('po-price-val').value = base;
-  _modalPriceBuffer[st + '|' + dt] = base;
-  updatePriceSavedNote();
-  showToast('Synced ' + dt + ' price: ₹' + base + ' (demo)', 'nfo');
-}
-
 function onExoticChange() {
   var isEx = document.getElementById('po-exotic').value === 'yes';
   document.getElementById('po-handling-wrap').style.display = isEx ? 'block' : 'none';
@@ -1380,6 +1367,33 @@ async function saveProduct() {
 // ── Quick price update (without reopening full product form) ─────────────────
 var _quickPriceProductId = null;
 var _quickPriceBuffer    = {}; // district -> rupees
+var _quickPriceState     = 'Tamil Nadu';
+
+// Which state a district belongs to (for inferring the initial state).
+function stateOfDistrict(d) {
+  for (var st in _stateDistricts) { if (_stateDistricts[st].indexOf(d) !== -1) return st; }
+  return 'Tamil Nadu';
+}
+// Build the district rows for a state: districts that already have a price, else one blank row.
+function qpRowsForState(state) {
+  var dists = _stateDistricts[state] || [];
+  var withPrices = dists.filter(function(d){ return _quickPriceBuffer[d] != null; });
+  var list = withPrices.length ? withPrices : [dists[0] || ''];
+  return list.map(function(d){ return quickPriceRow(d, _quickPriceBuffer[d] || ''); }).join('');
+}
+// Remember entered prices before switching state so nothing is lost visually.
+function captureQpRows() {
+  var rows = document.querySelectorAll('#qp-rows > div');
+  rows.forEach(function(row){
+    var sel = row.querySelector('select'); var inp = row.querySelector('input[type="number"]');
+    if (sel && inp && inp.value !== '') { var v = parseFloat(inp.value); if (!isNaN(v)) _quickPriceBuffer[sel.value] = v; }
+  });
+}
+function onQpStateChange() {
+  captureQpRows();
+  _quickPriceState = document.getElementById('qp-state').value;
+  document.getElementById('qp-rows').innerHTML = qpRowsForState(_quickPriceState);
+}
 
 function openUpdatePrice(id) {
   _quickPriceProductId = id;
@@ -1394,14 +1408,14 @@ function openUpdatePrice(id) {
   body += '<div style="background:#f0faf4;border-radius:10px;padding:12px;margin-bottom:16px">';
   body += '<div style="font-size:15px;font-weight:700;color:var(--forest)">' + p.name + (p.regional_name ? ' · ' + p.regional_name : '') + '</div>';
   body += '<div style="font-size:11px;color:var(--gray);margin-top:2px">Unit: ' + p.unit + ' · Fee: ' + (p.platform_fee_pct||5) + '%</div></div>';
-  body += '<div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px">Govt Market Price per District (₹)</div>';
+  _quickPriceState = prices.length > 0 ? stateOfDistrict(prices[0].district) : 'Tamil Nadu';
+  body += '<div class="fg" style="margin-bottom:10px"><label class="fl" style="font-size:12px">State</label>';
+  body += '<select class="fi" id="qp-state" onchange="onQpStateChange()">';
+  for (var st in _stateDistricts) body += '<option value="' + st + '"' + (st === _quickPriceState ? ' selected' : '') + '>' + st + '</option>';
+  body += '</select></div>';
 
-  var knownDistricts = prices.length > 0 ? prices.map(function(dp){ return dp.district; }) : ['Pudukkottai'];
-  body += '<div id="qp-rows">';
-  knownDistricts.forEach(function(d){
-    body += quickPriceRow(d, _quickPriceBuffer[d] || '');
-  });
-  body += '</div>';
+  body += '<div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px">Govt Market Price per District (₹)</div>';
+  body += '<div id="qp-rows">' + qpRowsForState(_quickPriceState) + '</div>';
   body += '<button type="button" style="font-size:11px;color:#1d4ed8;background:none;border:none;cursor:pointer;padding:4px 0;margin-top:4px" onclick="addQuickPriceRow()">+ Add district</button>';
   body += '<div style="margin-top:20px;display:flex;gap:10px">';
   body += '<button class="sbtn" style="flex:1" onclick="saveQuickPrices()">Save Prices →</button>';
@@ -1414,9 +1428,8 @@ function openUpdatePrice(id) {
 }
 
 function quickPriceRow(district, value) {
-  var allDistricts = [];
-  for (var st in _stateDistricts) _stateDistricts[st].forEach(function(d){ allDistricts.push(d); });
-  var opts = allDistricts.map(function(d){
+  var dists = _stateDistricts[_quickPriceState] || [];
+  var opts = dists.map(function(d){
     return '<option value="' + d + '"' + (d === district ? ' selected' : '') + '>' + d + '</option>';
   }).join('');
   return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
@@ -1428,8 +1441,9 @@ function quickPriceRow(district, value) {
 
 function addQuickPriceRow() {
   var el = document.getElementById('qp-rows');
+  var dists = _stateDistricts[_quickPriceState] || [];
   var div = document.createElement('div');
-  div.innerHTML = quickPriceRow('Pudukkottai', '');
+  div.innerHTML = quickPriceRow(dists[0] || '', '');
   el.appendChild(div.firstChild);
 }
 
