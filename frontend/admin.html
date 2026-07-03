@@ -313,7 +313,7 @@
       <div class="fg" id="cr-renewal-amount-row" style="display:none">
         <label class="fl">Subscription Amount (₹) <span class="rq">*</span></label>
         <input class="fi" id="cr-renewal-amount" type="number" min="1" placeholder="e.g. 700">
-        <div style="font-size:11px;color:#6b7280;margin-top:4px">Plan fees — Monthly: ₹250 · Quarterly: ₹700 · Half Yearly: ₹1,400 · Yearly: ₹2,800</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px">Plan fees — Monthly: ₹200 · Quarterly: ₹550 · Half Yearly: ₹1,100 · Yearly: ₹2,000</div>
       </div>
       <div class="fg"><label class="fl">Notes (optional)</label>
         <textarea class="fi" id="cr-review-notes" rows="2" placeholder="Reason for approval or rejection…" style="resize:none"></textarea>
@@ -3459,12 +3459,12 @@ function renderRegistrationList(list, status) {
     html += '</div>';
     html += '</div>';
     if (r.approval_status === 'pending_review' && r.subscription_plan) {
-      var planFees = { 'Monthly': 250, 'Quarterly': 700, 'Half Yearly': 1400, 'Yearly': 2800 };
+      var planFees = { 'Monthly': 200, 'Quarterly': 550, 'Half Yearly': 1100, 'Yearly': 2000 };
       var subFee   = planFees[r.subscription_plan] || 0;
       var isCon    = r.gender === 'Female' || r.gender === 'Transgender';
-      var total    = 100 + (isCon ? Math.round(subFee * 0.5) : subFee);
+      var total    = 100 + (isCon ? Math.round(subFee * 0.9) : subFee);
       html += '<div style="margin-top:8px;font-size:11px;background:#f0fdf4;border:1px solid #bbf7d0;padding:6px 10px;border-radius:6px;color:#166534">';
-      html += '📋 <strong>' + r.subscription_plan + '</strong> plan &bull; Reg ₹100 + Sub ₹' + (isCon ? Math.round(subFee*0.5) : subFee) + (isCon ? ' (50% concession)' : '') + ' = <strong>₹' + total + '</strong>';
+      html += '📋 <strong>' + r.subscription_plan + '</strong> plan &bull; Reg ₹100 + Sub ₹' + (isCon ? Math.round(subFee*0.9) : subFee) + (isCon ? ' (10% concession)' : '') + ' = <strong>₹' + total + '</strong>';
       html += '</div>';
     }
     if (r.approval_status === 'payment_pending' && r.payment_reference) {
@@ -3572,22 +3572,22 @@ function closeRegDetail() {
   _currentRegId = null;
 }
 
-var ADMIN_PLAN_FEES = { 'Monthly': 250, 'Quarterly': 700, 'Half Yearly': 1400, 'Yearly': 2800 };
+var ADMIN_PLAN_FEES = { 'Monthly': 200, 'Quarterly': 550, 'Half Yearly': 1100, 'Yearly': 2000 };
 
 function openApproveModal(id, name, gender, plan) {
   _currentRegId = id;
   document.getElementById('approve-name-lbl').textContent = 'Approving registration for: ' + name;
   document.getElementById('approve-err').style.display = 'none';
   var isConcession  = (gender === 'Female' || gender === 'Transgender');
-  var subFee        = ADMIN_PLAN_FEES[plan] || 2800;
-  var discount      = isConcession ? Math.round(subFee * 0.5) : 0;
+  var subFee        = ADMIN_PLAN_FEES[plan] || 2000;
+  var discount      = isConcession ? Math.round(subFee * 0.1) : 0;
   var suggested     = 100 + subFee - discount;  // registration ₹100 + subscription
   var concBanner    = document.getElementById('approve-concession');
   if (concBanner) {
     concBanner.style.display = isConcession ? 'block' : 'none';
     if (isConcession) {
       concBanner.innerHTML = '<strong>🌸 Women & Transgender Concession applies</strong><br>' +
-        (plan ? 'Plan: ' + plan + ' — Fee: ₹' + subFee + ' → Concession (50%): ₹' + (subFee - discount) + '.' : '') +
+        (plan ? 'Plan: ' + plan + ' — Fee: ₹' + subFee + ' → Concession (10%): ₹' + (subFee - discount) + '.' : '') +
         ' Registration: ₹100.<br>' +
         '<span style="font-size:10px;opacity:.8">Total pre-filled below. You may override.</span>';
     }

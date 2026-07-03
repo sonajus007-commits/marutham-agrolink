@@ -436,7 +436,7 @@ body{background:var(--green-bg);}
             background:linear-gradient(135deg,#fce4ec,#f8bbd0);
             border:1.5px solid #e85d8a;border-radius:10px;font-size:12px;color:#880e4f;line-height:1.6">
             <strong style="font-size:13px">🌸 Women &amp; Transgender Empowerment Concession</strong><br>
-            You qualify for a <strong>50% discount</strong> on the annual subscription fee!<br>
+            You qualify for a <strong>10% discount</strong> on the subscription fee!<br>
             <span style="font-size:11px;opacity:.8">Our admin team will automatically apply the concession when reviewing your application.</span>
           </div>
         </div>
@@ -552,33 +552,33 @@ body{background:var(--green-bg);}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px">
             <div style="background:#fff;border:1px solid #dcfce7;border-radius:8px;padding:8px 10px">
               <div style="font-size:11px;color:#6b7280">Monthly</div>
-              <div style="font-weight:800;color:#166534">₹250 <span style="font-size:10px;font-weight:400;color:#9ca3af">/ 30 days</span></div>
+              <div style="font-weight:800;color:#166534">₹200 <span style="font-size:10px;font-weight:400;color:#9ca3af">/ 30 days</span></div>
             </div>
             <div style="background:#fff;border:1px solid #dcfce7;border-radius:8px;padding:8px 10px">
               <div style="font-size:11px;color:#6b7280">Quarterly</div>
-              <div style="font-weight:800;color:#166534">₹700 <span style="font-size:10px;font-weight:400;color:#9ca3af">/ 90 days</span></div>
+              <div style="font-weight:800;color:#166534">₹550 <span style="font-size:10px;font-weight:400;color:#9ca3af">/ 90 days</span></div>
             </div>
             <div style="background:#fff;border:1px solid #dcfce7;border-radius:8px;padding:8px 10px">
               <div style="font-size:11px;color:#6b7280">Half Yearly</div>
-              <div style="font-weight:800;color:#166534">₹1,400 <span style="font-size:10px;font-weight:400;color:#9ca3af">/ 180 days</span></div>
+              <div style="font-weight:800;color:#166534">₹1,100 <span style="font-size:10px;font-weight:400;color:#9ca3af">/ 180 days</span></div>
             </div>
             <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #86efac;border-radius:8px;padding:8px 10px">
               <div style="font-size:11px;color:#166534;font-weight:700">Yearly ⭐ Best Value</div>
-              <div style="font-weight:800;color:#166534">₹2,800 <span style="font-size:10px;font-weight:400;color:#9ca3af">/ 365 days</span></div>
+              <div style="font-weight:800;color:#166534">₹2,000 <span style="font-size:10px;font-weight:400;color:#9ca3af">/ 365 days</span></div>
             </div>
           </div>
           <div id="f-concession-note" style="display:none;font-size:11px;color:#880e4f;background:#fce4ec;border-radius:6px;padding:6px 10px;margin-top:6px">
-            🌸 50% concession applies on subscription fee for Female / Transgender applicants
+            🌸 10% concession applies on subscription fee for Female / Transgender applicants
           </div>
         </div>
         <div class="fg">
           <label class="fl">Select Subscription Plan <span class="rq">*</span></label>
           <select class="fi" id="f-plan" onchange="updatePlanTotal()">
             <option value="">— Choose a plan —</option>
-            <option value="Monthly">Monthly — ₹250 / 30 days</option>
-            <option value="Quarterly">Quarterly — ₹700 / 90 days</option>
-            <option value="Half Yearly">Half Yearly — ₹1,400 / 180 days</option>
-            <option value="Yearly">Yearly — ₹2,800 / 365 days</option>
+            <option value="Monthly">Monthly — ₹200 / 30 days</option>
+            <option value="Quarterly">Quarterly — ₹550 / 90 days</option>
+            <option value="Half Yearly">Half Yearly — ₹1,100 / 180 days</option>
+            <option value="Yearly">Yearly — ₹2,000 / 365 days</option>
           </select>
           <div class="em" id="f-plan-e">Please select a subscription plan</div>
         </div>
@@ -590,7 +590,7 @@ body{background:var(--green-bg);}
             <span style="opacity:.8" id="f-plan-label">Subscription</span><span id="f-plan-fee">—</span>
           </div>
           <div id="f-concession-row" style="display:none;justify-content:space-between;margin-bottom:4px;color:#86efac">
-            <span>🌸 Concession (50%)</span><span id="f-concession-amt">—</span>
+            <span>🌸 Concession (10%)</span><span id="f-concession-amt">—</span>
           </div>
           <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,.2);padding-top:8px;margin-top:4px;font-weight:800;font-size:15px">
             <span>Total Payable</span><span id="f-plan-total-amt">—</span>
@@ -744,7 +744,7 @@ function setSellerType(type) {
   document.getElementById('f-submit-btn').textContent     = type === 'Farmer'
     ? '✅ Create Farmer Account' : '✅ Create Retailer Account';
 }
-var PLAN_FEES = { 'Monthly': 250, 'Quarterly': 700, 'Half Yearly': 1400, 'Yearly': 2800 };
+var PLAN_FEES = { 'Monthly': 200, 'Quarterly': 550, 'Half Yearly': 1100, 'Yearly': 2000 };
 
 function showGenderConcession() {
   var v = document.getElementById('f-gd').value;
@@ -761,7 +761,7 @@ function updatePlanTotal() {
   if (!plan) { totalBox.style.display = 'none'; return; }
   var isConcession = gender === 'Female' || gender === 'Transgender';
   var subFee       = PLAN_FEES[plan] || 0;
-  var discount     = isConcession ? Math.round(subFee * 0.5) : 0;
+  var discount     = isConcession ? Math.round(subFee * 0.1) : 0;
   var subPayable   = subFee - discount;
   var total        = 100 + subPayable;
   document.getElementById('f-plan-label').textContent   = plan + ' Subscription';
