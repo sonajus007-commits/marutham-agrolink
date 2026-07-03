@@ -327,22 +327,12 @@ async function renderHome() {
     html += '<div class="sc"><div class="slbl">Completed</div><div class="sval">' + delivered.length + '</div><div class="ssub">Delivered</div></div>';
     html += '</div>';
 
-    // Pipeline step definitions (for home cards)
-    var _directStages = ['Order Placed','Packaged','VCO Verified','Picked Up','Out for Delivery','Delivered'];
-    var _hubStages    = ['Order Placed','Packaged','VCO Verified','Picked Up','In Transit','At Hub','Out for Delivery','Delivered'];
-
-    function miniPipeline(stage, route) {
-      var stages = route === 'hub' ? _hubStages : _directStages;
-      var pct = stages.length > 1 ? Math.round((stage / (stages.length - 1)) * 100) : 0;
-      var label = stages[stage] || '—';
-      var h = '<div style="margin:10px 0 4px">';
-      h += '<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:5px">';
-      h += '<span style="font-weight:700;color:var(--forest)">' + label + '</span>';
-      h += '<span style="color:var(--gray)">Step ' + (stage + 1) + ' of ' + stages.length + '</span>';
+    // Compact unified pipeline for home cards (shared renderer)
+    function miniPipeline(status, route) {
+      var h = '<div style="margin:10px 0 2px">';
+      h += '<div style="font-size:10px;font-weight:700;color:var(--forest);margin-bottom:6px">' + (status || '—') + '</div>';
+      h += renderPipelineHTML(buildPipeline(route, status));
       h += '</div>';
-      h += '<div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden">';
-      h += '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#1a7a4a,#52b788);border-radius:3px;transition:width .4s"></div>';
-      h += '</div></div>';
       return h;
     }
 
@@ -362,7 +352,7 @@ async function renderHome() {
           html += '<div style="text-align:right"><div class="ord-amt">' + fmt(o.total) + '</div>';
           html += '<div style="font-size:10px;color:var(--gray)">' + (o.pay_method || '') + '</div></div>';
           html += '</div>';
-          html += miniPipeline(o.stage || 0, o.route || 'direct');
+          html += miniPipeline(o.status, o.route || 'direct');
           html += '<div style="font-size:11px;color:var(--forest);font-weight:600;margin-top:6px">Track Order →</div>';
           html += '</div>';
         });
@@ -1511,31 +1501,12 @@ async function openOrderDetail(orderId) {
     var html = '';
 
     // ── Route pipeline ────────────────────────────────────────────────────
-    if (trackRes && trackRes.routeMap) {
-      var rm = trackRes.routeMap;
+    // ── Unified route pipeline (skipped stages shown, bypassed with an arrow) ──
+    if (o.status) {
       html += '<div class="card" style="padding:14px 10px">';
-      html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><div style="display:flex;align-items:flex-start;min-width:max-content">';
-      rm.forEach(function(step, idx) {
-        var done    = step.status === 'done';
-        var active  = step.status === 'active';
-        var dotBg   = done ? '#1a7a4a' : active ? '#f4a261' : '#e2e8f0';
-        var dotBdr  = done ? '#1a7a4a' : active ? '#f4a261' : '#cbd5e1';
-        var lblClr  = done ? '#1a7a4a' : active ? '#f4a261' : '#94a3b8';
-        var lblWt   = active ? '700' : '400';
-        html += '<div style="display:flex;flex-direction:column;align-items:center;min-width:72px">';
-        html += '<div style="display:flex;align-items:center;width:100%">';
-        if (idx > 0) html += '<div style="flex:1;height:2px;background:' + (done || active ? '#1a7a4a' : '#e2e8f0') + '"></div>';
-        html += '<div style="width:22px;height:22px;border-radius:50%;background:' + dotBg + ';border:2px solid ' + dotBdr + ';display:flex;align-items:center;justify-content:center;flex-shrink:0' + (active ? ';box-shadow:0 0 0 4px rgba(244,162,97,.25)' : '') + '">';
-        html += done ? '<span style="font-size:10px;color:#fff">✓</span>' : (active ? '<span style="font-size:8px;color:#fff">●</span>' : '');
-        html += '</div>';
-        if (idx < rm.length - 1) html += '<div style="flex:1;height:2px;background:' + (done ? '#1a7a4a' : '#e2e8f0') + '"></div>';
-        html += '</div>';
-        html += '<div style="font-size:8px;text-align:center;margin-top:5px;color:' + lblClr + ';font-weight:' + lblWt + ';line-height:1.3;max-width:70px;padding:0 2px">' + step.label + '</div>';
-        html += '</div>';
-      });
-      html += '</div></div>';
+      html += renderPipelineHTML(buildPipeline(o.route || 'direct', o.status));
       // Agent + ETA card
-      if (trackRes.agent || trackRes.eta) {
+      if (trackRes && (trackRes.agent || trackRes.eta)) {
         html += '<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">';
         if (trackRes.agent) {
           html += '<div style="flex:1;min-width:140px;background:#f0faf4;border-radius:8px;padding:8px 12px">';

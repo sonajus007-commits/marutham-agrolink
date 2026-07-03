@@ -209,3 +209,92 @@ function buildAddress(u) {
           u.city, u.district, u.pincode, u.state]
     .filter(Boolean).join(', ');
 }
+
+// ── Order pipeline (unified tracker) ──────────────────────────────────────────
+// One consistent flow for every order: Order Placed → Delivered. Hub-only stages
+// (In Transit, At Hub) are shown for direct orders too, but marked "skipped" and
+// bypassed with an arrow so the jump Picked Up → Out for Delivery is visible.
+var PIPELINE_STAGES   = ['Order Placed','Packaged','VCO Verified','Picked Up','In Transit','At Hub','Out for Delivery','Delivered'];
+var PIPELINE_HUB_ONLY = { 'In Transit': true, 'At Hub': true };
+
+// Build node states from the order's route + current status label.
+function buildPipeline(route, currentStatus) {
+  var isDirect = (route !== 'hub');
+  var curIdx   = PIPELINE_STAGES.indexOf(currentStatus);
+  return PIPELINE_STAGES.map(function(label, i) {
+    var skipped = isDirect && !!PIPELINE_HUB_ONLY[label];
+    var status;
+    if (skipped)            status = 'skipped';
+    else if (curIdx < 0)    status = 'pending';
+    else if (i < curIdx)    status = 'done';
+    else if (i === curIdx)  status = 'active';
+    else                    status = 'pending';
+    return { label: label, status: status, skipped: skipped };
+  });
+}
+
+// Colour of the connector segment between node i and i+1.
+function _pipeGap(nodes, i) {
+  var a = nodes[i], b = nodes[i + 1];
+  if (a.skipped || b.skipped) return 'dash';
+  if (b.status === 'done' || b.status === 'active') return 'green';
+  return 'grey';
+}
+function _pipeConn(kind) {
+  if (kind === 'green') return '<div style="flex:1;height:2px;background:#1a7a4a"></div>';
+  if (kind === 'dash')  return '<div style="flex:1;height:0;border-top:2px dashed #cbd5e1"></div>';
+  return '<div style="flex:1;height:2px;background:#e2e8f0"></div>';
+}
+
+// Render the whole tracker widget (horizontally scrollable, fixed node width so
+// the bypass arc aligns). `opts.activeColor` overrides the "current step" colour.
+function renderPipelineHTML(nodes, opts) {
+  opts = opts || {};
+  var NODE_W = 66, activeColor = opts.activeColor || '#f4a261';
+  var N = nodes.length, totalW = N * NODE_W;
+
+  // contiguous skipped span (single run expected: In Transit + At Hub)
+  var s = -1, e = -1;
+  for (var k = 0; k < N; k++) { if (nodes[k].skipped) { if (s < 0) s = k; e = k; } }
+  var hasSkip = s > 0 && e >= 0 && e < N - 1;
+
+  var html = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">';
+  html += '<div style="position:relative;width:' + totalW + 'px;min-width:' + totalW + 'px">';
+
+  html += '<div style="display:flex">';
+  nodes.forEach(function(node, i) {
+    var done = node.status === 'done', active = node.status === 'active', skipped = node.status === 'skipped';
+    var dotBg = done ? '#1a7a4a' : active ? activeColor : '#e2e8f0';
+    var dotBd = done ? '#1a7a4a' : active ? activeColor : '#cbd5e1';
+    var lblCl = done ? '#1a7a4a' : active ? activeColor : '#94a3b8';
+
+    html += '<div style="width:' + NODE_W + 'px;display:flex;flex-direction:column;align-items:center;flex-shrink:0">';
+    html += '<div style="display:flex;align-items:center;width:100%;height:22px">';
+    html += (i > 0) ? _pipeConn(_pipeGap(nodes, i - 1)) : '<div style="flex:1"></div>';
+    html += '<div style="width:20px;height:20px;border-radius:50%;background:' + dotBg + ';border:2px ' + (skipped ? 'dashed' : 'solid') + ' ' + dotBd + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;' + (skipped ? 'opacity:.55;' : '') + (active ? 'box-shadow:0 0 0 4px rgba(244,162,97,.22);' : '') + '">';
+    html += done ? '<span style="font-size:10px;color:#fff">✓</span>' : (active ? '<span style="font-size:7px;color:#fff">●</span>' : '');
+    html += '</div>';
+    html += (i < N - 1) ? _pipeConn(_pipeGap(nodes, i)) : '<div style="flex:1"></div>';
+    html += '</div>';
+    html += '<div style="font-size:8px;text-align:center;margin-top:5px;color:' + lblCl + ';font-weight:' + (active ? '700' : '400') + ';line-height:1.25;max-width:' + (NODE_W - 4) + 'px;' + (skipped ? 'text-decoration:line-through;opacity:.7;' : '') + '">' + node.label + '</div>';
+    html += '</div>';
+  });
+  html += '</div>'; // node row
+
+  // Bottom bypass arc: an under-connector from the node before the skipped span
+  // to the node after it (Picked Up → Out for Delivery). Reads cleaner than a jump-over.
+  if (hasSkip) {
+    var x1 = (s - 1) * NODE_W + NODE_W / 2;   // centre of node before the span
+    var x2 = (e + 1) * NODE_W + NODE_W / 2;   // centre of node after the span
+    var midX = (x1 + x2) / 2, depth = 20;
+    // Orthogonal bracket: down from Picked Up, horizontal across, up into Out for Delivery.
+    html += '<svg width="' + totalW + '" height="30" style="display:block;overflow:visible;margin-top:2px">';
+    html += '<path d="M ' + x1 + ' 1 L ' + x1 + ' ' + depth + ' L ' + x2 + ' ' + depth + ' L ' + x2 + ' 8" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 3"/>';
+    html += '<path d="M ' + (x2 - 4) + ' 8 L ' + (x2 + 4) + ' 8 L ' + x2 + ' 1 Z" fill="#94a3b8"/>';
+    html += '<text x="' + midX + '" y="' + (depth + 8) + '" text-anchor="middle" font-size="8" fill="#94a3b8" font-weight="700">skips ahead</text>';
+    html += '</svg>';
+  }
+
+  html += '</div></div>';
+  return html;
+}
