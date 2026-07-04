@@ -138,121 +138,197 @@
 
 <!-- ── EMPLOYEE TRACKER PANEL ─────────────────────────────────────────────── -->
 <div class="panel" id="panel-employees">
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+    <input class="fi" id="empSearch" type="text" placeholder="Search by ID, name, phone, designation…" oninput="renderEmpTable()" style="flex:1;min-width:180px;margin:0">
+    <button class="add-prod-btn" onclick="openEmployeeModal(null)">➕ Add Employee</button>
+  </div>
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-    <input class="fi" id="empSearch" type="text" placeholder="Search by ID, name, phone, designation…" oninput="renderEmployees()" style="flex:1;min-width:180px;margin:0">
-    <select class="fi" id="empStatusFilter" onchange="renderEmployees()" style="flex:0;width:150px;margin:0">
+    <select class="fi" id="empApprovalFilter" onchange="renderEmployees()" style="flex:0;min-width:170px;margin:0">
+      <option value="">All approvals</option>
+      <option value="pending">⏳ Pending approval</option>
+      <option value="approved">✓ Approved</option>
+      <option value="rejected">✗ Rejected</option>
+    </select>
+    <select class="fi" id="empStateFilter" onchange="onEmpFilterStateChange()" style="flex:0;min-width:150px;margin:0"></select>
+    <select class="fi" id="empDistrictFilter" onchange="renderEmpTable()" style="flex:0;min-width:150px;margin:0"></select>
+    <select class="fi" id="empRoleFilter" onchange="renderEmpTable()" style="flex:0;min-width:170px;margin:0"><option value="">All roles</option></select>
+    <select class="fi" id="empStatusFilter" onchange="renderEmployees()" style="flex:0;min-width:130px;margin:0">
       <option value="">All statuses</option>
       <option value="active">Active</option>
       <option value="inactive">Inactive</option>
     </select>
-    <button class="add-prod-btn" onclick="openEmployeeModal(null)">➕ Add Employee</button>
   </div>
-  <div style="font-size:12px;color:var(--gray);margin-bottom:10px">Company employee master. Permanent staff accounts must link to an active record here by Employee ID.</div>
+  <div id="empPendingBanner" style="display:none;background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:13px;color:#854d0e"></div>
+  <div style="font-size:12px;color:var(--gray);margin-bottom:10px">Company employee master. Employees are HR-approved before an ID is issued; permanent staff logins link to an approved record by Employee ID.</div>
   <div id="empListWrap"><div class="spinner"><div class="spin"></div></div></div>
 </div>
 
-<!-- ── EMPLOYEE ADD/EDIT MODAL ────────────────────────────────────────────── -->
-<div class="overlay" id="employeeOverlay" style="display:none" onclick="if(event.target===this)closeEmployeeModal()">
-  <div class="obox" style="max-width:620px;max-height:92vh;overflow-y:auto">
-    <div class="ohdr">
-      <span class="otitle" id="emp-modal-title">➕ Add Employee</span>
-      <button class="cls" onclick="closeEmployeeModal()">✕</button>
-    </div>
-    <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
-      <div class="fsec" style="padding-top:0;border-top:none">Personal Details</div>
-      <div class="tc2">
-        <div class="fg"><label class="fl">Employee ID</label>
-          <input class="fi" id="emp-empid" type="text" placeholder="Auto (e.g. MATN00001) if left blank">
-          <div style="font-size:11px;color:var(--gray);margin-top:4px">Leave blank to auto-generate from State: MA + state code + 5 digits (e.g. MATN00001).</div></div>
-        <div class="fg"><label class="fl">Status</label>
-          <select class="fi" id="emp-status">
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select></div>
-      </div>
-      <div class="tc2">
-        <div class="fg"><label class="fl">First Name <span class="rq">*</span></label><input class="fi" id="emp-fname" type="text"></div>
-        <div class="fg"><label class="fl">Last Name</label><input class="fi" id="emp-lname" type="text"></div>
-      </div>
-      <div class="tc2">
-        <div class="fg"><label class="fl">Gender</label>
-          <select class="fi" id="emp-gender">
-            <option value="">— Select —</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Transgender">Transgender</option>
-          </select></div>
-        <div class="fg"><label class="fl">Date of Birth</label><input class="fi" id="emp-dob" type="date"></div>
-      </div>
-      <div class="tc2">
-        <div class="fg"><label class="fl">Phone</label><input class="fi" id="emp-phone" type="tel" maxlength="10" oninput="numOnly(this)"></div>
-        <div class="fg"><label class="fl">Email</label><input class="fi" id="emp-email" type="email"></div>
-      </div>
+<style>
+.form-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:24px;align-items:start;}
+.form-grid .span2{grid-column:1 / -1;}
+@media(max-width:720px){.form-grid{grid-template-columns:1fr;}}
+.form-page-wrap{max-width:1120px;margin:0 auto;}
+.form-actions{position:sticky;bottom:0;background:#f3faf4;border-top:1px solid #dbe7dd;
+  padding:12px 0;margin-top:8px;display:flex;gap:10px;justify-content:flex-end;}
+</style>
+
+<!-- ── EMPLOYEE ADD/EDIT (full-page) ──────────────────────────────────────── -->
+<div class="overlay" id="employeeOverlay" style="display:none">
+  <div class="overlay-hdr" style="position:sticky;top:0;z-index:5">
+    <button class="overlay-back" onclick="closeEmployeeModal()" title="Back">←</button>
+    <span class="overlay-title" id="emp-modal-title">➕ Add Employee</span>
+  </div>
+  <div class="overlay-body">
+   <div class="form-page-wrap">
+    <div class="form-grid">
+      <div class="fsec span2" style="padding-top:0;border-top:none">Personal Details</div>
+      <div class="fg"><label class="fl">Employee ID</label>
+        <input class="fi" id="emp-empid" type="text" placeholder="Auto (e.g. MATN00001) if left blank">
+        <div id="emp-empid-note" style="font-size:11px;color:var(--gray);margin-top:4px">Leave blank to auto-generate from State: MA + state code + 5 digits (e.g. MATN00001).</div></div>
+      <div class="fg"><label class="fl">Status</label>
+        <select class="fi" id="emp-status">
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select></div>
+      <div class="fg"><label class="fl">First Name <span class="rq">*</span></label><input class="fi" id="emp-fname" type="text"></div>
+      <div class="fg"><label class="fl">Last Name</label><input class="fi" id="emp-lname" type="text"></div>
+      <div class="fg"><label class="fl">Gender</label>
+        <select class="fi" id="emp-gender">
+          <option value="">— Select —</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Transgender">Transgender</option>
+        </select></div>
+      <div class="fg"><label class="fl">Date of Birth</label><input class="fi" id="emp-dob" type="date"></div>
+      <div class="fg"><label class="fl">Phone</label><input class="fi" id="emp-phone" type="tel" maxlength="10" oninput="numOnly(this)"></div>
+      <div class="fg"><label class="fl">Email</label><input class="fi" id="emp-email" type="email"></div>
       <div class="fg"><label class="fl">Aadhaar Number</label><input class="fi" id="emp-aadhar" type="text" maxlength="12" oninput="numOnly(this)"></div>
 
-      <div class="fsec">Personal Address</div>
-      <div class="fg"><label class="fl">Address Line</label><input class="fi" id="emp-address" type="text"></div>
-      <div class="tc2">
-        <div class="fg"><label class="fl">State</label>
-          <select class="fi" id="emp-state" onchange="onEmpStateChange()"></select></div>
-        <div class="fg"><label class="fl">District</label>
-          <select class="fi" id="emp-district" onchange="onEmpDistrictChange()"></select></div>
-      </div>
-      <div class="tc2">
-        <div class="fg"><label class="fl">Taluk</label><select class="fi" id="emp-taluk"></select></div>
-        <div class="fg"><label class="fl">Pincode</label><input class="fi" id="emp-pincode" type="text" maxlength="6" oninput="numOnly(this)"></div>
-      </div>
-      <div class="tc2">
-        <div class="fg"><label class="fl">City</label><input class="fi" id="emp-city" type="text"></div>
-        <div class="fg"><label class="fl">Village/Town</label><input class="fi" id="emp-village" type="text"></div>
-      </div>
+      <div class="fsec span2">Personal Address</div>
+      <div class="fg"><label class="fl">House / Door Number</label><input class="fi" id="emp-house" type="text" placeholder="Door No / Flat No"></div>
+      <div class="fg"><label class="fl">Street Line 1</label><input class="fi" id="emp-street1" type="text" placeholder="Street name"></div>
+      <div class="fg span2"><label class="fl">Street Line 2</label><input class="fi" id="emp-street2" type="text" placeholder="Area, Colony"></div>
+      <div class="fg"><label class="fl">State</label>
+        <select class="fi" id="emp-state" onchange="onEmpStateChange()"></select></div>
+      <div class="fg"><label class="fl">District</label>
+        <select class="fi" id="emp-district" onchange="onEmpDistrictChange()"></select></div>
+      <div class="fg"><label class="fl">Taluk</label><select class="fi" id="emp-taluk"></select></div>
+      <div class="fg"><label class="fl">Pincode</label><input class="fi" id="emp-pincode" type="text" maxlength="6" oninput="numOnly(this)"></div>
+      <div class="fg"><label class="fl">City</label><input class="fi" id="emp-city" type="text"></div>
+      <div class="fg"><label class="fl">Village/Town</label><input class="fi" id="emp-village" type="text"></div>
 
-      <div class="fsec">Company Details</div>
-      <div class="tc2">
-        <div class="fg"><label class="fl">Designation</label><input class="fi" id="emp-designation" type="text" placeholder="e.g. VCO, Hub Incharge, Manager"></div>
-        <div class="fg"><label class="fl">Department</label><input class="fi" id="emp-department" type="text" placeholder="e.g. Operations, Logistics"></div>
-      </div>
-      <div class="tc2">
-        <div class="fg"><label class="fl">Employment Type</label>
-          <select class="fi" id="emp-emptype">
-            <option value="Permanent">Permanent</option>
-            <option value="Contract">Contract</option>
-          </select></div>
-        <div class="fg"><label class="fl">Date of Joining</label><input class="fi" id="emp-doj" type="date"></div>
-      </div>
-      <div class="tc2">
-        <div class="fg"><label class="fl">Work Location</label><input class="fi" id="emp-worklocation" type="text" placeholder="Posting village/town/office"></div>
-        <div class="fg"><label class="fl">Reporting Manager</label><input class="fi" id="emp-reporting" type="text"></div>
-      </div>
-      <div class="tc2">
-        <div class="fg"><label class="fl">Work District</label><input class="fi" id="emp-workdistrict" type="text"></div>
-        <div class="fg"><label class="fl">Work State</label><input class="fi" id="emp-workstate" type="text"></div>
-      </div>
-      <div class="fg"><label class="fl">Notes</label><input class="fi" id="emp-notes" type="text"></div>
+      <div class="fsec span2">Company Details</div>
+      <div class="fg"><label class="fl">Designation</label>
+        <select class="fi" id="emp-designation"></select></div>
+      <div class="fg"><label class="fl">Department</label>
+        <select class="fi" id="emp-department" onchange="onEmpDeptOrUnitChange()"></select></div>
+      <div class="fg"><label class="fl">Employment Type</label>
+        <select class="fi" id="emp-emptype">
+          <option value="Permanent">Permanent</option>
+          <option value="Contract">Contract</option>
+        </select>
+        <div style="font-size:11px;color:var(--gray);margin-top:4px">Permanent → ID starts <strong>MA</strong> (e.g. MATN00001) · Contract → <strong>CE</strong> (e.g. CETN00001).</div></div>
+      <div class="fg"><label class="fl">Date of Joining</label><input class="fi" id="emp-doj" type="date"></div>
+      <div class="fg"><label class="fl">Work State</label>
+        <select class="fi" id="emp-workstate" onchange="onEmpWorkStateChange()"></select></div>
+      <div class="fg"><label class="fl">Work District</label>
+        <select class="fi" id="emp-workdistrict" onchange="onEmpDeptOrUnitChange()"></select></div>
+      <div class="fg span2"><label class="fl">Work Location</label><input class="fi" id="emp-worklocation" type="text" placeholder="Posting village/town/office"></div>
+      <label class="span2" style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:4px 0">
+        <input type="checkbox" id="emp-ismanager" style="width:16px;height:16px;cursor:pointer">
+        <span>This employee is a <strong>Manager</strong> (can be assigned as a Reporting Manager for others)</span>
+      </label>
 
-      <div class="em" id="emp-err" style="display:none;margin:0"></div>
-      <div style="display:flex;gap:10px;justify-content:flex-end">
-        <button class="sbtn" style="background:var(--muted);color:var(--text);flex:0;padding:0 20px" onclick="closeEmployeeModal()">Cancel</button>
-        <button class="sbtn" id="emp-save-btn" onclick="saveEmployee()" style="flex:0;padding:0 24px">Save</button>
+      <div id="emp-trust-wrap" class="span2" style="display:none;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:10px 12px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:#3730a3;margin-bottom:6px">Approval Authority (Bootstrap)</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:3px 0">
+          <input type="checkbox" id="emp-isbod" style="width:16px;height:16px;cursor:pointer">
+          <span><strong>Board of Director</strong> — root of trust; approves HR Admins</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:3px 0">
+          <input type="checkbox" id="emp-ishradmin" style="width:16px;height:16px;cursor:pointer">
+          <span><strong>HR Admin</strong> — can approve all other employee requests</span>
+        </label>
+        <div style="font-size:11px;color:#4338ca;margin-top:4px">These roles are <strong>auto-approved</strong> — the Employee ID is issued immediately and a login can be created right away. All other employees need HR Admin approval first.</div>
+      </div>
+      <div class="fg span2"><label class="fl">Reporting Manager</label>
+        <input type="hidden" id="emp-reporting-empid">
+        <div style="display:flex;gap:8px;align-items:center;max-width:560px">
+          <input class="fi" id="emp-reporting" type="text" readonly placeholder="No manager selected" style="flex:1;background:#f8fafc;cursor:default">
+          <button type="button" class="sbtn" style="flex:0;padding:0 16px;white-space:nowrap;width:auto" onclick="openMgrPicker()">Select…</button>
+          <button type="button" class="sbtn" style="flex:0;padding:0 12px;background:var(--muted);color:var(--text);width:auto" onclick="clearEmpManager()" title="Clear">✕</button>
+        </div>
+        <div id="emp-reporting-note" style="font-size:11px;color:var(--gray);margin-top:4px">Pick from Managers in the same Work District &amp; Department.</div></div>
+      <div class="fg span2"><label class="fl">Notes</label><input class="fi" id="emp-notes" type="text"></div>
+
+      <div class="em span2" id="emp-err" style="display:none;margin:0"></div>
+      <div class="form-actions span2">
+        <button class="sbtn" style="background:var(--muted);color:var(--text);flex:0;padding:0 20px;width:auto" onclick="closeEmployeeModal()">Cancel</button>
+        <button class="sbtn" id="emp-save-btn" onclick="saveEmployee()" style="flex:0;padding:0 28px;width:auto">Save</button>
+      </div>
+    </div>
+   </div>
+  </div>
+</div>
+
+<!-- ── REPORTING-MANAGER PICKER POPUP ─────────────────────────────────────────── -->
+<div class="overlay" id="mgrPickerOverlay" style="display:none" onclick="if(event.target===this)closeMgrPicker()">
+  <div class="obox" style="max-width:520px;max-height:88vh;overflow-y:auto">
+    <div class="ohdr">
+      <span class="otitle">👔 Select Reporting Manager</span>
+      <button class="cls" onclick="closeMgrPicker()">✕</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div id="mgr-picker-ctx" style="font-size:12px;color:var(--gray)"></div>
+      <input class="fi" id="mgr-picker-search" type="text" placeholder="Search managers…" oninput="renderMgrPicker()" style="margin:0">
+      <div id="mgr-picker-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── EMPLOYEE READ-ONLY DETAIL VIEW ─────────────────────────────────────────── -->
+<div class="overlay" id="empDetailOverlay" style="display:none" onclick="if(event.target===this)closeEmpDetail()">
+  <div class="obox" style="max-width:640px;max-height:92vh;overflow-y:auto">
+    <div class="ohdr">
+      <span class="otitle" id="empd-title">👤 Employee</span>
+      <button class="cls" onclick="closeEmpDetail()">✕</button>
+    </div>
+    <div style="padding:16px">
+      <div style="display:flex;gap:8px;margin-bottom:14px;border-bottom:2px solid #e5e7eb">
+        <button class="ptab" id="empd-tab-info" onclick="empdTab('info',this)" style="border:none;background:none;padding:8px 4px;cursor:pointer;font-weight:700;border-bottom:2px solid var(--forest);margin-bottom:-2px">Details</button>
+        <button class="ptab" id="empd-tab-hist" onclick="empdTab('hist',this)" style="border:none;background:none;padding:8px 4px;cursor:pointer;font-weight:700;color:#94a3b8;border-bottom:2px solid transparent;margin-bottom:-2px">Change History</button>
+      </div>
+      <div id="empd-info"></div>
+      <div id="empd-hist" style="display:none"><div class="spinner"><div class="spin"></div></div></div>
+      <div id="empd-actions" style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;border-top:1px solid #f1f5f9;padding-top:14px;flex-wrap:wrap">
+        <button class="sbtn" style="background:var(--muted);color:var(--text);flex:0;padding:0 20px" onclick="closeEmpDetail()">Close</button>
+        <button class="sbtn" id="empd-reject-btn" style="flex:0;padding:0 18px;display:none;background:#b91c1c" onclick="rejectFromDetail()">✗ Reject</button>
+        <button class="sbtn" id="empd-approve-btn" style="flex:0;padding:0 18px;display:none;background:#166534" onclick="approveFromDetail()">✓ Approve</button>
+        <button class="sbtn" id="empd-edit-btn" style="flex:0;padding:0 24px;display:none" onclick="editFromDetail()">✏️ Edit</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Create Staff Modal ──────────────────────────────────────────────────────── -->
-<div class="overlay" id="createStaffOverlay" style="display:none" onclick="if(event.target===this)closeCreateStaff()">
-  <div class="obox" style="max-width:460px">
-    <div class="ohdr">
-      <span class="otitle">➕ Add Staff Member</span>
-      <button class="cls" onclick="closeCreateStaff()">✕</button>
+<div class="overlay" id="createStaffOverlay" style="display:none">
+  <div class="overlay-hdr" style="position:sticky;top:0;z-index:5">
+    <button class="overlay-back" onclick="closeCreateStaff()" title="Back">←</button>
+    <span class="overlay-title">➕ Add Staff Member</span>
+  </div>
+  <div class="overlay-body">
+   <div class="form-page-wrap">
+    <div class="fg span2" style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;max-width:1120px;margin:0 auto 16px">
+      <label class="fl">Employee ID <span class="rq" id="cs-empid-rq" style="display:none">*</span></label>
+      <input class="fi" id="cs-empid" type="text" placeholder="e.g. MATN00001 — enter first to auto-fill" onblur="csLookupEmp()" style="text-transform:uppercase">
+      <div id="cs-empid-note" style="font-size:11px;margin-top:4px"></div>
+      <div style="font-size:11px;color:var(--gray);margin-top:2px">Enter the Employee ID to auto-fill the details below from the employee master.</div>
     </div>
-    <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
-      <div class="tc2">
-        <div class="fg"><label class="fl">First Name <span class="rq">*</span></label>
-          <input class="fi" id="cs-fn" type="text" placeholder="First name"></div>
-        <div class="fg"><label class="fl">Last Name</label>
-          <input class="fi" id="cs-ln" type="text" placeholder="Last name"></div>
-      </div>
+    <div class="form-grid">
+      <div class="fg"><label class="fl">First Name <span class="rq">*</span></label>
+        <input class="fi" id="cs-fn" type="text" placeholder="First name"></div>
+      <div class="fg"><label class="fl">Last Name</label>
+        <input class="fi" id="cs-ln" type="text" placeholder="Last name"></div>
       <div class="fg"><label class="fl">Gender <span class="rq">*</span></label>
         <select class="fi" id="cs-gd">
           <option value="">— Select Gender —</option>
@@ -263,7 +339,7 @@
         <div class="em" id="cs-gd-e" style="display:none;margin-top:4px">Please select gender</div></div>
       <div class="fg"><label class="fl">Phone <span class="rq">*</span></label>
         <input class="fi" id="cs-ph" type="tel" placeholder="10-digit phone" maxlength="10" oninput="numOnly(this)"></div>
-      <div class="fg"><label class="fl">Role <span class="rq">*</span></label>
+      <div class="fg span2"><label class="fl">Role <span class="rq">*</span></label>
         <select class="fi" id="cs-role" onchange="csRoleChanged()">
           <option value="">— Select role —</option>
           <option value="VCO">VCO (Verification Officer)</option>
@@ -273,54 +349,46 @@
           <option value="Regional Manager">Regional Manager</option>
           <option value="State Head">State Head</option>
         </select></div>
-      <div class="tc2">
-        <div class="fg"><label class="fl">State <span class="rq">*</span></label>
-          <select class="fi" id="cs-st" onchange="onCsStateChange()"></select></div>
-        <div class="fg"><label class="fl">District <span class="rq">*</span></label>
-          <select class="fi" id="cs-di" onchange="onCsDistrictChange()"></select></div>
-      </div>
-      <div class="tc2">
-        <div class="fg"><label class="fl">Taluk <span class="rq">*</span></label>
-          <select class="fi" id="cs-tk"></select></div>
-        <div class="fg"><label class="fl">Pincode <span class="rq">*</span></label>
-          <input class="fi" id="cs-pn" type="text" placeholder="6-digit PIN" maxlength="6" oninput="numOnly(this)"></div>
-      </div>
+      <div class="fg"><label class="fl">State <span class="rq">*</span></label>
+        <select class="fi" id="cs-st" onchange="onCsStateChange()"></select></div>
+      <div class="fg"><label class="fl">District <span class="rq">*</span></label>
+        <select class="fi" id="cs-di" onchange="onCsDistrictChange()"></select></div>
+      <div class="fg"><label class="fl">Taluk <span class="rq">*</span></label>
+        <select class="fi" id="cs-tk"></select></div>
+      <div class="fg"><label class="fl">Pincode <span class="rq">*</span></label>
+        <input class="fi" id="cs-pn" type="text" placeholder="6-digit PIN" maxlength="6" oninput="numOnly(this)"></div>
+      <div class="fg"><label class="fl">Aadhaar Number <span class="rq">*</span></label>
+        <input class="fi" id="cs-aadhar" type="text" placeholder="12-digit Aadhaar" maxlength="12" oninput="numOnly(this)"></div>
+      <div class="fg"><label class="fl">Employment Status</label>
+        <select class="fi" id="cs-emptype" onchange="onCsEmpTypeChange()">
+          <option value="">— Select —</option>
+          <option value="Permanent">Permanent</option>
+          <option value="Contract">Contract</option>
+        </select></div>
       <div class="fg"><label class="fl">Village/Town <span class="rq" id="cs-vt-rq" style="display:none">*</span></label>
         <input class="fi" id="cs-vt" type="text" placeholder="e.g. Ponnamaravathi">
         <div style="font-size:11px;color:var(--gray);margin-top:4px">Village/Town this staff covers. Required for VCO &amp; Delivery Agent — it decides which orders they handle.</div></div>
-      <div class="fg"><label class="fl">Aadhaar Number <span class="rq">*</span></label>
-        <input class="fi" id="cs-aadhar" type="text" placeholder="12-digit Aadhaar" maxlength="12" oninput="numOnly(this)"></div>
-      <div class="tc2">
-        <div class="fg"><label class="fl">Employment Status</label>
-          <select class="fi" id="cs-emptype" onchange="onCsEmpTypeChange()">
-            <option value="">— Select —</option>
-            <option value="Permanent">Permanent</option>
-            <option value="Contract">Contract</option>
-          </select></div>
-        <div class="fg"><label class="fl">Employee ID <span class="rq" id="cs-empid-rq" style="display:none">*</span></label>
-          <input class="fi" id="cs-empid" type="text" placeholder="e.g. MATN00001" onblur="csLookupEmp()">
-          <div id="cs-empid-note" style="font-size:11px;margin-top:4px"></div></div>
-      </div>
       <div class="fg" id="cs-vehicle-wrap" style="display:none"><label class="fl">Vehicle Number</label>
         <input class="fi" id="cs-vehicle" type="text" placeholder="e.g. TN59AB1234" style="text-transform:uppercase">
         <div style="font-size:11px;color:var(--gray);margin-top:4px">Optional — for VCO, Delivery Agent &amp; Hub Incharge.</div></div>
-      <div class="fg"><label class="fl">Temporary Password <span class="rq">*</span></label>
+      <div class="fg span2" style="max-width:560px"><label class="fl">Temporary Password <span class="rq">*</span></label>
         <div class="pww">
           <input class="fi" id="cs-pw" type="password" placeholder="Min 6 characters">
           <button class="peye" onclick="togglePw('cs-pw',this)" type="button">👁</button>
         </div>
         <div style="font-size:11px;color:var(--gray);margin-top:4px">Staff member should change this on first login.</div></div>
-      <div class="em" id="cs-err" style="display:none;margin:0"></div>
-      <div class="card" id="cs-success" style="display:none;background:#f0fdf4;border-left:4px solid #16a34a;padding:14px;margin:0">
+      <div class="em span2" id="cs-err" style="display:none;margin:0"></div>
+      <div class="card span2" id="cs-success" style="display:none;background:#f0fdf4;border-left:4px solid #16a34a;padding:14px;margin:0">
         <div style="font-weight:700;color:#166534;margin-bottom:4px">Account created!</div>
         <div style="font-size:13px;color:#166534">Login ID: <span class="mono" id="cs-lid" style="font-weight:700"></span></div>
         <div style="font-size:12px;color:#64748b;margin-top:6px">Share these login credentials with the staff member.</div>
       </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end">
-        <button class="sbtn" style="background:var(--muted);color:var(--text);flex:0;padding:0 20px" onclick="closeCreateStaff()">Cancel</button>
-        <button class="sbtn" id="cs-btn" onclick="submitCreateStaff()" style="flex:0;padding:0 24px">Create Account</button>
+      <div class="form-actions span2">
+        <button class="sbtn" style="background:var(--muted);color:var(--text);flex:0;padding:0 20px;width:auto" onclick="closeCreateStaff()">Cancel</button>
+        <button class="sbtn" id="cs-btn" onclick="submitCreateStaff()" style="flex:0;padding:0 28px;width:auto">Create Account</button>
       </div>
     </div>
+   </div>
   </div>
 </div>
 
@@ -857,12 +925,33 @@ document.getElementById('heroLabel').textContent  = user.admin_role || 'Admin';
 document.getElementById('heroScope').textContent  = user.fname + ' ' + (user.lname || '');
 document.getElementById('heroSub').textContent    = (user.district ? user.district + ' · ' : '') + 'Marutham Agrolink';
 
-// Employee tracker (HR master) is managed by Head Office / State Head only.
+// Employee tracker (HR master) is managed by Head Office / State Head, plus the
+// delegated trust roles (HR Admin, Board of Director). Authority is resolved live
+// from the logged-in user's own employee record (see loadMyAuthority).
 var IS_HR_OWNER = (user.admin_role === 'Head Office' || user.admin_role === 'State Head');
-if (!IS_HR_OWNER) {
+var MY_IS_BOD = false, MY_IS_HR_ADMIN = false;
+var CAN_MINT_TRUST = IS_HR_OWNER;                 // may flag BoD / HR Admin
+var CAN_APPROVE_EMP = IS_HR_OWNER;                // may approve/reject employees
+var CAN_ACCESS_TRACKER = IS_HR_OWNER;             // may open the Employees tab
+function applyTrackerGating() {
+  CAN_MINT_TRUST    = IS_HR_OWNER || MY_IS_BOD;
+  CAN_APPROVE_EMP   = IS_HR_OWNER || MY_IS_BOD || MY_IS_HR_ADMIN;
+  CAN_ACCESS_TRACKER = IS_HR_OWNER || MY_IS_BOD || MY_IS_HR_ADMIN;
   var _empTab = document.getElementById('tab-employees');
-  if (_empTab) _empTab.style.display = 'none';
+  if (_empTab) _empTab.style.display = CAN_ACCESS_TRACKER ? '' : 'none';
 }
+// Resolve HR Admin / Board of Director authority from the user's own record.
+function loadMyAuthority() {
+  return API.getMyEmployeeRecord().then(function(r){
+    var e = r.employee;
+    if (e && e.approval_status === 'approved') {
+      MY_IS_BOD = e.is_board_director === true;
+      MY_IS_HR_ADMIN = e.is_hr_admin === true;
+    }
+  }).catch(function(){}).then(function(){ applyTrackerGating(); });
+}
+applyTrackerGating();
+loadMyAuthority();
 
 // Hub Incharge: reveal hub queue tab and land there by default
 if (user.admin_role === 'Hub Incharge') {
@@ -2726,54 +2815,162 @@ async function toggleBlock(userId, currentlyBlocked) {
 var _allEmployees = [];
 var _empEditId    = null;
 
+var EMP_DESIGNATIONS = ['Board of Director','CEO','Managing Director','CFO','CTO',
+  'Technical Admin','HR Admin','HR Manager','Collection Officer(VCO)','Delivery Agent',
+  'Hub Incharge','District Manager','Regional Manager','Zonal Manager','State Head'];
+var EMP_DEPARTMENTS  = ['Board of Director','HR & Admin','Operations','Logistics','Finance','Management'];
+
+// Build a <select> from a fixed list, preserving any pre-existing off-list value.
+function fillEmpSelect(sel, list, selected, placeholder) {
+  sel.innerHTML = '<option value="">' + (placeholder || '— Select —') + '</option>' +
+    list.map(function(o){ return '<option value="' + o + '"' + (o === selected ? ' selected' : '') + '>' + o + '</option>'; }).join('') +
+    (selected && list.indexOf(selected) === -1
+      ? '<option value="' + selected + '" selected>' + selected + ' (existing)</option>' : '');
+}
+
 async function renderEmployees() {
   var wrap = document.getElementById('empListWrap');
-  var q      = document.getElementById('empSearch').value.trim().toLowerCase();
   var status = document.getElementById('empStatusFilter').value;
+  var approval = document.getElementById('empApprovalFilter').value;
   wrap.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
   try {
-    var res = await API.getEmployees({ status: status });
+    var res = await API.getEmployees({ status: status, approval_status: approval });
     _allEmployees = res.employees || [];
   } catch(e) {
     wrap.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
     return;
   }
-  var rows = _allEmployees;
-  if (q) {
-    rows = rows.filter(function(e){
-      return [e.emp_id, e.fname, e.lname, e.phone, e.designation, e.department]
+  updateEmpPendingBanner();
+  buildEmpFilterOptions();
+  renderEmpTable();
+}
+
+// Show a "N awaiting approval" banner to approvers (and offer a quick jump).
+function updateEmpPendingBanner() {
+  var banner = document.getElementById('empPendingBanner');
+  if (!CAN_APPROVE_EMP) { banner.style.display = 'none'; return; }
+  var pending = _allEmployees.filter(function(e){ return e.approval_status === 'pending'; }).length;
+  if (!pending) { banner.style.display = 'none'; return; }
+  banner.style.display = '';
+  banner.innerHTML = '⏳ <strong>' + pending + '</strong> employee request' + (pending > 1 ? 's' : '') +
+    ' awaiting your approval. <a href="#" onclick="document.getElementById(\'empApprovalFilter\').value=\'pending\';renderEmployees();return false" style="color:#854d0e;font-weight:700;text-decoration:underline">Review now →</a>';
+}
+
+// Populate the State / District / Role filter dropdowns from actual data values.
+function buildEmpFilterOptions() {
+  var stateSel = document.getElementById('empStateFilter');
+  var roleSel  = document.getElementById('empRoleFilter');
+  var states = {}, roles = {};
+  _allEmployees.forEach(function(e){
+    if (e.state)       states[e.state] = 1;
+    if (e.work_state)  states[e.work_state] = 1;
+    if (e.designation) roles[e.designation] = 1;
+  });
+  var curState = stateSel.value, curRole = roleSel.value;
+  stateSel.innerHTML = '<option value="">All states</option>' +
+    Object.keys(states).sort().map(function(s){ return '<option' + (s === curState ? ' selected' : '') + '>' + s + '</option>'; }).join('');
+  roleSel.innerHTML = '<option value="">All roles</option>' +
+    Object.keys(roles).sort().map(function(r){ return '<option' + (r === curRole ? ' selected' : '') + '>' + r + '</option>'; }).join('');
+  buildEmpDistrictFilter();
+}
+function buildEmpDistrictFilter() {
+  var st = document.getElementById('empStateFilter').value;
+  var distSel = document.getElementById('empDistrictFilter');
+  var dists = {};
+  _allEmployees.forEach(function(e){
+    var match = !st || e.state === st || e.work_state === st;
+    if (!match) return;
+    if (e.district)      dists[e.district] = 1;
+    if (e.work_district) dists[e.work_district] = 1;
+  });
+  var cur = distSel.value;
+  distSel.innerHTML = '<option value="">All districts</option>' +
+    Object.keys(dists).sort().map(function(d){ return '<option' + (d === cur ? ' selected' : '') + '>' + d + '</option>'; }).join('');
+}
+function onEmpFilterStateChange() { buildEmpDistrictFilter(); renderEmpTable(); }
+
+function renderEmpTable() {
+  var wrap = document.getElementById('empListWrap');
+  var q     = document.getElementById('empSearch').value.trim().toLowerCase();
+  var fSt   = document.getElementById('empStateFilter').value;
+  var fDi   = document.getElementById('empDistrictFilter').value;
+  var fRole = document.getElementById('empRoleFilter').value;
+  var rows = _allEmployees.filter(function(e){
+    if (q) {
+      var hit = [e.emp_id, e.fname, e.lname, e.phone, e.designation, e.department]
         .filter(Boolean).some(function(v){ return String(v).toLowerCase().indexOf(q) !== -1; });
-    });
-  }
+      if (!hit) return false;
+    }
+    if (fSt   && e.state !== fSt && e.work_state !== fSt) return false;
+    if (fDi   && e.district !== fDi && e.work_district !== fDi) return false;
+    if (fRole && e.designation !== fRole) return false;
+    return true;
+  });
   if (!rows.length) {
-    wrap.innerHTML = '<div class="empty-state"><p>No employees found.</p></div>';
+    wrap.innerHTML = '<div class="empty-state"><p>No employees match these filters.</p></div>';
     return;
   }
   var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">';
   html += '<thead><tr style="text-align:left;border-bottom:2px solid #e5e7eb;color:#6b7280;font-size:11px;text-transform:uppercase">'
         + '<th style="padding:8px">Emp ID</th><th style="padding:8px">Name</th><th style="padding:8px">Role / Designation</th>'
-        + '<th style="padding:8px">Type</th><th style="padding:8px">Start Date</th><th style="padding:8px">Phone</th>'
+        + '<th style="padding:8px">Work District</th><th style="padding:8px">Type</th><th style="padding:8px">Approval</th>'
         + '<th style="padding:8px">Status</th><th style="padding:8px"></th></tr></thead><tbody>';
   rows.forEach(function(e){
     var name = (e.fname || '') + (e.lname ? ' ' + e.lname : '');
     var stpill = e.status === 'active'
       ? '<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:50px;background:#dcfce7;color:#166534">Active</span>'
       : '<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:50px;background:#f1f5f9;color:#64748b">Inactive</span>';
+    var mgrTag = e.is_manager ? ' <span title="Manager" style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:50px;background:#e0e7ff;color:#3730a3">MGR</span>' : '';
+    var roleTag = e.is_board_director ? ' <span title="Board of Director" style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:50px;background:#fef3c7;color:#92400e">BoD</span>'
+                : e.is_hr_admin ? ' <span title="HR Admin" style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:50px;background:#dbeafe;color:#1e40af">HR</span>' : '';
+    var idCell = e.emp_id
+      ? '<a href="#" onclick="openEmpDetail(\'' + e.id + '\');return false" style="font-weight:700;color:var(--forest);text-decoration:underline">' + e.emp_id + '</a>'
+      : '<a href="#" onclick="openEmpDetail(\'' + e.id + '\');return false" style="color:#94a3b8;text-decoration:underline;font-style:italic">(pending ID)</a>';
+    var apPill = e.approval_status === 'approved'
+      ? '<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:50px;background:#dcfce7;color:#166534">Approved</span>'
+      : e.approval_status === 'rejected'
+      ? '<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:50px;background:#fee2e2;color:#991b1b">Rejected</span>'
+      : '<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:50px;background:#fef9c3;color:#854d0e">Pending</span>';
+    var actions = (e.approval_status === 'pending' && CAN_APPROVE_EMP)
+      ? '<button class="blkbtn" style="background:#166534;margin-right:6px" onclick="approveEmp(\'' + e.id + '\')">Approve</button>'
+        + '<button class="blkbtn" style="background:#b91c1c" onclick="rejectEmp(\'' + e.id + '\')">Reject</button>'
+      : '';
     html += '<tr style="border-bottom:1px solid #f1f5f9">'
-      + '<td style="padding:8px;font-weight:700;color:var(--forest)">' + (e.emp_id||'—') + '</td>'
+      + '<td style="padding:8px">' + idCell + mgrTag + roleTag + '</td>'
       + '<td style="padding:8px">' + (name || '—') + '</td>'
       + '<td style="padding:8px">' + (e.designation || '—') + (e.department ? ' <span style="color:#94a3b8">· ' + e.department + '</span>' : '') + '</td>'
+      + '<td style="padding:8px">' + (e.work_district || '—') + '</td>'
       + '<td style="padding:8px">' + (e.employment_type || '—') + '</td>'
-      + '<td style="padding:8px">' + fmtEmpDate(e.date_of_joining) + '</td>'
-      + '<td style="padding:8px">' + (e.phone || '—') + '</td>'
+      + '<td style="padding:8px">' + apPill + '</td>'
       + '<td style="padding:8px">' + stpill + '</td>'
-      + '<td style="padding:8px"><button class="blkbtn b-blk" style="background:#475569" onclick="openEmployeeModal(\'' + e.id + '\')">View / Edit</button></td>'
+      + '<td style="padding:8px;white-space:nowrap">' + actions + '</td>'
       + '</tr>';
   });
   html += '</tbody></table></div>';
   wrap.innerHTML = html;
 }
 
+async function approveEmp(id) {
+  var e = _allEmployees.find(function(x){ return x.id === id; }) || {};
+  var nm = (e.fname || '') + (e.lname ? ' ' + e.lname : '');
+  if (!confirm('Approve ' + (nm || 'this employee') + '? An Employee ID will be generated and a login can then be created.')) return;
+  try {
+    var r = await API.approveEmployee(id);
+    showToast((r && r.message) || 'Employee approved.', 'ok');
+    renderEmployees();
+  } catch(err) { showToast(err.message, 'er'); }
+}
+async function rejectEmp(id) {
+  var reason = prompt('Reject this employee request? Optionally add a reason:');
+  if (reason === null) return;   // cancelled
+  try {
+    await API.rejectEmployee(id, reason);
+    showToast('Employee request rejected.', 'ok');
+    renderEmployees();
+  } catch(err) { showToast(err.message, 'er'); }
+}
+
+// Personal-address cascade
 function onEmpStateChange() {
   var st = document.getElementById('emp-state').value;
   fillDistrictSelect(document.getElementById('emp-district'), st, '');
@@ -2784,6 +2981,18 @@ function onEmpDistrictChange() {
   var di = document.getElementById('emp-district').value;
   fillTalukSelect(document.getElementById('emp-taluk'), st, di, '');
 }
+// Work-location cascade (State ▸ District). Changing the district also invalidates
+// any chosen reporting manager (managers are scoped to district + department).
+function onEmpWorkStateChange() {
+  var st = document.getElementById('emp-workstate').value;
+  fillDistrictSelect(document.getElementById('emp-workdistrict'), st, '');
+  onEmpDeptOrUnitChange();
+}
+function onEmpDeptOrUnitChange() {
+  // The employee's org unit (Work District + Department) changed — clear the
+  // previously selected reporting manager so it can't point outside the unit.
+  clearEmpManager();
+}
 
 function openEmployeeModal(id) {
   _empEditId = id;
@@ -2791,30 +3000,124 @@ function openEmployeeModal(id) {
   var e = id ? (_allEmployees.find(function(x){ return x.id === id; }) || {}) : {};
   document.getElementById('emp-modal-title').textContent = id ? '✏️ Edit Employee' : '➕ Add Employee';
   var sv2 = function(fid, val){ document.getElementById(fid).value = val || ''; };
-  sv2('emp-empid', e.emp_id);
+
+  // Employee ID is always system-generated — never entered by hand, and permanent
+  // once created. The field is therefore read-only in both add and edit modes.
+  var empIdEl = document.getElementById('emp-empid');
+  var empIdNote = document.getElementById('emp-empid-note');
+  empIdEl.readOnly = true;
+  empIdEl.style.background = '#f1f5f9'; empIdEl.style.cursor = 'not-allowed';
+  if (id) {
+    empIdEl.value = e.emp_id || '';
+    empIdEl.placeholder = '';
+    empIdNote.textContent = '🔒 Employee ID is permanent and cannot be changed once generated.';
+  } else {
+    empIdEl.value = '';
+    empIdEl.placeholder = 'Auto-generated on save';
+    empIdNote.textContent = 'Auto-generated from the State on save: MA + state code + 5 digits (e.g. MATN00001).';
+  }
+
   document.getElementById('emp-status').value = e.status || 'active';
   sv2('emp-fname', e.fname); sv2('emp-lname', e.lname);
   document.getElementById('emp-gender').value = e.gender || '';
   sv2('emp-dob', e.dob ? String(e.dob).slice(0,10) : '');
   sv2('emp-phone', e.phone); sv2('emp-email', e.email); sv2('emp-aadhar', e.aadhar);
-  sv2('emp-address', e.address_line); sv2('emp-pincode', e.pincode);
-  sv2('emp-city', e.city); sv2('emp-village', e.village_town);
-  sv2('emp-designation', e.designation); sv2('emp-department', e.department);
+  sv2('emp-house', e.house_no); sv2('emp-street1', e.street1); sv2('emp-street2', e.street2);
+  sv2('emp-pincode', e.pincode); sv2('emp-city', e.city); sv2('emp-village', e.village_town);
+
+  fillEmpSelect(document.getElementById('emp-designation'), EMP_DESIGNATIONS, e.designation || '', '— Select Designation —');
+  fillEmpSelect(document.getElementById('emp-department'),  EMP_DEPARTMENTS,  e.department  || '', '— Select Department —');
   document.getElementById('emp-emptype').value = e.employment_type || 'Permanent';
   sv2('emp-doj', e.date_of_joining ? String(e.date_of_joining).slice(0,10) : '');
-  sv2('emp-worklocation', e.work_location); sv2('emp-reporting', e.reporting_manager);
-  sv2('emp-workdistrict', e.work_district); sv2('emp-workstate', e.work_state);
+  sv2('emp-worklocation', e.work_location);
+  document.getElementById('emp-ismanager').checked = !!e.is_manager;
+  // Trust-role flags — only shown to those allowed to mint them (HO / Board of Director).
+  document.getElementById('emp-trust-wrap').style.display = CAN_MINT_TRUST ? '' : 'none';
+  document.getElementById('emp-isbod').checked = !!e.is_board_director;
+  document.getElementById('emp-ishradmin').checked = !!e.is_hr_admin;
+  // Reporting manager (display name + hidden emp_id reference)
+  document.getElementById('emp-reporting').value = e.reporting_manager || '';
+  document.getElementById('emp-reporting-empid').value = e.reporting_manager_emp_id || '';
   sv2('emp-notes', e.notes);
+
   loadLocations().then(function(){
     fillStateSelect(document.getElementById('emp-state'), e.state || '');
     fillDistrictSelect(document.getElementById('emp-district'), e.state || '', e.district || '');
     fillTalukSelect(document.getElementById('emp-taluk'), e.state || '', e.district || '', e.taluk || '');
+    fillStateSelect(document.getElementById('emp-workstate'), e.work_state || '');
+    fillDistrictSelect(document.getElementById('emp-workdistrict'), e.work_state || '', e.work_district || '');
   });
   document.getElementById('employeeOverlay').style.display = 'flex';
+  _empFormDirty = false;   // programmatic fills above don't count as user edits
 }
 
-function closeEmployeeModal() {
+// Discard-guard: prevent a stray backdrop/✕ click from wiping a part-filled form.
+var _empFormDirty = false;
+function closeEmployeeModal(force) {
+  if (!force && _empFormDirty &&
+      !confirm('You have unsaved changes. Discard this employee entry?')) return;
+  _empFormDirty = false;
   document.getElementById('employeeOverlay').style.display = 'none';
+}
+
+// ── Reporting-Manager picker popup ────────────────────────────────────────────
+var _mgrList = [];
+function clearEmpManager() {
+  document.getElementById('emp-reporting').value = '';
+  document.getElementById('emp-reporting-empid').value = '';
+}
+async function openMgrPicker() {
+  var dept = document.getElementById('emp-department').value;
+  var dist = document.getElementById('emp-workdistrict').value;
+  var ctx  = document.getElementById('mgr-picker-ctx');
+  var list = document.getElementById('mgr-picker-list');
+  if (!dept || !dist) {
+    showToast('Select a Department and Work District first — managers are scoped to that org unit.', 'er');
+    return;
+  }
+  document.getElementById('mgr-picker-search').value = '';
+  ctx.innerHTML = 'Managers in <strong>' + dist + '</strong> · <strong>' + dept + '</strong>';
+  list.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  document.getElementById('mgrPickerOverlay').style.display = 'flex';
+  try {
+    var res = await API.getManagers({ district: dist, department: dept, exclude: _empEditId || undefined });
+    _mgrList = res.managers || [];
+  } catch(err) {
+    list.innerHTML = '<div style="font-size:12px;color:#991b1b;padding:8px">' + err.message + '</div>';
+    return;
+  }
+  renderMgrPicker();
+}
+function renderMgrPicker() {
+  var list = document.getElementById('mgr-picker-list');
+  var q = document.getElementById('mgr-picker-search').value.trim().toLowerCase();
+  var rows = _mgrList.filter(function(m){
+    if (!q) return true;
+    return [m.emp_id, m.fname, m.lname, m.designation].filter(Boolean)
+      .some(function(v){ return String(v).toLowerCase().indexOf(q) !== -1; });
+  });
+  if (!rows.length) {
+    list.innerHTML = '<div style="font-size:13px;color:#6b7280;padding:12px;text-align:center">No Managers found in this district &amp; department.<br><span style="font-size:11px">Mark an employee as a Manager (and set their Work District + Department) to list them here.</span></div>';
+    return;
+  }
+  list.innerHTML = rows.map(function(m){
+    var name = (m.fname || '') + (m.lname ? ' ' + m.lname : '');
+    return '<div onclick="selectMgr(\'' + m.emp_id + '\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:6px;cursor:pointer" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'
+      + '<div style="flex:1"><div style="font-weight:700">' + (name || '—') + '</div>'
+      + '<div style="font-size:11px;color:#6b7280">' + (m.emp_id || '') + (m.designation ? ' · ' + m.designation : '') + '</div></div>'
+      + '<span style="font-size:12px;color:var(--forest);font-weight:700">Select →</span></div>';
+  }).join('');
+}
+function selectMgr(empId) {
+  var m = _mgrList.find(function(x){ return x.emp_id === empId; });
+  if (!m) return;
+  var name = (m.fname || '') + (m.lname ? ' ' + m.lname : '');
+  document.getElementById('emp-reporting').value = name + ' (' + m.emp_id + ')';
+  document.getElementById('emp-reporting-empid').value = m.emp_id;
+  closeMgrPicker();
+}
+function closeMgrPicker() {
+  document.getElementById('mgrPickerOverlay').style.display = 'none';
 }
 
 async function saveEmployee() {
@@ -2827,7 +3130,6 @@ async function saveEmployee() {
   if (ad && !/^\d{12}$/.test(ad)) { errEl.textContent = 'Aadhaar must be 12 digits.'; errEl.style.display = 'block'; return; }
 
   var data = {
-    emp_id:          g('emp-empid') || undefined,
     status:          document.getElementById('emp-status').value,
     fname:           fname,
     lname:           g('emp-lname') || undefined,
@@ -2836,36 +3138,128 @@ async function saveEmployee() {
     phone:           g('emp-phone') || undefined,
     email:           g('emp-email') || undefined,
     aadhar:          ad || undefined,
-    address_line:    g('emp-address') || undefined,
+    house_no:        g('emp-house') || undefined,
+    street1:         g('emp-street1') || undefined,
+    street2:         g('emp-street2') || undefined,
     state:           document.getElementById('emp-state').value || undefined,
     district:        document.getElementById('emp-district').value || undefined,
     taluk:           document.getElementById('emp-taluk').value || undefined,
     pincode:         g('emp-pincode') || undefined,
     city:            g('emp-city') || undefined,
     village_town:    g('emp-village') || undefined,
-    designation:     g('emp-designation') || undefined,
-    department:      g('emp-department') || undefined,
+    designation:     document.getElementById('emp-designation').value || undefined,
+    department:      document.getElementById('emp-department').value || undefined,
     employment_type: document.getElementById('emp-emptype').value || undefined,
     date_of_joining: g('emp-doj') || undefined,
     work_location:   g('emp-worklocation') || undefined,
-    reporting_manager: g('emp-reporting') || undefined,
-    work_district:   g('emp-workdistrict') || undefined,
-    work_state:      g('emp-workstate') || undefined,
+    work_state:      document.getElementById('emp-workstate').value || undefined,
+    work_district:   document.getElementById('emp-workdistrict').value || undefined,
+    is_manager:      document.getElementById('emp-ismanager').checked,
+    reporting_manager:      g('emp-reporting') || null,
+    reporting_manager_emp_id: g('emp-reporting-empid') || null,
     notes:           g('emp-notes') || undefined,
   };
+  // Trust-role flags are only sent by those allowed to mint them.
+  if (CAN_MINT_TRUST) {
+    data.is_board_director = document.getElementById('emp-isbod').checked;
+    data.is_hr_admin       = document.getElementById('emp-ishradmin').checked;
+  }
   var btn = document.getElementById('emp-save-btn');
   btn.disabled = true; btn.textContent = 'Saving…';
   try {
-    if (_empEditId) await API.updateEmployee(_empEditId, data);
-    else            await API.createEmployee(data);
+    var resp;
+    if (_empEditId) resp = await API.updateEmployee(_empEditId, data);
+    else            resp = await API.createEmployee(data);
+    _empFormDirty = false;
     closeEmployeeModal();
     renderEmployees();
-    showToast('Employee saved.', 'ok');
+    showToast((resp && resp.message) ? resp.message : 'Employee saved.', 'ok');
   } catch(e) {
     errEl.textContent = e.message; errEl.style.display = 'block';
   } finally {
     btn.disabled = false; btn.textContent = 'Save';
   }
+}
+
+// ── EMPLOYEE READ-ONLY DETAIL VIEW (+ change history) ─────────────────────────
+var _empDetailId = null;
+function openEmpDetail(id) {
+  _empDetailId = id;
+  var e = _allEmployees.find(function(x){ return x.id === id; }) || {};
+  var name = (e.fname || '') + (e.lname ? ' ' + e.lname : '');
+  document.getElementById('empd-title').textContent = '👤 ' + (name || 'Employee') + (e.emp_id ? ' · ' + e.emp_id : '');
+  var addr = [e.house_no, e.street1, e.street2, e.village_town, e.city, e.taluk, e.district, e.state, e.pincode]
+    .filter(Boolean).join(', ');
+  var mgr  = e.reporting_manager || (e.reporting_manager_emp_id ? e.reporting_manager_emp_id : '');
+  var apLabel = e.approval_status === 'approved' ? '✓ Approved'
+              : e.approval_status === 'rejected' ? '✗ Rejected'
+              : '⏳ Pending approval';
+  var trust = e.is_board_director ? 'Board of Director' : (e.is_hr_admin ? 'HR Admin' : '');
+  var pairs = [
+    ['Employee ID',        e.emp_id || '(issued on approval)'],
+    ['Approval',           apLabel],
+    ['Status',             e.status === 'inactive' ? 'Inactive' : 'Active'],
+    ['Trust Role',         trust],
+    ['Gender',             e.gender],
+    ['Date of Birth',      e.dob ? fmtEmpDate(e.dob) : ''],
+    ['Phone',              e.phone],
+    ['Email',              e.email],
+    ['Aadhaar',            e.aadhar],
+    ['Address',            addr],
+    ['Designation',        e.designation],
+    ['Department',         e.department],
+    ['Manager?',           e.is_manager ? 'Yes' : 'No'],
+    ['Employment Type',    e.employment_type],
+    ['Date of Joining',    e.date_of_joining ? fmtEmpDate(e.date_of_joining) : ''],
+    ['Work Location',      e.work_location],
+    ['Work District',      e.work_district],
+    ['Work State',         e.work_state],
+    ['Reporting Manager',  mgr],
+    ['Rejected Reason',    e.approval_status === 'rejected' ? e.rejected_reason : ''],
+    ['Notes',              e.notes],
+  ];
+  document.getElementById('empd-info').innerHTML =
+    '<div style="display:grid;grid-template-columns:150px 1fr;gap:6px 14px;font-size:13px">' +
+    pairs.map(function(p){
+      return '<div style="color:#6b7280">' + p[0] + '</div><div style="font-weight:600">' + (p[1] || '—') + '</div>';
+    }).join('') + '</div>';
+  document.getElementById('empd-hist').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  document.getElementById('empd-edit-btn').style.display = CAN_ACCESS_TRACKER ? '' : 'none';
+  var showAppr = (e.approval_status === 'pending' && CAN_APPROVE_EMP);
+  document.getElementById('empd-approve-btn').style.display = showAppr ? '' : 'none';
+  document.getElementById('empd-reject-btn').style.display  = showAppr ? '' : 'none';
+  empdTab('info', document.getElementById('empd-tab-info'));
+  document.getElementById('empDetailOverlay').style.display = 'flex';
+}
+async function approveFromDetail() { closeEmpDetail(); await approveEmp(_empDetailId); }
+async function rejectFromDetail()  { closeEmpDetail(); await rejectEmp(_empDetailId); }
+function empdTab(which, btn) {
+  ['info','hist'].forEach(function(t){
+    document.getElementById('empd-' + t).style.display = (t === which) ? '' : 'none';
+  });
+  ['empd-tab-info','empd-tab-hist'].forEach(function(bid){
+    var b = document.getElementById(bid);
+    var on = (b === btn);
+    b.style.color = on ? '' : '#94a3b8';
+    b.style.borderBottomColor = on ? 'var(--forest)' : 'transparent';
+  });
+  if (which === 'hist') loadEmpHistory();
+}
+async function loadEmpHistory() {
+  var box = document.getElementById('empd-hist');
+  try {
+    var res = await API.getEmployeeHistory(_empDetailId);
+    box.innerHTML = renderAuditLog(res.audit || []);
+  } catch(e) {
+    box.innerHTML = '<div style="font-size:12px;color:#6b7280;padding:8px">' + e.message + '</div>';
+  }
+}
+function editFromDetail() {
+  closeEmpDetail();
+  openEmployeeModal(_empDetailId);
+}
+function closeEmpDetail() {
+  document.getElementById('empDetailOverlay').style.display = 'none';
 }
 
 // ── CREATE STAFF ──────────────────────────────────────────────────────────────
@@ -2898,12 +3292,28 @@ function openCreateStaff() {
     onCsDistrictChange();
   });
   document.getElementById('createStaffOverlay').style.display = 'flex';
+  _csFormDirty = false;   // programmatic resets above don't count as user edits
   setTimeout(function(){ document.getElementById('cs-fn').focus(); }, 80);
 }
 
-function closeCreateStaff() {
+var _csFormDirty = false;
+function closeCreateStaff(force) {
+  if (!force && _csFormDirty &&
+      !confirm('You have unsaved changes. Discard this staff entry?')) return;
+  _csFormDirty = false;
   document.getElementById('createStaffOverlay').style.display = 'none';
 }
+
+// Attach dirty-trackers once (user typing/selecting flips the flag; programmatic
+// value-setting does not fire these events, so pre-fills won't trip the guard).
+(function attachDirtyGuards(){
+  var eo = document.getElementById('employeeOverlay');
+  if (eo) { eo.addEventListener('input', function(){ _empFormDirty = true; });
+            eo.addEventListener('change', function(){ _empFormDirty = true; }); }
+  var co = document.getElementById('createStaffOverlay');
+  if (co) { co.addEventListener('input', function(){ _csFormDirty = true; });
+            co.addEventListener('change', function(){ _csFormDirty = true; }); }
+})();
 
 var CS_VEHICLE_ROLES = ['VCO', 'Delivery Agent', 'Hub Incharge'];
 
@@ -2917,19 +3327,61 @@ function onCsEmpTypeChange() {
   var t = document.getElementById('cs-emptype').value;
   document.getElementById('cs-empid-rq').style.display = (t === 'Permanent') ? '' : 'none';
 }
+// Map an employee-master designation to a staff login role (where one exists).
+var DESIGNATION_TO_ROLE = {
+  'Collection Officer(VCO)': 'VCO',
+  'VCO':                     'VCO',
+  'Delivery Agent':          'Delivery Agent',
+  'Hub Incharge':            'Hub Incharge',
+  'District Manager':        'District Manager',
+  'Regional Manager':        'Regional Manager',
+  'State Head':              'State Head',
+};
+
 function csLookupEmp() {
-  var id = document.getElementById('cs-empid').value.trim();
+  var el = document.getElementById('cs-empid');
+  var id = el.value.trim().toUpperCase();
+  el.value = id;
   var note = document.getElementById('cs-empid-note');
   if (!id) { note.textContent = ''; return; }
+  note.style.color = '#6b7280';
+  note.textContent = 'Looking up…';
   API.lookupEmployee(id).then(function(r){
     var e = r.employee;
     note.style.color = (e.status === 'active') ? '#1a7a4a' : '#c0392b';
     note.textContent = '✓ ' + (e.fname || '') + (e.lname ? ' ' + e.lname : '') +
-      (e.designation ? ' · ' + e.designation : '') + (e.status !== 'active' ? ' (' + e.status + ')' : '');
+      (e.designation ? ' · ' + e.designation : '') +
+      (e.status !== 'active' ? ' (' + e.status + ')' : '') + ' — details filled below';
+    csFillFromEmployee(e);
   }).catch(function(){
     note.style.color = '#c0392b';
     note.textContent = '✗ Not found in employee tracker';
   });
+}
+
+// Sync the Create-Staff form from an employee-master record, so the admin only
+// needs to set the login Role + Password. Keeps staff data in step with HR master.
+function csFillFromEmployee(e) {
+  var sv = function(fid, val){ document.getElementById(fid).value = (val == null ? '' : val); };
+  sv('cs-fn', e.fname); sv('cs-ln', e.lname);
+  if (e.gender) document.getElementById('cs-gd').value = e.gender;
+  sv('cs-ph', e.phone); sv('cs-aadhar', e.aadhar);
+  sv('cs-vt', e.village_town); sv('cs-pn', e.pincode);
+  if (e.employment_type) {
+    document.getElementById('cs-emptype').value = e.employment_type;
+    onCsEmpTypeChange();
+  }
+  // Role — best-effort from designation; also refreshes village/vehicle requirements.
+  var role = DESIGNATION_TO_ROLE[e.designation];
+  if (role) { document.getElementById('cs-role').value = role; csRoleChanged(); }
+  // Location cascade: State ▸ District ▸ Taluk (from the employee's address).
+  if (e.state) {
+    loadLocations().then(function(){
+      fillStateSelect(document.getElementById('cs-st'), e.state);
+      fillDistrictSelect(document.getElementById('cs-di'), e.state, e.district || '');
+      fillTalukSelect(document.getElementById('cs-tk'), e.state, e.district || '', e.taluk || '');
+    });
+  }
 }
 
 function onCsStateChange() {
@@ -2985,6 +3437,7 @@ async function submitCreateStaff() {
     var res = await API.createStaff({ fname: fn, lname: ln, gender: gd, phone: ph, password: pw, admin_role: role, state: st, district: di, taluk: tk, pincode: pn, village_town: vt, aadhar: ad, employment_type: etype || undefined, emp_id: eid || undefined, agent_vehicle: (CS_VEHICLE_ROLES.indexOf(role) !== -1 ? veh : '') || undefined });
     document.getElementById('cs-lid').textContent = res.login_id;
     document.getElementById('cs-success').style.display = 'block';
+    _csFormDirty = false;   // saved — closing now shouldn't warn
     btn.textContent = 'Add Another';
     btn.disabled = false;
     btn.onclick = function() {

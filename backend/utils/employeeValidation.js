@@ -15,11 +15,12 @@ async function validateStaffEmployment({ employment_type, emp_id }) {
     if (!id) return { ok: false, error: 'Employee ID is required for Permanent staff.' };
     const { data, error } = await supabase
       .from('employees')
-      .select('id, emp_id, status')
+      .select('id, emp_id, status, approval_status')
       .eq('emp_id', id)
       .maybeSingle();
     if (error) return { ok: false, error: 'Could not verify Employee ID against the employee tracker.' };
     if (!data) return { ok: false, error: `Employee ID "${id}" is not in the employee tracker. Add the employee first, or mark this account as Contract.` };
+    if (data.approval_status !== 'approved') return { ok: false, error: `Employee "${id}" is not yet approved by HR. A login can only be created after the employee is approved.` };
     if (data.status !== 'active') return { ok: false, error: `Employee ID "${id}" is marked ${data.status} in the employee tracker.` };
   }
   return { ok: true, employment_type: type, emp_id: id };

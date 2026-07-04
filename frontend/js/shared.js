@@ -244,7 +244,7 @@ function fmtEmpDate(d) {
 // views in both admin.html and agent.html. Returns null if no record.
 function employeeDetailPairs(e) {
   if (!e) return null;
-  var addr = [e.address_line, e.village_town, e.city, e.taluk, e.district, e.state, e.pincode]
+  var addr = [e.house_no, e.street1, e.street2, e.address_line, e.village_town, e.city, e.taluk, e.district, e.state, e.pincode]
     .filter(Boolean).join(', ');
   return [
     ['Employee No',        e.emp_id],

@@ -54,6 +54,7 @@ var API = {
       var p = [];
       if (params.q) p.push('q=' + encodeURIComponent(params.q));
       if (params.status) p.push('status=' + encodeURIComponent(params.status));
+      if (params.approval_status) p.push('approval_status=' + encodeURIComponent(params.approval_status));
       if (p.length) qs = '?' + p.join('&');
     }
     return apiFetch('GET', '/employees' + qs, null, tok());
@@ -72,6 +73,22 @@ var API = {
   },
   updateEmployee: function(id, data) {
     return apiFetch('PATCH', '/employees/' + id, data, tok());
+  },
+  getManagers: function(params) {
+    var p = [];
+    if (params.district)   p.push('district='   + encodeURIComponent(params.district));
+    if (params.department) p.push('department=' + encodeURIComponent(params.department));
+    if (params.exclude)    p.push('exclude='    + encodeURIComponent(params.exclude));
+    return apiFetch('GET', '/employees/managers' + (p.length ? '?' + p.join('&') : ''), null, tok());
+  },
+  getEmployeeHistory: function(id) {
+    return apiFetch('GET', '/employees/' + id + '/history', null, tok());
+  },
+  approveEmployee: function(id) {
+    return apiFetch('PATCH', '/employees/' + id + '/approve', {}, tok());
+  },
+  rejectEmployee: function(id, reason) {
+    return apiFetch('PATCH', '/employees/' + id + '/reject', { reason: reason }, tok());
   },
   blockUser: function(id) {
     return apiFetch('PATCH', '/users/' + id + '/block', {}, tok());

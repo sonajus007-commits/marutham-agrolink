@@ -47,6 +47,22 @@ async function requireAuth(req, res, next) {
   // Signal to routes/frontend that a suspended seller still owes payment.
   user.needs_payment = user.role === 'farmer' && user.status === 'suspended';
 
+  // Attach delegated trust-role flags (HR Admin / Board of Director) live from the
+  // linked employee-tracker record, so approval authority is always up to date.
+  user.is_hr_admin = false;
+  user.is_board_director = false;
+  if (user.role === 'admin' && user.emp_id) {
+    const { data: emp } = await supabase
+      .from('employees')
+      .select('is_hr_admin, is_board_director, approval_status')
+      .eq('emp_id', user.emp_id)
+      .maybeSingle();
+    if (emp && emp.approval_status === 'approved') {
+      user.is_hr_admin = emp.is_hr_admin === true;
+      user.is_board_director = emp.is_board_director === true;
+    }
+  }
+
   req.user = user;
   next();
 }
