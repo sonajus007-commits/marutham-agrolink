@@ -44,10 +44,26 @@ function pickFields(body) {
   return out;
 }
 
+// ── GET /employees/me ─────────────────────────────────────────────────────────
+// The logged-in staff member's OWN employee master record (read-only). Read live
+// so any HO update (e.g. a promotion) reflects on the employee's next profile view.
+// Returns { employee: null } for contract / unlinked staff.
+router.get('/me', requireRole('admin'), async (req, res) => {
+  const empId = req.user.emp_id;
+  if (!empId) return res.json({ employee: null });
+  const { data, error } = await supabase
+    .from('employees').select('*').eq('emp_id', empId).maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ employee: data || null });
+});
+
 // ── GET /employees ────────────────────────────────────────────────────────────
-// List employee-tracker records. Any admin may read (needed to look up an ID);
-// optional ?q= search and ?status= filter.
+// List employee-tracker records — Head Office / State Head only (HR ownership).
+// Optional ?q= search and ?status= filter.
 router.get('/', requireRole('admin'), async (req, res) => {
+  if (!isHeadOffice(req.user)) {
+    return res.status(403).json({ error: 'Head Office access required to view the employee tracker.' });
+  }
   try {
     let q = supabase.from('employees').select('*').order('emp_id', { ascending: true });
     if (req.query.status) q = q.eq('status', req.query.status);

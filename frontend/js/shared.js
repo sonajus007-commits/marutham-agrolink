@@ -233,6 +233,36 @@ function fillTalukSelect(sel, state, district, selected) {
     ts.map(function(t){ return '<option value="' + t + '"' + (t === selected ? ' selected' : '') + '>' + t + '</option>'; }).join('');
 }
 
+// ── Employee master (read-only profile card) ─────────────────────────────────
+function fmtEmpDate(d) {
+  if (!d) return '—';
+  var dt = new Date(d);
+  if (isNaN(dt)) return d;
+  return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+// Label/value pairs for an employee master record, used by the self-profile
+// views in both admin.html and agent.html. Returns null if no record.
+function employeeDetailPairs(e) {
+  if (!e) return null;
+  var addr = [e.address_line, e.village_town, e.city, e.taluk, e.district, e.state, e.pincode]
+    .filter(Boolean).join(', ');
+  return [
+    ['Employee No',        e.emp_id],
+    ['Role / Designation', e.designation],
+    ['Department',         e.department],
+    ['Employment Type',    e.employment_type],
+    ['Start Date',         fmtEmpDate(e.date_of_joining)],
+    ['Aadhaar',            e.aadhar ? '•••• •••• ' + String(e.aadhar).slice(-4) : '—'],
+    ['Gender',             e.gender],
+    ['Date of Birth',      e.dob ? fmtEmpDate(e.dob) : '—'],
+    ['Phone',              e.phone],
+    ['Email',              e.email],
+    ['Work Location',      e.work_location],
+    ['Reporting Manager',  e.reporting_manager],
+    ['Address',            addr],
+  ];
+}
+
 // ── Address builder ───────────────────────────────────────────────────────────
 function buildAddress(u) {
   return [u.house_no, u.street1, u.street2, u.landmark, u.village_town,

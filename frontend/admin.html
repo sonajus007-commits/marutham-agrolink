@@ -666,6 +666,11 @@
       </div>
     </div>
   </div>
+  <div class="card" id="empDetailsCard" style="display:none">
+    <h3>🧑‍💼 Employee Details</h3>
+    <div style="font-size:11px;color:var(--gray);margin:-6px 0 10px">Maintained by Head Office. Read-only — contact HO for any correction.</div>
+    <div id="p-emp-body"></div>
+  </div>
   <div class="card">
     <h3>🔒 Change Password</h3>
     <button class="bedit" onclick="toggleAdminPwForm()">🔒 Change Password</button>
@@ -851,6 +856,13 @@ document.getElementById('userBadge').textContent = user.fname;
 document.getElementById('heroLabel').textContent  = user.admin_role || 'Admin';
 document.getElementById('heroScope').textContent  = user.fname + ' ' + (user.lname || '');
 document.getElementById('heroSub').textContent    = (user.district ? user.district + ' · ' : '') + 'Marutham Agrolink';
+
+// Employee tracker (HR master) is managed by Head Office / State Head only.
+var IS_HR_OWNER = (user.admin_role === 'Head Office' || user.admin_role === 'State Head');
+if (!IS_HR_OWNER) {
+  var _empTab = document.getElementById('tab-employees');
+  if (_empTab) _empTab.style.display = 'none';
+}
 
 // Hub Incharge: reveal hub queue tab and land there by default
 if (user.admin_role === 'Hub Incharge') {
@@ -2739,8 +2751,9 @@ async function renderEmployees() {
   }
   var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">';
   html += '<thead><tr style="text-align:left;border-bottom:2px solid #e5e7eb;color:#6b7280;font-size:11px;text-transform:uppercase">'
-        + '<th style="padding:8px">Emp ID</th><th style="padding:8px">Name</th><th style="padding:8px">Designation</th>'
-        + '<th style="padding:8px">Type</th><th style="padding:8px">Phone</th><th style="padding:8px">Status</th><th style="padding:8px"></th></tr></thead><tbody>';
+        + '<th style="padding:8px">Emp ID</th><th style="padding:8px">Name</th><th style="padding:8px">Role / Designation</th>'
+        + '<th style="padding:8px">Type</th><th style="padding:8px">Start Date</th><th style="padding:8px">Phone</th>'
+        + '<th style="padding:8px">Status</th><th style="padding:8px"></th></tr></thead><tbody>';
   rows.forEach(function(e){
     var name = (e.fname || '') + (e.lname ? ' ' + e.lname : '');
     var stpill = e.status === 'active'
@@ -2751,9 +2764,10 @@ async function renderEmployees() {
       + '<td style="padding:8px">' + (name || '—') + '</td>'
       + '<td style="padding:8px">' + (e.designation || '—') + (e.department ? ' <span style="color:#94a3b8">· ' + e.department + '</span>' : '') + '</td>'
       + '<td style="padding:8px">' + (e.employment_type || '—') + '</td>'
+      + '<td style="padding:8px">' + fmtEmpDate(e.date_of_joining) + '</td>'
       + '<td style="padding:8px">' + (e.phone || '—') + '</td>'
       + '<td style="padding:8px">' + stpill + '</td>'
-      + '<td style="padding:8px"><button class="blkbtn b-blk" style="background:#475569" onclick="openEmployeeModal(\'' + e.id + '\')">Edit</button></td>'
+      + '<td style="padding:8px"><button class="blkbtn b-blk" style="background:#475569" onclick="openEmployeeModal(\'' + e.id + '\')">View / Edit</button></td>'
       + '</tr>';
   });
   html += '</tbody></table></div>';
@@ -3673,6 +3687,31 @@ function renderProfile() {
   document.getElementById('p-email').textContent    = user.email || '—';
   document.getElementById('p-arole').textContent    = user.admin_role || '—';
   document.getElementById('p-district').textContent = user.district || '—';
+  loadMyEmployeeCard();
+}
+
+// Read-only employee master card — live from HO-maintained record, so promotions
+// and other updates auto-reflect on the employee's next profile view.
+async function loadMyEmployeeCard() {
+  var card = document.getElementById('empDetailsCard');
+  var body = document.getElementById('p-emp-body');
+  if (!card || !body) return;
+  var row = function(l, v){ return '<div class="irow"><span class="ilbl">' + l + '</span><span class="ival">' + (v || '—') + '</span></div>'; };
+  try {
+    var res = await API.getMyEmployeeRecord();
+    var e = res.employee;
+    if (e) {
+      body.innerHTML = employeeDetailPairs(e).map(function(p){ return row(p[0], p[1]); }).join('');
+      card.style.display = '';
+    } else if (user.emp_id || user.employment_type) {
+      // Contract / unlinked staff — Employee No may be blank or a placeholder.
+      body.innerHTML = row('Employee No', user.emp_id) + row('Employment Type', user.employment_type)
+        + '<div style="font-size:12px;color:var(--gray);margin-top:6px">Full employee record applies to permanent employees.</div>';
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  } catch (err) { card.style.display = 'none'; }
 }
 
 function toggleAdminEditForm() {

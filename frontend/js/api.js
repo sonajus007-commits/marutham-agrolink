@@ -61,6 +61,9 @@ var API = {
   getEmployee: function(id) {
     return apiFetch('GET', '/employees/' + id, null, tok());
   },
+  getMyEmployeeRecord: function() {
+    return apiFetch('GET', '/employees/me', null, tok());
+  },
   lookupEmployee: function(empId) {
     return apiFetch('GET', '/employees/lookup/' + encodeURIComponent(empId), null, tok());
   },

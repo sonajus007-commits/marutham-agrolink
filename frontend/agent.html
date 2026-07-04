@@ -224,6 +224,13 @@
       </div>
     </div>
 
+    <!-- Employee details (read-only, maintained by Head Office) -->
+    <div style="background:#fff;border:1px solid #eef4ee;border-radius:14px;padding:16px;display:none" id="agent-emp-card">
+      <div style="font-size:13px;font-weight:700;color:var(--forest);margin-bottom:2px">🧑‍💼 Employee Details</div>
+      <div style="font-size:10px;color:var(--gray);margin-bottom:10px">Maintained by Head Office · read-only</div>
+      <div id="agent-emp-body" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
     <!-- Gender -->
     <div style="background:#fff;border:1px solid #eef4ee;border-radius:14px;padding:16px">
       <div style="font-size:13px;font-weight:700;color:var(--forest);margin-bottom:10px">⚧ Gender</div>
@@ -752,7 +759,35 @@ function openAgentProfile() {
     renderServiceVillageChips();
     document.getElementById('prof-village-input').value = '';
   }
+  loadAgentEmployeeCard();
   document.getElementById('profileSheet').classList.add('active');
+}
+
+// Read-only employee master card — live from the HO-maintained record so any
+// update (e.g. a promotion) auto-reflects on the agent's next profile view.
+async function loadAgentEmployeeCard() {
+  var card = document.getElementById('agent-emp-card');
+  var body = document.getElementById('agent-emp-body');
+  if (!card || !body) return;
+  var row = function(l, v){
+    return '<div style="display:flex;justify-content:space-between;font-size:12px;gap:12px">'
+      + '<span style="color:var(--gray)">' + l + '</span>'
+      + '<span style="color:var(--forest);text-align:right">' + (v || '—') + '</span></div>';
+  };
+  try {
+    var res = await API.getMyEmployeeRecord();
+    var e = res.employee;
+    if (e) {
+      body.innerHTML = employeeDetailPairs(e).map(function(p){ return row(p[0], p[1]); }).join('');
+      card.style.display = '';
+    } else if (user.emp_id || user.employment_type) {
+      body.innerHTML = row('Employee No', user.emp_id) + row('Employment Type', user.employment_type)
+        + '<div style="font-size:11px;color:var(--gray);margin-top:4px">Full employee record applies to permanent employees.</div>';
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  } catch (err) { card.style.display = 'none'; }
 }
 
 var _serviceVillages = [];
