@@ -2,6 +2,7 @@ const express = require('express');
 const supabase = require('../db/supabase');
 const { requireRole } = require('../middleware/auth');
 const notify = require('../utils/notify');
+const { validateStaffEmployment } = require('../utils/employeeValidation');
 
 const router = express.Router();
 
@@ -330,7 +331,7 @@ router.get('/:id/listings', requireRole('admin'), async (req, res) => {
 router.get('/:id', requireRole('admin'), async (req, res) => {
   const { data, error } = await supabase
     .from('users')
-    .select('id,login_id,fname,lname,phone,alt_phone,email,role,admin_role,seller_type,gender,status,approval_status,district,state,village_town,city,taluk,pincode,street1,street2,house_no,landmark,bank_name,bank_account,ifsc,gst_number,business_name,business_type,aadhar,subscription_expires_at,subscription_plan,subscription_amount,created_at,updated_at')
+    .select('id,login_id,fname,lname,phone,alt_phone,email,role,admin_role,seller_type,gender,status,approval_status,district,state,village_town,city,taluk,pincode,street1,street2,house_no,landmark,bank_name,bank_account,ifsc,gst_number,business_name,business_type,aadhar,emp_id,employment_type,agent_vehicle,subscription_expires_at,subscription_plan,subscription_amount,created_at,updated_at')
     .eq('id', req.params.id)
     .single();
   if (error) return res.status(404).json({ error: 'User not found.' });
@@ -344,7 +345,7 @@ const ADMIN_EDITABLE = [
   'house_no', 'street1', 'street2', 'landmark', 'village_town', 'city', 'taluk', 'district', 'pincode', 'state',
   'bank_name', 'bank_account', 'ifsc',
   'gst_number', 'business_name', 'business_type',
-  'aadhar', 'agent_vehicle',
+  'aadhar', 'agent_vehicle', 'emp_id', 'employment_type',
   'subscription_expires_at', 'subscription_plan',
 ];
 
@@ -357,6 +358,23 @@ router.patch('/:id', requireRole('admin'), async (req, res) => {
     if (req.body[key] !== undefined) updates[key] = req.body[key] || null;
   }
   if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No updatable fields provided.' });
+
+  // village_town is canonical; keep the legacy vco_city (VCO order-matching) in sync.
+  if (updates.village_town !== undefined) updates.vco_city = updates.village_town;
+
+  // Employee tracker rule: Permanent staff must reference an active tracker record.
+  if (updates.employment_type !== undefined || updates.emp_id !== undefined) {
+    const { data: cur } = await supabase
+      .from('users').select('role, emp_id, employment_type').eq('id', req.params.id).single();
+    if (cur && cur.role === 'admin') {
+      const check = await validateStaffEmployment({
+        employment_type: updates.employment_type !== undefined ? updates.employment_type : cur.employment_type,
+        emp_id:          updates.emp_id          !== undefined ? updates.emp_id          : cur.emp_id,
+      });
+      if (!check.ok) return res.status(400).json({ error: check.error });
+    }
+  }
+
   updates.updated_at = new Date().toISOString();
 
   const { data, error } = await supabase

@@ -40,6 +40,7 @@
   <button class="ptab"    id="tab-products"  onclick="openTab('products',this)">🌾 Products</button>
   <button class="ptab"    id="tab-orders"    onclick="openTab('orders',this)">📦 Orders</button>
   <button class="ptab"    id="tab-users"     onclick="openTab('users',this)">👥 Users</button>
+  <button class="ptab"    id="tab-employees" onclick="openTab('employees',this)">🧑‍💼 Employees</button>
   <button class="ptab"    id="tab-payouts"   onclick="openTab('payouts',this)">💸 Payouts</button>
   <button class="ptab"    id="tab-returns"   onclick="openTab('returns',this)">↩ Returns</button>
   <button class="ptab"    id="tab-farmers"   onclick="openTab('farmers',this)">🌾 Farmers</button>
@@ -135,6 +136,109 @@
   <div id="userListWrap"><div class="spinner"><div class="spin"></div></div></div>
 </div>
 
+<!-- ── EMPLOYEE TRACKER PANEL ─────────────────────────────────────────────── -->
+<div class="panel" id="panel-employees">
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+    <input class="fi" id="empSearch" type="text" placeholder="Search by ID, name, phone, designation…" oninput="renderEmployees()" style="flex:1;min-width:180px;margin:0">
+    <select class="fi" id="empStatusFilter" onchange="renderEmployees()" style="flex:0;width:150px;margin:0">
+      <option value="">All statuses</option>
+      <option value="active">Active</option>
+      <option value="inactive">Inactive</option>
+    </select>
+    <button class="add-prod-btn" onclick="openEmployeeModal(null)">➕ Add Employee</button>
+  </div>
+  <div style="font-size:12px;color:var(--gray);margin-bottom:10px">Company employee master. Permanent staff accounts must link to an active record here by Employee ID.</div>
+  <div id="empListWrap"><div class="spinner"><div class="spin"></div></div></div>
+</div>
+
+<!-- ── EMPLOYEE ADD/EDIT MODAL ────────────────────────────────────────────── -->
+<div class="overlay" id="employeeOverlay" style="display:none" onclick="if(event.target===this)closeEmployeeModal()">
+  <div class="obox" style="max-width:620px;max-height:92vh;overflow-y:auto">
+    <div class="ohdr">
+      <span class="otitle" id="emp-modal-title">➕ Add Employee</span>
+      <button class="cls" onclick="closeEmployeeModal()">✕</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div class="fsec" style="padding-top:0;border-top:none">Personal Details</div>
+      <div class="tc2">
+        <div class="fg"><label class="fl">Employee ID</label>
+          <input class="fi" id="emp-empid" type="text" placeholder="Auto (e.g. MATN00001) if left blank">
+          <div style="font-size:11px;color:var(--gray);margin-top:4px">Leave blank to auto-generate from State: MA + state code + 5 digits (e.g. MATN00001).</div></div>
+        <div class="fg"><label class="fl">Status</label>
+          <select class="fi" id="emp-status">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select></div>
+      </div>
+      <div class="tc2">
+        <div class="fg"><label class="fl">First Name <span class="rq">*</span></label><input class="fi" id="emp-fname" type="text"></div>
+        <div class="fg"><label class="fl">Last Name</label><input class="fi" id="emp-lname" type="text"></div>
+      </div>
+      <div class="tc2">
+        <div class="fg"><label class="fl">Gender</label>
+          <select class="fi" id="emp-gender">
+            <option value="">— Select —</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Transgender">Transgender</option>
+          </select></div>
+        <div class="fg"><label class="fl">Date of Birth</label><input class="fi" id="emp-dob" type="date"></div>
+      </div>
+      <div class="tc2">
+        <div class="fg"><label class="fl">Phone</label><input class="fi" id="emp-phone" type="tel" maxlength="10" oninput="numOnly(this)"></div>
+        <div class="fg"><label class="fl">Email</label><input class="fi" id="emp-email" type="email"></div>
+      </div>
+      <div class="fg"><label class="fl">Aadhaar Number</label><input class="fi" id="emp-aadhar" type="text" maxlength="12" oninput="numOnly(this)"></div>
+
+      <div class="fsec">Personal Address</div>
+      <div class="fg"><label class="fl">Address Line</label><input class="fi" id="emp-address" type="text"></div>
+      <div class="tc2">
+        <div class="fg"><label class="fl">State</label>
+          <select class="fi" id="emp-state" onchange="onEmpStateChange()"></select></div>
+        <div class="fg"><label class="fl">District</label>
+          <select class="fi" id="emp-district" onchange="onEmpDistrictChange()"></select></div>
+      </div>
+      <div class="tc2">
+        <div class="fg"><label class="fl">Taluk</label><select class="fi" id="emp-taluk"></select></div>
+        <div class="fg"><label class="fl">Pincode</label><input class="fi" id="emp-pincode" type="text" maxlength="6" oninput="numOnly(this)"></div>
+      </div>
+      <div class="tc2">
+        <div class="fg"><label class="fl">City</label><input class="fi" id="emp-city" type="text"></div>
+        <div class="fg"><label class="fl">Village/Town</label><input class="fi" id="emp-village" type="text"></div>
+      </div>
+
+      <div class="fsec">Company Details</div>
+      <div class="tc2">
+        <div class="fg"><label class="fl">Designation</label><input class="fi" id="emp-designation" type="text" placeholder="e.g. VCO, Hub Incharge, Manager"></div>
+        <div class="fg"><label class="fl">Department</label><input class="fi" id="emp-department" type="text" placeholder="e.g. Operations, Logistics"></div>
+      </div>
+      <div class="tc2">
+        <div class="fg"><label class="fl">Employment Type</label>
+          <select class="fi" id="emp-emptype">
+            <option value="Permanent">Permanent</option>
+            <option value="Contract">Contract</option>
+          </select></div>
+        <div class="fg"><label class="fl">Date of Joining</label><input class="fi" id="emp-doj" type="date"></div>
+      </div>
+      <div class="tc2">
+        <div class="fg"><label class="fl">Work Location</label><input class="fi" id="emp-worklocation" type="text" placeholder="Posting village/town/office"></div>
+        <div class="fg"><label class="fl">Reporting Manager</label><input class="fi" id="emp-reporting" type="text"></div>
+      </div>
+      <div class="tc2">
+        <div class="fg"><label class="fl">Work District</label><input class="fi" id="emp-workdistrict" type="text"></div>
+        <div class="fg"><label class="fl">Work State</label><input class="fi" id="emp-workstate" type="text"></div>
+      </div>
+      <div class="fg"><label class="fl">Notes</label><input class="fi" id="emp-notes" type="text"></div>
+
+      <div class="em" id="emp-err" style="display:none;margin:0"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="sbtn" style="background:var(--muted);color:var(--text);flex:0;padding:0 20px" onclick="closeEmployeeModal()">Cancel</button>
+        <button class="sbtn" id="emp-save-btn" onclick="saveEmployee()" style="flex:0;padding:0 24px">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Create Staff Modal ──────────────────────────────────────────────────────── -->
 <div class="overlay" id="createStaffOverlay" style="display:none" onclick="if(event.target===this)closeCreateStaff()">
   <div class="obox" style="max-width:460px">
@@ -184,6 +288,22 @@
       <div class="fg"><label class="fl">Village/Town <span class="rq" id="cs-vt-rq" style="display:none">*</span></label>
         <input class="fi" id="cs-vt" type="text" placeholder="e.g. Ponnamaravathi">
         <div style="font-size:11px;color:var(--gray);margin-top:4px">Village/Town this staff covers. Required for VCO &amp; Delivery Agent — it decides which orders they handle.</div></div>
+      <div class="fg"><label class="fl">Aadhaar Number <span class="rq">*</span></label>
+        <input class="fi" id="cs-aadhar" type="text" placeholder="12-digit Aadhaar" maxlength="12" oninput="numOnly(this)"></div>
+      <div class="tc2">
+        <div class="fg"><label class="fl">Employment Status</label>
+          <select class="fi" id="cs-emptype" onchange="onCsEmpTypeChange()">
+            <option value="">— Select —</option>
+            <option value="Permanent">Permanent</option>
+            <option value="Contract">Contract</option>
+          </select></div>
+        <div class="fg"><label class="fl">Employee ID <span class="rq" id="cs-empid-rq" style="display:none">*</span></label>
+          <input class="fi" id="cs-empid" type="text" placeholder="e.g. MATN00001" onblur="csLookupEmp()">
+          <div id="cs-empid-note" style="font-size:11px;margin-top:4px"></div></div>
+      </div>
+      <div class="fg" id="cs-vehicle-wrap" style="display:none"><label class="fl">Vehicle Number</label>
+        <input class="fi" id="cs-vehicle" type="text" placeholder="e.g. TN59AB1234" style="text-transform:uppercase">
+        <div style="font-size:11px;color:var(--gray);margin-top:4px">Optional — for VCO, Delivery Agent &amp; Hub Incharge.</div></div>
       <div class="fg"><label class="fl">Temporary Password <span class="rq">*</span></label>
         <div class="pww">
           <input class="fi" id="cs-pw" type="password" placeholder="Min 6 characters">
@@ -238,11 +358,11 @@
       <div id="ud-edit-form" style="display:none;border-top:1px solid #e5e7eb;padding-top:14px">
         <div class="fsec" style="padding-top:0;border-top:none">Edit Profile</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="fg"><label class="fl">First Name</label><input class="fi" id="ud-fname" type="text"></div>
+          <div class="fg"><label class="fl">First Name <span class="rq">*</span></label><input class="fi" id="ud-fname" type="text"></div>
           <div class="fg"><label class="fl">Last Name</label><input class="fi" id="ud-lname" type="text"></div>
           <div class="fg"><label class="fl">Email</label><input class="fi" id="ud-email" type="email"></div>
           <div class="fg"><label class="fl">Alt Phone</label><input class="fi" id="ud-altphone" type="text"></div>
-          <div class="fg"><label class="fl">Gender</label>
+          <div class="fg"><label class="fl">Gender <span class="rq">*</span></label>
             <select class="fi" id="ud-gender">
               <option value="">— Select —</option>
               <option value="Male">Male</option>
@@ -250,10 +370,34 @@
               <option value="Transgender">Transgender</option>
             </select>
           </div>
-          <div class="fg"><label class="fl">District</label><input class="fi" id="ud-district" type="text"></div>
-          <div class="fg"><label class="fl">Taluk</label><input class="fi" id="ud-taluk" type="text"></div>
-          <div class="fg"><label class="fl">State</label><input class="fi" id="ud-state" type="text"></div>
-          <div class="fg"><label class="fl">Pincode</label><input class="fi" id="ud-pincode" type="text"></div>
+          <div class="fg"><label class="fl">Aadhaar Number <span class="rq">*</span></label>
+            <input class="fi" id="ud-aadhar" type="text" maxlength="12" placeholder="12-digit Aadhaar" oninput="numOnly(this)"></div>
+          <div class="fg"><label class="fl">State <span class="rq">*</span></label>
+            <select class="fi" id="ud-state" onchange="onUdStateChange()"></select></div>
+          <div class="fg"><label class="fl">District <span class="rq">*</span></label>
+            <select class="fi" id="ud-district" onchange="onUdDistrictChange()"></select></div>
+          <div class="fg"><label class="fl">Taluk <span class="rq">*</span></label>
+            <select class="fi" id="ud-taluk"></select></div>
+          <div class="fg"><label class="fl">Pincode <span class="rq">*</span></label>
+            <input class="fi" id="ud-pincode" type="text" maxlength="6" placeholder="6-digit PIN" oninput="numOnly(this)"></div>
+          <div class="fg"><label class="fl">City</label><input class="fi" id="ud-city" type="text"></div>
+          <div class="fg"><label class="fl">Village/Town</label><input class="fi" id="ud-village" type="text"></div>
+        </div>
+        <div id="ud-emp-section" style="display:none">
+          <div class="fsec">Employment</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="fg"><label class="fl">Employment Status</label>
+              <select class="fi" id="ud-emptype" onchange="onUdEmpTypeChange()">
+                <option value="">— Select —</option>
+                <option value="Permanent">Permanent</option>
+                <option value="Contract">Contract</option>
+              </select></div>
+            <div class="fg"><label class="fl">Employee ID <span class="rq" id="ud-empid-rq" style="display:none">*</span></label>
+              <input class="fi" id="ud-empid" type="text" placeholder="e.g. MATN00001" onblur="udLookupEmp()">
+              <div id="ud-empid-note" style="font-size:11px;margin-top:4px"></div></div>
+            <div class="fg" id="ud-vehicle-wrap" style="display:none"><label class="fl">Vehicle Number</label>
+              <input class="fi" id="ud-vehicle" type="text" placeholder="e.g. TN59AB1234" style="text-transform:uppercase"></div>
+          </div>
         </div>
         <div id="ud-seller-fields">
           <div class="fsec">Bank &amp; Business Details</div>
@@ -735,6 +879,7 @@ function openTab(name, tabEl) {
   if (name === 'products') { renderProducts(); loadPriceSyncStatus(); }
   if (name === 'orders')   renderAdminOrders();
   if (name === 'users')    renderUsers();
+  if (name === 'employees') renderEmployees();
   if (name === 'payouts')  renderPayouts();
   if (name === 'returns')  renderReturns();
   if (name === 'consumers') renderConsumers();
@@ -928,6 +1073,7 @@ function kpiCard(icon, label, val, bg, color) {
 async function renderProducts() {
   var el = document.getElementById('adminProductList');
   el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  loadLocations().then(rebuildStateDistricts); // warm live State/District data for the price editors
   try {
     var res = await API.getProducts();
     _allProducts = res.products || [];
@@ -1075,12 +1221,23 @@ var _catTree = {
   },
 };
 
-var _stateDistricts = {
-  'Tamil Nadu': ['Pudukkottai','Tiruchirappalli','Thanjavur','Madurai','Chennai','Coimbatore','Salem','Tirunelveli','Sivaganga','Dindigul','Namakkal','Erode','Vellore','Tiruppur'],
-  'Karnataka':  ['Bengaluru','Mysuru','Hubli','Mangaluru','Belagavi','Ballari','Tumkur','Shivamogga'],
-  'Kerala':     ['Thiruvananthapuram','Kochi','Kozhikode','Thrissur','Kannur','Kollam','Palakkad'],
-  'Andhra Pradesh': ['Vijayawada','Visakhapatnam','Guntur','Nellore','Kurnool','Tirupati'],
-};
+// State ▸ District map for the price editors, derived live from the /locations
+// table (via shared.js loadLocations/_locTree) — never hardcoded, so it always
+// reflects the current location data.
+var _stateDistricts = {};
+function rebuildStateDistricts() {
+  _stateDistricts = {};
+  if (!_locTree) return _stateDistricts;
+  Object.keys(_locTree).sort().forEach(function(st){
+    _stateDistricts[st] = Object.keys(_locTree[st]).sort();
+  });
+  return _stateDistricts;
+}
+// Ensure the state/district data is loaded before opening a price editor.
+function ensureLocations(cb) {
+  if (_stateDistricts && Object.keys(_stateDistricts).length) { cb(); return; }
+  loadLocations().then(function(){ rebuildStateDistricts(); cb(); });
+}
 
 var _foodDict = {
   'tomatoes':{ta:'தக்காளி',kn:'ಟೊಮೇಟೊ',ml:'തക്കാളി',te:'టమాట',hi:'टमाटर'},
@@ -1242,6 +1399,7 @@ function renderHandlingSummary() {
 
 // ── Open / Close / Save ───────────────────────────────────────────────────────
 function openAddProduct() {
+  if (!Object.keys(_stateDistricts).length) { ensureLocations(openAddProduct); return; }
   _editProductId = null; _autoFillCache = null;
   _modalPriceBuffer = {}; _modalHandleBuffer = {};
   document.getElementById('productOverlayTitle').textContent = 'Add Product';
@@ -1263,6 +1421,7 @@ function openAddProduct() {
 }
 
 function openEditProduct(id) {
+  if (!Object.keys(_stateDistricts).length) { ensureLocations(function(){ openEditProduct(id); }); return; }
   _editProductId = id; _autoFillCache = null;
   _modalPriceBuffer = {}; _modalHandleBuffer = {};
   var p = _allProducts.find(function(x){ return x.id === id; });
@@ -1398,6 +1557,7 @@ function onQpStateChange() {
 }
 
 function openUpdatePrice(id) {
+  if (!Object.keys(_stateDistricts).length) { ensureLocations(function(){ openUpdatePrice(id); }); return; }
   _quickPriceProductId = id;
   _quickPriceBuffer    = {};
   var p = _allProducts.find(function(x){ return x.id === id; });
@@ -1914,6 +2074,11 @@ function renderUserDetail() {
     info += infoRow('Business Name', u.business_name);
     info += infoRow('GST', u.gst_number);
   }
+  if (u.role === 'admin') {
+    info += infoRow('Employee ID', u.emp_id);
+    info += infoRow('Employment', u.employment_type);
+    if (UD_VEHICLE_ROLES.indexOf(u.admin_role) !== -1) info += infoRow('Vehicle No.', u.agent_vehicle);
+  }
   if (u.subscription_plan || u.subscription_expires_at) {
     info += infoRow('Subscription Plan', u.subscription_plan || '—');
     if (u.subscription_expires_at) {
@@ -2080,6 +2245,8 @@ function renderPriceSyncStatus(sync) {
   el.innerHTML = '<strong>' + icon + ' Govt Price Sync:</strong> ' + (sync.message || '') + ' <span style="opacity:.7;margin-left:6px">Last run: ' + dt + '</span>';
 }
 
+var UD_VEHICLE_ROLES = ['VCO', 'Delivery Agent', 'Hub Incharge'];
+
 function toggleUdEditForm() {
   var form = document.getElementById('ud-edit-form');
   var visible = form.style.display !== 'none';
@@ -2090,10 +2257,26 @@ function toggleUdEditForm() {
   document.getElementById('ud-email').value   = u.email || '';
   document.getElementById('ud-altphone').value= u.alt_phone || '';
   document.getElementById('ud-gender').value  = u.gender || '';
-  document.getElementById('ud-district').value= u.district || '';
-  document.getElementById('ud-taluk').value   = u.taluk || '';
-  document.getElementById('ud-state').value   = u.state || '';
+  document.getElementById('ud-aadhar').value  = u.aadhar || '';
   document.getElementById('ud-pincode').value = u.pincode || '';
+  document.getElementById('ud-city').value    = u.city || '';
+  document.getElementById('ud-village').value = u.village_town || '';
+  // Cascading State ▸ District ▸ Taluk from the live locations table
+  loadLocations().then(function(){
+    fillStateSelect(document.getElementById('ud-state'), u.state || '');
+    fillDistrictSelect(document.getElementById('ud-district'), u.state || '', u.district || '');
+    fillTalukSelect(document.getElementById('ud-taluk'), u.state || '', u.district || '', u.taluk || '');
+  });
+  // Employment section — staff (role='admin') only
+  var isStaff = (u.role === 'admin');
+  document.getElementById('ud-emp-section').style.display = isStaff ? '' : 'none';
+  document.getElementById('ud-emptype').value = u.employment_type || '';
+  document.getElementById('ud-empid').value   = u.emp_id || '';
+  document.getElementById('ud-empid-note').textContent = '';
+  var showVeh = isStaff && UD_VEHICLE_ROLES.indexOf(u.admin_role) !== -1;
+  document.getElementById('ud-vehicle-wrap').style.display = showVeh ? '' : 'none';
+  document.getElementById('ud-vehicle').value = u.agent_vehicle || '';
+  onUdEmpTypeChange();
   // Bank/business fields only relevant for sellers
   document.getElementById('ud-seller-fields').style.display = u.role === 'farmer' ? '' : 'none';
   document.getElementById('ud-bank').value    = u.bank_name || '';
@@ -2108,25 +2291,92 @@ function toggleUdEditForm() {
   form.style.display = '';
 }
 
+function onUdStateChange() {
+  var st = document.getElementById('ud-state').value;
+  fillDistrictSelect(document.getElementById('ud-district'), st, '');
+  fillTalukSelect(document.getElementById('ud-taluk'), st, '', '');
+}
+function onUdDistrictChange() {
+  var st = document.getElementById('ud-state').value;
+  var di = document.getElementById('ud-district').value;
+  fillTalukSelect(document.getElementById('ud-taluk'), st, di, '');
+}
+function onUdEmpTypeChange() {
+  var t = document.getElementById('ud-emptype').value;
+  document.getElementById('ud-empid-rq').style.display = (t === 'Permanent') ? '' : 'none';
+}
+function udLookupEmp() {
+  var id = document.getElementById('ud-empid').value.trim();
+  var note = document.getElementById('ud-empid-note');
+  if (!id) { note.textContent = ''; return; }
+  API.lookupEmployee(id).then(function(r){
+    var e = r.employee;
+    note.style.color = (e.status === 'active') ? '#1a7a4a' : '#c0392b';
+    note.textContent = '✓ ' + (e.fname || '') + (e.lname ? ' ' + e.lname : '') +
+      (e.designation ? ' · ' + e.designation : '') + (e.status !== 'active' ? ' (' + e.status + ')' : '');
+  }).catch(function(){
+    note.style.color = '#c0392b';
+    note.textContent = '✗ Not found in employee tracker';
+  });
+}
+
 async function saveUserDetail() {
+  var u = _udUser;
+  var isStaff = (u.role === 'admin');
+  var g = function(id){ return document.getElementById(id).value.trim(); };
+  var gender   = document.getElementById('ud-gender').value;
+  var state    = document.getElementById('ud-state').value;
+  var district = document.getElementById('ud-district').value;
+  var taluk    = document.getElementById('ud-taluk').value;
+  var fname = g('ud-fname'), pincode = g('ud-pincode'), aadhar = g('ud-aadhar');
+
+  var need = [];
+  if (!fname) need.push('First Name');
+  // Full mandatory set applies to staff (admin) accounts.
+  if (isStaff) {
+    if (!gender)   need.push('Gender');
+    if (!state)    need.push('State');
+    if (!district) need.push('District');
+    var hasTaluks = (_locTree && _locTree[state] && (_locTree[state][district] || []).length > 0);
+    if (hasTaluks && !taluk) need.push('Taluk');
+    if (!pincode)  need.push('Pincode');
+    if (!aadhar)   need.push('Aadhaar Number');
+  }
+  if (need.length) { showToast('Required: ' + need.join(', '), 'er'); return; }
+  if (pincode && !/^\d{6}$/.test(pincode)) { showToast('Enter a valid 6-digit pincode.', 'er'); return; }
+  if (aadhar && !/^\d{12}$/.test(aadhar)) { showToast('Aadhaar must be 12 digits.', 'er'); return; }
+
+  var empType = document.getElementById('ud-emptype').value;
+  var empId   = g('ud-empid');
+  if (isStaff && empType === 'Permanent' && !empId) {
+    showToast('Employee ID is required for Permanent staff.', 'er'); return;
+  }
+
   var data = {
-    fname:    document.getElementById('ud-fname').value.trim()   || undefined,
-    lname:    document.getElementById('ud-lname').value.trim()   || undefined,
-    email:    document.getElementById('ud-email').value.trim()   || undefined,
-    alt_phone:document.getElementById('ud-altphone').value.trim()|| undefined,
-    gender:   document.getElementById('ud-gender').value         || undefined,
-    district: document.getElementById('ud-district').value.trim()|| undefined,
-    taluk:    document.getElementById('ud-taluk').value.trim()   || undefined,
-    state:    document.getElementById('ud-state').value.trim()   || undefined,
-    pincode:  document.getElementById('ud-pincode').value.trim() || undefined,
-    bank_name:   document.getElementById('ud-bank').value.trim()    || undefined,
-    bank_account:document.getElementById('ud-acc').value.trim()     || undefined,
+    fname: fname,
+    lname:     g('ud-lname')    || undefined,
+    email:     g('ud-email')    || undefined,
+    alt_phone: g('ud-altphone') || undefined,
+    gender: gender || undefined, aadhar: aadhar || undefined,
+    state: state || undefined, district: district || undefined, taluk: taluk || undefined,
+    pincode: pincode || undefined,
+    city:         g('ud-city')    || undefined,
+    village_town: g('ud-village') || undefined,
+    bank_name:    g('ud-bank')    || undefined,
+    bank_account: g('ud-acc')     || undefined,
     ifsc:        (document.getElementById('ud-ifsc').value.trim().toUpperCase()) || undefined,
-    gst_number:  document.getElementById('ud-gst').value.trim()     || undefined,
-    business_name:document.getElementById('ud-bizname').value.trim()|| undefined,
+    gst_number:   g('ud-gst')     || undefined,
+    business_name:g('ud-bizname') || undefined,
     subscription_plan:       document.getElementById('ud-subplan').value || undefined,
     subscription_expires_at: document.getElementById('ud-subexp').value  || undefined,
   };
+  if (isStaff) {
+    data.employment_type = empType || undefined;
+    data.emp_id = empId || undefined;
+    if (UD_VEHICLE_ROLES.indexOf(u.admin_role) !== -1) {
+      data.agent_vehicle = document.getElementById('ud-vehicle').value.trim().toUpperCase() || undefined;
+    }
+  }
   try {
     var res = await API.updateUser(_udUserId, data);
     _udUser = res.user;
@@ -2460,6 +2710,150 @@ async function toggleBlock(userId, currentlyBlocked) {
   } catch(e) { showToast(e.message, 'er'); }
 }
 
+// ── EMPLOYEE TRACKER (HR master) ──────────────────────────────────────────────
+var _allEmployees = [];
+var _empEditId    = null;
+
+async function renderEmployees() {
+  var wrap = document.getElementById('empListWrap');
+  var q      = document.getElementById('empSearch').value.trim().toLowerCase();
+  var status = document.getElementById('empStatusFilter').value;
+  wrap.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
+  try {
+    var res = await API.getEmployees({ status: status });
+    _allEmployees = res.employees || [];
+  } catch(e) {
+    wrap.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
+    return;
+  }
+  var rows = _allEmployees;
+  if (q) {
+    rows = rows.filter(function(e){
+      return [e.emp_id, e.fname, e.lname, e.phone, e.designation, e.department]
+        .filter(Boolean).some(function(v){ return String(v).toLowerCase().indexOf(q) !== -1; });
+    });
+  }
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="empty-state"><p>No employees found.</p></div>';
+    return;
+  }
+  var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">';
+  html += '<thead><tr style="text-align:left;border-bottom:2px solid #e5e7eb;color:#6b7280;font-size:11px;text-transform:uppercase">'
+        + '<th style="padding:8px">Emp ID</th><th style="padding:8px">Name</th><th style="padding:8px">Designation</th>'
+        + '<th style="padding:8px">Type</th><th style="padding:8px">Phone</th><th style="padding:8px">Status</th><th style="padding:8px"></th></tr></thead><tbody>';
+  rows.forEach(function(e){
+    var name = (e.fname || '') + (e.lname ? ' ' + e.lname : '');
+    var stpill = e.status === 'active'
+      ? '<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:50px;background:#dcfce7;color:#166534">Active</span>'
+      : '<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:50px;background:#f1f5f9;color:#64748b">Inactive</span>';
+    html += '<tr style="border-bottom:1px solid #f1f5f9">'
+      + '<td style="padding:8px;font-weight:700;color:var(--forest)">' + (e.emp_id||'—') + '</td>'
+      + '<td style="padding:8px">' + (name || '—') + '</td>'
+      + '<td style="padding:8px">' + (e.designation || '—') + (e.department ? ' <span style="color:#94a3b8">· ' + e.department + '</span>' : '') + '</td>'
+      + '<td style="padding:8px">' + (e.employment_type || '—') + '</td>'
+      + '<td style="padding:8px">' + (e.phone || '—') + '</td>'
+      + '<td style="padding:8px">' + stpill + '</td>'
+      + '<td style="padding:8px"><button class="blkbtn b-blk" style="background:#475569" onclick="openEmployeeModal(\'' + e.id + '\')">Edit</button></td>'
+      + '</tr>';
+  });
+  html += '</tbody></table></div>';
+  wrap.innerHTML = html;
+}
+
+function onEmpStateChange() {
+  var st = document.getElementById('emp-state').value;
+  fillDistrictSelect(document.getElementById('emp-district'), st, '');
+  fillTalukSelect(document.getElementById('emp-taluk'), st, '', '');
+}
+function onEmpDistrictChange() {
+  var st = document.getElementById('emp-state').value;
+  var di = document.getElementById('emp-district').value;
+  fillTalukSelect(document.getElementById('emp-taluk'), st, di, '');
+}
+
+function openEmployeeModal(id) {
+  _empEditId = id;
+  document.getElementById('emp-err').style.display = 'none';
+  var e = id ? (_allEmployees.find(function(x){ return x.id === id; }) || {}) : {};
+  document.getElementById('emp-modal-title').textContent = id ? '✏️ Edit Employee' : '➕ Add Employee';
+  var sv2 = function(fid, val){ document.getElementById(fid).value = val || ''; };
+  sv2('emp-empid', e.emp_id);
+  document.getElementById('emp-status').value = e.status || 'active';
+  sv2('emp-fname', e.fname); sv2('emp-lname', e.lname);
+  document.getElementById('emp-gender').value = e.gender || '';
+  sv2('emp-dob', e.dob ? String(e.dob).slice(0,10) : '');
+  sv2('emp-phone', e.phone); sv2('emp-email', e.email); sv2('emp-aadhar', e.aadhar);
+  sv2('emp-address', e.address_line); sv2('emp-pincode', e.pincode);
+  sv2('emp-city', e.city); sv2('emp-village', e.village_town);
+  sv2('emp-designation', e.designation); sv2('emp-department', e.department);
+  document.getElementById('emp-emptype').value = e.employment_type || 'Permanent';
+  sv2('emp-doj', e.date_of_joining ? String(e.date_of_joining).slice(0,10) : '');
+  sv2('emp-worklocation', e.work_location); sv2('emp-reporting', e.reporting_manager);
+  sv2('emp-workdistrict', e.work_district); sv2('emp-workstate', e.work_state);
+  sv2('emp-notes', e.notes);
+  loadLocations().then(function(){
+    fillStateSelect(document.getElementById('emp-state'), e.state || '');
+    fillDistrictSelect(document.getElementById('emp-district'), e.state || '', e.district || '');
+    fillTalukSelect(document.getElementById('emp-taluk'), e.state || '', e.district || '', e.taluk || '');
+  });
+  document.getElementById('employeeOverlay').style.display = 'flex';
+}
+
+function closeEmployeeModal() {
+  document.getElementById('employeeOverlay').style.display = 'none';
+}
+
+async function saveEmployee() {
+  var g = function(id){ return document.getElementById(id).value.trim(); };
+  var errEl = document.getElementById('emp-err');
+  errEl.style.display = 'none';
+  var fname = g('emp-fname');
+  if (!fname) { errEl.textContent = 'First name is required.'; errEl.style.display = 'block'; return; }
+  var ad = g('emp-aadhar');
+  if (ad && !/^\d{12}$/.test(ad)) { errEl.textContent = 'Aadhaar must be 12 digits.'; errEl.style.display = 'block'; return; }
+
+  var data = {
+    emp_id:          g('emp-empid') || undefined,
+    status:          document.getElementById('emp-status').value,
+    fname:           fname,
+    lname:           g('emp-lname') || undefined,
+    gender:          document.getElementById('emp-gender').value || undefined,
+    dob:             g('emp-dob') || undefined,
+    phone:           g('emp-phone') || undefined,
+    email:           g('emp-email') || undefined,
+    aadhar:          ad || undefined,
+    address_line:    g('emp-address') || undefined,
+    state:           document.getElementById('emp-state').value || undefined,
+    district:        document.getElementById('emp-district').value || undefined,
+    taluk:           document.getElementById('emp-taluk').value || undefined,
+    pincode:         g('emp-pincode') || undefined,
+    city:            g('emp-city') || undefined,
+    village_town:    g('emp-village') || undefined,
+    designation:     g('emp-designation') || undefined,
+    department:      g('emp-department') || undefined,
+    employment_type: document.getElementById('emp-emptype').value || undefined,
+    date_of_joining: g('emp-doj') || undefined,
+    work_location:   g('emp-worklocation') || undefined,
+    reporting_manager: g('emp-reporting') || undefined,
+    work_district:   g('emp-workdistrict') || undefined,
+    work_state:      g('emp-workstate') || undefined,
+    notes:           g('emp-notes') || undefined,
+  };
+  var btn = document.getElementById('emp-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    if (_empEditId) await API.updateEmployee(_empEditId, data);
+    else            await API.createEmployee(data);
+    closeEmployeeModal();
+    renderEmployees();
+    showToast('Employee saved.', 'ok');
+  } catch(e) {
+    errEl.textContent = e.message; errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save';
+  }
+}
+
 // ── CREATE STAFF ──────────────────────────────────────────────────────────────
 function openCreateStaff() {
   document.getElementById('cs-fn').value = '';
@@ -2471,6 +2865,13 @@ function openCreateStaff() {
   document.getElementById('cs-tk').innerHTML = '';
   document.getElementById('cs-pn').value = '';
   document.getElementById('cs-vt').value = '';
+  document.getElementById('cs-aadhar').value = '';
+  document.getElementById('cs-emptype').value = '';
+  document.getElementById('cs-empid').value = '';
+  document.getElementById('cs-empid-note').textContent = '';
+  document.getElementById('cs-empid-rq').style.display = 'none';
+  document.getElementById('cs-vehicle').value = '';
+  document.getElementById('cs-vehicle-wrap').style.display = 'none';
   document.getElementById('cs-gd-e').style.display = 'none';
   document.getElementById('cs-err').style.display = 'none';
   document.getElementById('cs-success').style.display = 'none';
@@ -2490,10 +2891,31 @@ function closeCreateStaff() {
   document.getElementById('createStaffOverlay').style.display = 'none';
 }
 
+var CS_VEHICLE_ROLES = ['VCO', 'Delivery Agent', 'Hub Incharge'];
+
 function csRoleChanged() {
   var role = document.getElementById('cs-role').value;
   var needsVillage = (role === 'VCO' || role === 'Delivery Agent');
   document.getElementById('cs-vt-rq').style.display = needsVillage ? '' : 'none';
+  document.getElementById('cs-vehicle-wrap').style.display = CS_VEHICLE_ROLES.indexOf(role) !== -1 ? '' : 'none';
+}
+function onCsEmpTypeChange() {
+  var t = document.getElementById('cs-emptype').value;
+  document.getElementById('cs-empid-rq').style.display = (t === 'Permanent') ? '' : 'none';
+}
+function csLookupEmp() {
+  var id = document.getElementById('cs-empid').value.trim();
+  var note = document.getElementById('cs-empid-note');
+  if (!id) { note.textContent = ''; return; }
+  API.lookupEmployee(id).then(function(r){
+    var e = r.employee;
+    note.style.color = (e.status === 'active') ? '#1a7a4a' : '#c0392b';
+    note.textContent = '✓ ' + (e.fname || '') + (e.lname ? ' ' + e.lname : '') +
+      (e.designation ? ' · ' + e.designation : '') + (e.status !== 'active' ? ' (' + e.status + ')' : '');
+  }).catch(function(){
+    note.style.color = '#c0392b';
+    note.textContent = '✗ Not found in employee tracker';
+  });
 }
 
 function onCsStateChange() {
@@ -2518,6 +2940,10 @@ async function submitCreateStaff() {
   var tk   = document.getElementById('cs-tk').value;
   var pn   = document.getElementById('cs-pn').value.trim();
   var vt   = document.getElementById('cs-vt').value.trim();
+  var ad   = document.getElementById('cs-aadhar').value.trim();
+  var etype= document.getElementById('cs-emptype').value;
+  var eid  = document.getElementById('cs-empid').value.trim();
+  var veh  = document.getElementById('cs-vehicle').value.trim().toUpperCase();
   var pw   = document.getElementById('cs-pw').value;
 
   var errEl = document.getElementById('cs-err');
@@ -2533,14 +2959,16 @@ async function submitCreateStaff() {
   var _hasTaluks = (_locTree && _locTree[st] && (_locTree[st][di]||[]).length > 0);
   if (_hasTaluks && !tk) { errEl.textContent = 'Select a taluk.'; errEl.style.display = 'block'; return; }
   if (!/^\d{6}$/.test(pn)) { errEl.textContent = 'Enter a valid 6-digit pincode.'; errEl.style.display = 'block'; return; }
+  if (!/^\d{12}$/.test(ad)) { errEl.textContent = 'Enter a valid 12-digit Aadhaar number.'; errEl.style.display = 'block'; return; }
   if ((role === 'VCO' || role === 'Delivery Agent') && !vt) { errEl.textContent = 'Village/Town is required for VCO and Delivery Agent.'; errEl.style.display = 'block'; return; }
+  if (etype === 'Permanent' && !eid) { errEl.textContent = 'Employee ID is required for Permanent staff.'; errEl.style.display = 'block'; return; }
   if (pw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
 
   var btn = document.getElementById('cs-btn');
   btn.disabled = true; btn.textContent = 'Creating…';
 
   try {
-    var res = await API.createStaff({ fname: fn, lname: ln, gender: gd, phone: ph, password: pw, admin_role: role, state: st, district: di, taluk: tk, pincode: pn, village_town: vt });
+    var res = await API.createStaff({ fname: fn, lname: ln, gender: gd, phone: ph, password: pw, admin_role: role, state: st, district: di, taluk: tk, pincode: pn, village_town: vt, aadhar: ad, employment_type: etype || undefined, emp_id: eid || undefined, agent_vehicle: (CS_VEHICLE_ROLES.indexOf(role) !== -1 ? veh : '') || undefined });
     document.getElementById('cs-lid').textContent = res.login_id;
     document.getElementById('cs-success').style.display = 'block';
     btn.textContent = 'Add Another';
@@ -2552,6 +2980,10 @@ async function submitCreateStaff() {
       document.getElementById('cs-ph').value = '';
       document.getElementById('cs-vt').value = '';
       document.getElementById('cs-pn').value = '';
+      document.getElementById('cs-aadhar').value = '';
+      document.getElementById('cs-empid').value = '';
+      document.getElementById('cs-empid-note').textContent = '';
+      document.getElementById('cs-vehicle').value = '';
       document.getElementById('cs-pw').value = '';
       btn.textContent = 'Create Account';
       btn.onclick = submitCreateStaff;

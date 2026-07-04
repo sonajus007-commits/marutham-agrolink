@@ -47,6 +47,29 @@ var API = {
   updateUser: function(id, data) {
     return apiFetch('PATCH', '/users/' + id, data, tok());
   },
+  // ── Employee tracker (HR master) ──
+  getEmployees: function(params) {
+    var qs = '';
+    if (params) {
+      var p = [];
+      if (params.q) p.push('q=' + encodeURIComponent(params.q));
+      if (params.status) p.push('status=' + encodeURIComponent(params.status));
+      if (p.length) qs = '?' + p.join('&');
+    }
+    return apiFetch('GET', '/employees' + qs, null, tok());
+  },
+  getEmployee: function(id) {
+    return apiFetch('GET', '/employees/' + id, null, tok());
+  },
+  lookupEmployee: function(empId) {
+    return apiFetch('GET', '/employees/lookup/' + encodeURIComponent(empId), null, tok());
+  },
+  createEmployee: function(data) {
+    return apiFetch('POST', '/employees', data, tok());
+  },
+  updateEmployee: function(id, data) {
+    return apiFetch('PATCH', '/employees/' + id, data, tok());
+  },
   blockUser: function(id) {
     return apiFetch('PATCH', '/users/' + id + '/block', {}, tok());
   },

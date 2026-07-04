@@ -54,10 +54,11 @@ create table if not exists users (
   ifsc            text,
 
   -- admin-only
-  emp_id          text,
+  emp_id          text,                          -- Employee ID → employees.emp_id
+  employment_type text,                          -- 'Permanent' | 'Contract'
   district_assign text,                          -- District Manager's district
   vco_city        text,                          -- VCO / Agent base village
-  agent_vehicle   text,                          -- Delivery Agent vehicle
+  agent_vehicle   text,                          -- Delivery Agent / VCO / Hub vehicle no.
 
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
@@ -65,6 +66,52 @@ create table if not exists users (
 create index if not exists idx_users_role     on users(role);
 create index if not exists idx_users_district on users(district);
 create index if not exists idx_users_village  on users(village_town);
+create index if not exists idx_users_emp_id   on users(emp_id);
+
+-- ------------------------------------------------------------
+-- 1b. EMPLOYEES  (HR employee master / "employee tracker")
+-- ------------------------------------------------------------
+-- Company-wide master of every employee's personal + company
+-- details. Staff login accounts link here by Employee ID
+-- (users.emp_id == employees.emp_id). Permanent staff must match
+-- an ACTIVE row here (enforced in the app). Full DDL + trigger
+-- live in migration_employee_tracker.sql.
+create table if not exists employees (
+  id                uuid primary key default gen_random_uuid(),
+  emp_id            text unique not null,          -- Employee ID: MA+state+5-digit, e.g. MATN00001
+  -- personal
+  fname             text not null,
+  lname             text,
+  gender            text,
+  dob               date,
+  phone             text,
+  email             text,
+  aadhar            text,
+  address_line      text,
+  village_town      text,
+  city              text,
+  taluk             text,
+  district          text,
+  state             text,
+  pincode           text,
+  -- company
+  designation       text,
+  department        text,
+  employment_type   text not null default 'Permanent',
+  date_of_joining   date,
+  work_location     text,
+  work_district     text,
+  work_state        text,
+  reporting_manager text,
+  -- lifecycle
+  status            text not null default 'active',
+  linked_user_id    uuid references users(id) on delete set null,
+  notes             text,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+create index if not exists idx_employees_emp_id on employees(emp_id);
+create index if not exists idx_employees_status on employees(status);
 
 -- ------------------------------------------------------------
 -- 2. PRODUCTS  (the catalogue - managed by Head Office)

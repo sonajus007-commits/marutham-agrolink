@@ -5,6 +5,7 @@ const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { distCode, stateCode } = require('../utils/codeGen');
 const notify = require('../utils/notify');
+const { validateStaffEmployment } = require('../utils/employeeValidation');
 
 const router = express.Router();
 
@@ -451,17 +452,33 @@ router.post('/create-staff', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'Admin access required.' });
   }
 
-  const { fname, lname, phone, password, admin_role, district, state, gender, village_town, taluk, city, pincode } = req.body;
+  const { fname, lname, phone, password, admin_role, district, state, gender, village_town,
+          taluk, city, pincode, aadhar, agent_vehicle, emp_id, employment_type } = req.body;
   if (!fname || !phone || !password || !admin_role) {
     return res.status(400).json({ error: 'fname, phone, password, and admin_role are required.' });
   }
   if (password.length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters.' });
   }
+  // Mandatory profile fields for every staff member.
+  // Taluk is validated conditionally on the client (some districts have none),
+  // so it is not part of this unconditional server check.
+  const missing = [];
+  if (!gender)  missing.push('gender');
+  if (!state)   missing.push('state');
+  if (!district) missing.push('district');
+  if (!pincode) missing.push('pincode');
+  if (!aadhar)  missing.push('Aadhaar number');
+  if (missing.length) {
+    return res.status(400).json({ error: 'Required: ' + missing.join(', ') + '.' });
+  }
   // Village/Town decides which orders a VCO / Delivery Agent handles — required for those roles.
   if ((admin_role === 'VCO' || admin_role === 'Delivery Agent') && !village_town) {
     return res.status(400).json({ error: 'village_town is required for VCO and Delivery Agent.' });
   }
+  // Employee tracker rule: Permanent staff must reference an active tracker record.
+  const empCheck = await validateStaffEmployment({ employment_type, emp_id });
+  if (!empCheck.ok) return res.status(400).json({ error: empCheck.error });
 
   const allowed = CREATABLE_BY[req.user.admin_role] || [];
   if (!allowed.includes(admin_role)) {
@@ -490,6 +507,10 @@ router.post('/create-staff', requireAuth, async (req, res) => {
     ...(taluk ? { taluk } : {}),
     ...(city ? { city } : {}),
     ...(pincode ? { pincode } : {}),
+    ...(aadhar ? { aadhar } : {}),
+    ...(agent_vehicle ? { agent_vehicle } : {}),
+    ...(empCheck.emp_id ? { emp_id: empCheck.emp_id } : {}),
+    ...(empCheck.employment_type ? { employment_type: empCheck.employment_type } : {}),
     // Keep both fields in sync: village_town is the canonical address field (editable
     // everywhere); vco_city is what the VCO order query historically reads.
     ...(village_town ? { village_town, vco_city: village_town } : {}),

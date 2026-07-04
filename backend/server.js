@@ -38,6 +38,7 @@ const configRouter        = require('./routes/config');
 const registrationsRouter = require('./routes/registrations');
 const subscriptionRouter  = require('./routes/subscription');
 const locationsRouter     = require('./routes/locations');
+const employeesRouter     = require('./routes/employees');
 
 app.use('/auth',          authRouter);
 app.use('/products',  productsRouter);
@@ -57,6 +58,7 @@ app.use('/config',        configRouter);
 app.use('/registrations', registrationsRouter);
 app.use('/subscription',  subscriptionRouter);
 app.use('/locations',     locationsRouter);
+app.use('/employees',     employeesRouter);
 
 // /me lives under /auth but the spec exposes it at /me — alias both
 app.get('/me',   require('./middleware/auth').requireAuth, (req, res) => res.redirect(307, '/auth/me'));
