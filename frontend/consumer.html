@@ -2016,10 +2016,32 @@ async function doChangePassword() {
   }
 }
 
+// ── Pending order (product picked from the public home page) ───────────────────
+async function consumePendingOrder() {
+  var pid = localStorage.getItem('ma_pending_order');
+  if (!pid) return;
+  localStorage.removeItem('ma_pending_order');
+
+  // Make sure the product catalogue is loaded before we add to the cart.
+  await renderShop();
+
+  var wanted  = Number(pid);
+  var product = _allProducts.find(function(p) { return p.id === wanted || p.id === pid; });
+  if (!product) {
+    openTab('shop', document.getElementById('tab-shop'));
+    showToast('That product is no longer available here', 'er');
+    return;
+  }
+  addToCart(product.id);
+  openTab('cart', document.getElementById('tab-cart'));
+  showToast(product.name + ' added to cart', 'ok');
+}
+
 // ── Initial load ──────────────────────────────────────────────────────────────
 registerPwRules('pw-new', ['pw-r1','pw-r2','pw-r3','pw-r4']);
 renderHome();
 updateCartBar();
+consumePendingOrder();
 </script>
 </body>
 </html>

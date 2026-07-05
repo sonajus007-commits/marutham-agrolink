@@ -926,6 +926,8 @@ async function doLogin() {
 
 function redirectUser(u) {
   if (u.role === 'consumer') { window.location.href = 'consumer.html'; return; }
+  /* Only consumers can order — drop any product a non-consumer had queued. */
+  localStorage.removeItem('ma_pending_order');
   if (u.role === 'farmer')   { window.location.href = 'farmer.html';   return; }
   if (u.role === 'admin' && ['Delivery Agent', 'VCO'].includes(u.admin_role)) {
     window.location.href = 'agent.html'; return;

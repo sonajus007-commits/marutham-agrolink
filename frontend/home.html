@@ -535,7 +535,7 @@ async function loadProducts() {
           '<div class="product-name">' + escHtml(p.name) + '</div>',
           '<div class="product-price">' + price + '</div>',
           rating ? '<div class="product-rating">' + rating + '</div>' : '',
-          '<button class="btn-add" onclick="handleOrder(' + escHtml(String(p.id)) + ')">' + btnLabel + '</button>',
+          '<button class="btn-add" data-pid="' + escHtml(String(p.id)) + '" onclick="handleOrder(this.dataset.pid)">' + btnLabel + '</button>',
         '</div>'
       ].join('');
     }).join('');
@@ -551,6 +551,11 @@ async function loadProducts() {
 }
 
 function handleOrder(productId) {
+  /* Remember which product the visitor wanted so we can drop it straight
+     into the cart once they're logged in. */
+  if (productId != null && productId !== '') {
+    localStorage.setItem('ma_pending_order', String(productId));
+  }
   if (isLoggedIn()) {
     window.location.href = 'consumer.html';
   } else {
