@@ -110,12 +110,19 @@ router.get('/lookup/:empId', requireRole('admin'), async (req, res) => {
     .from('employees')
     .select('id, emp_id, fname, lname, gender, phone, email, aadhar, ' +
             'village_town, city, taluk, district, state, pincode, ' +
-            'designation, department, employment_type, work_state, work_district, status')
+            'designation, department, employment_type, date_of_joining, ' +
+            'work_state, work_district, work_location, ' +
+            'reporting_manager, reporting_manager_emp_id, status')
     .eq('emp_id', req.params.empId)
     .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: 'Employee ID not found in the tracker.' });
-  res.json({ employee: data });
+  // One login per employee — flag if this Employee ID already backs a staff account
+  // so the form can warn before submit.
+  const { data: loginRows } = await supabase
+    .from('users').select('login_id').eq('emp_id', req.params.empId).limit(1);
+  const existing_login_id = (loginRows && loginRows.length) ? loginRows[0].login_id : null;
+  res.json({ employee: data, existing_login_id });
 });
 
 // ── GET /employees/managers ───────────────────────────────────────────────────

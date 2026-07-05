@@ -170,6 +170,7 @@
 .form-page-wrap{max-width:1120px;margin:0 auto;}
 .form-actions{position:sticky;bottom:0;background:#f3faf4;border-top:1px solid #dbe7dd;
   padding:12px 0;margin-top:8px;display:flex;gap:10px;justify-content:flex-end;}
+.cs-ro{background:#eef2f6!important;color:#475569;cursor:default;}
 </style>
 
 <!-- ── EMPLOYEE ADD/EDIT (full-page) ──────────────────────────────────────── -->
@@ -319,10 +320,13 @@
   <div class="overlay-body">
    <div class="form-page-wrap">
     <div class="fg span2" style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;max-width:1120px;margin:0 auto 16px">
-      <label class="fl">Employee ID <span class="rq" id="cs-empid-rq" style="display:none">*</span></label>
-      <input class="fi" id="cs-empid" type="text" placeholder="e.g. MATN00001 — enter first to auto-fill" onblur="csLookupEmp()" style="text-transform:uppercase">
+      <label class="fl">Employee ID <span class="rq">*</span></label>
+      <div style="display:flex;gap:8px;align-items:stretch">
+        <input class="fi" id="cs-empid" type="text" placeholder="e.g. MATN00001 — type &amp; press Enter or Fetch" onblur="csLookupEmp()" onkeydown="if(event.key==='Enter'){event.preventDefault();csLookupEmp();}" style="text-transform:uppercase;flex:1;margin:0">
+        <button type="button" class="sbtn" onclick="csLookupEmp()" style="flex:0;width:auto;padding:0 20px;white-space:nowrap">Fetch</button>
+      </div>
       <div id="cs-empid-note" style="font-size:11px;margin-top:4px"></div>
-      <div style="font-size:11px;color:var(--gray);margin-top:2px">Enter the Employee ID to auto-fill the details below from the employee master.</div>
+      <div style="font-size:11px;color:var(--gray);margin-top:2px">Required. Every staff login represents an approved employee — the designation, department &amp; posting below are read live from the employee master.</div>
     </div>
     <div class="form-grid">
       <div class="fg"><label class="fl">First Name <span class="rq">*</span></label>
@@ -339,16 +343,7 @@
         <div class="em" id="cs-gd-e" style="display:none;margin-top:4px">Please select gender</div></div>
       <div class="fg"><label class="fl">Phone <span class="rq">*</span></label>
         <input class="fi" id="cs-ph" type="tel" placeholder="10-digit phone" maxlength="10" oninput="numOnly(this)"></div>
-      <div class="fg span2"><label class="fl">Role <span class="rq">*</span></label>
-        <select class="fi" id="cs-role" onchange="csRoleChanged()">
-          <option value="">— Select role —</option>
-          <option value="VCO">VCO (Verification Officer)</option>
-          <option value="Delivery Agent">Delivery Agent</option>
-          <option value="District Manager">District Manager</option>
-          <option value="Hub Incharge">Hub Incharge</option>
-          <option value="Regional Manager">Regional Manager</option>
-          <option value="State Head">State Head</option>
-        </select></div>
+      <input type="hidden" id="cs-role">
       <div class="fg"><label class="fl">State <span class="rq">*</span></label>
         <select class="fi" id="cs-st" onchange="onCsStateChange()"></select></div>
       <div class="fg"><label class="fl">District <span class="rq">*</span></label>
@@ -359,18 +354,31 @@
         <input class="fi" id="cs-pn" type="text" placeholder="6-digit PIN" maxlength="6" oninput="numOnly(this)"></div>
       <div class="fg"><label class="fl">Aadhaar Number <span class="rq">*</span></label>
         <input class="fi" id="cs-aadhar" type="text" placeholder="12-digit Aadhaar" maxlength="12" oninput="numOnly(this)"></div>
-      <div class="fg"><label class="fl">Employment Status</label>
-        <select class="fi" id="cs-emptype" onchange="onCsEmpTypeChange()">
-          <option value="">— Select —</option>
-          <option value="Permanent">Permanent</option>
-          <option value="Contract">Contract</option>
-        </select></div>
       <div class="fg"><label class="fl">Village/Town <span class="rq" id="cs-vt-rq" style="display:none">*</span></label>
         <input class="fi" id="cs-vt" type="text" placeholder="e.g. Ponnamaravathi">
         <div style="font-size:11px;color:var(--gray);margin-top:4px">Village/Town this staff covers. Required for VCO &amp; Delivery Agent — it decides which orders they handle.</div></div>
       <div class="fg" id="cs-vehicle-wrap" style="display:none"><label class="fl">Vehicle Number</label>
         <input class="fi" id="cs-vehicle" type="text" placeholder="e.g. TN59AB1234" style="text-transform:uppercase">
         <div style="font-size:11px;color:var(--gray);margin-top:4px">Optional — for VCO, Delivery Agent &amp; Hub Incharge.</div></div>
+
+      <div class="fsec span2">Company Details <span style="font-weight:400;font-size:11px;color:var(--gray)">· live from the employee master · read-only</span></div>
+      <div class="fg"><label class="fl">Designation</label>
+        <input class="fi cs-ro" id="cs-designation" type="text" readonly placeholder="Enter Employee ID above"></div>
+      <div class="fg"><label class="fl">Department</label>
+        <input class="fi cs-ro" id="cs-department" type="text" readonly placeholder="—"></div>
+      <div class="fg"><label class="fl">Employment Type</label>
+        <input class="fi cs-ro" id="cs-emptype-ro" type="text" readonly placeholder="—"></div>
+      <div class="fg"><label class="fl">Date of Joining</label>
+        <input class="fi cs-ro" id="cs-doj" type="text" readonly placeholder="—"></div>
+      <div class="fg"><label class="fl">Work State</label>
+        <input class="fi cs-ro" id="cs-workstate" type="text" readonly placeholder="—"></div>
+      <div class="fg"><label class="fl">Work District</label>
+        <input class="fi cs-ro" id="cs-workdistrict" type="text" readonly placeholder="—"></div>
+      <div class="fg span2"><label class="fl">Work Location</label>
+        <input class="fi cs-ro" id="cs-worklocation" type="text" readonly placeholder="—"></div>
+      <div class="fg span2"><label class="fl">Reporting Manager</label>
+        <input class="fi cs-ro" id="cs-reporting-ro" type="text" readonly placeholder="—"></div>
+
       <div class="fg span2" style="max-width:560px"><label class="fl">Temporary Password <span class="rq">*</span></label>
         <div class="pww">
           <input class="fi" id="cs-pw" type="password" placeholder="Min 6 characters">
@@ -3268,18 +3276,15 @@ function openCreateStaff() {
   document.getElementById('cs-ln').value = '';
   document.getElementById('cs-gd').value = '';
   document.getElementById('cs-ph').value = '';
-  document.getElementById('cs-role').value = '';
   document.getElementById('cs-pw').value = '';
   document.getElementById('cs-tk').innerHTML = '';
   document.getElementById('cs-pn').value = '';
   document.getElementById('cs-vt').value = '';
   document.getElementById('cs-aadhar').value = '';
-  document.getElementById('cs-emptype').value = '';
   document.getElementById('cs-empid').value = '';
   document.getElementById('cs-empid-note').textContent = '';
-  document.getElementById('cs-empid-rq').style.display = 'none';
   document.getElementById('cs-vehicle').value = '';
-  document.getElementById('cs-vehicle-wrap').style.display = 'none';
+  csClearCompany();     // blank the read-only company section + derived role
   document.getElementById('cs-gd-e').style.display = 'none';
   document.getElementById('cs-err').style.display = 'none';
   document.getElementById('cs-success').style.display = 'none';
@@ -3323,9 +3328,14 @@ function csRoleChanged() {
   document.getElementById('cs-vt-rq').style.display = needsVillage ? '' : 'none';
   document.getElementById('cs-vehicle-wrap').style.display = CS_VEHICLE_ROLES.indexOf(role) !== -1 ? '' : 'none';
 }
-function onCsEmpTypeChange() {
-  var t = document.getElementById('cs-emptype').value;
-  document.getElementById('cs-empid-rq').style.display = (t === 'Permanent') ? '' : 'none';
+
+// Blank the read-only company section + derived role (used on open and after a save).
+var CS_COMPANY_FIELDS = ['cs-designation','cs-department','cs-emptype-ro','cs-doj',
+  'cs-workstate','cs-workdistrict','cs-worklocation','cs-reporting-ro'];
+function csClearCompany() {
+  CS_COMPANY_FIELDS.forEach(function(id){ document.getElementById(id).value = ''; });
+  document.getElementById('cs-role').value = '';
+  csRoleChanged();     // hides village-required + vehicle since role is now empty
 }
 // Map an employee-master designation to a staff login role (where one exists).
 var DESIGNATION_TO_ROLE = {
@@ -3338,42 +3348,66 @@ var DESIGNATION_TO_ROLE = {
   'State Head':              'State Head',
 };
 
+// The Create-Staff login role is not chosen by hand — it is derived from the linked
+// employee's designation (see csFillFromEmployee) and held in the hidden #cs-role.
+// DESIGNATION_TO_ROLE maps a designation to its access role; management/org titles
+// with no distinct login role use the designation itself as the role value.
+
 function csLookupEmp() {
   var el = document.getElementById('cs-empid');
   var id = el.value.trim().toUpperCase();
   el.value = id;
   var note = document.getElementById('cs-empid-note');
-  if (!id) { note.textContent = ''; return; }
+  var btn  = document.getElementById('cs-btn');
+  if (!id) { note.textContent = ''; csClearCompany(); return; }
   note.style.color = '#6b7280';
   note.textContent = 'Looking up…';
   API.lookupEmployee(id).then(function(r){
     var e = r.employee;
+    csFillFromEmployee(e);
+    // One login per employee — block creation if this ID already has an account.
+    if (r.existing_login_id) {
+      note.style.color = '#c0392b';
+      note.textContent = '⚠ This employee already has a login (' + r.existing_login_id +
+        '). One employee can hold only one login — creation is blocked.';
+      btn.disabled = true;
+      return;
+    }
+    btn.disabled = false;
     note.style.color = (e.status === 'active') ? '#1a7a4a' : '#c0392b';
     note.textContent = '✓ ' + (e.fname || '') + (e.lname ? ' ' + e.lname : '') +
       (e.designation ? ' · ' + e.designation : '') +
       (e.status !== 'active' ? ' (' + e.status + ')' : '') + ' — details filled below';
-    csFillFromEmployee(e);
   }).catch(function(){
     note.style.color = '#c0392b';
     note.textContent = '✗ Not found in employee tracker';
+    csClearCompany();     // clear stale details so a bad ID can't be submitted
+    btn.disabled = false;
   });
 }
 
 // Sync the Create-Staff form from an employee-master record, so the admin only
-// needs to set the login Role + Password. Keeps staff data in step with HR master.
+// needs to set the Password. Personal fields are editable; the Company Details
+// section is read-only and reflects the master live. Keeps staff in step with HR.
 function csFillFromEmployee(e) {
   var sv = function(fid, val){ document.getElementById(fid).value = (val == null ? '' : val); };
+  // Personal / login fields (editable).
   sv('cs-fn', e.fname); sv('cs-ln', e.lname);
   if (e.gender) document.getElementById('cs-gd').value = e.gender;
   sv('cs-ph', e.phone); sv('cs-aadhar', e.aadhar);
   sv('cs-vt', e.village_town); sv('cs-pn', e.pincode);
-  if (e.employment_type) {
-    document.getElementById('cs-emptype').value = e.employment_type;
-    onCsEmpTypeChange();
-  }
-  // Role — best-effort from designation; also refreshes village/vehicle requirements.
-  var role = DESIGNATION_TO_ROLE[e.designation];
-  if (role) { document.getElementById('cs-role').value = role; csRoleChanged(); }
+  // Company details — read-only, straight from the employee master.
+  sv('cs-designation',  e.designation);
+  sv('cs-department',   e.department);
+  sv('cs-emptype-ro',   e.employment_type);
+  sv('cs-doj',          e.date_of_joining ? fmtEmpDate(e.date_of_joining) : '');
+  sv('cs-workstate',    e.work_state);
+  sv('cs-workdistrict', e.work_district);
+  sv('cs-worklocation', e.work_location);
+  sv('cs-reporting-ro', e.reporting_manager || e.reporting_manager_emp_id || '');
+  // Login role is derived from designation — drives access + village/vehicle needs.
+  document.getElementById('cs-role').value = DESIGNATION_TO_ROLE[e.designation] || e.designation || '';
+  csRoleChanged();
   // Location cascade: State ▸ District ▸ Taluk (from the employee's address).
   if (e.state) {
     loadLocations().then(function(){
@@ -3407,7 +3441,6 @@ async function submitCreateStaff() {
   var pn   = document.getElementById('cs-pn').value.trim();
   var vt   = document.getElementById('cs-vt').value.trim();
   var ad   = document.getElementById('cs-aadhar').value.trim();
-  var etype= document.getElementById('cs-emptype').value;
   var eid  = document.getElementById('cs-empid').value.trim();
   var veh  = document.getElementById('cs-vehicle').value.trim().toUpperCase();
   var pw   = document.getElementById('cs-pw').value;
@@ -3416,10 +3449,11 @@ async function submitCreateStaff() {
   var gdEl  = document.getElementById('cs-gd-e');
   errEl.style.display = 'none';
   gdEl.style.display  = 'none';
+  if (!eid) { errEl.textContent = 'Employee ID is required — enter it to load the employee from the master.'; errEl.style.display = 'block'; return; }
+  if (!role) { errEl.textContent = 'Enter a valid Employee ID first — no approved employee / designation loaded.'; errEl.style.display = 'block'; return; }
   if (!fn) { errEl.textContent = 'First name is required.'; errEl.style.display = 'block'; return; }
   if (!gd) { gdEl.style.display = 'block'; return; }
   if (!/^\d{10}$/.test(ph)) { errEl.textContent = 'Enter a valid 10-digit phone number.'; errEl.style.display = 'block'; return; }
-  if (!role) { errEl.textContent = 'Select a role.'; errEl.style.display = 'block'; return; }
   if (!st) { errEl.textContent = 'Select a state.'; errEl.style.display = 'block'; return; }
   if (!di) { errEl.textContent = 'Select a district.'; errEl.style.display = 'block'; return; }
   var _hasTaluks = (_locTree && _locTree[st] && (_locTree[st][di]||[]).length > 0);
@@ -3427,14 +3461,14 @@ async function submitCreateStaff() {
   if (!/^\d{6}$/.test(pn)) { errEl.textContent = 'Enter a valid 6-digit pincode.'; errEl.style.display = 'block'; return; }
   if (!/^\d{12}$/.test(ad)) { errEl.textContent = 'Enter a valid 12-digit Aadhaar number.'; errEl.style.display = 'block'; return; }
   if ((role === 'VCO' || role === 'Delivery Agent') && !vt) { errEl.textContent = 'Village/Town is required for VCO and Delivery Agent.'; errEl.style.display = 'block'; return; }
-  if (etype === 'Permanent' && !eid) { errEl.textContent = 'Employee ID is required for Permanent staff.'; errEl.style.display = 'block'; return; }
   if (pw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
 
   var btn = document.getElementById('cs-btn');
   btn.disabled = true; btn.textContent = 'Creating…';
 
   try {
-    var res = await API.createStaff({ fname: fn, lname: ln, gender: gd, phone: ph, password: pw, admin_role: role, state: st, district: di, taluk: tk, pincode: pn, village_town: vt, aadhar: ad, employment_type: etype || undefined, emp_id: eid || undefined, agent_vehicle: (CS_VEHICLE_ROLES.indexOf(role) !== -1 ? veh : '') || undefined });
+    // admin_role, designation & company details are derived server-side from emp_id.
+    var res = await API.createStaff({ fname: fn, lname: ln, gender: gd, phone: ph, password: pw, state: st, district: di, taluk: tk, pincode: pn, village_town: vt, aadhar: ad, emp_id: eid, agent_vehicle: (CS_VEHICLE_ROLES.indexOf(role) !== -1 ? veh : '') || undefined });
     document.getElementById('cs-lid').textContent = res.login_id;
     document.getElementById('cs-success').style.display = 'block';
     _csFormDirty = false;   // saved — closing now shouldn't warn
@@ -3452,6 +3486,7 @@ async function submitCreateStaff() {
       document.getElementById('cs-empid-note').textContent = '';
       document.getElementById('cs-vehicle').value = '';
       document.getElementById('cs-pw').value = '';
+      csClearCompany();     // reset the read-only company section for the next entry
       btn.textContent = 'Create Account';
       btn.onclick = submitCreateStaff;
       document.getElementById('cs-fn').focus();

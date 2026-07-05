@@ -372,6 +372,17 @@ router.patch('/:id', requireRole('admin'), async (req, res) => {
         emp_id:          updates.emp_id          !== undefined ? updates.emp_id          : cur.emp_id,
       });
       if (!check.ok) return res.status(400).json({ error: check.error });
+
+      // One login per employee: don't let an Employee ID be moved onto this login
+      // if another account already holds it.
+      const newEmpId = (updates.emp_id !== undefined ? updates.emp_id : cur.emp_id);
+      if (newEmpId && newEmpId !== cur.emp_id) {
+        const { data: dupEmp } = await supabase
+          .from('users').select('login_id').eq('emp_id', newEmpId).neq('id', req.params.id).limit(1);
+        if (dupEmp && dupEmp.length) {
+          return res.status(409).json({ error: `Employee "${newEmpId}" already has a login (${dupEmp[0].login_id}). One employee can hold only one login account.` });
+        }
+      }
     }
   }
 
