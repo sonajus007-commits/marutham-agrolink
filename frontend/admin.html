@@ -181,6 +181,20 @@
 .form-actions{position:sticky;bottom:0;background:#f3faf4;border-top:1px solid #dbe7dd;
   padding:12px 0;margin-top:8px;display:flex;gap:10px;justify-content:flex-end;}
 .cs-ro{background:#eef2f6!important;color:#475569;cursor:default;}
+/* User-profile two-pane layout (profile left, stat detail right) */
+.ud-2col{display:flex;align-items:stretch;max-height:calc(90vh - 52px);}
+.ud-left{flex:0 0 500px;overflow-y:auto;}
+.ud-right{flex:1;min-width:0;overflow-y:auto;padding:18px;background:#fafbfc;border-left:1px solid #e5e7eb;}
+.ud-statcell{cursor:pointer;border-radius:8px;padding:4px 2px;transition:background .12s;}
+.ud-statcell:hover{background:#eef2ff;}
+.ud-statcell.on{background:#e0e7ff;outline:2px solid #6366f1;}
+.ud-drow{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #eef1f4;font-size:12px;}
+.ud-drow:last-child{border-bottom:none;}
+@media(max-width:800px){
+  .ud-2col{flex-direction:column;max-height:calc(90vh - 52px);overflow-y:auto;}
+  .ud-left{flex:1 1 auto;overflow:visible;}
+  .ud-right{border-left:none;border-top:1px solid #e5e7eb;}
+}
 </style>
 
 <!-- ── EMPLOYEE ADD/EDIT (full-page) ──────────────────────────────────────── -->
@@ -425,12 +439,13 @@
 
 <!-- ── USER DETAIL OVERLAY ───────────────────────────────────────────────── -->
 <div class="overlay" id="userDetailOverlay" style="display:none" onclick="if(event.target===this)closeUserDetail()">
-  <div class="obox" style="max-width:560px;max-height:90vh;overflow-y:auto">
+  <div class="obox" style="max-width:940px;max-height:90vh;overflow:hidden">
     <div class="ohdr">
       <span class="otitle">👤 User Profile</span>
       <button class="cls" onclick="closeUserDetail()">✕</button>
     </div>
-    <div style="padding:18px;display:flex;flex-direction:column;gap:14px">
+    <div class="ud-2col">
+    <div class="ud-left" style="padding:18px;display:flex;flex-direction:column;gap:14px">
       <div style="background:#f0fdf4;border-radius:12px;padding:14px">
         <div style="font-size:17px;font-weight:800;color:var(--forest)" id="ud-name">—</div>
         <div style="font-size:11px;color:#5f7268;margin-top:2px" id="ud-meta">—</div>
@@ -526,6 +541,10 @@
         <button class="sbtn" style="flex:0;padding:0 14px;background:#475569" id="ud-history-btn" onclick="udShowHistory()">🕘 History</button>
       </div>
       <div id="ud-history" style="display:none;margin-top:12px"></div>
+    </div>
+    <div class="ud-right" id="ud-detail">
+      <div style="color:#9ca3af;font-size:12px;text-align:center;padding:30px 10px">Select a stat to see details.</div>
+    </div>
     </div>
   </div>
 </div>
@@ -2240,6 +2259,8 @@ async function openUserDetail(id) {
   document.getElementById('ud-info').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
   document.getElementById('ud-products').innerHTML = '';
   document.getElementById('ud-stats').innerHTML = '';
+  document.getElementById('ud-detail').innerHTML = '';
+  _udActivity = null;
   document.getElementById('ud-edit-form').style.display = 'none';
 
   // Load profile and listings independently so one failing doesn't block the other
@@ -2364,12 +2385,14 @@ function escHtml(s) {
 }
 
 // A titled stat card: cells = [[label, value, color], ...]
+// A titled stat card. cells = [[label, value, color, statKey], ...]; each cell is
+// clickable and drives the detail pane on the right.
 function udStatPanel(title, cells) {
   var html = '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px">';
   html += '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:700">' + title + '</div>';
   html += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
   cells.forEach(function(c) {
-    html += '<div style="flex:1;min-width:70px;text-align:center">'
+    html += '<div class="ud-statcell" id="ud-sc-' + c[3] + '" onclick="selectStat(\'' + c[3] + '\')" style="flex:1;min-width:70px;text-align:center" title="Click for details">'
          +    '<div style="font-size:16px;font-weight:800;color:' + c[2] + '">' + c[1] + '</div>'
          +    '<div style="font-size:9px;color:var(--gray);text-transform:uppercase;letter-spacing:.4px">' + c[0] + '</div>'
          +  '</div>';
@@ -2379,35 +2402,193 @@ function udStatPanel(title, cells) {
 }
 
 function renderUserStats(u) {
-  var host = document.getElementById('ud-stats');
+  var host   = document.getElementById('ud-stats');
+  var detail = document.getElementById('ud-detail');
   if (!host) return;
+  _udActivity = null;   // reset the per-user activity cache
 
   if (u.role === 'farmer') {
     var f = (_allFarmers || []).find(function(x){ return x.id === u.id; });
-    if (!f) { host.innerHTML = ''; return; }
+    if (!f) { host.innerHTML = ''; if (detail) detail.innerHTML = ''; return; }
     var rating = (f.avg_rating && parseFloat(f.avg_rating) > 0)
       ? '★ ' + parseFloat(f.avg_rating).toFixed(1)
       : '—';
     host.innerHTML = udStatPanel('Seller Performance', [
-      ['Revenue',   fmt(f.total_revenue),        '#166534'],
-      ['Orders',    f.delivered_orders || 0,     '#2d6a4f'],
-      ['Listed',    f.active_listings  || 0,     '#1e40af'],
-      ['Rating',    rating,                      '#d97706'],
+      ['Revenue',   fmt(f.total_revenue),        '#166534', 'f_revenue'],
+      ['Orders',    f.delivered_orders || 0,     '#2d6a4f', 'f_orders'],
+      ['Listed',    f.active_listings  || 0,     '#1e40af', 'f_listed'],
+      ['Rating',    rating,                      '#d97706', 'f_rating'],
     ]);
+    selectStat('f_revenue');   // default
 
   } else if (u.role === 'consumer') {
     var c = (_allConsumers || []).find(function(x){ return x.id === u.id; });
-    if (!c) { host.innerHTML = ''; return; }
+    if (!c) { host.innerHTML = ''; if (detail) detail.innerHTML = ''; return; }
     host.innerHTML = udStatPanel('Purchase Activity', [
-      ['Spend',     fmt(c.total_spend),          '#1d4ed8'],
-      ['Orders',    c.total_orders || 0,         '#2d6a4f'],
-      ['Delivered', c.delivered    || 0,         '#7c3aed'],
-      ['Returned',  c.returned     || 0,         '#c0392b'],
+      ['Spend',     fmt(c.total_spend),          '#1d4ed8', 'c_spend'],
+      ['Orders',    c.total_orders || 0,         '#2d6a4f', 'c_orders'],
+      ['Delivered', c.delivered    || 0,         '#7c3aed', 'c_delivered'],
+      ['Returned',  c.returned     || 0,         '#c0392b', 'c_returned'],
     ]) + '<div id="ud-frequent" style="margin-top:10px"></div>';
     loadFrequentlyOrdered(u.id);
+    selectStat('c_orders');    // default
 
   } else {
     host.innerHTML = '';
+    if (detail) detail.innerHTML = '<div style="color:#9ca3af;font-size:12px;text-align:center;padding:30px 10px">No activity for this account type.</div>';
+  }
+}
+
+// ── Stat detail pane ──────────────────────────────────────────────────────────
+var _udActivity   = null;   // cached activity payload for the currently open user
+var _udActiveStat = null;
+
+async function selectStat(key) {
+  _udActiveStat = key;
+  document.querySelectorAll('.ud-statcell').forEach(function(el){ el.classList.remove('on'); });
+  var cell = document.getElementById('ud-sc-' + key);
+  if (cell) cell.classList.add('on');
+
+  var host = document.getElementById('ud-detail');
+  if (!host || !_udUser) return;
+  host.innerHTML = '<div style="text-align:center;padding:26px"><div class="spin" style="margin:auto;width:22px;height:22px;border-width:2px"></div></div>';
+
+  try {
+    if (key === 'f_listed') { renderListedDetail(host, _udUser.id); return; }
+    if (!_udActivity) {
+      _udActivity = _udUser.role === 'farmer'
+        ? await API.getFarmerActivity(_udUser.id)
+        : await API.getConsumerActivity(_udUser.id);
+    }
+    // Guard against a race if the user closed/switched while loading.
+    if (_udActiveStat !== key) return;
+    renderStatDetail(host, key, _udActivity);
+  } catch (e) {
+    host.innerHTML = '<div style="color:#c0392b;font-size:12px;padding:14px">' + escHtml(e.message) + '</div>';
+  }
+}
+
+function udDetailHead(title, sub) {
+  return '<div style="font-size:13px;font-weight:800;color:#111827">' + title + '</div>'
+       + '<div style="font-size:11px;color:#6b7280;margin-bottom:10px">' + (sub || '') + '</div>';
+}
+function udEmpty(msg) {
+  return '<div style="color:#9ca3af;font-size:12px;text-align:center;padding:24px 10px">' + msg + '</div>';
+}
+function udRow(left, right) {
+  return '<div class="ud-drow"><div style="min-width:0">' + left + '</div><div style="text-align:right;white-space:nowrap">' + right + '</div></div>';
+}
+// Badge for an *order* status (distinct from the account statusPill()).
+function orderStatusBadge(o) {
+  if (o.cancelled) return '<span style="padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700;background:#fee2e2;color:#991b1b">Cancelled</span>';
+  var s = o.status || '—';
+  var style = s === 'Delivered' ? 'background:#dcfce7;color:#166534'
+            : s === 'Order Placed' ? 'background:#dbeafe;color:#1e40af'
+            : 'background:#f1f5f9;color:#475569';
+  return '<span style="padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700;' + style + '">' + escHtml(s) + '</span>';
+}
+
+function renderStatDetail(host, key, data) {
+  var html = '';
+
+  if (key === 'c_orders' || key === 'c_spend' || key === 'c_delivered') {
+    var orders = (data.orders || []).slice();
+    if (key === 'c_spend' || key === 'c_delivered') {
+      orders = orders.filter(function(o){ return o.status === 'Delivered'; });
+    }
+    var titleMap = { c_orders:'All Orders', c_spend:'Spend — Delivered Orders', c_delivered:'Delivered Orders' };
+    html += udDetailHead(titleMap[key], orders.length + ' order' + (orders.length === 1 ? '' : 's'));
+    if (!orders.length) { host.innerHTML = html + udEmpty('No orders yet.'); return; }
+    var total = 0;
+    orders.forEach(function(o) {
+      total += parseFloat(o.total || 0);
+      var left = '<div style="font-weight:700">' + escHtml(o.code || '—') + '</div>'
+               + '<div style="color:#6b7280;font-size:11px">' + fmtDateShort(o.created_at) + '</div>';
+      var right = (key === 'c_orders' ? orderStatusBadge(o) + '<br>' : '')
+                + '<span style="font-weight:800">' + fmt(o.total) + '</span>';
+      html += udRow(left, right);
+    });
+    if (key === 'c_spend') {
+      html += '<div class="ud-drow" style="border-top:2px solid #e5e7eb;font-weight:800"><div>Total Spend</div><div style="text-align:right">' + fmt(total) + '</div></div>';
+    }
+
+  } else if (key === 'c_returned') {
+    var rets = data.returns || [];
+    html += udDetailHead('Returns', rets.length + ' return' + (rets.length === 1 ? '' : 's'));
+    if (!rets.length) { host.innerHTML = html + udEmpty('No returns.'); return; }
+    rets.forEach(function(r) {
+      var decision = r.decision || 'pending';
+      var dStyle = decision === 'accepted' ? 'background:#dcfce7;color:#166534'
+                 : decision === 'rejected' ? 'background:#fee2e2;color:#991b1b'
+                 : 'background:#fef3c7;color:#92400e';
+      var left = '<div style="font-weight:700">' + escHtml(r.code || '—') + '</div>'
+               + '<div style="color:#6b7280;font-size:11px">Order ' + escHtml(r.order_code) + ' · ' + fmtDateShort(r.requested_at) + '</div>';
+      var right = '<span style="padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700;' + dStyle + '">' + (decision.charAt(0).toUpperCase() + decision.slice(1)) + '</span>'
+                + (r.refund_amt != null ? '<br><span style="font-weight:800">' + fmt(r.refund_amt) + '</span>' : '');
+      html += udRow(left, right);
+    });
+
+  } else if (key === 'f_revenue') {
+    var items = data.items || [];
+    html += udDetailHead('Revenue — Delivered Items', items.length + ' line item' + (items.length === 1 ? '' : 's'));
+    if (!items.length) { host.innerHTML = html + udEmpty('No delivered items yet.'); return; }
+    var rtotal = 0;
+    items.forEach(function(it) {
+      rtotal += parseFloat(it.amount || 0);
+      var left = '<div style="font-weight:700">' + escHtml(it.name || '—') + '</div>'
+               + '<div style="color:#6b7280;font-size:11px">' + (it.qty || '') + ' ' + escHtml(it.unit || '') + ' · ' + escHtml(it.order_code || '') + ' · ' + fmtDateShort(it.created_at) + '</div>';
+      html += udRow(left, '<span style="font-weight:800">' + fmt(it.amount) + '</span>');
+    });
+    html += '<div class="ud-drow" style="border-top:2px solid #e5e7eb;font-weight:800"><div>Total Revenue</div><div style="text-align:right">' + fmt(rtotal) + '</div></div>';
+
+  } else if (key === 'f_orders') {
+    var fords = data.orders || [];
+    html += udDetailHead('Orders Fulfilled', fords.length + ' order' + (fords.length === 1 ? '' : 's'));
+    if (!fords.length) { host.innerHTML = html + udEmpty('No delivered orders yet.'); return; }
+    fords.forEach(function(o) {
+      var left = '<div style="font-weight:700">' + escHtml(o.code || '—') + '</div>'
+               + '<div style="color:#6b7280;font-size:11px">' + fmtDateShort(o.created_at) + '</div>';
+      html += udRow(left, '<span style="font-weight:800">' + fmt(o.amount) + '</span>');
+    });
+
+  } else if (key === 'f_rating') {
+    var ratings = data.ratings || [];
+    html += udDetailHead('Reviews', ratings.length + ' rating' + (ratings.length === 1 ? '' : 's'));
+    if (!ratings.length) { host.innerHTML = html + udEmpty('No ratings yet.'); return; }
+    ratings.forEach(function(rt) {
+      var stars = '';
+      for (var s = 1; s <= 5; s++) stars += s <= rt.rating_value ? '★' : '☆';
+      var left = '<div style="font-weight:700">' + escHtml(rt.name || '—') + '</div>'
+               + '<div style="color:#6b7280;font-size:11px">' + fmtDateShort(rt.rated_at) + '</div>';
+      html += udRow(left, '<span style="color:#f59e0b;font-size:13px">' + stars + '</span>');
+    });
+  }
+
+  host.innerHTML = html;
+}
+
+// "Listed" detail: read-only summary of the farmer's product listings.
+async function renderListedDetail(host, farmerId) {
+  try {
+    var res = await API.getUserListings(farmerId);
+    if (_udActiveStat !== 'f_listed') return;
+    var listings = res.listings || [];
+    var html = udDetailHead('Product Listings', listings.length + ' product' + (listings.length === 1 ? '' : 's'));
+    if (!listings.length) { host.innerHTML = html + udEmpty('No product listings yet.'); return; }
+    listings.forEach(function(l) {
+      var p = l.product || {};
+      var st = l.listing_status || 'pending';
+      var stStyle = st === 'active' ? 'background:#dcfce7;color:#166534'
+                  : st === 'rejected' ? 'background:#fee2e2;color:#991b1b'
+                  : 'background:#fef3c7;color:#92400e';
+      var left = '<div style="font-weight:700">' + escHtml(p.name || '—') + '</div>'
+               + '<div style="color:#6b7280;font-size:11px">' + escHtml((p.product_group || '') + (p.unit ? ' · ' + p.unit : '')) + '</div>';
+      var right = '<span style="padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700;' + stStyle + '">' + (st.charAt(0).toUpperCase() + st.slice(1)) + '</span>';
+      html += udRow(left, right);
+    });
+    host.innerHTML = html;
+  } catch (e) {
+    host.innerHTML = '<div style="color:#c0392b;font-size:12px;padding:14px">' + escHtml(e.message) + '</div>';
   }
 }
 

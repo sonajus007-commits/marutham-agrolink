@@ -272,6 +272,9 @@ var API = {
   getFarmers: function() {
     return apiFetch('GET', '/farmers', null, tok());
   },
+  getFarmerActivity: function(id) {
+    return apiFetch('GET', '/farmers/' + id + '/activity', null, tok());
+  },
   blockFarmer: function(id) {
     return apiFetch('PATCH', '/farmers/' + id + '/block', {}, tok());
   },
@@ -285,6 +288,9 @@ var API = {
   },
   getConsumerFrequent: function(id) {
     return apiFetch('GET', '/consumers/' + id + '/frequent', null, tok());
+  },
+  getConsumerActivity: function(id) {
+    return apiFetch('GET', '/consumers/' + id + '/activity', null, tok());
   },
   blockConsumer: function(id) {
     return apiFetch('PATCH', '/consumers/' + id + '/block', {}, tok());

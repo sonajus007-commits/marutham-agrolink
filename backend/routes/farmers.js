@@ -112,6 +112,56 @@ router.get('/', requireRole('admin'), async (req, res) => {
   }
 });
 
+// ── GET /farmers/:id/activity ─────────────────────────────────────────────────
+// Revenue line-items, fulfilled orders, and reviews for the stat-detail pane.
+router.get('/:id/activity', requireRole('admin'), async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const { data: items, error: iErr } = await supabase
+      .from('order_items')
+      .select('order_id, name, qty, unit, farmer_price, rated, rating_value, rated_at')
+      .eq('farmer_id', id);
+    if (iErr) return res.status(500).json({ error: iErr.message });
+
+    const orderIds = [...new Set((items || []).map(i => i.order_id))];
+    const ordersById = {};
+    if (orderIds.length) {
+      const { data: ords } = await supabase
+        .from('orders')
+        .select('id, code, created_at, status')
+        .in('id', orderIds);
+      (ords || []).forEach(o => { ordersById[o.id] = o; });
+    }
+
+    // Revenue = delivered line-items only (matches the headline Revenue stat).
+    const revItems = [];
+    const orderMap = {};
+    (items || []).forEach(it => {
+      const o = ordersById[it.order_id];
+      if (!o || o.status !== 'Delivered') return;
+      const linePaise = Math.round(parseFloat(it.farmer_price || 0) * parseFloat(it.qty || 1));
+      revItems.push({
+        order_code: o.code, created_at: o.created_at,
+        name: it.name, qty: it.qty, unit: it.unit, amount: linePaise,
+      });
+      if (!orderMap[o.id]) orderMap[o.id] = { code: o.code, created_at: o.created_at, amount: 0 };
+      orderMap[o.id].amount += linePaise;
+    });
+    revItems.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const orders = Object.values(orderMap).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    const ratings = (items || [])
+      .filter(it => it.rated && it.rating_value)
+      .map(it => ({ name: it.name, rating_value: it.rating_value, rated_at: it.rated_at }))
+      .sort((a, b) => new Date(b.rated_at) - new Date(a.rated_at));
+
+    res.json({ items: revItems, orders, ratings });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── PATCH /farmers/:id/block ──────────────────────────────────────────────────
 router.patch('/:id/block', requireRole('admin'), async (req, res) => {
   const { data, error } = await supabase

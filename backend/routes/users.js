@@ -318,7 +318,7 @@ router.get('/:id/listings', requireRole('admin'), async (req, res) => {
   const { data, error } = await supabase
     .from('farmer_listings')
     .select(`
-      id, farmer_price, qty_available, listing_status, rejection_reason, created_at,
+      id, farmer_price, qty_available, listing_status, created_at,
       product:products ( id, name, code, unit, product_group )
     `)
     .eq('farmer_id', req.params.id)

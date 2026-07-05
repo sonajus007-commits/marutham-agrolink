@@ -138,4 +138,43 @@ router.get('/:id/frequent', requireRole('admin'), async (req, res) => {
   }
 });
 
+// ── GET /consumers/:id/activity ───────────────────────────────────────────────
+// Order + return history for the profile popup's stat-detail pane.
+router.get('/:id/activity', requireRole('admin'), async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const { data: orders, error: oErr } = await supabase
+      .from('orders')
+      .select('id, code, created_at, status, total, cancelled')
+      .eq('consumer_id', id)
+      .order('created_at', { ascending: false });
+    if (oErr) return res.status(500).json({ error: oErr.message });
+
+    const orderIds = (orders || []).map(o => o.id);
+    const codeById = {};
+    (orders || []).forEach(o => { codeById[o.id] = o.code; });
+
+    let returns = [];
+    if (orderIds.length) {
+      const { data: rets } = await supabase
+        .from('returns')
+        .select('code, order_id, requested_at, decision, refund_amt')
+        .in('order_id', orderIds)
+        .order('requested_at', { ascending: false });
+      returns = (rets || []).map(r => ({
+        code: r.code,
+        order_code: codeById[r.order_id] || '—',
+        requested_at: r.requested_at,
+        decision: r.decision,
+        refund_amt: r.refund_amt,
+      }));
+    }
+
+    res.json({ orders: orders || [], returns });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;

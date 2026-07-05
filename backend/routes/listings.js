@@ -271,12 +271,11 @@ router.patch('/:id/status', async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Admin access required.' });
   }
-  const { status, rejection_reason } = req.body;
+  const { status } = req.body;
   if (!['active', 'rejected', 'pending'].includes(status)) {
     return res.status(400).json({ error: 'status must be active, rejected, or pending.' });
   }
   const update = { listing_status: status, updated_at: new Date().toISOString() };
-  if (status === 'rejected' && rejection_reason) update.rejection_reason = rejection_reason;
   const { data, error } = await supabase
     .from('farmer_listings')
     .update(update)
