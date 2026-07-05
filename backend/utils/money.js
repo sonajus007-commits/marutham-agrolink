@@ -13,6 +13,8 @@ const MONEY_FIELDS = new Set([
   'market_price',
   // payouts + returns
   'amount',
+  // consumers/farmers directory rollups (accumulated from order totals in paise)
+  'total_spend', 'total_revenue',
 ]);
 
 function paiseToRupees(value) {

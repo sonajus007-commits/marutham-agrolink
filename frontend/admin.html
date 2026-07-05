@@ -43,8 +43,6 @@
   <button class="ptab"    id="tab-employees" onclick="openTab('employees',this)">🧑‍💼 Employees</button>
   <button class="ptab"    id="tab-payouts"   onclick="openTab('payouts',this)">💸 Payouts</button>
   <button class="ptab"    id="tab-returns"   onclick="openTab('returns',this)">↩ Returns</button>
-  <button class="ptab"    id="tab-farmers"   onclick="openTab('farmers',this)">🌾 Farmers</button>
-  <button class="ptab"    id="tab-consumers" onclick="openTab('consumers',this)">🛒 Consumers</button>
   <button class="ptab"    id="tab-hub"           onclick="openTab('hub',this)" style="display:none">🏭 Hub Queue</button>
   <button class="ptab"    id="tab-registrations" onclick="openTab('registrations',this)">📋 Registrations</button>
   <button class="ptab"    id="tab-listings-review" onclick="openTab('listings-review',this)">🔍 Listing Approvals</button>
@@ -119,6 +117,7 @@
       📋 Change Requests <span id="chreq-badge" style="background:#fff;color:#1d4ed8;border-radius:50px;padding:1px 7px;font-size:10px;margin-left:4px">0</span>
     </button>
     <button class="add-prod-btn" onclick="openCreateStaff()">➕ Add Staff</button>
+    <button onclick="exportUsersCSV()" style="padding:8px 14px;background:#f0faf4;border:1.5px solid #c3e6cb;border-radius:10px;font-size:12px;font-weight:700;color:var(--forest);cursor:pointer;font-family:inherit;white-space:nowrap">⬇ Export CSV</button>
   </div>
   <div id="changeRequestsPanel" style="display:none;margin-bottom:16px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:14px;padding:14px">
     <div style="font-weight:700;color:#1d4ed8;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
@@ -440,6 +439,7 @@
           <span id="ud-sub-badge"></span>
         </div>
       </div>
+      <div id="ud-stats"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px" id="ud-info"></div>
       <div id="ud-products"></div>
       <div id="ud-edit-form" style="display:none;border-top:1px solid #e5e7eb;padding-top:14px">
@@ -581,41 +581,6 @@
   <div id="returnListWrap"><div class="spinner"><div class="spin"></div></div></div>
 </div>
 
-<!-- ── CONSUMERS ──────────────────────────────────────────────────────────── -->
-<div class="panel" id="panel-consumers">
-  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
-    <input id="consumer-search" type="text" placeholder="Search by name, phone or village…"
-      style="flex:1;border:1.5px solid #e2e8e2;border-radius:10px;padding:9px 12px;font-size:12px;font-family:inherit;outline:none"
-      oninput="filterConsumers()">
-    <select id="consumer-sort" onchange="filterConsumers()"
-      style="border:1.5px solid #e2e8e2;border-radius:10px;padding:9px 10px;font-size:12px;font-family:inherit;background:#fff;outline:none">
-      <option value="spend">↓ Spend</option>
-      <option value="orders">↓ Orders</option>
-      <option value="name">A–Z Name</option>
-      <option value="joined">Newest</option>
-    </select>
-    <button onclick="exportConsumersCSV()" style="padding:8px 14px;background:#f0faf4;border:1.5px solid #c3e6cb;border-radius:10px;font-size:11px;font-weight:700;color:var(--forest);cursor:pointer;font-family:inherit;white-space:nowrap">⬇ CSV</button>
-  </div>
-  <div id="consumersWrap"><div class="spinner"><div class="spin"></div></div></div>
-</div>
-
-<!-- ── FARMERS ────────────────────────────────────────────────────────────── -->
-<div class="panel" id="panel-farmers">
-  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
-    <input id="farmer-search" type="text" placeholder="Search by name or village…" style="flex:1"
-      style="flex:1;border:1.5px solid #e2e8e2;border-radius:10px;padding:9px 12px;font-size:12px;font-family:inherit;outline:none"
-      oninput="filterFarmers()">
-    <select id="farmer-sort" onchange="filterFarmers()"
-      style="border:1.5px solid #e2e8e2;border-radius:10px;padding:9px 10px;font-size:12px;font-family:inherit;background:#fff;outline:none">
-      <option value="revenue">↓ Revenue</option>
-      <option value="orders">↓ Orders</option>
-      <option value="rating">↓ Rating</option>
-      <option value="name">A–Z Name</option>
-    </select>
-    <button onclick="exportFarmersCSV()" style="padding:8px 14px;background:#f0faf4;border:1.5px solid #c3e6cb;border-radius:10px;font-size:11px;font-weight:700;color:var(--forest);cursor:pointer;font-family:inherit;white-space:nowrap">⬇ CSV</button>
-  </div>
-  <div id="farmersWrap"><div class="spinner"><div class="spin"></div></div></div>
-</div>
 
 <!-- ── REGISTRATIONS ──────────────────────────────────────────────────────── -->
 <div class="panel" id="panel-registrations">
@@ -1002,8 +967,6 @@ function openTab(name, tabEl) {
   if (name === 'employees') renderEmployees();
   if (name === 'payouts')  renderPayouts();
   if (name === 'returns')  renderReturns();
-  if (name === 'consumers') renderConsumers();
-  if (name === 'farmers')  renderFarmers();
   if (name === 'hub')              renderHubQueue();
   if (name === 'registrations')    loadRegistrations();
   if (name === 'listings-review')  loadAdminListings('pending');
@@ -2136,7 +2099,9 @@ function _uth(label, key) {
     + '<span style="font-size:10px;color:' + (on ? 'var(--forest)' : '#cbd5e1') + '">' + arrow + '</span></th>';
 }
 
-function renderUserTable() {
+// The users currently visible in the table, honouring all active filters + sort.
+// Shared by renderUserTable() and exportUsersCSV() so the export matches the view.
+function filteredUserList() {
   var q       = (document.getElementById('userSearch').value || '').toLowerCase();
   var fSt     = document.getElementById('userStateFilter').value;
   var fDi     = document.getElementById('userDistrictFilter').value;
@@ -2152,6 +2117,66 @@ function renderUserTable() {
   if (fRole)   list = list.filter(function(u){ return (u.admin_role || u.role) === fRole; });
   if (fStatus) list = list.filter(function(u){ return (u.status || 'active') === fStatus; });
   list.sort(userCmp);
+  return list;
+}
+
+// Export the filtered Users view to CSV, with role-aware performance columns
+// (folded in from the removed Farmers/Consumers directory exports).
+async function exportUsersCSV() {
+  var list = filteredUserList();
+  if (!list.length) { showToast('No users to export.', 'er'); return; }
+
+  // Pull in the stat caches for whichever roles are present.
+  var hasFarmer   = list.some(function(u){ return u.role === 'farmer'; });
+  var hasConsumer = list.some(function(u){ return u.role === 'consumer'; });
+  if (hasFarmer)   await ensureDirectoryCache('farmer');
+  if (hasConsumer) await ensureDirectoryCache('consumer');
+
+  var farmerMap = {}, consumerMap = {};
+  (_allFarmers   || []).forEach(function(f){ farmerMap[f.id]   = f; });
+  (_allConsumers || []).forEach(function(c){ consumerMap[c.id] = c; });
+
+  var date = new Date().toISOString().slice(0,10);
+  downloadCSV('users_' + date + '.csv',
+    ['Name','Login ID','Phone','Role','Gender','District','State','Status','Joined',
+     'Revenue/Spend (₹)','Orders','Delivered','Returned','Listed','Avg Rating'],
+    list.map(function(u) {
+      var revSpend = '', orders = '', delivered = '', returned = '', listed = '', rating = '';
+      if (u.role === 'farmer') {
+        var f = farmerMap[u.id];
+        if (f) {
+          revSpend = parseFloat(f.total_revenue || 0).toFixed(2);
+          orders   = f.delivered_orders || 0;
+          listed   = f.active_listings  || 0;
+          rating   = f.avg_rating || '';
+        }
+      } else if (u.role === 'consumer') {
+        var c = consumerMap[u.id];
+        if (c) {
+          revSpend  = parseFloat(c.total_spend || 0).toFixed(2);
+          orders    = c.total_orders || 0;
+          delivered = c.delivered    || 0;
+          returned  = c.returned     || 0;
+        }
+      }
+      return [
+        ((u.fname||'') + ' ' + (u.lname||'')).trim(),
+        u.login_id || '',
+        u.phone    || '',
+        u.admin_role || u.role,
+        u.gender   || '',
+        u.district || '',
+        u.state    || '',
+        u.status   || 'active',
+        fmtDateShort(u.created_at),
+        revSpend, orders, delivered, returned, listed, rating,
+      ];
+    })
+  );
+}
+
+function renderUserTable() {
+  var list = filteredUserList();
 
   if (list.length === 0) {
     document.getElementById('userListWrap').innerHTML = '<div class="empty-state"><p>No users found.</p></div>'; return;
@@ -2214,12 +2239,15 @@ async function openUserDetail(id) {
   document.getElementById('userDetailOverlay').style.display = 'flex';
   document.getElementById('ud-info').innerHTML = '<div class="spinner"><div class="spin"></div></div>';
   document.getElementById('ud-products').innerHTML = '';
+  document.getElementById('ud-stats').innerHTML = '';
   document.getElementById('ud-edit-form').style.display = 'none';
 
   // Load profile and listings independently so one failing doesn't block the other
   try {
     var res = await API.getUserById(id);
     _udUser = res.user;
+    // Make sure the directory stats cache for this role is loaded, then render.
+    await ensureDirectoryCache(_udUser.role);
     renderUserDetail();
   } catch(e) {
     document.getElementById('ud-info').innerHTML = '<p style="color:red">' + e.message + '</p>';
@@ -2297,6 +2325,9 @@ function renderUserDetail() {
   }
   document.getElementById('ud-info').innerHTML = info;
 
+  // Role-specific performance stats (merged in from the old Farmers/Consumers tabs)
+  renderUserStats(u);
+
   // Highlight the current status; dim the button that matches it (no-op action).
   var cur = u.status || 'active';
   ['active','suspended','blocked'].forEach(function(s){
@@ -2312,6 +2343,95 @@ function renderUserDetail() {
 
   var isHO = (user.admin_role === 'Head Office' || user.admin_role === 'State Head');
   document.getElementById('ud-edit-btn').style.display = isHO ? '' : 'none';
+}
+
+// Ensure the farmer/consumer stat directory is cached before rendering a profile.
+// These lists were previously loaded by the (now-removed) Farmers/Consumers tabs.
+async function ensureDirectoryCache(role) {
+  try {
+    if (role === 'farmer' && (!_allFarmers || !_allFarmers.length)) {
+      _allFarmers = (await API.getFarmers()).farmers || [];
+    } else if (role === 'consumer' && (!_allConsumers || !_allConsumers.length)) {
+      _allConsumers = (await API.getConsumers()).consumers || [];
+    }
+  } catch (e) { /* stats are best-effort; profile still renders without them */ }
+}
+
+function escHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// A titled stat card: cells = [[label, value, color], ...]
+function udStatPanel(title, cells) {
+  var html = '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px">';
+  html += '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:700">' + title + '</div>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  cells.forEach(function(c) {
+    html += '<div style="flex:1;min-width:70px;text-align:center">'
+         +    '<div style="font-size:16px;font-weight:800;color:' + c[2] + '">' + c[1] + '</div>'
+         +    '<div style="font-size:9px;color:var(--gray);text-transform:uppercase;letter-spacing:.4px">' + c[0] + '</div>'
+         +  '</div>';
+  });
+  html += '</div></div>';
+  return html;
+}
+
+function renderUserStats(u) {
+  var host = document.getElementById('ud-stats');
+  if (!host) return;
+
+  if (u.role === 'farmer') {
+    var f = (_allFarmers || []).find(function(x){ return x.id === u.id; });
+    if (!f) { host.innerHTML = ''; return; }
+    var rating = (f.avg_rating && parseFloat(f.avg_rating) > 0)
+      ? '★ ' + parseFloat(f.avg_rating).toFixed(1)
+      : '—';
+    host.innerHTML = udStatPanel('Seller Performance', [
+      ['Revenue',   fmt(f.total_revenue),        '#166534'],
+      ['Orders',    f.delivered_orders || 0,     '#2d6a4f'],
+      ['Listed',    f.active_listings  || 0,     '#1e40af'],
+      ['Rating',    rating,                      '#d97706'],
+    ]);
+
+  } else if (u.role === 'consumer') {
+    var c = (_allConsumers || []).find(function(x){ return x.id === u.id; });
+    if (!c) { host.innerHTML = ''; return; }
+    host.innerHTML = udStatPanel('Purchase Activity', [
+      ['Spend',     fmt(c.total_spend),          '#1d4ed8'],
+      ['Orders',    c.total_orders || 0,         '#2d6a4f'],
+      ['Delivered', c.delivered    || 0,         '#7c3aed'],
+      ['Returned',  c.returned     || 0,         '#c0392b'],
+    ]) + '<div id="ud-frequent" style="margin-top:10px"></div>';
+    loadFrequentlyOrdered(u.id);
+
+  } else {
+    host.innerHTML = '';
+  }
+}
+
+// Products a consumer orders repeatedly (2+ times), rendered as count chips.
+async function loadFrequentlyOrdered(consumerId) {
+  var wrap = document.getElementById('ud-frequent');
+  if (!wrap) return;
+  try {
+    var res  = await API.getConsumerFrequent(consumerId);
+    var list = res.frequent || [];
+    if (!list.length) { wrap.innerHTML = ''; return; }
+    var html = '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:700">Frequently Ordered</div>';
+    html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+    list.forEach(function(p) {
+      html += '<span style="display:inline-flex;align-items:center;gap:5px;background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;font-size:11px;font-weight:700;padding:4px 10px;border-radius:50px">'
+           +    escHtml(p.name)
+           +    '<span style="background:#4338ca;color:#fff;font-size:10px;padding:1px 6px;border-radius:50px">×' + p.count + '</span>'
+           +  '</span>';
+    });
+    html += '</div>';
+    wrap.innerHTML = html;
+  } catch (e) {
+    wrap.innerHTML = '';   // best-effort; silent on failure
+  }
 }
 
 // Coloured status pill used in the detail modal and history.
@@ -3672,251 +3792,11 @@ function exportPayoutsCSV() {
   );
 }
 
-function exportFarmersCSV() {
-  var farmers = _allFarmers || [];
-  var date = new Date().toISOString().slice(0,10);
-  downloadCSV('farmers_' + date + '.csv',
-    ['Name','Phone','Village','District','Active Listings','Orders Delivered','Revenue (₹)','Avg Rating','Ratings Count','Bank','Status'],
-    farmers.map(function(f) { return [
-      ((f.fname||'') + ' ' + (f.lname||'')).trim(),
-      f.phone || '',
-      f.village_town || '',
-      f.district     || '',
-      f.active_listings  || 0,
-      f.delivered_orders || 0,
-      parseFloat(f.total_revenue || 0).toFixed(2),
-      f.avg_rating  || '',
-      f.num_ratings || 0,
-      f.bank_name   || '',
-      f.status      || 'active',
-    ]; })
-  );
-}
-
-// ── CONSUMERS DIRECTORY ───────────────────────────────────────────────────────
+// ── CONSUMER / FARMER STAT CACHES ─────────────────────────────────────────────
+// Populated on demand by ensureDirectoryCache() to power the merged stats shown
+// in the user-detail profile popup (the standalone directory tabs were removed).
 var _allConsumers = [];
-
-async function renderConsumers() {
-  var wrap = document.getElementById('consumersWrap');
-  wrap.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
-  try {
-    var res = await API.getConsumers();
-    _allConsumers = res.consumers || [];
-    filterConsumers();
-  } catch(e) {
-    wrap.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
-  }
-}
-
-function filterConsumers() {
-  var q    = (document.getElementById('consumer-search').value || '').toLowerCase();
-  var sort = document.getElementById('consumer-sort').value;
-  var list = _allConsumers.filter(function(c) {
-    if (!q) return true;
-    var name  = ((c.fname||'') + ' ' + (c.lname||'')).toLowerCase();
-    var phone = (c.phone||'').toLowerCase();
-    var loc   = ((c.village_town||'') + ' ' + (c.district||'')).toLowerCase();
-    return name.includes(q) || phone.includes(q) || loc.includes(q);
-  });
-  list.sort(function(a, b) {
-    if (sort === 'spend')  return (b.total_spend||0) - (a.total_spend||0);
-    if (sort === 'orders') return (b.total_orders||0) - (a.total_orders||0);
-    if (sort === 'joined') return new Date(b.created_at) - new Date(a.created_at);
-    return ((a.fname||'') + (a.lname||'')).localeCompare((b.fname||'') + (b.lname||''));
-  });
-
-  var wrap = document.getElementById('consumersWrap');
-  if (list.length === 0) {
-    wrap.innerHTML = '<div class="empty-state"><div class="es-icon">🛒</div><p>No consumers found' + (q ? ' matching "' + q + '"' : '') + '.</p></div>';
-    return;
-  }
-
-  var totalSpend  = list.reduce(function(s,c){ return s + parseFloat(c.total_spend||0); }, 0);
-  var totalOrders = list.reduce(function(s,c){ return s + (c.total_orders||0); }, 0);
-  var html = '<div style="display:flex;gap:10px;margin-bottom:12px">';
-  html += '<div class="sc" style="flex:1;border-left:3px solid #1d4ed8"><div class="slbl">Consumers</div><div class="sval">' + list.length + '</div></div>';
-  html += '<div class="sc" style="flex:1;border-left:3px solid #f59e0b"><div class="slbl">Total Spend</div><div class="sval mono">' + fmt(totalSpend) + '</div></div>';
-  html += '<div class="sc" style="flex:1;border-left:3px solid #7c3aed"><div class="slbl">Orders Placed</div><div class="sval">' + totalOrders + '</div></div>';
-  html += '</div>';
-
-  list.forEach(function(c) {
-    var isBlocked = c.status === 'blocked';
-    var initials  = ((c.fname||'C')[0] + (c.lname||'')[0]).toUpperCase();
-    html += '<div class="card" style="padding:12px 14px;margin-bottom:8px' + (isBlocked ? ';opacity:.65' : '') + '">';
-    html += '<div style="display:flex;align-items:center;gap:12px">';
-    html += '<div style="width:38px;height:38px;border-radius:50%;background:' + (isBlocked ? '#9ca3af' : '#1d4ed8') + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">' + initials + '</div>';
-    html += '<div style="flex:1;min-width:0">';
-    html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
-    html += '<div style="font-size:13px;font-weight:700;color:#1d4ed8">' + (c.fname||'') + (c.lname ? ' ' + c.lname : '') + '</div>';
-    if (isBlocked) html += '<span style="font-size:9px;font-weight:700;background:#fee2e2;color:#c0392b;padding:2px 8px;border-radius:50px">Blocked</span>';
-    html += '</div>';
-    html += '<div style="font-size:11px;color:var(--gray);margin-top:1px">' + (c.village_town||'') + (c.district ? (c.village_town ? ', ' : '') + c.district : '') + '</div>';
-    html += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:7px">';
-    html += '<div><div style="font-size:14px;font-weight:800;color:#1d4ed8">' + fmt(c.total_spend) + '</div><div style="font-size:9px;color:var(--gray)">Spend</div></div>';
-    html += '<div><div style="font-size:14px;font-weight:800;color:#2d6a4f">' + c.total_orders + '</div><div style="font-size:9px;color:var(--gray)">Orders</div></div>';
-    html += '<div><div style="font-size:14px;font-weight:800;color:#7c3aed">' + c.delivered + '</div><div style="font-size:9px;color:var(--gray)">Delivered</div></div>';
-    html += '</div>';
-    if (c.phone) html += '<div style="font-size:11px;color:var(--gray);margin-top:5px">📞 ' + c.phone + (c.email ? '  ·  ✉ ' + c.email : '') + '</div>';
-    html += '</div>';
-    html += '<div style="margin-left:auto;padding-left:8px">';
-    if (isBlocked) {
-      html += '<button onclick="toggleConsumerBlock(\'' + c.id + '\',false)" style="font-size:11px;padding:6px 12px;border:1.5px solid #2d6a4f;background:#f0faf4;color:var(--forest);border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">Unblock</button>';
-    } else {
-      html += '<button onclick="toggleConsumerBlock(\'' + c.id + '\',true)" style="font-size:11px;padding:6px 12px;border:1.5px solid #fee2e2;background:#fff5f5;color:#c0392b;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">Block</button>';
-    }
-    html += '</div></div></div>';
-  });
-  wrap.innerHTML = html;
-}
-
-async function toggleConsumerBlock(id, block) {
-  var reason = '';
-  if (block) {
-    reason = prompt('Enter a reason for blocking this consumer (required):', '');
-    if (reason === null) return;
-    if (!reason.trim()) { showToast('A reason is required to block a user.', 'er'); return; }
-  }
-  try {
-    // Uses the unified status endpoint so the change is recorded in history.
-    await API.setUserStatus(id, block ? 'blocked' : 'active', reason.trim());
-    var c = _allConsumers.find(function(x){ return x.id === id; });
-    if (c) c.status = block ? 'blocked' : 'active';
-    filterConsumers();
-    showToast(block ? 'Consumer blocked.' : 'Consumer unblocked.', 'ok');
-  } catch(e) { showToast(e.message, 'er'); }
-}
-
-function exportConsumersCSV() {
-  var date = new Date().toISOString().slice(0,10);
-  downloadCSV('consumers_' + date + '.csv',
-    ['Name','Phone','Email','Village','District','Orders','Delivered','Spend (₹)','Joined','Status'],
-    _allConsumers.map(function(c) { return [
-      ((c.fname||'') + ' ' + (c.lname||'')).trim(),
-      c.phone   || '',
-      c.email   || '',
-      c.village_town || '',
-      c.district     || '',
-      c.total_orders || 0,
-      c.delivered    || 0,
-      parseFloat(c.total_spend || 0).toFixed(2),
-      fmtDateShort(c.created_at),
-      c.status || 'active',
-    ]; })
-  );
-}
-
-// ── FARMERS DIRECTORY ─────────────────────────────────────────────────────────
-var _allFarmers = [];
-
-async function renderFarmers() {
-  var wrap = document.getElementById('farmersWrap');
-  wrap.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
-  try {
-    var res = await API.getFarmers();
-    _allFarmers = res.farmers || [];
-    filterFarmers();
-  } catch(e) {
-    wrap.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
-  }
-}
-
-function filterFarmers() {
-  var q    = (document.getElementById('farmer-search').value || '').toLowerCase();
-  var sort = document.getElementById('farmer-sort').value;
-  var list = _allFarmers.filter(function(f) {
-    if (!q) return true;
-    var name = ((f.fname||'') + ' ' + (f.lname||'')).toLowerCase();
-    var loc  = (f.village_town||'' + ' ' + (f.district||'')).toLowerCase();
-    return name.includes(q) || loc.includes(q);
-  });
-  list.sort(function(a, b) {
-    if (sort === 'revenue') return (b.total_revenue||0) - (a.total_revenue||0);
-    if (sort === 'orders')  return (b.delivered_orders||0) - (a.delivered_orders||0);
-    if (sort === 'rating')  return (parseFloat(b.avg_rating)||0) - (parseFloat(a.avg_rating)||0);
-    return (a.fname||'').localeCompare(b.fname||'');
-  });
-
-  var wrap = document.getElementById('farmersWrap');
-  if (list.length === 0) {
-    wrap.innerHTML = '<div class="empty-state"><div class="es-icon">👨‍🌾</div><p>No farmers found' + (q ? ' matching "' + q + '"' : '') + '.</p></div>';
-    return;
-  }
-
-  // Summary strip
-  var totalRev = list.reduce(function(s,f){ return s + (parseFloat(f.total_revenue)||0); }, 0);
-  var totalOrd = list.reduce(function(s,f){ return s + (f.delivered_orders||0); }, 0);
-  var html = '<div style="display:flex;gap:10px;margin-bottom:12px">';
-  html += '<div class="sc" style="flex:1;border-left:3px solid var(--forest)"><div class="slbl">Farmers</div><div class="sval">' + list.length + '</div></div>';
-  html += '<div class="sc" style="flex:1;border-left:3px solid #f59e0b"><div class="slbl">Total Revenue</div><div class="sval mono">' + fmt(totalRev) + '</div></div>';
-  html += '<div class="sc" style="flex:1;border-left:3px solid #7c3aed"><div class="slbl">Orders Fulfilled</div><div class="sval">' + totalOrd + '</div></div>';
-  html += '</div>';
-
-  list.forEach(function(f) {
-    var isBlocked  = f.status === 'blocked';
-    var initials   = ((f.fname||'F')[0] + (f.lname||'?')[0]).toUpperCase();
-    var avgR       = parseFloat(f.avg_rating);
-    var stars      = '';
-    if (!isNaN(avgR)) {
-      var filled = Math.round(avgR);
-      for (var s = 1; s <= 5; s++) stars += s <= filled ? '★' : '☆';
-    }
-
-    html += '<div class="card" style="padding:14px;margin-bottom:10px' + (isBlocked ? ';opacity:.65' : '') + '">';
-    html += '<div style="display:flex;align-items:flex-start;gap:12px">';
-    // Avatar
-    html += '<div style="width:42px;height:42px;border-radius:50%;background:' + (isBlocked ? '#9ca3af' : 'var(--forest)') + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0">' + initials + '</div>';
-
-    html += '<div style="flex:1;min-width:0">';
-    // Name + status
-    html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
-    html += '<div style="font-size:14px;font-weight:700;color:var(--forest)">' + (f.fname||'') + (f.lname ? ' ' + f.lname : '') + '</div>';
-    if (isBlocked) html += '<span style="font-size:9px;font-weight:700;background:#fee2e2;color:#c0392b;padding:2px 8px;border-radius:50px">Blocked</span>';
-    html += '</div>';
-    // Location
-    html += '<div style="font-size:11px;color:var(--gray);margin-top:2px">' + (f.village_town||'') + (f.district ? (f.village_town ? ', ' : '') + f.district : '') + '</div>';
-    // Stats row
-    html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">';
-    html += '<div style="text-align:center"><div style="font-size:15px;font-weight:800;color:var(--forest)">' + fmt(f.total_revenue) + '</div><div style="font-size:9px;color:var(--gray)">Revenue</div></div>';
-    html += '<div style="text-align:center"><div style="font-size:15px;font-weight:800;color:#2d6a4f">' + f.delivered_orders + '</div><div style="font-size:9px;color:var(--gray)">Orders</div></div>';
-    html += '<div style="text-align:center"><div style="font-size:15px;font-weight:800;color:#1e40af">' + f.active_listings + '</div><div style="font-size:9px;color:var(--gray)">Listed</div></div>';
-    if (stars) html += '<div style="text-align:center"><div style="font-size:13px;color:#f4a261">' + stars + '</div><div style="font-size:9px;color:var(--gray)">' + avgR.toFixed(1) + ' (' + f.num_ratings + ')</div></div>';
-    html += '</div>';
-    // Phone + bank
-    if (f.phone) html += '<div style="font-size:11px;color:var(--gray);margin-top:6px">📞 ' + f.phone + (f.bank_name ? '  ·  🏦 ' + f.bank_name : '') + '</div>';
-    html += '</div>';
-
-    // Actions
-    html += '<div style="margin-left:auto;padding-left:8px;display:flex;flex-direction:column;gap:6px;align-items:flex-end">';
-    html += '<button onclick="openUserDetail(\'' + f.id + '\')" style="font-size:11px;padding:6px 12px;border:1.5px solid #c3e6cb;background:#f0faf4;color:var(--forest);border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">View Profile</button>';
-    if (isBlocked) {
-      html += '<button onclick="toggleFarmerBlock(\'' + f.id + '\',false)" style="font-size:11px;padding:6px 12px;border:1.5px solid #2d6a4f;background:#f0faf4;color:var(--forest);border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">Unblock</button>';
-    } else {
-      html += '<button onclick="toggleFarmerBlock(\'' + f.id + '\',true)" style="font-size:11px;padding:6px 12px;border:1.5px solid #fee2e2;background:#fff5f5;color:#c0392b;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">Block</button>';
-    }
-    html += '</div>';
-
-    html += '</div></div>';
-  });
-
-  wrap.innerHTML = html;
-}
-
-async function toggleFarmerBlock(id, block) {
-  var reason = '';
-  if (block) {
-    reason = prompt('Enter a reason for blocking this farmer (required):', '');
-    if (reason === null) return;
-    if (!reason.trim()) { showToast('A reason is required to block a user.', 'er'); return; }
-  }
-  try {
-    // Uses the unified status endpoint so the change is recorded in history.
-    await API.setUserStatus(id, block ? 'blocked' : 'active', reason.trim());
-    var f = _allFarmers.find(function(x){ return x.id === id; });
-    if (f) f.status = block ? 'blocked' : 'active';
-    filterFarmers(); // re-render without refetching
-    showToast(block ? 'Farmer blocked.' : 'Farmer unblocked.', 'ok');
-  } catch(e) { showToast(e.message, 'er'); }
-}
+var _allFarmers   = [];
 
 // ── PAYOUTS ───────────────────────────────────────────────────────────────────
 var _allPayouts       = [];

@@ -283,6 +283,9 @@ var API = {
   getConsumers: function() {
     return apiFetch('GET', '/consumers', null, tok());
   },
+  getConsumerFrequent: function(id) {
+    return apiFetch('GET', '/consumers/' + id + '/frequent', null, tok());
+  },
   blockConsumer: function(id) {
     return apiFetch('PATCH', '/consumers/' + id + '/block', {}, tok());
   },

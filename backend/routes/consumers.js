@@ -30,13 +30,15 @@ router.get('/', requireRole('admin'), async (req, res) => {
     // Order stats per consumer
     const { data: orders } = await supabase
       .from('orders')
-      .select('consumer_id, total, status, cancelled')
+      .select('id, consumer_id, total, status, cancelled')
       .in('consumer_id', consumerIds);
 
     const orderMap = {};
+    const orderToConsumer = {};   // order_id → consumer_id, for return attribution
     (orders || []).forEach(o => {
       const cid = o.consumer_id;
-      if (!orderMap[cid]) orderMap[cid] = { total_orders: 0, delivered: 0, total_spend: 0 };
+      orderToConsumer[o.id] = cid;
+      if (!orderMap[cid]) orderMap[cid] = { total_orders: 0, delivered: 0, total_spend: 0, returned: 0 };
       orderMap[cid].total_orders++;
       if (o.status === 'Delivered') {
         orderMap[cid].delivered++;
@@ -44,10 +46,24 @@ router.get('/', requireRole('admin'), async (req, res) => {
       }
     });
 
+    // Returns per consumer (one return row per order → count = returned orders)
+    const orderIds = (orders || []).map(o => o.id);
+    if (orderIds.length) {
+      const { data: returns } = await supabase
+        .from('returns')
+        .select('order_id')
+        .in('order_id', orderIds);
+      (returns || []).forEach(r => {
+        const cid = orderToConsumer[r.order_id];
+        if (cid && orderMap[cid]) orderMap[cid].returned++;
+      });
+    }
+
     const result = consumers.map(c => ({
       ...c,
       total_orders:  (orderMap[c.id] || {}).total_orders || 0,
       delivered:     (orderMap[c.id] || {}).delivered    || 0,
+      returned:      (orderMap[c.id] || {}).returned      || 0,
       total_spend:   Math.round((orderMap[c.id] || {}).total_spend || 0), // paise; middleware converts
     }));
 
@@ -77,6 +93,49 @@ router.patch('/:id/unblock', requireRole('admin'), async (req, res) => {
     .select('id, fname').single();
   if (error) return res.status(500).json({ error: error.message });
   res.json({ message: 'Consumer unblocked.', user: data });
+});
+
+// ── GET /consumers/:id/frequent ───────────────────────────────────────────────
+// Products this consumer has ordered 2+ times, most-ordered first (top 6).
+// "Ordered N times" = number of distinct orders that contain the product.
+router.get('/:id/frequent', requireRole('admin'), async (req, res) => {
+  try {
+    const consumerId = req.params.id;
+
+    const { data: orders, error: oErr } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('consumer_id', consumerId);
+    if (oErr) return res.status(500).json({ error: oErr.message });
+
+    const orderIds = (orders || []).map(o => o.id);
+    if (!orderIds.length) return res.json({ frequent: [] });
+
+    const { data: items, error: iErr } = await supabase
+      .from('order_items')
+      .select('order_id, product_id, name')
+      .in('order_id', orderIds);
+    if (iErr) return res.status(500).json({ error: iErr.message });
+
+    // Group by product; count distinct orders it appears in.
+    const byProduct = {};
+    (items || []).forEach(it => {
+      const key = it.product_id || it.name;
+      if (!key) return;
+      if (!byProduct[key]) byProduct[key] = { name: it.name || 'Product', orders: new Set() };
+      byProduct[key].orders.add(it.order_id);
+    });
+
+    const frequent = Object.values(byProduct)
+      .map(p => ({ name: p.name, count: p.orders.size }))
+      .filter(p => p.count >= 2)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+
+    res.json({ frequent });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 module.exports = router;
