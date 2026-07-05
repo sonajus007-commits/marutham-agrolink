@@ -133,6 +133,17 @@
     <div id="changeRequestsList"><div class="spinner"><div class="spin"></div></div></div>
   </div>
   <div class="filt-row" id="userRoleFilter"></div>
+  <div style="display:flex;gap:10px;align-items:center;margin:2px 0 12px;flex-wrap:wrap">
+    <select class="fi" id="userStateFilter" onchange="onUserFilterStateChange()" style="flex:0;min-width:150px;margin:0"></select>
+    <select class="fi" id="userDistrictFilter" onchange="renderUserTable()" style="flex:0;min-width:150px;margin:0"></select>
+    <select class="fi" id="userRoleSelect" onchange="renderUserTable()" style="flex:0;min-width:170px;margin:0"><option value="">All roles</option></select>
+    <select class="fi" id="userStatusFilter" onchange="renderUserTable()" style="flex:0;min-width:130px;margin:0">
+      <option value="">All statuses</option>
+      <option value="active">Active</option>
+      <option value="suspended">Suspended</option>
+      <option value="blocked">Blocked</option>
+    </select>
+  </div>
   <div id="userListWrap"><div class="spinner"><div class="spin"></div></div></div>
 </div>
 
@@ -2009,6 +2020,9 @@ async function scanOrder(orderId) {
 
 // ── USERS ─────────────────────────────────────────────────────────────────────
 var _userRoles = ['All','consumer','farmer','admin'];
+// View-chip labels — the staff/admin view is presented as "Employee".
+var USER_ROLE_LABELS = { All:'All', consumer:'Consumer', farmer:'Farmer', admin:'Employee' };
+var _userSort = { key: 'name', dir: 'asc' };
 async function renderUsers() {
   renderUserRoleFilter();
   var el = document.getElementById('userListWrap');
@@ -2016,6 +2030,7 @@ async function renderUsers() {
   try {
     var res = await API.getUsers();
     _allUsers = res.users || [];
+    buildUserFilterOptions();
     renderUserTable();
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p>' + e.message + '</p></div>';
@@ -2038,7 +2053,7 @@ async function renderUsers() {
 function renderUserRoleFilter() {
   var html = '';
   _userRoles.forEach(function(r) {
-    html += '<button class="chip' + (r === _activeUserRole ? ' on' : '') + '" onclick="setUserRole(\'' + r + '\')">' + r.charAt(0).toUpperCase() + r.slice(1) + '</button>';
+    html += '<button class="chip' + (r === _activeUserRole ? ' on' : '') + '" onclick="setUserRole(\'' + r + '\')">' + (USER_ROLE_LABELS[r] || (r.charAt(0).toUpperCase() + r.slice(1))) + '</button>';
   });
   document.getElementById('userRoleFilter').innerHTML = html;
 }
@@ -2046,6 +2061,7 @@ function renderUserRoleFilter() {
 function setUserRole(r) {
   _activeUserRole = r;
   renderUserRoleFilter();
+  buildUserFilterOptions();   // State / Role options track the selected view
   renderUserTable();
 }
 
@@ -2053,20 +2069,98 @@ function filterUsers() {
   renderUserTable();
 }
 
+// Build the State / Role filter options from the users in the active view.
+function buildUserFilterOptions() {
+  var base = _allUsers.filter(function(u){ return _activeUserRole === 'All' || u.role === _activeUserRole; });
+  var stateSel = document.getElementById('userStateFilter');
+  var roleSel  = document.getElementById('userRoleSelect');
+  var states = {}, roles = {};
+  base.forEach(function(u){
+    if (u.state) states[u.state] = 1;
+    var rl = u.admin_role || u.role;
+    if (rl) roles[rl] = 1;
+  });
+  var curState = stateSel.value, curRole = roleSel.value;
+  stateSel.innerHTML = '<option value="">All states</option>' +
+    Object.keys(states).sort().map(function(s){ return '<option' + (s === curState ? ' selected' : '') + '>' + s + '</option>'; }).join('');
+  roleSel.innerHTML = '<option value="">All roles</option>' +
+    Object.keys(roles).sort().map(function(r){ return '<option' + (r === curRole ? ' selected' : '') + '>' + r + '</option>'; }).join('');
+  buildUserDistrictFilter();
+}
+function buildUserDistrictFilter() {
+  var base = _allUsers.filter(function(u){ return _activeUserRole === 'All' || u.role === _activeUserRole; });
+  var st = document.getElementById('userStateFilter').value;
+  var distSel = document.getElementById('userDistrictFilter');
+  var dists = {};
+  base.forEach(function(u){
+    if (st && u.state !== st) return;
+    if (u.district) dists[u.district] = 1;
+  });
+  var cur = distSel.value;
+  distSel.innerHTML = '<option value="">All districts</option>' +
+    Object.keys(dists).sort().map(function(d){ return '<option' + (d === cur ? ' selected' : '') + '>' + d + '</option>'; }).join('');
+}
+function onUserFilterStateChange() { buildUserDistrictFilter(); renderUserTable(); }
+
+// Column sorting — click a header to toggle ascending / descending.
+function setUserSort(key) {
+  if (_userSort.key === key) _userSort.dir = (_userSort.dir === 'asc') ? 'desc' : 'asc';
+  else { _userSort.key = key; _userSort.dir = 'asc'; }
+  renderUserTable();
+}
+function userSortValue(u, key) {
+  switch (key) {
+    case 'name':         return (u.fname + ' ' + (u.lname || '')).trim().toLowerCase();
+    case 'login_id':     return (u.login_id || '').toLowerCase();
+    case 'phone':        return (u.phone || '');
+    case 'role':         return (u.admin_role || u.role || '').toLowerCase();
+    case 'gender':       return (u.gender || '').toLowerCase();
+    case 'district':     return (u.district || '').toLowerCase();
+    case 'status':       return (u.status || 'active').toLowerCase();
+    case 'subscription': return u.subscription_expires_at ? new Date(u.subscription_expires_at).getTime() : 0;
+    default:             return '';
+  }
+}
+function userCmp(a, b) {
+  var va = userSortValue(a, _userSort.key), vb = userSortValue(b, _userSort.key);
+  var r = (typeof va === 'number' && typeof vb === 'number')
+    ? va - vb
+    : String(va).localeCompare(String(vb), undefined, { numeric: true });
+  return _userSort.dir === 'asc' ? r : -r;
+}
+function _uth(label, key) {
+  var on = _userSort.key === key;
+  var arrow = on ? (_userSort.dir === 'asc' ? ' ▲' : ' ▼') : ' ⇅';
+  return '<th onclick="setUserSort(\'' + key + '\')" style="cursor:pointer;user-select:none;white-space:nowrap"'
+    + ' title="Sort by ' + label + '">' + label
+    + '<span style="font-size:10px;color:' + (on ? 'var(--forest)' : '#cbd5e1') + '">' + arrow + '</span></th>';
+}
+
 function renderUserTable() {
-  var q  = (document.getElementById('userSearch').value || '').toLowerCase();
-  var list = _allUsers;
+  var q       = (document.getElementById('userSearch').value || '').toLowerCase();
+  var fSt     = document.getElementById('userStateFilter').value;
+  var fDi     = document.getElementById('userDistrictFilter').value;
+  var fRole   = document.getElementById('userRoleSelect').value;
+  var fStatus = document.getElementById('userStatusFilter').value;
+  var list = _allUsers.slice();
   if (_activeUserRole !== 'All') list = list.filter(function(u){ return u.role === _activeUserRole; });
   if (q) list = list.filter(function(u){
     return (u.fname+' '+(u.lname||'')+u.phone+(u.login_id||'')).toLowerCase().includes(q);
   });
+  if (fSt)     list = list.filter(function(u){ return u.state === fSt; });
+  if (fDi)     list = list.filter(function(u){ return u.district === fDi; });
+  if (fRole)   list = list.filter(function(u){ return (u.admin_role || u.role) === fRole; });
+  if (fStatus) list = list.filter(function(u){ return (u.status || 'active') === fStatus; });
+  list.sort(userCmp);
 
   if (list.length === 0) {
     document.getElementById('userListWrap').innerHTML = '<div class="empty-state"><p>No users found.</p></div>'; return;
   }
 
   var html = '<div class="tbl-wrap"><table class="utbl"><thead><tr>';
-  html += '<th>Name</th><th>Login ID</th><th>Phone</th><th>Role</th><th>Gender</th><th>District</th><th>Subscription</th><th>Status</th><th>Action</th>';
+  html += _uth('Name','name') + _uth('Login ID','login_id') + _uth('Phone','phone')
+        + _uth('Role','role') + _uth('Gender','gender') + _uth('District','district')
+        + _uth('Subscription','subscription') + _uth('Status','status') + '<th>Action</th>';
   html += '</tr></thead><tbody>';
   list.forEach(function(u) {
     var roleClass = u.role === 'admin' ? 'rb-vc' : (u.role === 'farmer' ? 'rb-fa' : 'rb-co');
