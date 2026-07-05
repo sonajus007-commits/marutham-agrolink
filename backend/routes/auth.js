@@ -5,7 +5,6 @@ const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { distCode, stateCode } = require('../utils/codeGen');
 const notify = require('../utils/notify');
-const { validateStaffEmployment } = require('../utils/employeeValidation');
 
 const router = express.Router();
 
@@ -29,10 +28,37 @@ const ROLE_PREFIXES = {
   'Regional Manager': 'RM',
   'State Head':       'SH',
   'Head Office':      'HO',
+  // Management / org-level designations (shown in Add Staff, mirror Add Employee).
+  'Board of Director': 'BD',
+  'CEO':               'CO',
+  'Managing Director': 'MD',
+  'CFO':               'CF',
+  'CTO':               'CT',
+  'Technical Admin':   'TA',
+  'HR Admin':          'HA',
+  'HR Manager':        'HM',
+  'Zonal Manager':     'ZM',
 };
 
-// State-level roles have no district segment in their login ID.
-const STATE_LEVEL_ROLES = new Set(['Regional Manager', 'State Head', 'Head Office']);
+// State-level roles have no district segment in their login ID. Top management /
+// org-level roles are company-wide, so they too skip the district segment.
+const STATE_LEVEL_ROLES = new Set(['Regional Manager', 'State Head', 'Head Office',
+  'Board of Director', 'CEO', 'Managing Director', 'CFO', 'CTO', 'Technical Admin',
+  'HR Admin', 'HR Manager', 'Zonal Manager']);
+
+// Employee-master designation → staff login role (admin_role) used for access
+// control. Designations that have a distinct login role map to it (e.g.
+// "Collection Officer(VCO)" → "VCO"); management/org titles with no distinct role
+// use the designation itself. Mirrors DESIGNATION_TO_ROLE in the admin UI.
+const DESIGNATION_TO_ROLE = {
+  'Collection Officer(VCO)': 'VCO',
+  'VCO':                     'VCO',
+  'Delivery Agent':          'Delivery Agent',
+  'Hub Incharge':            'Hub Incharge',
+  'District Manager':        'District Manager',
+  'Regional Manager':        'Regional Manager',
+  'State Head':              'State Head',
+};
 
 // Counter format: [A-Z][01-99] — always visually alphanumeric.
 // Sequence: A01, A02 … A99, B01 … Z99  (2,574 slots per name prefix).
@@ -440,8 +466,10 @@ router.post('/reset-password', async (req, res) => {
 
 // ── POST /auth/create-staff ───────────────────────────────────────────────────
 // Admin creates a VCO / Delivery Agent / District Manager / Hub Incharge / RM / SH account
+const MGMT_ROLES = ['Board of Director','CEO','Managing Director','CFO','CTO',
+  'Technical Admin','HR Admin','HR Manager','Zonal Manager'];
 const CREATABLE_BY = {
-  'Head Office':      ['VCO','Delivery Agent','District Manager','Hub Incharge','Regional Manager','State Head','Head Office'],
+  'Head Office':      ['VCO','Delivery Agent','District Manager','Hub Incharge','Regional Manager','State Head','Head Office', ...MGMT_ROLES],
   'State Head':       ['VCO','Delivery Agent','District Manager','Hub Incharge','Regional Manager'],
   'Regional Manager': ['VCO','Delivery Agent','District Manager','Hub Incharge'],
   'District Manager': ['VCO','Delivery Agent'],
@@ -452,14 +480,35 @@ router.post('/create-staff', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'Admin access required.' });
   }
 
-  const { fname, lname, phone, password, admin_role, district, state, gender, village_town,
-          taluk, city, pincode, aadhar, agent_vehicle, emp_id, employment_type } = req.body;
-  if (!fname || !phone || !password || !admin_role) {
-    return res.status(400).json({ error: 'fname, phone, password, and admin_role are required.' });
+  const { fname, lname, phone, password, district, state, gender, village_town,
+          taluk, city, pincode, aadhar, agent_vehicle, emp_id } = req.body;
+  if (!fname || !phone || !password) {
+    return res.status(400).json({ error: 'fname, phone, and password are required.' });
   }
   if (password.length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters.' });
   }
+
+  // Every staff login represents an approved employee: the Employee ID is mandatory,
+  // and the login role + company details are read authoritatively from the master.
+  const empId = (emp_id || '').trim();
+  if (!empId) {
+    return res.status(400).json({ error: 'Employee ID is required. Add & approve the employee in the tracker first, then create their login.' });
+  }
+  const { data: emp, error: empErr } = await supabase
+    .from('employees')
+    .select('emp_id, designation, employment_type, status, approval_status')
+    .eq('emp_id', empId)
+    .maybeSingle();
+  if (empErr)  return res.status(500).json({ error: 'Could not verify Employee ID against the employee tracker.' });
+  if (!emp)    return res.status(404).json({ error: `Employee ID "${empId}" is not in the employee tracker.` });
+  if (emp.approval_status !== 'approved') return res.status(400).json({ error: `Employee "${empId}" is not yet HR-approved. A login can only be created after approval.` });
+  if (emp.status !== 'active')            return res.status(400).json({ error: `Employee ID "${empId}" is marked ${emp.status} in the employee tracker.` });
+  if (!emp.designation)                   return res.status(400).json({ error: `Employee "${empId}" has no designation set. Set the designation on the employee record first.` });
+
+  // Login role is derived from the employee's designation (never trusted from the client).
+  const admin_role = DESIGNATION_TO_ROLE[emp.designation] || emp.designation;
+
   // Mandatory profile fields for every staff member.
   // Taluk is validated conditionally on the client (some districts have none),
   // so it is not part of this unconditional server check.
@@ -476,13 +525,21 @@ router.post('/create-staff', requireAuth, async (req, res) => {
   if ((admin_role === 'VCO' || admin_role === 'Delivery Agent') && !village_town) {
     return res.status(400).json({ error: 'village_town is required for VCO and Delivery Agent.' });
   }
-  // Employee tracker rule: Permanent staff must reference an active tracker record.
-  const empCheck = await validateStaffEmployment({ employment_type, emp_id });
-  if (!empCheck.ok) return res.status(400).json({ error: empCheck.error });
 
   const allowed = CREATABLE_BY[req.user.admin_role] || [];
   if (!allowed.includes(admin_role)) {
     return res.status(403).json({ error: `Your role (${req.user.admin_role}) cannot create ${admin_role} accounts.` });
+  }
+
+  // One login per employee: an Employee ID may back only a single staff account.
+  // (Uses limit(1) rather than maybeSingle so a pre-existing duplicate can't throw.)
+  const { data: dupEmp } = await supabase
+    .from('users')
+    .select('login_id')
+    .eq('emp_id', empId)
+    .limit(1);
+  if (dupEmp && dupEmp.length) {
+    return res.status(409).json({ error: `Employee "${empId}" already has a login (${dupEmp[0].login_id}). One employee can hold only one login account.` });
   }
 
   const { data: existing } = await supabase
@@ -509,8 +566,8 @@ router.post('/create-staff', requireAuth, async (req, res) => {
     ...(pincode ? { pincode } : {}),
     ...(aadhar ? { aadhar } : {}),
     ...(agent_vehicle ? { agent_vehicle } : {}),
-    ...(empCheck.emp_id ? { emp_id: empCheck.emp_id } : {}),
-    ...(empCheck.employment_type ? { employment_type: empCheck.employment_type } : {}),
+    emp_id: emp.emp_id,
+    ...(emp.employment_type ? { employment_type: emp.employment_type } : {}),
     // Keep both fields in sync: village_town is the canonical address field (editable
     // everywhere); vco_city is what the VCO order query historically reads.
     ...(village_town ? { village_town, vco_city: village_town } : {}),
