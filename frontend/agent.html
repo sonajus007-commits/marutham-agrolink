@@ -148,6 +148,9 @@
     <div class="astat"><div class="astat-val" id="s-cod">₹0</div><div class="astat-lbl" id="lbl-cod">COD Collected</div></div>
   </div>
 
+  <!-- Field dashboard (VCO / Delivery Agent) -->
+  <div id="fieldDashboard"></div>
+
   <!-- Scan bar -->
   <div class="scan-bar">
     <div class="scan-bar-label">📷 Scan / Enter Order Code</div>
@@ -289,9 +292,13 @@
 <script src="js/config.js"></script>
 <script src="js/shared.js"></script>
 <script src="js/api.js"></script>
+<script src="js/dashboard/common.js"></script>
+<script src="js/dashboard/field.js"></script>
 <script>
 var user = requireAuth('agent');
 if (!user) throw new Error('redirect');
+
+var _isVCO = (user.admin_role === 'VCO');
 
 startClock('liveClock');
 document.getElementById('agentName').textContent = user.fname + (user.lname ? ' ' + user.lname : '');
@@ -306,8 +313,6 @@ var _inTransit  = [];  // Picked Up — agent to advance to Out for Delivery
 var _toDeliver  = [];  // Out for Delivery — agent to deliver
 var _inProgress = [];  // Order Placed / In Transit / At Hub — view only (no action here)
 var _delivered  = [];  // Delivered today
-
-var _isVCO = (user.admin_role === 'VCO');
 
 // Relabel stats for VCOs
 if (_isVCO) {
@@ -875,9 +880,17 @@ async function agentChangePw() {
   }
 }
 
+// ── Field dashboard (VCO / Delivery Agent) ────────────────────────────────────
+function loadFieldDashboard() {
+  if (typeof renderFieldDashboard === 'function') {
+    renderFieldDashboard(document.getElementById('fieldDashboard'));
+  }
+}
+
 // ── Init + auto-refresh ───────────────────────────────────────────────────────
 loadOrders();
-setInterval(loadOrders, 60000);
+loadFieldDashboard();
+setInterval(function () { loadOrders(); loadFieldDashboard(); }, 60000);
 </script>
 </body>
 </html>

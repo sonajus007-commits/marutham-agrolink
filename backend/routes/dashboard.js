@@ -166,4 +166,636 @@ router.get('/', async (req, res) => {
   });
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// GET /dashboard/executive  — company-wide business overview (Executive profile)
+// ───────────────────────────────────────────────────────────────────────────────
+// Serves Board of Director / CEO / Managing Director (Head Office allowed for
+// preview). All figures are aggregated live from DB records in JS (same pattern as
+// GET /dashboard). Money is returned already-in-rupees under field names NOT in the
+// money middleware's MONEY_FIELDS set, so values pass through untouched.
+// Query params: ?trend=monthly|quarterly|yearly  (default monthly)
+// ═══════════════════════════════════════════════════════════════════════════════
+const EXECUTIVE_ROLES = new Set([
+  'Board of Director', 'CEO', 'Managing Director', 'CFO', 'CTO', 'Head Office',
+]);
+
+// Tiles with no data source yet — the UI greys these out as "Needs integration".
+const EXEC_PLACEHOLDERS = [
+  'net_profit', 'ebitda', 'cash_flow', 'revenue_forecast',
+  'receivables', 'payables', 'gst', 'tds', 'bank_balance', 'daily_settlement',
+  'salary_cost', 'warehouse_cost', 'hub_cost',
+  'vehicle_utilization', 'fuel_cost',
+  'farmer_satisfaction', 'customer_complaints', 'hub_issues', 'stock_shortage',
+];
+
+// paise (int) → rupees (number, 2 dp). Named fields avoid the money middleware.
+const rup = (paise) => Math.round((Number(paise || 0)) / 100 * 100) / 100;
+
+// IST helpers (DB stores UTC; users are in IST = UTC+5:30).
+const IST_MS = 5.5 * 3600000;
+function istParts(d) {
+  const t = new Date(new Date(d).getTime() + IST_MS);
+  return { y: t.getUTCFullYear(), m: t.getUTCMonth(), day: t.getUTCDate(), date: t };
+}
+
+router.get('/executive', async (req, res) => {
+  const u = req.user;
+  if (u.role !== 'admin' || !EXECUTIVE_ROLES.has(u.admin_role)) {
+    return res.status(403).json({ error: 'Executive dashboard is restricted to Board/CEO/MD.' });
+  }
+
+  const trendMode = ['monthly', 'quarterly', 'yearly'].includes(req.query.trend)
+    ? req.query.trend : 'monthly';
+
+  // ── Pull the datasets (JS aggregation, current-scale friendly) ──────────────
+  const [
+    ordersR, itemsR, productsR, usersR, listingsR, payoutsR, returnsR,
+  ] = await Promise.all([
+    supabase.from('orders').select('id, total, item_total, market_fee, delivery, status, cancelled, district, created_at, delivered_at, picked_up_at, eta_ts, consumer_id, refund_amt'),
+    supabase.from('order_items').select('order_id, product_id, qty, price, farmer_id, farmer_name, rated, rating_value'),
+    supabase.from('products').select('id, category, product_group'),
+    supabase.from('users').select('id, role, created_at, district, status, subscription_amount, subscription_expires_at'),
+    supabase.from('farmer_listings').select('farmer_id, listed'),
+    supabase.from('payouts').select('amount, status, created_at, paid_at'),
+    supabase.from('returns').select('id, decision, refund_amt'),
+  ]);
+
+  const err = ordersR.error || itemsR.error || productsR.error || usersR.error
+    || listingsR.error || payoutsR.error || returnsR.error;
+  if (err) return res.status(500).json({ error: 'Could not load executive dashboard.' });
+
+  const orders   = ordersR.data   || [];
+  const items    = itemsR.data    || [];
+  const products = productsR.data  || [];
+  const users    = usersR.data     || [];
+  const listings = listingsR.data  || [];
+  const payouts  = payoutsR.data   || [];
+  const returns  = returnsR.data   || [];
+
+  const active = orders.filter(o => !o.cancelled);
+
+  // Reference "today"/month/year in IST
+  const nowIst = istParts(Date.now());
+  const isSameDay  = p => p.y === nowIst.y && p.m === nowIst.m && p.day === nowIst.day;
+  const isThisMonth = p => p.y === nowIst.y && p.m === nowIst.m;
+  const isThisYear  = p => p.y === nowIst.y;
+  // previous month (handles Jan → Dec last year)
+  const prevM = nowIst.m === 0 ? 11 : nowIst.m - 1;
+  const prevMY = nowIst.m === 0 ? nowIst.y - 1 : nowIst.y;
+  const isPrevMonth = p => p.y === prevMY && p.m === prevM;
+
+  // ── Summary ─────────────────────────────────────────────────────────────────
+  let revToday = 0, revMtd = 0, revYtd = 0, gmv = 0;
+  const districtAgg = {};                 // district → { revenue(paise), orders }
+  active.forEach(o => {
+    const p = istParts(o.created_at);
+    gmv += o.total;
+    if (isSameDay(p))   revToday += o.total;
+    if (isThisMonth(p)) revMtd   += o.total;
+    if (isThisYear(p))  revYtd   += o.total;
+    const dk = o.district || 'Unknown';
+    if (!districtAgg[dk]) districtAgg[dk] = { revenue: 0, orders: 0 };
+    districtAgg[dk].revenue += o.total;
+    districtAgg[dk].orders  += 1;
+  });
+
+  const ordersThisMonth = active.filter(o => isThisMonth(istParts(o.created_at))).length;
+  const ordersPrevMonth = active.filter(o => isPrevMonth(istParts(o.created_at))).length;
+  const growthPct = (cur, prev) => prev > 0 ? Math.round((cur - prev) / prev * 1000) / 10 : (cur > 0 ? 100 : 0);
+
+  const consumers = users.filter(x => x.role === 'consumer');
+  const farmers   = users.filter(x => x.role === 'farmer');
+  const consThisM = consumers.filter(x => isThisMonth(istParts(x.created_at))).length;
+  const consPrevM = consumers.filter(x => isPrevMonth(istParts(x.created_at))).length;
+  const farmThisM = farmers.filter(x => isThisMonth(istParts(x.created_at))).length;
+  const farmPrevM = farmers.filter(x => isPrevMonth(istParts(x.created_at))).length;
+
+  // ── Orders block (current snapshot totals) ──────────────────────────────────
+  const ordersBlock = {
+    today:     active.filter(o => isSameDay(istParts(o.created_at))).length,
+    delivered: orders.filter(o => o.status === 'Delivered').length,
+    cancelled: orders.filter(o => o.cancelled).length,
+    pending:   active.filter(o => o.status !== 'Delivered').length,
+    refunded:  returns.filter(r => r.decision === 'accepted').length,
+  };
+
+  // ── Customers: repeat / retention / basket ──────────────────────────────────
+  const ordersByConsumer = {};
+  active.forEach(o => { if (o.consumer_id) ordersByConsumer[o.consumer_id] = (ordersByConsumer[o.consumer_id] || 0) + 1; });
+  const buyers = Object.keys(ordersByConsumer).length;
+  const repeatBuyers = Object.values(ordersByConsumer).filter(n => n > 1).length;
+  const avgBasket = active.length > 0 ? rup(active.reduce((s, o) => s + o.total, 0) / active.length) : 0;
+
+  // ── Farmers: active / inactive / top / rating ───────────────────────────────
+  const activeFarmerIds = new Set(listings.filter(l => l.listed).map(l => l.farmer_id));
+  const farmerRevenue = {};   // farmer_id → { name, revenue(paise) }
+  let ratingSum = 0, ratingCount = 0;
+  const itemsByOrder = {};
+  items.forEach(it => {
+    (itemsByOrder[it.order_id] = itemsByOrder[it.order_id] || []).push(it);
+    if (it.farmer_id) {
+      const fr = farmerRevenue[it.farmer_id] || (farmerRevenue[it.farmer_id] = { name: it.farmer_name || 'Farmer', revenue: 0 });
+      fr.revenue += Number(it.qty || 0) * Number(it.price || 0);
+    }
+    if (it.rated && it.rating_value) { ratingSum += it.rating_value; ratingCount++; }
+  });
+  const topFarmers = Object.entries(farmerRevenue)
+    .map(([id, v]) => ({ farmer_id: id, name: v.name, revenue: rup(v.revenue) }))
+    .sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+
+  // ── Product categories ──────────────────────────────────────────────────────
+  const prodCat = {};
+  products.forEach(p => { prodCat[p.id] = p.category || p.product_group || 'Other'; });
+  const catAgg = {};   // category → { revenue(paise), orders:Set }
+  items.forEach(it => {
+    const cat = prodCat[it.product_id] || 'Other';
+    const c = catAgg[cat] || (catAgg[cat] = { revenue: 0, orders: new Set() });
+    c.revenue += Number(it.qty || 0) * Number(it.price || 0);
+    c.orders.add(it.order_id);
+  });
+  const categories = Object.entries(catAgg)
+    .map(([name, v]) => ({ name, revenue: rup(v.revenue), orders: v.orders.size }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  // ── Logistics: SLA / avg delivery time / late ───────────────────────────────
+  const delivered = orders.filter(o => o.status === 'Delivered' && o.delivered_at);
+  let durSum = 0, durN = 0, late = 0, onTimeEligible = 0;
+  delivered.forEach(o => {
+    if (o.picked_up_at) { durSum += (new Date(o.delivered_at) - new Date(o.picked_up_at)); durN++; }
+    if (o.eta_ts) { onTimeEligible++; if (new Date(o.delivered_at) > new Date(o.eta_ts)) late++; }
+  });
+  const logistics = {
+    avg_delivery_mins: durN > 0 ? Math.round(durSum / durN / 60000) : null,
+    late_deliveries:   late,
+    sla_pct:           onTimeEligible > 0 ? Math.round((onTimeEligible - late) / onTimeEligible * 100) : null,
+  };
+
+  // ── Financial (live cuts) ───────────────────────────────────────────────────
+  const subActive = farmers.filter(f => f.subscription_expires_at && new Date(f.subscription_expires_at) > new Date(nowIst.date.getTime() - IST_MS));
+  const financial = {
+    platform_commission: rup(active.reduce((s, o) => s + o.market_fee, 0)),
+    delivery_income:     rup(active.reduce((s, o) => s + o.delivery, 0)),
+    subscription_income: rup(subActive.reduce((s, f) => s + Number(f.subscription_amount || 0), 0)),
+    payouts_pending:     rup(payouts.filter(p => p.status === 'pending').reduce((s, p) => s + p.amount, 0)),
+    payouts_paid:        rup(payouts.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0)),
+  };
+
+  // ── Districts (map + ranking): green/amber/red vs peak revenue ──────────────
+  const maxDistRev = Math.max(1, ...Object.values(districtAgg).map(d => d.revenue));
+  const districts = Object.entries(districtAgg)
+    .map(([district, v]) => {
+      const share = v.revenue / maxDistRev;
+      const status = share >= 0.66 ? 'green' : share >= 0.33 ? 'amber' : 'red';
+      return { district, revenue: rup(v.revenue), orders: v.orders, status };
+    })
+    .sort((a, b) => b.revenue - a.revenue);
+
+  // ── Trend (period-bucketed active revenue + orders) ─────────────────────────
+  const trend = buildTrend(active, trendMode);
+
+  // ── Alerts (live-derived only) ──────────────────────────────────────────────
+  const alerts = [];
+  const cancelRate = orders.length > 0 ? cancelledOrdersCount(orders) / orders.length : 0;
+  if (cancelRate > 0.15) {
+    alerts.push({ type: 'high_cancellation', severity: 'high', message: `High cancellation rate: ${Math.round(cancelRate * 100)}% of all orders.` });
+  }
+  const stalePayouts = payouts.filter(p => p.status === 'pending' && (Date.now() - new Date(p.created_at)) > 7 * 86400000).length;
+  if (stalePayouts > 0) {
+    alerts.push({ type: 'delayed_payment', severity: 'medium', message: `${stalePayouts} farmer payout${stalePayouts > 1 ? 's' : ''} pending over 7 days.` });
+  }
+  districts.filter(d => d.status === 'red' && d.orders > 0).slice(0, 3).forEach(d => {
+    alerts.push({ type: 'district_low', severity: 'low', message: `${d.district} underperforming (₹${d.revenue}, ${d.orders} orders).` });
+  });
+
+  res.json({
+    scope: 'executive',
+    generated_at: new Date().toISOString(),
+    summary: {
+      revenue_today: rup(revToday),
+      revenue_mtd:   rup(revMtd),
+      revenue_ytd:   rup(revYtd),
+      gmv:           rup(gmv),
+      total_orders:  orders.length,
+      order_growth_pct:    growthPct(ordersThisMonth, ordersPrevMonth),
+      customer_growth_pct: growthPct(consThisM, consPrevM),
+      farmer_growth_pct:   growthPct(farmThisM, farmPrevM),
+      active_districts:    Object.keys(districtAgg).length,
+    },
+    orders: ordersBlock,
+    customers: {
+      new: consThisM,
+      repeat: repeatBuyers,
+      retention_pct: buyers > 0 ? Math.round(repeatBuyers / buyers * 100) : 0,
+      avg_basket: avgBasket,
+    },
+    farmers: {
+      registered: farmers.length,
+      active: activeFarmerIds.size,
+      inactive: Math.max(0, farmers.length - activeFarmerIds.size),
+      top: topFarmers,
+      avg_rating: ratingCount > 0 ? Math.round(ratingSum / ratingCount * 10) / 10 : null,
+    },
+    categories,
+    logistics,
+    financial,
+    districts,
+    trend: { mode: trendMode, points: trend },
+    alerts,
+    placeholders: EXEC_PLACEHOLDERS,
+  });
+});
+
+function cancelledOrdersCount(orders) { return orders.filter(o => o.cancelled).length; }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GET /dashboard/operations  — geo-scoped operational dashboard
+// ───────────────────────────────────────────────────────────────────────────────
+// Serves the "Operations" profile. Scope narrows by the viewer's role:
+//   District Manager / Hub Incharge → their district (district_assign || district)
+//   Regional Manager / State Head / Zonal Manager → their state (all its districts)
+//   Head Office → everything (preview)
+// All figures aggregated live in JS. Money returned already-in-rupees.
+// ═══════════════════════════════════════════════════════════════════════════════
+const OPS_DISTRICT_ROLES = new Set(['District Manager', 'Hub Incharge']);
+const OPS_REGION_ROLES   = new Set(['Regional Manager', 'State Head', 'Zonal Manager']);
+const OPS_ALL_ROLES      = new Set(['Head Office']);
+
+const OPS_PLACEHOLDERS = ['hub_stock', 'farmer_visits', 'vco_attendance', 'agents_online', 'transfer_stock'];
+
+router.get('/operations', async (req, res) => {
+  const u = req.user;
+  if (u.role !== 'admin' ||
+      !(OPS_DISTRICT_ROLES.has(u.admin_role) || OPS_REGION_ROLES.has(u.admin_role) || OPS_ALL_ROLES.has(u.admin_role))) {
+    return res.status(403).json({ error: 'Operations dashboard is restricted to operational managers.' });
+  }
+
+  // ── Resolve scope ───────────────────────────────────────────────────────────
+  let scope = { level: 'all', name: 'All Regions' };
+  let districtSet = null;   // null = no district filter
+  if (OPS_DISTRICT_ROLES.has(u.admin_role)) {
+    const d = u.district_assign || u.district;
+    scope = { level: 'district', name: d || 'Unassigned' };
+    districtSet = new Set([d]);
+  } else if (OPS_REGION_ROLES.has(u.admin_role)) {
+    scope = { level: 'region', name: u.state || 'Unassigned' };
+    const { data: locs } = await supabase.from('locations').select('district').eq('state', u.state);
+    districtSet = new Set((locs || []).map(l => l.district));
+  }
+  const inScopeDistrict = (d) => districtSet == null || districtSet.has(d);
+
+  // ── Pull datasets ───────────────────────────────────────────────────────────
+  const [ordersR, usersR, listingsR, payoutsR, returnsR] = await Promise.all([
+    supabase.from('orders').select('id, total, status, cancelled, district, village, created_at, delivered_at, agent_id, agent_name'),
+    supabase.from('users').select('id, role, admin_role, fname, lname, phone, agent_vehicle, district, status, approval_status'),
+    supabase.from('farmer_listings').select('farmer_id, listed, confirmed, updated_at'),
+    supabase.from('payouts').select('farmer_id, amount, status, created_at'),
+    supabase.from('returns').select('id, order_id, decision, collected'),
+  ]);
+  const oErr = ordersR.error || usersR.error || listingsR.error || payoutsR.error || returnsR.error;
+  if (oErr) return res.status(500).json({ error: 'Could not load operations dashboard.' });
+
+  const allOrders = ordersR.data || [];
+  const allUsers  = usersR.data  || [];
+  const listings  = listingsR.data || [];
+  const payouts   = payoutsR.data  || [];
+  const returns   = returnsR.data  || [];
+
+  const orders = allOrders.filter(o => inScopeDistrict(o.district));
+  const active = orders.filter(o => !o.cancelled);
+  const orderIdSet = new Set(orders.map(o => o.id));
+
+  const nowIst = istParts(Date.now());
+  const isToday = ts => { if (!ts) return false; const p = istParts(ts); return p.y === nowIst.y && p.m === nowIst.m && p.day === nowIst.day; };
+  const weekAgo = Date.now() - 7 * 86400000;
+
+  // ── Summary ─────────────────────────────────────────────────────────────────
+  const ordersToday = active.filter(o => isToday(o.created_at));
+  const summary = {
+    orders_today:      ordersToday.length,
+    revenue_today:     rup(ordersToday.reduce((s, o) => s + o.total, 0)),
+    revenue_week:      rup(active.filter(o => new Date(o.created_at) >= weekAgo).reduce((s, o) => s + o.total, 0)),
+    active_orders:     active.length,
+    delivered_today:   orders.filter(o => o.status === 'Delivered' && isToday(o.delivered_at)).length,
+    pending_deliveries: active.filter(o => o.status !== 'Delivered').length,
+  };
+
+  // ── Delivery status breakdown ───────────────────────────────────────────────
+  const statusBreakdown = {};
+  active.forEach(o => { statusBreakdown[o.status] = (statusBreakdown[o.status] || 0) + 1; });
+
+  // ── Scoped people ───────────────────────────────────────────────────────────
+  const scopedFarmers = allUsers.filter(x => x.role === 'farmer' && inScopeDistrict(x.district));
+  const scopedFarmerIds = new Set(scopedFarmers.map(f => f.id));
+  const agents = allUsers.filter(x => x.role === 'admin' && x.admin_role === 'Delivery Agent'
+    && x.status === 'active' && inScopeDistrict(x.district));
+
+  // ── Collections (listings by scoped farmers) ────────────────────────────────
+  const scopedListings = listings.filter(l => scopedFarmerIds.has(l.farmer_id));
+  const collections = {
+    confirmed_listings: scopedListings.filter(l => l.confirmed).length,
+    listed_active:      scopedListings.filter(l => l.listed).length,
+    updated_today:      scopedListings.filter(l => isToday(l.updated_at)).length,
+  };
+
+  // ── Quality / returns in scope ──────────────────────────────────────────────
+  const scopedReturns = returns.filter(r => orderIdSet.has(r.order_id));
+  const quality = {
+    pending_returns:  scopedReturns.filter(r => !r.decision).length,
+    rejected_returns: scopedReturns.filter(r => r.decision === 'rejected').length,
+    to_collect:       scopedReturns.filter(r => r.decision === 'accepted' && !r.collected).length,
+  };
+
+  // ── Pending farmer payments in scope ────────────────────────────────────────
+  const pendingPayouts = payouts.filter(p => p.status === 'pending' && scopedFarmerIds.has(p.farmer_id));
+  const payments = {
+    pending_count:  pendingPayouts.length,
+    pending_amount: rup(pendingPayouts.reduce((s, p) => s + p.amount, 0)),
+    stale_count:    pendingPayouts.filter(p => new Date(p.created_at) < weekAgo).length,
+  };
+
+  // ── Farmers block ───────────────────────────────────────────────────────────
+  const activeFarmerIds = new Set(scopedListings.filter(l => l.listed).map(l => l.farmer_id));
+  const farmers = {
+    registered:      scopedFarmers.length,
+    active:          activeFarmerIds.size,
+    pending_approval: scopedFarmers.filter(f => f.approval_status === 'pending_review').length,
+  };
+
+  // ── Per-district rollup (useful for region-scope view) ──────────────────────
+  const distAgg = {};
+  active.forEach(o => {
+    const k = o.district || 'Unknown';
+    const d = distAgg[k] || (distAgg[k] = { district: k, orders: 0, revenue: 0, pending: 0 });
+    d.orders++; d.revenue += o.total; if (o.status !== 'Delivered') d.pending++;
+  });
+  const districts = Object.values(distAgg)
+    .map(d => ({ district: d.district, orders: d.orders, revenue: rup(d.revenue), pending: d.pending }))
+    .sort((a, b) => b.orders - a.orders);
+
+  // ── Alerts (live) ───────────────────────────────────────────────────────────
+  const alerts = [];
+  if (farmers.pending_approval > 0) alerts.push({ type: 'farmer_approval', severity: 'medium', message: `${farmers.pending_approval} farmer registration${farmers.pending_approval > 1 ? 's' : ''} awaiting approval.` });
+  if (payments.stale_count > 0) alerts.push({ type: 'delayed_payment', severity: 'high', message: `${payments.stale_count} farmer payout${payments.stale_count > 1 ? 's' : ''} pending over 7 days.` });
+  if (quality.pending_returns > 0) alerts.push({ type: 'returns', severity: 'medium', message: `${quality.pending_returns} return${quality.pending_returns > 1 ? 's' : ''} awaiting a decision.` });
+  const unassigned = active.filter(o => !o.agent_id && ['Packaged', 'VCO Verified', 'Picked Up'].includes(o.status)).length;
+  if (unassigned > 0) alerts.push({ type: 'assign', severity: 'low', message: `${unassigned} order${unassigned > 1 ? 's' : ''} ready but no delivery agent assigned.` });
+
+  res.json({
+    scope,
+    generated_at: new Date().toISOString(),
+    summary,
+    delivery_status: { status_breakdown: statusBreakdown, agents_total: agents.length },
+    collections,
+    quality,
+    payments,
+    farmers,
+    agents: agents.slice(0, 20).map(a => ({ name: (a.fname || '') + (a.lname ? ' ' + a.lname : ''), phone: a.phone, vehicle: a.agent_vehicle, district: a.district })),
+    districts,
+    alerts,
+    placeholders: OPS_PLACEHOLDERS,
+  });
+});
+
+// Bucket active orders into period points (oldest → newest) for the trend chart.
+function buildTrend(active, mode) {
+  const now = new Date(Date.now() + IST_MS);
+  const buckets = [];   // { key, label, revenue(paise), orders }
+  const index = {};
+
+  function ensure(key, label) {
+    if (!(key in index)) { index[key] = buckets.length; buckets.push({ key, label, revenue: 0, orders: 0 }); }
+    return index[key];
+  }
+
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if (mode === 'yearly') {
+    for (let i = 4; i >= 0; i--) { const y = now.getUTCFullYear() - i; ensure('Y' + y, String(y)); }
+  } else if (mode === 'quarterly') {
+    for (let i = 7; i >= 0; i--) {
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i * 3, 1));
+      const q = Math.floor(d.getUTCMonth() / 3) + 1;
+      ensure('Q' + d.getUTCFullYear() + q, 'Q' + q + " '" + String(d.getUTCFullYear()).slice(2));
+    }
+  } else { // monthly — last 12
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+      ensure('M' + d.getUTCFullYear() + d.getUTCMonth(), MONTHS[d.getUTCMonth()] + " '" + String(d.getUTCFullYear()).slice(2));
+    }
+  }
+
+  active.forEach(o => {
+    const p = istParts(o.created_at);
+    let key;
+    if (mode === 'yearly')      key = 'Y' + p.y;
+    else if (mode === 'quarterly') key = 'Q' + p.y + (Math.floor(p.m / 3) + 1);
+    else                        key = 'M' + p.y + p.m;
+    if (key in index) { const b = buckets[index[key]]; b.revenue += o.total; b.orders += 1; }
+  });
+
+  return buckets.map(b => ({ label: b.label, revenue: rup(b.revenue), orders: b.orders }));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GET /dashboard/field  — field-worker dashboard (VCO & Delivery Agent)
+// ───────────────────────────────────────────────────────────────────────────────
+// VCO            → scoped to their village (vco_city || village_town)
+// Delivery Agent → scoped to orders assigned to them (agent_id = self)
+// Live aggregation in JS; money already-in-rupees. Returns { role, ... } so the
+// mobile agent.html can render the right layout.
+// ═══════════════════════════════════════════════════════════════════════════════
+const FIELD_PLACEHOLDERS = {
+  VCO: ['todays_schedule', 'gps_route', 'daily_earnings'],
+  'Delivery Agent': ['distance_travelled', 'daily_earnings', 'fuel_allowance'],
+};
+
+router.get('/field', async (req, res) => {
+  const u = req.user;
+  if (u.role !== 'admin' || !['VCO', 'Delivery Agent'].includes(u.admin_role)) {
+    return res.status(403).json({ error: 'Field dashboard is for VCO and Delivery Agent only.' });
+  }
+
+  const nowIst = istParts(Date.now());
+  const isToday = ts => { if (!ts) return false; const p = istParts(ts); return p.y === nowIst.y && p.m === nowIst.m && p.day === nowIst.day; };
+
+  // ── DELIVERY AGENT ──────────────────────────────────────────────────────────
+  if (u.admin_role === 'Delivery Agent') {
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('id, total, status, cancelled, pay_method, delivered_at, created_at')
+      .eq('agent_id', u.id);
+    if (error) return res.status(500).json({ error: 'Could not load field dashboard.' });
+
+    const mine = orders || [];
+    const delivered = mine.filter(o => o.status === 'Delivered');
+    const deliveredToday = delivered.filter(o => isToday(o.delivered_at));
+    const pending = mine.filter(o => !o.cancelled && o.status !== 'Delivered');
+
+    // Customer rating: avg of rated items on this agent's delivered orders
+    let ratingSum = 0, ratingCount = 0;
+    if (delivered.length) {
+      const { data: items } = await supabase
+        .from('order_items')
+        .select('rating_value, rated')
+        .in('order_id', delivered.map(o => o.id));
+      (items || []).forEach(it => { if (it.rated && it.rating_value) { ratingSum += it.rating_value; ratingCount++; } });
+    }
+
+    const isCod = o => o.pay_method === 'Cash on Delivery';
+    return res.json({
+      role: 'Delivery Agent',
+      scope: { level: 'agent', name: (u.fname || 'Agent') },
+      generated_at: new Date().toISOString(),
+      stats: {
+        deliveries_today:  mine.filter(o => !o.cancelled && (isToday(o.created_at) || o.status !== 'Delivered')).length,
+        completed:         delivered.length,
+        completed_today:   deliveredToday.length,
+        pending:           pending.length,
+        failed:            mine.filter(o => o.cancelled).length,
+        cod_amount:        rup(deliveredToday.filter(isCod).reduce((s, o) => s + o.total, 0)),
+        digital_amount:    rup(deliveredToday.filter(o => !isCod(o)).reduce((s, o) => s + o.total, 0)),
+        customer_rating:   ratingCount > 0 ? Math.round(ratingSum / ratingCount * 10) / 10 : null,
+      },
+      placeholders: FIELD_PLACEHOLDERS['Delivery Agent'],
+    });
+  }
+
+  // ── VCO ─────────────────────────────────────────────────────────────────────
+  const village = u.vco_city || u.village_town;
+  const [farmersR, ordersR] = await Promise.all([
+    supabase.from('users').select('id, approval_status, created_at').eq('role', 'farmer').eq('village_town', village),
+    supabase.from('orders').select('id').eq('village', village),
+  ]);
+  if (farmersR.error || ordersR.error) return res.status(500).json({ error: 'Could not load field dashboard.' });
+
+  const farmers = farmersR.data || [];
+  const farmerIds = farmers.map(f => f.id);
+  const villageOrderIds = (ordersR.data || []).map(o => o.id);
+
+  const [listingsR, payoutsR, returnsR] = await Promise.all([
+    farmerIds.length ? supabase.from('farmer_listings').select('farmer_id, listed, confirmed, qty_available, updated_at').in('farmer_id', farmerIds) : Promise.resolve({ data: [] }),
+    farmerIds.length ? supabase.from('payouts').select('amount, status').in('farmer_id', farmerIds) : Promise.resolve({ data: [] }),
+    villageOrderIds.length ? supabase.from('returns').select('id, decision, collected').in('order_id', villageOrderIds) : Promise.resolve({ data: [] }),
+  ]);
+
+  const listings = listingsR.data || [];
+  const payouts  = payoutsR.data  || [];
+  const returns  = returnsR.data  || [];
+
+  const confirmed = listings.filter(l => l.confirmed);
+  const pendingPayouts = payouts.filter(p => p.status === 'pending');
+
+  return res.json({
+    role: 'VCO',
+    scope: { level: 'village', name: village || 'Unassigned' },
+    generated_at: new Date().toISOString(),
+    stats: {
+      collections_today:  confirmed.filter(l => isToday(l.updated_at)).length,
+      farmers_to_visit:   listings.filter(l => l.listed && !l.confirmed).length,
+      products_collected: confirmed.length,
+      pending_collection: listings.filter(l => l.listed && !l.confirmed).length,
+      rejected_produce:   returns.filter(r => r.decision === 'rejected').length,
+      returns_pending:    returns.filter(r => !r.decision).length,
+      farmer_payments:    pendingPayouts.length,
+      farmer_payments_amount: rup(pendingPayouts.reduce((s, p) => s + p.amount, 0)),
+      farmers_registered: farmers.length,
+      farmers_pending:    farmers.filter(f => f.approval_status === 'pending_review').length,
+    },
+    placeholders: FIELD_PLACEHOLDERS.VCO,
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GET /dashboard/adminhead  — Head Office administration / operations control panel
+// ───────────────────────────────────────────────────────────────────────────────
+// Serves Head Office (+ Technical Admin / HR Admin / HR Manager as "Admin" for now).
+// Focus: employees, approvals across the org, staff-by-role, audit activity, master
+// data. Company-wide (no geo scope). Live aggregation in JS + count queries.
+// ═══════════════════════════════════════════════════════════════════════════════
+const ADMINHEAD_ROLES = new Set(['Head Office', 'Technical Admin', 'HR Admin', 'HR Manager']);
+const ADMINHEAD_PLACEHOLDERS = ['support_tickets', 'escalations', 'warehouse_utilization', 'inventory_stock'];
+
+router.get('/adminhead', async (req, res) => {
+  const u = req.user;
+  if (u.role !== 'admin' || !ADMINHEAD_ROLES.has(u.admin_role)) {
+    return res.status(403).json({ error: 'Admin Head dashboard is restricted to Head Office / Admin.' });
+  }
+
+  const nowIst = istParts(Date.now());
+  const todayStartUtc = new Date(Date.UTC(nowIst.y, nowIst.m, nowIst.day) - IST_MS).toISOString();
+  const weekAgoUtc = new Date(Date.now() - 7 * 86400000).toISOString();
+
+  const [employeesR, staffR] = await Promise.all([
+    supabase.from('employees').select('status, approval_status, department'),
+    supabase.from('users').select('admin_role, district, state').eq('role', 'admin'),
+  ]);
+  if (employeesR.error || staffR.error) return res.status(500).json({ error: 'Could not load admin dashboard.' });
+
+  const employees = employeesR.data || [];
+  const staff = staffR.data || [];
+
+  // Count queries (head:true → not subject to the 1000-row select cap)
+  const [farmersPendingC, listingsPendingC, productsC, userAuditC, empAuditC, loginsTodayC, failedLoginsC] =
+    await Promise.all([
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'farmer').eq('approval_status', 'pending_review'),
+      supabase.from('farmer_listings').select('id', { count: 'exact', head: true }).eq('listing_status', 'pending'),
+      supabase.from('products').select('id', { count: 'exact', head: true }),
+      supabase.from('user_audit_log').select('id', { count: 'exact', head: true }).gte('changed_at', weekAgoUtc),
+      supabase.from('employee_audit_log').select('id', { count: 'exact', head: true }).gte('changed_at', weekAgoUtc),
+      supabase.from('user_login_history').select('id', { count: 'exact', head: true }).gte('created_at', todayStartUtc),
+      supabase.from('user_login_history').select('id', { count: 'exact', head: true }).gte('created_at', todayStartUtc).eq('success', false),
+    ]);
+
+  const employees_pending = employees.filter(e => e.approval_status === 'pending').length;
+  const farmers_pending = farmersPendingC.count || 0;
+  const listings_pending = listingsPendingC.count || 0;
+
+  // Staff-by-role (the "manage all roles" overview)
+  const roleAgg = {};
+  staff.forEach(s => { const r = s.admin_role || 'Unassigned'; roleAgg[r] = (roleAgg[r] || 0) + 1; });
+  const staff_by_role = Object.entries(roleAgg).map(([role, count]) => ({ role, count })).sort((a, b) => b.count - a.count);
+
+  // Employees by department
+  const deptAgg = {};
+  employees.filter(e => e.status === 'active').forEach(e => { const d = e.department || 'Unassigned'; deptAgg[d] = (deptAgg[d] || 0) + 1; });
+  const employees_by_dept = Object.entries(deptAgg).map(([dept, count]) => ({ dept, count })).sort((a, b) => b.count - a.count);
+
+  const districts_active = new Set(staff.map(s => s.district).filter(Boolean)).size;
+  const states_covered = new Set(staff.map(s => s.state).filter(Boolean)).size;
+
+  const alerts = [];
+  const totalPending = employees_pending + farmers_pending + listings_pending;
+  if (employees_pending > 0) alerts.push({ type: 'employee_approval', severity: 'high', message: `${employees_pending} employee onboarding request${employees_pending > 1 ? 's' : ''} awaiting HR approval.` });
+  if (farmers_pending > 0) alerts.push({ type: 'farmer_approval', severity: 'medium', message: `${farmers_pending} farmer registration${farmers_pending > 1 ? 's' : ''} pending review.` });
+  if (listings_pending > 0) alerts.push({ type: 'listing_approval', severity: 'medium', message: `${listings_pending} produce listing${listings_pending > 1 ? 's' : ''} awaiting approval.` });
+  if ((failedLoginsC.count || 0) >= 5) alerts.push({ type: 'security', severity: 'high', message: `${failedLoginsC.count} failed login attempts today — review access.` });
+
+  res.json({
+    scope: { level: 'all', name: 'Head Office' },
+    generated_at: new Date().toISOString(),
+    summary: {
+      employees_active:   employees.filter(e => e.status === 'active').length,
+      staff_logins:       staff.length,
+      districts_active:   districts_active,
+      states_covered:     states_covered,
+      products_catalogue: productsC.count || 0,
+    },
+    approvals: {
+      employees_pending,
+      farmers_pending,
+      listings_pending,
+      total_pending: totalPending,
+    },
+    staff_by_role,
+    employees_by_dept,
+    audit: {
+      user_changes_7d:     userAuditC.count || 0,
+      employee_changes_7d: empAuditC.count || 0,
+      logins_today:        loginsTodayC.count || 0,
+      failed_logins_today: failedLoginsC.count || 0,
+    },
+    alerts,
+    placeholders: ADMINHEAD_PLACEHOLDERS,
+  });
+});
+
 module.exports = router;
