@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marutham AgroLink</title>
+<style>
+:root{
+  --green-deep:#1f6b3b; --green:#2e8b50; --green-light:#eaf6ed; --green-bg:#f3faf4;
+  --pink:#e85d8a; --pink-soft:#fce4ec; --ink:#1a2e22; --muted:#5f7268; --white:#ffffff;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',system-ui,sans-serif;color:var(--ink);background:var(--green-bg);line-height:1.6;}
+a{text-decoration:none;color:inherit;}
+.container{max-width:1200px;margin:0 auto;padding:0 20px;}
+
+/* HEADER */
+header{background:rgba(255,255,255,.85);backdrop-filter:blur(8px);position:sticky;top:0;z-index:100;border-bottom:1px solid #dcefe0;}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;max-width:1200px;margin:0 auto;gap:16px;flex-wrap:wrap;}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand img{height:54px;width:auto;border-radius:8px;}
+.brand-name{font-size:22px;font-weight:800;color:var(--green-deep);letter-spacing:.3px;}
+.brand-name span{color:var(--pink);}
+.nav-links{display:flex;gap:26px;align-items:center;font-weight:600;font-size:15px;color:var(--ink);}
+.nav-links a:hover{color:var(--green);}
+.nav-right{display:flex;align-items:center;gap:14px;}
+.clock{font-family:'Courier New',monospace;font-size:13px;font-weight:700;color:var(--green-deep);background:var(--green-light);padding:6px 12px;border-radius:50px;white-space:nowrap;}
+.lang-toggle{display:flex;background:var(--green-light);border-radius:50px;padding:3px;}
+.lang-toggle button{border:none;background:none;padding:5px 12px;border-radius:50px;font-weight:700;font-size:13px;cursor:pointer;color:var(--muted);}
+.lang-toggle button.active{background:var(--green);color:#fff;}
+.btn-login{background:var(--green-deep);color:#fff;padding:9px 22px;border-radius:50px;font-weight:700;font-size:14px;border:none;cursor:pointer;}
+.btn-login:hover{background:var(--green);}
+
+/* HERO */
+.hero{position:relative;background:linear-gradient(135deg,#eaf6ed 0%,#f3faf4 60%,#fce8f0 100%);padding:70px 20px 80px;overflow:hidden;text-align:center;}
+.hero-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13vw;font-weight:900;color:rgba(46,139,80,.06);white-space:nowrap;pointer-events:none;letter-spacing:-2px;}
+.hero-content{position:relative;z-index:2;max-width:760px;margin:0 auto;}
+.hero h1{font-size:42px;font-weight:900;color:var(--green-deep);line-height:1.15;margin-bottom:16px;}
+.hero h1 span{color:var(--pink);}
+.hero p{font-size:18px;color:var(--muted);margin-bottom:28px;}
+.hero-cta{display:inline-flex;gap:14px;flex-wrap:wrap;justify-content:center;}
+.btn-primary{background:var(--green-deep);color:#fff;padding:14px 32px;border-radius:50px;font-weight:700;font-size:16px;border:none;cursor:pointer;}
+.btn-outline{background:#fff;color:var(--green-deep);padding:14px 32px;border-radius:50px;font-weight:700;font-size:16px;border:2px solid var(--green);cursor:pointer;}
+
+/* SECTION */
+.section{padding:56px 20px;}
+.section-title{text-align:center;font-size:30px;font-weight:800;color:var(--green-deep);margin-bottom:8px;}
+.section-sub{text-align:center;color:var(--muted);margin-bottom:36px;font-size:16px;}
+
+/* PRODUCTS */
+.products{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:18px;}
+.product{background:#fff;border-radius:16px;padding:16px;box-shadow:0 4px 18px rgba(31,107,59,.07);border:1px solid #e6f4ea;transition:transform .15s;}
+.product:hover{transform:translateY(-4px);}
+.product-img{font-size:46px;text-align:center;padding:14px 0;background:var(--green-light);border-radius:12px;margin-bottom:12px;}
+.product-name{font-weight:700;font-size:16px;margin-bottom:4px;}
+.product-badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;margin-bottom:8px;}
+.badge-farmer{background:var(--green-light);color:var(--green-deep);}
+.badge-retailer{background:#fff3e0;color:#c2620a;}
+.product-price{font-size:18px;font-weight:800;color:var(--green-deep);}
+.product-rating{font-size:12px;color:#e8a317;margin-top:4px;}
+.product .btn-add{margin-top:10px;width:100%;background:var(--green);color:#fff;border:none;padding:9px;border-radius:50px;font-weight:700;cursor:pointer;font-size:13px;}
+
+/* ACHIEVEMENTS */
+.achievements{background:var(--green-deep);color:#fff;}
+.ach-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:30px;text-align:center;}
+.ach-num{font-size:44px;font-weight:900;color:#fff;}
+.ach-num span{color:#9be3b4;}
+.ach-label{font-size:15px;color:#cdeed8;margin-top:4px;}
+
+/* CEO */
+.ceo{background:#fff;}
+.ceo-card{max-width:860px;margin:0 auto;background:linear-gradient(135deg,#f3faf4,#fff);border-radius:20px;padding:38px;border:1px solid #e6f4ea;display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;}
+.ceo-avatar{width:90px;height:90px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:40px;flex-shrink:0;}
+.ceo-text{flex:1;min-width:240px;}
+.ceo-quote{font-size:17px;color:var(--ink);font-style:italic;line-height:1.7;margin-bottom:14px;}
+.ceo-name{font-weight:800;color:var(--green-deep);font-size:16px;}
+.ceo-role{color:var(--muted);font-size:14px;}
+
+/* STORIES */
+.stories{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;}
+.story{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 18px rgba(31,107,59,.07);border:1px solid #e6f4ea;}
+.story-top{background:linear-gradient(135deg,var(--green),var(--green-deep));padding:22px;color:#fff;display:flex;align-items:center;gap:14px;}
+.story-avatar{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:26px;}
+.story-name{font-weight:800;font-size:17px;}
+.story-village{font-size:13px;color:#cdeed8;}
+.story-body{padding:20px;color:var(--muted);font-size:14px;line-height:1.7;}
+.story-impact{margin-top:12px;padding-top:12px;border-top:1px solid #eee;font-weight:700;color:var(--pink);font-size:14px;}
+
+/* FOOTER */
+footer{background:#16321f;color:#cdeed8;padding:46px 20px 24px;}
+.foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:30px;max-width:1200px;margin:0 auto;}
+.foot-brand{font-size:20px;font-weight:800;color:#fff;margin-bottom:10px;}
+.foot-brand span{color:var(--pink);}
+.foot-col h4{color:#fff;font-size:15px;margin-bottom:12px;}
+.foot-col a{display:block;color:#a9cdb5;font-size:14px;margin-bottom:8px;}
+.foot-col a:hover{color:#fff;}
+.foot-bottom{text-align:center;border-top:1px solid #2a4a35;margin-top:30px;padding-top:18px;font-size:13px;color:#88a894;}
+@media(max-width:768px){
+  .nav-links{display:none;}
+  .hero h1{font-size:30px;}
+  .foot-grid{grid-template-columns:1fr 1fr;}
+  .hero-watermark{font-size:22vw;}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="nav">
+    <div class="brand">
+      <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCADgASwDASIAAhEBAxEB/8QAHQAAAQQDAQEAAAAAAAAAAAAAAQAFBgcCBAgDCf/EAE0QAAEDAwIDBAUIBgcGBQUAAAECAwQABREGIQcSMRNBUWEIFCJxgRUjMkJSkaGxM2Jyc4KSFiQ0Q1ODwURjorLC0SWj0uHwNVRkk/H/xAAaAQACAwEBAAAAAAAAAAAAAAAAAwECBAUG/8QAMxEAAgIBAwIEBAUDBQEAAAAAAAECAxEEITESQQUTUWEiMnGRFIGh0fAjM7EVQkPB8eH/2gAMAwEAAhEDEQA/AOyaNCkaAFSo0qABSpUaAFSoUqADSoUqADQpUaABSrzkvsRWFvyXm2WkDK1uKCUpHmT0qu9VcX7DbeZm0Nrur4250nkZB/aO5+A+NIu1NVCzZLBWUlHksmtadPgwG+0nTI8VH2nnAgfjVMtXLivrT24La7VBX0Wgerox+0rK1fCt+28GFyHRJ1FqB6Q6d1JYTk/zryfwrGtdbb/ZrbXq9kU8xv5UTG4cStFw8hd8aeUO6OhTn/KMUzyOMukW8lLdzcHiI4T/AMyhTlb+Fui4uCu1KlqH1pLyl/hkD8KfI2ltNRgAxYLYjH/4qCfxFW6ddLlxX3ZP9RkITxt0upWBBumPHlb/APXWyzxm0cs4c+UGSftMA/8AKo1Ok2q1pHKm3QwPAMJ/7V4vWCxP7PWW3OftRUH/AEq3laxf8i+3/wBDE/UZrdxG0ZOwG74w0o9z6VNf8wAqSw5cWY12sSSzIbP1mnAsfeKjs/h9o2aCHbDFbJ72ctH/AISKjsnhDamHfWLBebpaZA3CkOc4H5H8aFPWQ+aKl9Hj/IZmuSyqNVilritprdLsPU8NP1Vey9j8Dn4qp1sHEyyTZQgXhqRYbhnlLM1PKnPkrp9+KvHWwz02Jxfv+/BPWu+xOaFBKkrSFIUFJIyCDkEVlWwuKlSoUAGhRoUAKlSo0AClSo0AKlQpUAGo7qb+3o/dD8zUhqPamOJzf7ofmaAJFQpUqAFRpUqAFQ7qNKgBUKPvoUALupUqxedbZZW884lttCSpa1HASB1JPcKG8AZ1Ate8TbPpwuQofLcbknZTaFYbaP66vHyG/uqIa64iXPUc/wDo5opD6m3iW1PtDDj/AI8n2UeKjjbwHWRcO+FsCzJbuF9S1OuP0kt4yyyfIfWV5n4DvrlT1dmok69L25l2X09RTm5PECIxNPa54kvonXqWuFbCeZHaIKUY/wB213/tK+81Zmk+H2mtOhDjEISpaf8AaZOFrz5dyfgKlfTpRp9Hh9VT65fFL1ZMa0t+4h1pUqFbhga1502HBZL02UxGaH13XAgfeai+utSXWHcI2ntO25ci7TGy4h5aPmWUA4KiehI8+nnkAtVv4bQ3Cq560ur98ln2l9s6UMN+QG233DyrJPUScnCqOWuW9kv57FHJ5wiRDXGkC4UDUduJBxs8Mff0p6t8+DcGi7BmR5TfeplwLH4VCkwOFPN6mlGm+bpyB1GfvzWvL4YWQLTdNJ3CRZJg9ptyM+VtK94z09x+FLjdqOcRl9Hv+pCcixqVQrRmo7yb47pbU0FaLkyyXm5bSMsyGwcc2RsDv/7A7VNa1U2xtj1IunkRpuvlktN7jGNdYDEtvu7ROSn3HqPhTjQq8oqSw1lElejTGptILL+j56rjbwcrtM5zOB/ul9x8j+NSPSurLdf1ORkpdhXJj+0QZI5Xmz7u8eYqQUxan0xbr6G33O0iXBjeNOjnleZPke8fqnas3kSp3q49O35en+PoU6WuB8pVF7FerjCuDVh1SltExe0Sa2OVmaB3D7DmOqO/qKlFaK7FNZRZPIqNCjVyRUqFGgAUqVGgBUqVCgA1HNTY9fb/AHQ/M1Iqj2pcevIz/hD8zQBIaVKjQAqFGlQAqVLuoUAGlSpUAYPONssrddWlDaAVKUo4CQOpJ8KorXOqrrxAvydL6abcVbyvGRlPb4O7iz3NjuHx64FbvF/Vku/XZOjdOlbye1Dcjsju+5n9GD9kd58R4CrA4b6Pi6Ts4bPI9cHwDKfA+kfsp/VHd49a4905a2x01vEF8z9fZCZNzfSuDLh7oq26Rt3IyA/OdH9YlKT7S/1R9lPl8TUpoUq6tdUaoqEFhIakksINKhRq5IKNCl3UAIjIxVezNFXXVF4kSNYT1C2tPEQ7dDdKWygHZSz4kfH3dKsKmvVFmTfbZ8nuzZMVlTiVOlhQSXEjqgnwNZ9RSrI7rOO3Z/UrJZRGRYuFzSxA7CwB3pyF9PPn382c1ruaIuNhuDdy0RcVsNqcT6xbpTpVHdRncg9QQPj4HurxYsvCibqaVotuHbXLzFjpfeYyrtUpPfz53UNiRnICgSN6mWlbI3p+2G3MzZUlhLilNdurmLaT0QD4D/WssNN1S+KCXvHlfoiijnt9h2AwMUaFKukNDQpUaABSo0KANS722FdoDkGewl5hzGQdiCOigRuCDuCNxTdZpE23y02a7PKkKIPqcxQwZCR9VfcHAOv2huO8B9rXuERmbGVHfBwSCFJOFIUDkKB7iDuDS5Q36o8kNdz360q1Lc+6QqNLIMlr6SgMBxPcse/vHccjwrbq6eUSKjSpVIAo0KVABpUqVAAFR3UwPr7f7ofmakdR3UxxOb/dD8zQBIaVKkaADQ76RpHbegA1itaEJytaUjxUcCuYOM/pD6guF4l6J4J2eXe7m0osybrHiKfQ0sHBSykApJB+ur2fAHrVUwfR746a6uaLjrS8CApz21ru9zU+7jyabKse7Kaq5JEpZO9UqSoApIIPQjpUJ4wasOnLB6tDcCblNBQyQd20/Wc+HQeZ8qqLhb6PFx0TdW56OKOqEOJIUWbcExWFeIUl0ucyfempRqXTDM3idYpF51Qm5RJjvYKad5AtKkJKktgoSlHIogg7A5IG/MMY9XOydTjT8z2+hWyMsfCPnA3RottvGori0fXZaf6ulY3aaPf+0rr7seJq0axQAlIAAAHTFZU/TaeOnrVcexEYqKwgUaVCnlhUaVVRqDi3Mt/FxrRULSkqfDakxos6c24SplyQkqQQgA5QACSokDY9MDNZSUeSHJLktelTPqbU+n9MwFTtQXmDa46RkrkvJRn3A7k+QBqmr5x6u+oXXbfwi0bcdROglPyg/HWmOk+IG2R5qUn3USmo8kSmo8l+7UCRiuY29IelDqN0y7nrCLYwd0x2piWgnywyg/io036im+kpoKxXMXCSzebWYroVcEuoeXD9n9KlWErBHUcwUM1R245TKeZ6pkT4a2ycfS3LY1FBecj3iVIekplJIkpPOS2g59pZCgkoHTCvs12wNkjOK+bZiRbJp606ns2qlJ1ImctTsJtpQciBB5kPdp0JJGfj5Gui2ovpL6+5ZhnRdIwHAC00h9LJIx19kLcOeu5HuFJpswmksiqp4TwjpnI8aNczt6a9J7STpkwdSxNTNDdUd2Sl3mHhh1KT9yhUl07x++TX27ZxU0vcNITT7PrS2FmKs+PTKR7uYedOVq7rA5WLvsXnSptsd+s99gCfZLnDuUZQyHIryXQf5TVe8JOLT+ttVXCwT9Ky7G8zHMuKXnOZTjIdLR50lIKFcw6bg7+G93JJpFnJJpFqChSo1YsClRoUAeT7IWtDydnG88p8Qeo9x/0FevnRqF8adds8OeHlw1O5HEp5rkaisFXKHXlnlQCe5Odz5A1Gy3BLJM/KvNUiOlzs1PtJX9krAP3V85dZcbuKGqVOIuWqpcaK5nEa3D1VrB7vY9pQ96jVeqfdW+XXHlrcUclSlkqJ953rM9VHshypfc+sG2KVfNnhtxc1xw/uTMm13yZKgoUC9bZbynY7qe8YUTyHHRScEefSvoHw61tp3X2mmr9pyemVGWeRxOCFsuAAltaTulQz8RuMg02u2NnBScHEklCjQppQNRzU39vb/dD8zUjqOanOJ7fT9EPzNAEio0KVABqNcRZLrNiaisrdbVOmMRVLbc5FBtS8uYVty/NpXv1GcjepLUb4iW+TP02pcFgSJkJ9maw0f7xTSwvk95AIHmRUSzjYA2GzxLRbGodniQbdFQn5uLEYDTKfeAAVHz2r3QAmVyuTFyHv8JtOAn3gf9Rqpblx9069cpNj0XFe1HcIzalPvu80aK0QeXClqSXFHm2wlHcdxiqdsXE/iprjXNwt92kxtP2a0qxLtlub7MPqWDyJLmStaSPazzAEY23rm22wgpOb3X3NlWnnY4qK5Olta6zstqdXCfWmTKAx6tHw+7n9ZOezR73D8DVa3vXbr1rmM3GA7Ekyyhu29k8HUrdSQtCFqABC8pyk/o8jASk4NQx9+5pvESHHMKNGecUEIEB13ISApRU4FJS2SDtsd+8nNPWl0SLlxe01Z2mmXY7EhM55D0ZagQ2lZyHAeQEbEJIJJ6dKwU66yy6EUlhm+zQV10yk3lo6kTnG/iaNBOeUZ60q9EcQVGhRoAVUhxo07bLzxj0Uw7FabRLQ+zcpUeQ9HkdnjDKFONKSeUryEgndWR0q7lHlSSSAB3npUDi2ZWprFfLxz9lLvKkqtrpzlhpg5iKH8YLv+ZVZLKwVksrB52vgzw0gyUSzpaLOkpOQ9cHHJavvdUqp5GjsRmER4zLbLKBhLbaQlKR4ADYU36Tu3y3p2Fcy0WXHm/nWj1adB5XEHzSsKT8KcX3WmGHH33ENNNpKlrWoJSlIGSST0AqUkuCUkuDOvC4xI06C/ClsNvx5DamnWljKVpUMEHyIJFNen9X6V1BKXFsWo7Tc320862ostDikpzjOAc486ezj40bMNmcBcLNLpn8foGn51qjuxmrs8iRAXIUptDbRWVDn6rCeXbP0sAHqa78TjlAAxXKnDXQeptPekXdNYanjR7RZ48+atEmVJShL/bBRR2XevZackdDkdRiuorrcrdabc5cLnNjQYbQBcfkOBtCc7DJO3Ws+nSimhNK6U8m1XhOhQ58VcWdEYlR17KaebC0K94O1ednultvNvbuFpnxp8R3PI/HdDiFY2OCNutblaeR5XNx4K8MHXnJjemWLa8o8y3bfIdiHzPzakio76KlsZh6fvkp6EwzPkXJSw8VLW+7EUlK45WtwlSkFKsoyfo9fazU94lOuv2qPp2IsolXyQIXMk7tskFT6/g0lYB+0pNeVzYRp/WFoucdCWIE5tNpkoQMJQoEqiq26YPO3/mJ8KX0pPKRTpSeUS+lR86FMLhpUqVACquPSKtNpvnDV+13dgutvzI3ZAEghaXAvP8qV58iaseqp9J2KqToOJyB5xxFxQW2W5qopdJbcH6RO6cDJ8NqRqZONMmvRjtOlK2KfqUbL0Ho2VIMhzTkHmJyQkKSk/wAKSB+FYahsOnYml7gW7BbeyYiuuBtEZIJ5UEjBAznbrmt+4MSpOmQppU1yQhBWhuJN7ByRjISntFDbmGCc4364rcgwhGjORnn5EtpaeUpku9qQCMKHPgFQOe/evG9c0suXD9T1nRBvCjz7HJPtlIDm5xvXRPoF3WXF4oXW0NuqMSbalOutZ9kLacRyKx44WofGq4Vw5mT9a3ezwHDFgQXBySHkFWUqHMhCRtzKxnO+PZyavz0H9ByLLqHV1+ncqlxlotLC0jZeyXnFAHcbKa/GvSaWyM7Eov3POX1ShBuS24OqKFGlXVMADUd1MQJ7f7ofmakdRzU+PX28/wCEPzNAEjoCjQoANAjI/GjSoA+d9ws944SekFcrFcozog3p9xMVxGVF1h10qacT4lJ9lQ6jfyq1bJBhomzLnHDgdlIaYe5hyg9iCEkJxkHCvyq2/SIkaeliy255uK9eo00SY6lNcy46A2orKV4wkkcuRnJGDjoao++3OVpq4OXNcN+dZpASZXq6eZ6K4kY7QJ+uhSQMgbgpzvk15fxaKeo6Yctffc9H4XL+hmXCf2H27XK32eEubcpzEOOnqt5wIBPgM9T5Vnws1lZL3xCsjWl7g1cZqJKC6hnPMlknlWoggbBKl58PuqN8/D/WvZXALtF4cYbKWvWHM9lk53aURg5xnIz3ZqzPRRiWi53q9XhqHYDKtLbdubetUcJZSHMrWhKsbkBKM46ZIqnh+mjO1J5Uk8+hfXaiUa21hp7HQ46ClRoV6s8yGlS99eUl9iM0XpDzbLYxlTiwkDPTc7UAMutu2lW1FkiuFt66L9WUtJ3bZxl5Y8wjmAP2lJrbNytUC4wrD2jbMl5lSo8cbewjAwPDA6DyPhTTou7v6lkT72htbVsDyoduDjRQp1CFYce33wpYwkfZQD9aqS1hdLo5ru43oKUJEWYUxlZ/RpbJCQP5Tnxya52v160kYyxnL/TuKlPpWS7rKFWrWdytShyxbkn5SibbBzZEhA/i7Nz/ADFVnxUZbf4Z6oafSFtqtErI8fmlGti4xpFyhWu6sICZcZbclCR3hScON/FKlfEJ8K8uI/KrhxqRXMCPkiXvn/crrdnMS/Y4C4ZammaP1rZtUxkqS1EfBfGP0jRGHUfFBO3jiu/9SvPztLJm2Sbgksym3UK/SNBSVkA/rJ+/OK400No9eqPR81VcoTaXZ1kubcxkAZUpsMAPI/lPN70Ct1zi6D6NI0Mt91N3TKEEEZ5vUR84FA/ANe6sUHiDi+GjLXLojh9y1NIRbnrbiWzIvCHJHqzoky1nJbZCTlLI7hg4Tj3+Ga0PTDvdyvl5sXDTTqFSpbyvXpTLZ3UQFdkj7g4v4Jqv+Emob9ojjfGja6vU0sQ4r7UpMmSpwNBccOjGT12SPHO1OPBjXGnxxXu3FDXlzMVy4vOsWxvslOdkSE8yiE5KUob5GwcdVK8DSdLSqoOLe8nuwTXTj1JL6DuqezXetGypAJXi4xEk48EOgf8AAr766jB7+6uCm7zZeH/pCp1DYLmxMsrdy7dt2O5zIMR/6aP4UrUMHoUCu71OKdiFcRSFKUjLSjukkj2Tt3dK3aeXw9PoOpl8OPQjlmSu764ud3XvFtqPk2H4FZIXIWP4g23/AJaqc7/Ch6j07LgIkJKJCFIQ82c9m4k+yseaVpB96aYbvc4ekbXEsJU+lT8ZwIljfDp6rWOuSpRUSPGmDhVeFWhpnT8xh8yZctRQk9Gk8u6iT4lJwB76yWeJVV6hUPvz7PbC/M6VeinOh2fxrv8AYn+lLk7dbDHlSWw1LALUpsdG3kEpcT8FJVjyxTpTVb4Zg3uatlB9XnYfOBsl4AJV/MkIPvCvGnaukjEgUqNKpJFVO+ldc4Fi0LDvNyWssMzezDSBlbqltqACR3nY+4EmrizTDr+zpvujrnbCgrcdYUpnAyQ6n2kEfxAUq+tWVyg+4ymbrsUl2ON43FO1pmss3eyXmzsugFDshj2cHocDfHmM7d1WBDkxpkVuTFebfYdTzNuoOUrHiD3itW3RnErceeubsxBVlptxCB6sPsDlAO3TffaspF2hMudiHA+99VlnClfhske/FeJt6G8QWD2FfXj4nk09RzJbSUQbZbpdzub6kogxGE57V5ZIQlR+onYlSjgAAnNdFcItHq0Xo5q3SZKZdykurmXKQkYS7Jcxz8o7kDCUJH2UjvqktC3Juy6ytl5lxn3lF9SXG4451AKZcSEpBxkAH47mumIkhmXEakx1hbLyEuNqHRSSMg/ca9B4LXBVua5OF4vZJ2KHbGT1pUKNds5AKj2pv7c3+6H5mpEKjmpzie3+6H5mgCRUqVGgACtC93aNa2W+1S49IeJRHjsjLryvBI8upJwANyQK87/dRbWmmmGvWZ0lRRGj82OdQGSVH6qEjdSu4eJIBbbZbyw6ubNe9buTyeV6QU8vs5yEIT9Rsdye/qSTvSbbVBe5aMHJkeetMe4MybPqq3t9pc5a5TUhp0qHaEeyhC8AodQhKUjbCgkkZHMmqy1lpeXpl7s5wMi3vK5WZoThKieiHAPoL8O5Xcc+yL3nRWZsRyLJR2jTg9oZwR3ggjcEHBBG4IBFMFxReJNukWF+J6446go9cdbHYusHqVbY7X6vLjGTz9NhydTRDULMuToabUz0z+Hg54sfDLh3qDU81epLE3Ihsxm1y3W31R3Ge0cIDxUkgKSnkwrPQKz3YPUPD3RumdDacaselLW1b7elRc5EKKitZxlalEkqJwNyegHdVGWeyLTri5WWE/2Slx+zZRNQTzt9ojlQ535STy536BW4O9yx4txtEZuVaifZbSqRbArmaWce0Gif0as5xj2T3pGcjR4fY66lCYvXYsuco8PBLzSzXjAlMToTMyK4HGXkBaFDvBGRXt0rqGEIqhfSNRfbrrrTWnre6oJlAept78vrBWcuKHeG0jnPgAfGr62qgOPHEC6cN+Jtu1FcdMC8Wv5PVFtTqZPZpZeWrL/MeQ+2UpQB+qDjOTjPqYKcMPjKFW4cdzW1h8r6L1jJjw7pNitO4ejO9sQlaT4j6P0sjpj4V5etW652+ZfZ8WQbo298/FQeVqS/lIQojGUhXOSoA7lO2OaoPq70irVq2GiPd+HivmiS081d+Vxsnrg9l0PgdqYGuMlrZWw2zpqamK3FeZWg3JHaLWpSChwL7LbkCCAMdFeVcCzRNWS6XmL3Wez+n82M8pJPZ7FmxbjqjVGpI1pl3uQ6/JcCFMtLKW2h9bCU7YSMk+GOtWVqm7MW7h7rbT8llwu2m3OtMNsMqWt2O80oMKSlIyd+ZBI70EmufND8e7JpZ51+Hw/deluJ5FSXrsCrl+ykBoBI93WrB4UcUL1xR4wW24WfSZtUa2w3mLvJMwutrjrwptB9ge2HE5T5FfdW/wAOodSbnLMpfnsXrkvXdnr6FMT1fR+orXMgS2HVTG3FtSYy0JW2poJ6qAB3SoEf96r3SnBa7x/SLFjmWqU5puBMVNTJWwrsXIyfbaRz4wSSUIIznZVdlikdt8nrXS8lYSfYb5Swk+xxp6XOlbuvjCJtttkySm5QGF8zMZa0l1JLZTkAjPso++ui9GcLNMW3hvatK3qyW25mPHHrC346VlTyvacUDjI9onGD0AqD8PPSGb1bxQY0cNPIjMyJEhlqWJhUT2YWUnl5R9Lk8ds1fAGRmorhBtyXciEYtuSOP/Se4N2vSca23nRdlnrjSX1szIzfPIQ0eUFCh1UkHChuSOlXF6NuqblfuHcKFd2JERyyxTFmmSyttTuNmlpKgMjswckb5/G3HucNK7MArx7IJwM+ZrliP6Qd70JKnac1Rotx6+NS3XJ7q7iU9o4tRIKU8hw3y8oTg45QKrKMa5dXGQxGuXV2JXc5UqRJMabcBfLRGkZDrT3M800c5UkncDGM5yMgeNb94nXC36hRIj+psz2o47WUV5aQjkw0E82wWpABPUnmwMbmqaTx2szd8VcY+hZDAUoqLCbqnssn6QwWt0kEgp6b173zj7aLmphTmipDSmBhAZuiUgD4tHJxgZ7gAK8t+AvUZPK6s7b+nvz9PQ9D/q+kylnbHp6+3Bf+lDeG9D3O+tXNVzuyHBI7ND5cJS17RZPmtPMMDvUPCovxU4latc19pLS+grlZ4Ma/WtdxZuM6Mp9DwHMQgAHb2Ug+OVDpjeCWj0p4lpgtwYnD0MR2xt/4rkk95J7Pc+dN2oU3OHorQXEiXaVWqBbdWLNvjLXzONW2WeblUcD2QsKCdvoqT5V6TRRVdUa28tc8/mcbUaiN1spQ78f9FjxLh6QqZPZr1Bw/ebzhLi7fISVeGQDt99Wnwp1S7rLQVt1BKhohS3w41KjpVzBp9pxTTqQTvgLQrGe7FM2UjpggdCK0+By0xLhrWwBRxDv65jKfBmW0h8fDnU6PhXUsrUVlGOi6U3iRZ2K1rlOh2+IuVOksxmEfScdUEgf+/lTdrC+Jsdq7dKUuynVdlGbUcBSyCcnHRIAKj5DxIqsZDsuVLEy4y3JkodHHNgjyQnoge7fxJrBqNTGnblmtRbI/xruVpvXYSmLahpk3JuO24YgQ7IWcha1kjm5RnAB8CT3YicGI2l9uLEilT7n0UIABOOp8AB3k7Ct3VcVUBcR6fNBS/OceCUDCQoBwgb9VFKhn9nA83zT7MmLDTOaYUpxwAvtnq6nrhPmnPs+OD9rNec1MXqL8yOzptV+H0227b/Y97ZbmbI2Zry+3mqAQOTxJ2bbB8TjJO56nAGBN9F6qlWO3xrZemEuxWkYTKigq7EZzyqRuVJTnAWnuG6R1qLRWTJfE99KkpGRFbUCClJ2KyD0Uodx6J26k1vZ5ehrZRY6PkObZJ2vqk9y4ocmPMityoj7T7Dg5m3G1BSVDxBGxr1qnrLcJ1nkGVaVoCVq5nY6zhl/xz9lX64+PMKtSw3SPeLWzPjBSUOAhSFjCm1A4UlXmCCDXZo1EbltyIawb1RzUxxPb/dD8zUiqO6n/ALe3+6H5mnkEiFI0qZddXj5C0hdLtnCo0Zam/wBvGE/8RFVlJRi5PsQ3hZGawzmb3qG93RkhxuLJ+TGF9RhoBTuPe4sg+PZjwp8cV2balncJGT7u+oJwEb7PhrDXkqL8qS6pR6kl1Qz+FT3bvAI7x41y1N2Yk+5pp3rTACDuOlLvzTfZpLfZmCpwKeYcdax3lLagAf5VI++nGhrAxPKIxqi0tnUNqv8AGabTNbUqGtwpyFtrwpIOO8LbQAe7mqSqUewLrScko5kjPXbIFal8QpdoldmPnENl1v8AbR7afxSKzsrqnrcw6r2VbHHgOo/Aigrwzy0C825DnIZcSWBLLrKQfoIdQl3HwUtYqOcarlMkLsWjbbLlRHb3KUua9EdLbrcBhIW9yrG6CtRaaBG/zhxWegX2LVNdZKwhhTUtK1LX9FUaU5nJ/YdHwSPCmGyXJvU2sb/rBsqXAHJabWtaCnLLJKnnADuOd5RHmGU11dPieEYbpOEGyDa50bC0do67akh671/bkwIq3W0I1E6tJXjCEYWDsVFIq0uGtlm6w4FWO38Tozd2mTrehyYHk+0c5U2SRghwJKMqGDzZNVfxZXH1jxA0Xw29ZQ1CnT0zbpzLwVstZKW/4yCPepNdMNjlQE8oAA2A6Cr2dPU0ilHU4Zk85OTuIHosXdqU5J0TeY8qITlMO4Hs3UeQcAKVfEJPvqvl+j5xYTI7H+iwIz+kE9jl+/nrvShWV6aDJdEWcg6E9FnUsqW29q67w7XDBytiIe3fUPDmICE+/wBr3V1HojSdh0bYWrLp63tw4jZ5jjdbiz1WtR3Uo+J/KnujTIVRhwXhXGHAq0b6+5Fss6S0grcajuLQkdSQgkD8K3FqS2grWoJSkZJJwAK5s498edPTbK7pnRepJDUp9fJKuEeGpbaWsEKQhRweY7e0kHbODkipnNRWWE5qK3KD4FSex4x6QlNBS3V3RkEJGSQvKVfgon4V9EE7pFfNW0IiWe5x7lB1K5GkRHEux3moToW2tJyCN67G4J8ctMath26xXO8dnqUpSyvt4xYRLcA+k31Tk/ZyDnOBWbTTSzFiNPJLZly1AeLfCnTHEaEj5TaVFubCCmPcWAO1bH2TnZaM/VPwIqe91KtbSksM0tJrDOKNUejLxEtslfySq23yPk8imnww5jzQ5sD7lGmeD6O3FeY8EL0/HhDOC5JntBI/lKj+Fd4UKR+GhkT+Hic9cJPRotNhlM3TW0ti+y2lBbcNpsiKhQ6FWd3MeBAT5Gt70yrddpPDN9ceUpFpbZUX2GykEvJUhbKsHdQBSRgdM56bi+Kp/wBJ4OtWCzzGllkMzVJU+UdolHM2QAUdSSRjPdg+NV1CVdMnFcGzR1x82MV3NLhpqJvUGgrDeM83rcBpayO5YTyr/wCJJqNawlStM8ZLNfY0uS1EuEJoyWmXSlLxiv8AtcyRso9lII37gax4PXBgW24QXJUHlbdDzSWHAG0JXnm2JyklQJx07/GtbjTJhphWKczNiuORroGSgPJUrkkNLbVgA5+lyH4Vpst8/RebHZ4z9jHTV+G1/lT4zj7/APpY3Ei6h3UbyBhSIDaY7YzsXVlKl/h2Y+BpuKTk53qPPy33oGn5E1KlSp8ppyWrH13B2ij7uYY+6pDud64N0/Mm5G2KxsNdyiIm3aEhbbS0RgZGHE5wvPKkjzAKz91OYrxZWPXJBCTsEIz7hnH/ABV6docqww8oJOCUpBGfvpSJM8V4vnmWlgfXyVEdyR1+/IH30kTG+2S2pt5BJ+u2QD8elalokmY/NdOOZl31VQHcpG6v+YUBkcU7DlHSpRwwklm63K3FR5HkIloHgrPZr+/DZ9+ajAp40Aop1u0n7dvfB+DjJ/1rTpHi1FZ8Fn1HNTj+vt7/AN0PzNSOo9qUZnI/dD8zXbFEgquPSNfU1wykNpJHbSmGzjw5ub/pqx6rn0i46nuGchxJx2Ephwny5uX/AKqy63P4eePRi7fkZr8BznhXaPIvg/8A73KnPXaq/wDR+eC+GURvH6KXKb/81R/6qsCsFbzBfRGuj+3H6Ec040Var1K845zFuUhppOMBCSy2pXvJVv8AAVIxUd09lOq9QoJA55SFY8wwz/3qRVZPORiWEIAKPKoZSdj7qatOBQtbSVH6LaUH3oy2f+QU6+dMLFzt1rXcEXGU3EYZfcUlx48qVAnnIB+tgL3x0q3OxDeHllUcYNYq0fZbk5AW2zORcLgoOuN86G23cIJI7zzuIPQjCTsawh6qsOn9NW+22qS7c4kOO22lcdJ5CkfScUtWASfaUepJNM+pZ7N81POvCGj6u6+pUJLicFDZx7RH2lEc3iAUjuNRfVdmtl2CF3aPMlpSThAnLabGRjJAUkdNu+slfjD085Ris+/7f+m2Xgyvqi5vHt6/Uz9HtLvEHjW/rKU66tuRLU61GSjHYw2D8ysq7klxKBjG5HXrXZY6VSvowaUgW+0Sb/GhNxW3B6pCQz+i7AYUpST9YlexPT2Nu81ccyVHhxHZUt5tlhlBW44tWEpSBkkmuvpm3B2S/wB2/wDPyOfqFGElXHiKx+570qpGDxkkua05n46W7EvDKWypPM2ebHbFWNxjJI8KuOZcYMO3LuMqWy1Ebb7RTylAICfHPh+dGn1dV6bg+DLGcZcG3imLWM3U8S3Z0tZYNzmKyOWZNMdtHgchCir3be+o3H4qWSRarjLZZeD0VeGmFkBT6ScJWPAeI6itXhrriTPuDlvvcttSn1c0d1WE+0SPm8AfEfdSH4lp/MjWpfMHWnsmVhry7elAGXybDb0RHEqSpq1xmZQKTsRhalKO3lXPdxv91jPqt920rYGpDQwpiVYGmXB8AlKq+juxG9R7V9i0jqdCbJqSFbbgt1JLbL/L2oH2kH6SfenFPsqzv1C51N8M+eyr+xygf0R01zeJYfI/lL2Pwp70rfNVybox/RTStpdnsuJcZFu0+04ttYOUnPKogg75Jrpa2ei9omNqxy5TZ1wn2oYUxbHVcoCu8LcThS0+A2PiTThx14i27g5pqBZtJWi2NXKYSWIyWQllhlOynFJTjOT7IGdzk91KVMorMngV5TSzJ4GPQd59J5xaX7tpyyPxldUXFTcZeP8AKUSD701e2n5F2lWxt29W5i3zejjLEnt0DzC+VOfurkux8c+M2o0Oqs0exhpkgOO+pcraSeieZS8Z8utN8v0gOK8ezylKuNs9aYuQjqIt6CEjs1kpG+D7SetMjdGPdl43wW2WdqUq4YR6R/FZIyu7W0+62t1LtAeknqyPGuc3UkWNemmuwbZaaSmKUrcWoFRUAdsDpirLUwbLLUQZ1xUd4iacXqfTTsGO+GJjaw9FcV9EOAEDm8iFEHwznuqOcO+J7eqHWfWYESLHlOKYjSYs/wBZbL6cktLy2gtqIBKcghXKcHOAbFz4UxqFsGnumaK7GmpRZw7xA4dqut97DU8yfBmMJKFR1MMg4z1CuX5wbDChke7emyycILNDmNKtL82ZPQrtW23VoQgBJyVLITkJHjnc4G/SusuOlli3Ox2yZJjl8Qbg2QkLKCO0y3kEb7FST7s1VtxujFglKt9rsjTpW0HXCp4t9pkkDcpUVdDknYZArgaiqell0qfwHXjqY6hYVeZvuGVe2Z2oLDCajuBpb6F8x27NQaWvsyOoICcHwOBUvxjYb1VXyhOm6geuYtirbzKQ+lZfQ58+kBIUAOoKRg56jarHsNyausPtkgNvNqCH2s57NXXY96SNwe8eYNJhbGTaQm7TTqhGTXPP1PWOB86rG6nVH8cf6UiiQnm7JaVJUoq5VbEE9cK/7ihb1hcJtQ3znPvyTWzvTDKa/Zq50reDY5MkBOT1GOpxWlp7BTcHB9e4PH7uUf6VvzSUx1HOCRgVo6d5UxZCUnf1t4n+c0J74DA6J86edAJ5tboV3t254/zOtD/Q0zJqRcMmw5qa4v8A+DCZb+KnHFf9IrVpFm1FJ8Fi1HdSnE5H7ofmakVR3U39ub/dD8zXbFEhpl1zZv6QaQulm25pUZaEZ6BfVJ/mAp6FI1WUVKLi+5DWVgp70ceZvRU+G8hbbsW6vJW2rqklDZI+/NTTVUoMQ220uz0vuqKY7UFYS88vGcDO2ANySQB3+FbsXTsa13S63KGVJ+U3kPvt/VS4lHIVD9oAE+Yz31mYjPr4nFPM+lotJJOyUk5IA8yBn3CuWq5VJQfYfTH+mokB0zE1gq/XV5qXb3OR5pLj0sqWtLobAU3ltKEucqeTmUAnc43wTUvQ3qdW651mbJ6hMN1fL5glwZ+IFOMRhEdrkQACpSlqI71KJJP3mvWhbPIxR25Gldvvj7TiH9QhhRSQ2qFCQjBxspXaFzPuGBWdks8O25lGKlU11IMiQ4ouOuHABytW+NugwMd1bdxnw7dG7eZIQy2TypzkqWr7KUjdR8gCaaEPXK9SnGC7Ks8QBKkpDYEpxPiVHIaBI2GCvxKelWy37EYSZQ89cKFdrhakvIBgy3o4TnJAS4oJG3fy8u1beltJ3DXGolWiNLdtcSEpty4vqCW5CW1AKSGkLBVlY6OYCRuQSRirh07AjWfU95bjNrQylcZQwSolxxv2lqJOSokbqOTvXO/pJXnUGnOM8TV1iMi2lUVMeLOZOz6mVFLyVDooBSuUpOQQBWGrQ1Rtc5brPBr1HitsKUorHbPc6+s1th2e0xbXb2Ux4kVpLLLYJPKlIwBk7n3nc1TPGiVM/pa5HXNUWY7KHmmnHw2kZ2IQnHtq7/HGe4VqcKfSE05q+KmwatWNP3d5HZCQlwtx3ydsoc6tK8lHHgTUmvPDiFBjmWyq83oElQaada7QJ6jBUPa+FavFFZfT01LK77/9HFm+uPwkCuOltOsWFU8FSJyoIlpa9fASc4OA2Bkd+2em/SmPUVzKrPp+1OT5bsRwK7CJ2vM2wsLUMnJydhkZ+jnYVKH7fpdmQtNxtNwYUk4WmReWUKB8CkJyKbnLdpBMoOQLNFV852nM7dgCFYxnI2zjyrgSbSaTx27/ALCJL0Ga0LQla2O1UXMghoIyVpwckHyONuu+ad7CO2ukd9ADcZqQO1feBQ22Er3yfHbp1zWyi2aelKLknTE95sEfORLqXAk523SkgffWvqS2XufNc+SbfMh2/mW6PXpKUuKccUpa1EqIH0lHGMbUhURS6s5a7b/sSl0olesuL0oTeysqkR2W1qwrlDi3R3FQOyR5dd6rVeoLhJuhucqY+uaVhYkFftAjpg92O7FA6altkmVNtbSycnmmpUfjy5ot6eWs+1e7Ugfq9sv8m6vfdde82S/XCKylOT3JrojidcbIhaLo6q4wuYrKXFkvI26IJO48j+Fc88ZdTStScTLxOU61dGUSCzHceaWhQZTuhHICAOXJG3XruTmrbGnGFDLt/gfBl7/0U0X/AEq+8Y7to1BbkSI61EAh5HMFDlUM8m23+ta9LrrILy5vK+q2Ik5NYKqb4gawdhxbLDuMSBBiJPZMtxGWW0DO5+jlRJ79yT40x3Oe+yy7CefjuF+T62twLBUV4Uk+GPpHbA3roaJabvc7CqJqS/xJFxjTWJtololIW7AcbPQdqkcyFezlBOPZB61LdBqb0rFuEq46ZOpLlc5rk2bc3UNHnWvGQlKEEIT7I2B8TXSWtpl80v0bBV5Zx0p3lOF7HzNbLMpXqEiI0prkkKbUs8245CojBz+tXSFvsllbu8NmVImuaahXdV4YsvYsFSZBJPKp4jmU2CfokdNjVusa/wBEIZMR3Ta2GlndIhsqQfeB1+6ivWaWX/JgmNaffBxAxqC9QoyY7N1uLTIWFAIkLSjmSQoHY4yDg57jvXbHop6oumquFLUq83N+4zost6Mt95PtFIwpIKvr4Soe18DuKh2ntKaPZ1FGcf1s6dMRbu5eIdmk20IKJK85CnsHmbGT7PwroG1ohNQGRbm2W4pTltLKAhOD4AAVv0jhLeEk/oNph0vOTR1jbnLtpubCZ3fU3zs/vEEKR/xJFcycVGQ/drfcBHQuLJjhCVvHHZrCieRJ7lYJJG2cbdDVxcX+NeldAtOwkOpu19A9m3x3Bls93aq6Njy3V4CqK4e6td4lMXq16htzjTrT5ntPW+KpTUYLUcJIwrGFKVjOQoKIOKT4jWrY4jydDR6qNF6bHNlsIYQMnZI6mty2SpECX6zDUlDpTyK505QtPXChkd+4I3G/iQfZWntRxGWSu0LdjLcDLMgq7AOnlUrZDmFDZJydx4E1jItV8ZwsWsOIBGQ1JQpQ38DgH4E15z8PfU84wz00tXpbY9LkmmPtkm3iTbGn0Q4BRlTYT6wtJ9hRRnJQRvy5+NOZkXIIGLdFye4zTkf+XitXSCSnS1u5iCoshS8EHClEqIOO8FW4p0ArqL3PNyS6n08DLK+XH3gPk1pKR3qmJ5fhhJP4Vq2aVcIEVTNwjxoamlKU7zEug8yiQ4taSOUK+0EkDGCRipNXiuOhchDxHziEqQD4pOMg+WQDRGKTyVeWejSyttKlI5FEAlIVzY+Pf76l/Cdk897lHODJaaHuSyk/ms1DYMVuKwI7OQ2FHkSeiAT9EeQ7vDpVgcLWQjTKpQ/2yW+8P2efkSf5UCtuhjmzJSfBLKj2pc+vIx/hD8zUhqPak/tyP3Q/M11xZIKVKlQAjTZdjHgRXZsh5DEZpJW4tZwEAdSfKnTpQO/lS7K1NYZaMnHgruXxE082kmH69cj3erRlBB/jc5U/iail44jakkyC3a7db7fGx9Nx7tnyfcUcifuVUx1nw+bn88uyrTHfO62Ds2s+R+qfw91VfOtVwgSjGlxHY7o+q4MZ8we8e6vOay3U0PDWF6nU0lVV3zSNm2at1HAubksxbRJeXketSVOuSOX7PNsEjOdkBKfKt9/XGo1SFSEPQ2CpKUlLUbbbON1E+JplZgTJEWVKZjrcjxAC+6keyjJxjzO/Qb1pNQb0Vxp7tumNWx1JKpC2sISOZKQTncDJ695JA6GsL1GpkuXg6cdNpY+hN+HMx++6tnMz5q+3lwx2jidllLahgJxsnqd8bd3jUh43cN4utOG7tigNNMTYKQ9azjAQ4kYCM/ZUMpPvB7qaeEluTaNf3i3OuF+Q3HPK4pOBy9oDlI7gUrRnc55RVtkDp1r0vh9TWnSnu2ef10q7bX0LY+YEhp9iQ7HkMLYeaWpt1txOFIUDhSSPEEEVPuGfGTWugUojW+f8oW1J/wDp84lxpI/UP0m/gceVW16X/Cxxp53iHYIxW2vHywy2n6J6CQB4dAv4K8a5hwSc0uUZVSwcZqVcjsTTnGPhVxLYbhauiJsNzICUmWrCM/qSE4+5fLUpn8MWWonrOnJMeWypAUhL4S4tf7Kyezx/D8a4UB5akui+IOstGvBenNQTIbWcqjFXaMK97asp+4A0uyum55tjv6rkurVL5kdEXl25accWi9wrxbW17DmfCW1+7sW+U/E0zpvWnHVFx+DelLPRbT7QB/mSTXtoz0pW1sJha500l5ChyuSLdghQ8VMrP5K+FT6AeCfEVAFlusKFNd37Fl31R4E/7pYAPwFY7fC+reqSf1J6U/lZBWblpJWzny60T3lLLoHwBTW+zb4E8hNlvkKU8r6MV7MZ5XkAv2VHyCqks/gbKDiU2y/MKYJ3VIZIWkfwnB/Cn2xcGtNWxlT97nSLjyjmXzqDLIA8QN8e9VZIeE3zeJQS984/f/BKhPO6KulwpsZ9TEyK9HeR9Jt1BSofA1nbIUq4SvVYMZ6Q/j6DaCojzOOg8zV3zblw3hWFgTrtp4WxhXZMrfmtrQhX2QpSic+WawuOltM6r00iLZbqqNblZKV2mSkNOE/b5chfuNMfgE03iWV+v89y/l+hUEu1W6ACi+3+3wnR1YZJlPDyKW8gH3qFaPyzpm35EJi9T1jo4pxuKn4BIUr8RUtXwNufyiG279EMD/EUwrtB5coOPjmnKVpLhboCP61q++x1qAzyzpATn9lpHtK/GqV+F3N4UFH3bz/PsU6J/QgDGpLteJDcO36VhznEq9gqbdlvD3rKunv2qwdOaG1VcUpcvLFitLR35Bb23Xce7cD4k1DNUek1pKyRlQNB6aVLCdkuuoEWOD4hAHOr4hNUbr3jHxA1kHGbjfnosJe3qcD5hrHgeU8yv4ia6ENDVB5sl1P22RGYx5eTqTVOvOE3DdIbkvw7jeWAQGYTDbj/ADfrcuEN/EiqD4lekXrTVHbQbRy6dti8p5YzhVJcT+s7tj3IA95qlwSBju8KJGelauvpXTBYXsUldJ7LYyCVOuKUnKlrOT3lRP4kmu8fRq4fHQvD9o3BgN3u54kztvab29hr+FJ3/WKqo/0RuFa79eG9c32KRa7e7/4e2sbSX0/Xx3oQfvV+ya7CrTpq8fEx1Ff+5kJ4oodeVZ2UNOLAkOuKKUk4w0oDOP2qhstPYskOApJKQArbJ5hV01g4224MLQlY/WANRfpPNl1ZNcZYKKn25Eh8yIjyocs7l5nHteS09Fj37+BFATZ8UJamWxxwDYOw/bB8yg+0PgVVdy7ZbnM88CKr3tJ/7VrqsFlUok22PnyTisz8Pn2ZbrRTqbvbOcIXNaZX9l/LSh8FgVsplRFjLcyMv9l5J/I1bSLFZ0DAt0cjwUjI/GsTp6wEkmyWw56/1Rvf8KlaCXdkOZVCUvz3k2+1KbenvDDaUnIbzt2i8fRSnrv1xgbkVcFmgM2u1RLdHB7KMylpGepCRjJ8++soECFAbLcGHHioUclLLSUAn3AVs1s0+nVK9yreRVHdSnE5H7ofmakPuqPalAM5H7ofma0EEhpUaFACpUe+hQAu6te4QYc+OY82M1IaP1Vpzj3eFbNCoaTWGSm1ujXgQYcCG3Ehxm2GG/oISnAHn7/Osbnb41whPxJLYW2+0W15G+D/APM1tUajojjpxsHU85KxtCHrdxogsvjCplgfQo/aWw60kke9PIfjVnCmO62FM3VdmvwcShy2tyWiCN1JeSkEZ8ihJp7qlNflx6QlLqbZg+y0+yth9tDjbiSlaFpBSpJGCCDsQR3VxX6SHBeToiY9qPTsZb2mHl5WhOSq3qJ+ir/dk/RV3dD3E9r1hJYZkx3I8hpDzLqShxtaQpKkkYIIOxBHdU2VqxYYuyCmsM+XuDQNdM8c/RxkxVv37h2wqQwSVvWjPtt95LBP0h+odx3E9K5pfZdYfcYfacadbUUONrSUqQodQQdwfI1zp1uDwzDKDi8MwAp80RbY931PDi3DKYDXPKmOYz2cdlJddV7+VBA8yKZCcVbno5abXe701HW183dZiIa+Yf7IxyyJR9ysR2v80iiC6pJERWXg6N0w/wAdX9OW5S/6FEyojbvrEpD7T0XmSDyLaR7K1JBxsUjI6VAtd6XuuqNaxNDPawm6o1AsCRc3X8NWyzsYztFQQlx1X1UrKttyPDpjHs9KpNfC3X1r1LeXtK6qs0K3Xa5uXJciVDW7NYdcSUqxvyrKQpQSVdAemd63zjslybZx29Te0nwq4OaNujUSU1Z51+eG3ys80t5ZP2GThKc9wSmnW8cHrD66q7aMnTtE3cnPb2hfKy4fByOfm1jywPfWvE4D8PlWV+Jera5e7jK9uVd5rpVMcdP1wsH2CD0A28c0yxL/AKo4Oz2bVrWXK1Bop1wNw7/yFT9vzsluUBupPcF//wABhRW62DCS3Q/oHHBhItedEyxggXdRfbVjuJjAYKvcsJrjPilHeb1P8qyFlb14jonOEp5eV5RKJCMd3K+h1OO4Yr6KRZMeZEbkxX2nmHkBbbrawpK0kZBBGxHnXHXpTaVVBvF09XawmPLTdY+P/tph5H0jyRJbCvL1il6iHw5KXQ+HJQRpb0Tscd9D8KxGQQ32q1fR+4RXHiLehLmoeiabiOf1qSNi8of3LZ+14q+qPPAqRcD/AEerxql1i9awakWix7LRHIKJMseQ6toP2j7R7gOtdi2W12+zWuNa7VDZhwozYbZYaTypQkdwH/zNaaaG95cD6qW95cGVqgQrXbo9ut8ZqNEjNpaZZbThKEgYAAraoUa3GwFGl30KADQo0KADQo0qABR86VCgBVHdTD+vt/uh+ZqR1HtSZ9eRt/dD8zQBIKNClQAqNKlQAqFKjQAqFGlQAKNCjQAKNClQAar/AIo8ItGcQW1PXWCYtz5cIuMTCHx4BW2FjyUD5YqwKFQ4qSwyGk1hnEuvPRs13p5bkiyJZ1LCTkgx/m5AHm0o7n9kn3VZnDWz3Hg4zEvmrLHJdtRtLbC50I9qq3LcWXny+zgKAUsoTzJ5sBpOa6OP4UwcRNMR9ZaJuumJMl2K3cI5aLzYyps5BCsd+CBt3jIpKoUXmIryVF5iVND9INyJdIszVWlVWLS1wcU3CnOSw5JACAtLjjAHMEKSQQR4jrVocPNf6X17Afl6anqkCMsIfbcaU042SMpylQBwR0PQ1z5rW1rsPEazyeOkpF2scS1LTbFW23rEZ19BCQ24kD9IU+1ucZ5RsAainyrre3WKdxjavs6xi8ymm7TFbU2562lpfIlEgHGUhtK8cqeqTnAIqqslF7lVZJPc7VWUpSSpQAAySaqfibrq46O1LjV1ljXHh5dW0R/XWGS4qE4oYUmQjcLbX1BA6eJ2OEni/o296JenybfdJdpVJ+TL62YqkLtyXEHK30E8wbOcZTnr5VElz18JoMa03latXcJ718xClKxIdgBYJS0of3rRGcY322wRgslNdhkpJ8Dkwzc+EeNQ6Ted1JwxlD1h6Cy52ztrSrcvR1Z9tnvKe78ax1kmTxldgv6V09PTZkx5MR27z8RWpLD7f9y2oc7gS62y4FEAZTtnO0Z4Zab1Jc7vqi18LNaGLw/dUhtt2dBU+kKdSe2TGK8bo6cx2PMM5IyejNKWSHpvTVusFv7QxbfGRHaKzlRSkYBJ8arFdSx2KxXUsdjiTRXo+8StSvgzbUiwx+bC5E9XKduvK2MqV5ZAB8a6W4U8BtG6GWzPfbN8vDe6ZkxA5W1eLbf0U+85V51bFGphRCBMKYxBSpUqcNFRpUKAFSpUaAFQo0KAFSo0KAFRpUhQAqjupSRObx/hD8zUiqO6mP8AX0fuh+ZoAkNKlRoAVClRoAVCjSoAVKlQoANKhSoANClijQAKVGhQAqVKlQBittDgwtAUOuCM1TWrvR50xcGVvafudzss5qR6zA5njIixHOfnUEMKOAlR6gHwx0q56VVlBS5KyipclI6d4Qa500m6SLVxDhy5t+KjeTcrOHm3VEEBaBzgghKiMKJB8KkGg+CWktKSLXKRIu9xdtoC2G5k1S46H+XCn0s/RSs5PTYZ2qz6RqFXFEKuKMG20NNhtpCUIHRKRgD4VnSpVcuClSo0ALFKlSoAFQbVnFzh5pa8qtF61LHYmoIDrTba3Szn7ZQkhJ8jvU5IOK+dHEvS2o9P61ucG9W+Z625LdcS6W1KTKClkhxCvrBWc7b9x3pN1jgtkKtscFsfQ20XK33e2R7na5jMyFJQHGX2VhSFpPeCK2qqT0T9P33T3CZmPfor0N2RLdksxnRhbLS+XAI+qSQpWO7m8atw0yLbSbGReVlg76VGhViRUaFGgAUaFGgAVHtS49ebyP7ofmakNR7Uo/ryP3Q/M0Af/9k=" alt="Marutham AgroLink">
+      <div class="brand-name">Marutham <span>AgroLink</span></div>
+    </div>
+    <nav class="nav-links">
+      <a href="#shop" data-en="Shop" data-ta="கடை">Shop</a>
+      <a href="#about" data-en="About" data-ta="எங்களை பற்றி">About</a>
+      <a href="#stories" data-en="Farmer Stories" data-ta="விவசாயி கதைகள்">Farmer Stories</a>
+      <a href="#contact" data-en="Contact" data-ta="தொடர்பு">Contact</a>
+      <a href="#career" data-en="Career" data-ta="வேலைவாய்ப்பு">Career</a>
+    </nav>
+    <div class="nav-right">
+      <span class="clock" id="clock">--:--:-- IST</span>
+      <div class="lang-toggle">
+        <button class="active" onclick="setLang('en',this)">EN</button>
+        <button onclick="setLang('ta',this)">த</button>
+      </div>
+      <button class="btn-login" data-en="Login / Register" data-ta="உள்நுழைய">Login / Register</button>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-watermark">Marutham AgroLink</div>
+  <div class="hero-content">
+    <h1 data-en="Fresh from our farms,<br>straight to your home" data-ta="எங்கள் வயல்களில் இருந்து,<br>நேரடியாக உங்கள் வீட்டிற்கு">Fresh from our farms,<br>straight to your home</h1>
+    <p data-en="Connecting local farmers of Pudukkottai directly with you — fair prices for farmers, fresh produce for families." data-ta="புதுக்கோட்டை விவசாயிகளை உங்களுடன் நேரடியாக இணைக்கிறோம் — விவசாயிகளுக்கு நியாயமான விலை, குடும்பங்களுக்கு புதிய காய்கறிகள்.">Connecting local farmers of Pudukkottai directly with you — fair prices for farmers, fresh produce for families.</p>
+    <div class="hero-cta">
+      <button class="btn-primary" data-en="Shop Fresh Now" data-ta="இப்போது வாங்குங்கள்">Shop Fresh Now</button>
+      <button class="btn-outline" data-en="Become a Seller" data-ta="விற்பனையாளராகுங்கள்">Become a Seller</button>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCTS -->
+<section class="section" id="shop">
+  <h2 class="section-title" data-en="Fresh Today" data-ta="இன்றைய புதிய பொருட்கள்">Fresh Today</h2>
+  <p class="section-sub" data-en="Browse what our farmers harvested today" data-ta="எங்கள் விவசாயிகள் இன்று அறுவடை செய்ததைப் பாருங்கள்">Browse what our farmers harvested today</p>
+  <div class="container">
+    <div class="products">
+      <div class="product"><div class="product-img">🍅</div><span class="product-badge badge-farmer" data-en="Direct from Farmer" data-ta="விவசாயியிடமிருந்து">Direct from Farmer</span><div class="product-name">Tomato</div><div class="product-price">₹24/kg</div><div class="product-rating">★ 4.6 (38)</div><button class="btn-add" data-en="Add to Cart" data-ta="கூடையில் சேர்">Add to Cart</button></div>
+      <div class="product"><div class="product-img">🥬</div><span class="product-badge badge-farmer" data-en="Direct from Farmer" data-ta="விவசாயியிடமிருந்து">Direct from Farmer</span><div class="product-name">Spinach</div><div class="product-price">₹18/bunch</div><div class="product-rating">★ 4.8 (51)</div><button class="btn-add" data-en="Add to Cart" data-ta="கூடையில் சேர்">Add to Cart</button></div>
+      <div class="product"><div class="product-img">🧅</div><span class="product-badge badge-retailer" data-en="Retailer" data-ta="சில்லறை விற்பனையாளர்">Retailer</span><div class="product-name">Onion</div><div class="product-price">₹32/kg</div><div class="product-rating">★ 4.3 (22)</div><button class="btn-add" data-en="Add to Cart" data-ta="கூடையில் சேர்">Add to Cart</button></div>
+      <div class="product"><div class="product-img">🥕</div><span class="product-badge badge-farmer" data-en="Direct from Farmer" data-ta="விவசாயியிடமிருந்து">Direct from Farmer</span><div class="product-name">Carrot</div><div class="product-price">₹40/kg</div><div class="product-rating">★ 4.5 (29)</div><button class="btn-add" data-en="Add to Cart" data-ta="கூடையில் சேர்">Add to Cart</button></div>
+      <div class="product"><div class="product-img">🥔</div><span class="product-badge badge-farmer" data-en="Direct from Farmer" data-ta="விவசாயியிடமிருந்து">Direct from Farmer</span><div class="product-name">Potato</div><div class="product-price">₹28/kg</div><div class="product-rating">★ 4.4 (44)</div><button class="btn-add" data-en="Add to Cart" data-ta="கூடையில் சேர்">Add to Cart</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ACHIEVEMENTS -->
+<section class="section achievements">
+  <div class="container">
+    <div class="ach-grid">
+      <div><div class="ach-num">250<span>+</span></div><div class="ach-label" data-en="Active Farmers" data-ta="செயலில் உள்ள விவசாயிகள்">Active Farmers</div></div>
+      <div><div class="ach-num">12<span>k+</span></div><div class="ach-label" data-en="Orders Delivered" data-ta="வழங்கப்பட்ட ஆர்டர்கள்">Orders Delivered</div></div>
+      <div><div class="ach-num">98<span>%</span></div><div class="ach-label" data-en="Happy Customers" data-ta="மகிழ்ச்சியான வாடிக்கையாளர்கள்">Happy Customers</div></div>
+      <div><div class="ach-num">1<span>district</span></div><div class="ach-label" data-en="Serving Pudukkottai" data-ta="புதுக்கோட்டையில் சேவை">Serving Pudukkottai</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CEO MESSAGE -->
+<section class="section ceo" id="about">
+  <h2 class="section-title" data-en="A Message from Our Founder" data-ta="எங்கள் நிறுவனரின் செய்தி">A Message from Our Founder</h2>
+  <p class="section-sub" data-en="Why we built Marutham AgroLink" data-ta="நாங்கள் ஏன் மருதம் அக்ரோலிங்க் உருவாக்கினோம்">Why we built Marutham AgroLink</p>
+  <div class="ceo-card">
+    <div class="ceo-avatar">🌾</div>
+    <div class="ceo-text">
+      <p class="ceo-quote" data-en="&ldquo;In Tamil tradition, Marutham is the fertile farmland — the land of paddy, rivers, and prosperity. We built Marutham AgroLink so that the people who grow our food earn what they truly deserve, and so every family can bring home produce that was in the soil this morning. No middlemen taking the farmer's share. Just fair prices, fresh food, and dignity for the hands that feed us.&rdquo;" data-ta="&ldquo;தமிழ் மரபில், மருதம் என்பது வளமான விவசாய நிலம் — நெல், ஆறுகள், செழிப்பின் நிலம். உணவை வளர்ப்பவர்கள் தகுதியானதைப் பெற வேண்டும் என்பதற்காகவே மருதம் அக்ரோலிங்கை உருவாக்கினோம்.&rdquo;">&ldquo;In Tamil tradition, Marutham is the fertile farmland — the land of paddy, rivers, and prosperity. We built Marutham AgroLink so that the people who grow our food earn what they truly deserve, and so every family can bring home produce that was in the soil this morning. No middlemen taking the farmer's share. Just fair prices, fresh food, and dignity for the hands that feed us.&rdquo;</p>
+      <div class="ceo-name">Ramprakash</div>
+      <div class="ceo-role" data-en="Founder &amp; Managing Director, Marutham AgroLink" data-ta="நிறுவனர் &amp; நிர்வாக இயக்குநர்">Founder &amp; Managing Director, Marutham AgroLink</div>
+    </div>
+  </div>
+</section>
+
+<!-- FARMER STORIES -->
+<section class="section" id="stories" style="background:var(--green-light);">
+  <h2 class="section-title" data-en="Farmer Stories" data-ta="விவசாயி கதைகள்">Farmer Stories</h2>
+  <p class="section-sub" data-en="Real farmers, real change" data-ta="உண்மையான விவசாயிகள், உண்மையான மாற்றம்">Real farmers, real change</p>
+  <div class="container">
+    <div class="stories">
+      <div class="story">
+        <div class="story-top"><div class="story-avatar">👨‍🌾</div><div><div class="story-name">Murugan</div><div class="story-village" data-en="Karambakkudi" data-ta="கரம்பக்குடி">Karambakkudi</div></div></div>
+        <div class="story-body" data-en="For years, traders decided my price at the gate. Now I list my tomatoes in the morning and they reach families the same day — at a price I set." data-ta="பல வருடங்களாக, வியாபாரிகள் என் விலையை முடிவு செய்தனர். இப்போது நான் காலையில் என் தக்காளியை பட்டியலிடுகிறேன்.">For years, traders decided my price at the gate. Now I list my tomatoes in the morning and they reach families the same day — at a price I set.<div class="story-impact" data-en="↑ 35% more income" data-ta="↑ 35% அதிக வருமானம்">↑ 35% more income</div></div>
+      </div>
+      <div class="story">
+        <div class="story-top"><div class="story-avatar">👩‍🌾</div><div><div class="story-name">Lakshmi</div><div class="story-village" data-en="Thirumayam" data-ta="திருமயம்">Thirumayam</div></div></div>
+        <div class="story-body" data-en="I grow greens on a small plot. Marutham gave me customers I could never reach alone. My harvest no longer goes to waste." data-ta="நான் ஒரு சிறிய நிலத்தில் கீரை வளர்க்கிறேன். மருதம் எனக்கு வாடிக்கையாளர்களை கொடுத்தது.">I grow greens on a small plot. Marutham gave me customers I could never reach alone. My harvest no longer goes to waste.<div class="story-impact" data-en="Zero wastage" data-ta="பாழாகாமல்">Zero wastage</div></div>
+      </div>
+      <div class="story">
+        <div class="story-top"><div class="story-avatar">👨‍🌾</div><div><div class="story-name">Selvam</div><div class="story-village" data-en="Aranthangi" data-ta="அறந்தாங்கி">Aranthangi</div></div></div>
+        <div class="story-body" data-en="The payment comes straight to my bank. No waiting, no cuts. My children see farming can be a respectable living again." data-ta="பணம் நேராக என் வங்கிக்கு வருகிறது. காத்திருப்பு இல்லை, வெட்டு இல்லை.">The payment comes straight to my bank. No waiting, no cuts. My children see farming can be a respectable living again.<div class="story-impact" data-en="Paid within 24 hrs" data-ta="24 மணி நேரத்தில் பணம்">Paid within 24 hrs</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer id="contact">
+  <div class="foot-grid">
+    <div>
+      <div class="foot-brand">Marutham <span>AgroLink</span></div>
+      <p style="font-size:14px;max-width:320px;" data-en="Linking farmers, empowering markets. Fresh produce direct from the farms of Pudukkottai." data-ta="விவசாயிகளை இணைத்து, சந்தைகளை வலுப்படுத்துகிறோம்.">Linking farmers, empowering markets. Fresh produce direct from the farms of Pudukkottai.</p>
+    </div>
+    <div class="foot-col">
+      <h4 data-en="Explore" data-ta="ஆராயுங்கள்">Explore</h4>
+      <a href="#shop" data-en="Shop" data-ta="கடை">Shop</a>
+      <a href="#about" data-en="About Us" data-ta="எங்களை பற்றி">About Us</a>
+      <a href="#stories" data-en="Farmer Stories" data-ta="விவசாயி கதைகள்">Farmer Stories</a>
+    </div>
+    <div class="foot-col" id="career">
+      <h4 data-en="Company" data-ta="நிறுவனம்">Company</h4>
+      <a href="#" data-en="Career" data-ta="வேலைவாய்ப்பு">Career</a>
+      <a href="#" data-en="Contact Us" data-ta="தொடர்பு">Contact Us</a>
+      <a href="#" data-en="Customer Care" data-ta="வாடிக்கையாளர் சேவை">Customer Care</a>
+    </div>
+    <div class="foot-col">
+      <h4 data-en="Legal" data-ta="சட்டம்">Legal</h4>
+      <a href="#" data-en="Privacy Policy" data-ta="தனியுரிமை">Privacy Policy</a>
+      <a href="#" data-en="Terms" data-ta="விதிமுறைகள்">Terms</a>
+      <a href="#" data-en="Refund Policy" data-ta="பணத்திரும்பல்">Refund Policy</a>
+    </div>
+  </div>
+  <div class="foot-bottom">© 2026 Marutham AgroLink Private Limited · Serving Pudukkottai, Tamil Nadu</div>
+</footer>
+
+<script>
+// Live IST clock
+function tick(){
+  var now=new Date();
+  var ist=new Date(now.getTime()+(now.getTimezoneOffset()*60000)+(5.5*3600000));
+  var h=String(ist.getHours()).padStart(2,'0');
+  var m=String(ist.getMinutes()).padStart(2,'0');
+  var s=String(ist.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent=h+':'+m+':'+s+' IST';
+}
+setInterval(tick,1000); tick();
+
+// Language toggle
+function setLang(lang,btn){
+  document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  document.querySelectorAll('[data-en]').forEach(function(el){
+    var t=el.getAttribute('data-'+lang);
+    if(t) el.innerHTML=t;
+  });
+  document.documentElement.lang=lang;
+}
+</script>
+</body>
+</html>
