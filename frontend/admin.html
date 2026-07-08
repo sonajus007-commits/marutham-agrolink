@@ -918,6 +918,12 @@
 <script src="js/config.js"></script>
 <script src="js/shared.js"></script>
 <script src="js/api.js"></script>
+<script src="js/vendor/echarts.min.js"></script>
+<script src="js/vendor/tamilnadu-districts.geojson.js"></script>
+<script src="js/dashboard/common.js"></script>
+<script src="js/dashboard/executive.js"></script>
+<script src="js/dashboard/operations.js"></script>
+<script src="js/dashboard/adminhead.js"></script>
 <script>
 var user = requireAuth('admin');
 if (!user) throw new Error('redirect');
@@ -1039,8 +1045,26 @@ async function saveOrderingWindow() {
   }
 }
 
+// Executive roles get the dedicated business-overview dashboard; every other
+// admin role keeps the existing generic dashboard until its own phase is built.
+var EXECUTIVE_DASH_ROLES = ['Board of Director', 'CEO', 'Managing Director', 'CFO', 'CTO'];
+var ADMINHEAD_DASH_ROLES = ['Head Office', 'Technical Admin', 'HR Admin', 'HR Manager'];
+var OPERATIONS_DASH_ROLES = ['District Manager', 'Hub Incharge', 'Regional Manager', 'State Head', 'Zonal Manager'];
+
 async function renderOverview() {
   var el = document.getElementById('overviewBody');
+  if (EXECUTIVE_DASH_ROLES.indexOf(user.admin_role) !== -1 && typeof renderExecutiveDashboard === 'function') {
+    renderExecutiveDashboard(el);
+    return;
+  }
+  if (ADMINHEAD_DASH_ROLES.indexOf(user.admin_role) !== -1 && typeof renderAdminHeadDashboard === 'function') {
+    renderAdminHeadDashboard(el);
+    return;
+  }
+  if (OPERATIONS_DASH_ROLES.indexOf(user.admin_role) !== -1 && typeof renderOperationsDashboard === 'function') {
+    renderOperationsDashboard(el);
+    return;
+  }
   el.innerHTML = '<div class="spinner"><div class="spin"></div></div>';
   try {
     var res = await API.getDashboard();

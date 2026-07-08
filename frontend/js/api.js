@@ -259,6 +259,20 @@ var API = {
     var qs = params ? '?' + new URLSearchParams(params).toString() : '';
     return apiFetch('GET', '/dashboard' + qs, null, tok());
   },
+  getExecutiveDashboard: function(params) {
+    var qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiFetch('GET', '/dashboard/executive' + qs, null, tok());
+  },
+  getOperationsDashboard: function(params) {
+    var qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiFetch('GET', '/dashboard/operations' + qs, null, tok());
+  },
+  getFieldDashboard: function() {
+    return apiFetch('GET', '/dashboard/field', null, tok());
+  },
+  getAdminHeadDashboard: function() {
+    return apiFetch('GET', '/dashboard/adminhead', null, tok());
+  },
 
   // ── Payouts ───────────────────────────────────────────────────────────────
   getPayouts: function() {
