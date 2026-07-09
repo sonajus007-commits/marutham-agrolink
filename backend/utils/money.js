@@ -1,5 +1,21 @@
-// All money fields stored in paise (integer) in the DB.
-// These fields are converted to Rupees (2 decimal places) in every API response.
+// Money is stored in PAISE (integers) in the database. Every field named below
+// is converted to Rupees, as a 2-decimal string, in every API response.
+//
+// TWO RULES, both learned the hard way:
+//
+//   1. If a response carries a money value, its field name MUST be in this set.
+//      A sibling left out keeps its paise value, and the client renders two
+//      different units side by side. That produced a subscription screen reading
+//      "Pay ₹2 & Activate" for a ₹300 charge, because `amount` was converted and
+//      `registration_charge` was not.
+//
+//   2. NEVER divide by 100 by hand before returning a value. This runs on the
+//      whole response, so a pre-divided field is converted twice: ₹100 → ₹1.00.
+//
+// Conversion is one-directional — responses only. Nothing converts rupees back
+// to paise on the way IN, so a handler must never take a money value from the
+// request body. (A client echoing back a rupee price once made partial refunds
+// 100x too small; see backend/utils/returns.js.)
 const MONEY_FIELDS = new Set([
   // orders
   'item_total', 'market_fee', 'delivery', 'total', 'saved', 'refund_amt',
@@ -15,6 +31,9 @@ const MONEY_FIELDS = new Set([
   'amount',
   // consumers/farmers directory rollups (accumulated from order totals in paise)
   'total_spend', 'total_revenue',
+  // users + subscription_payments + GET /subscription/plans
+  'subscription_amount', 'registration_charge',
+  'plan_amount', 'total_amount', 'base_amount', 'amount_paid',
 ]);
 
 function paiseToRupees(value) {

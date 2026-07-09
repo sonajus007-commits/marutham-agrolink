@@ -121,12 +121,14 @@ router.post('/pay', async (req, res) => {
   notify.notifyAccountActivated(updated).catch(e => console.error('Notification error (activate):', e.message));
 
   const { password_hash, ...safeUser } = updated;
+  // All paise. convertMoney() turns these into rupee strings on the way out —
+  // dividing here too would report ₹1.00 for a ₹100 charge.
   res.json({
     message:                 'Payment successful. Your account is now active.',
     plan:                    planName,
-    plan_amount:             planFee / 100,
-    registration_charge:     regCharge / 100,
-    amount_paid:             total / 100,
+    plan_amount:             planFee,
+    registration_charge:     regCharge,
+    amount_paid:             total,
     payment_reference:       paymentRef,
     subscription_expires_at: updated.subscription_expires_at,
     user:                    safeUser,

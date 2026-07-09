@@ -414,8 +414,11 @@ function openTab(name, tabEl) {
 // payment succeeds. Also reused (non-blocking, closable) as the "Renew" flow.
 var _subSelectedPlan = null;
 
-function rupees(paise) {
-  return '₹' + (paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+// Money arrives from the API already in rupees (see backend/utils/money.js) —
+// as a 2-decimal string, e.g. "200.00". Do NOT divide by 100 here; that used to
+// render a ₹200 plan as "₹2" and a ₹300 total as "Pay ₹2 & Activate".
+function money(rs) {
+  return '₹' + Number(rs || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 async function enforcePaymentGate() {
@@ -481,7 +484,7 @@ function renderSubscriptionPlans(data) {
 
   data.plans.forEach(function(p) {
     var strike = (p.base_amount && p.base_amount !== p.amount)
-      ? '<span style="text-decoration:line-through;color:#9ca3af;font-weight:500;font-size:12px;margin-right:6px">' + rupees(p.base_amount) + '</span>' : '';
+      ? '<span style="text-decoration:line-through;color:#9ca3af;font-weight:500;font-size:12px;margin-right:6px">' + money(p.base_amount) + '</span>' : '';
     html +=
       '<label style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:2px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:pointer" ' +
         'onclick="selectSubPlan(\'' + p.name + '\', ' + p.amount + ', ' + regCharge + ', this)">' +
@@ -490,14 +493,14 @@ function renderSubscriptionPlans(data) {
           '<div><div style="font-weight:700;color:#1a3d2b">' + p.name + '</div>' +
           '<div style="font-size:12px;color:#6b7280">' + p.days + ' days validity</div></div>' +
         '</div>' +
-        '<div style="font-weight:800;color:#15803d">' + strike + rupees(p.amount) + '</div>' +
+        '<div style="font-weight:800;color:#15803d">' + strike + money(p.amount) + '</div>' +
       '</label>';
   });
 
   html +=
     '<div id="subGateSummary" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;margin-top:6px;display:none">' +
       '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Plan fee</span><span id="sumPlan">—</span></div>' +
-      (regApplies ? '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Registration charge (one-time)</span><span>' + rupees(regCharge) + '</span></div>' : '') +
+      (regApplies ? '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Registration charge (one-time)</span><span>' + money(regCharge) + '</span></div>' : '') +
       '<div style="display:flex;justify-content:space-between;font-weight:800;color:#15803d;border-top:1px dashed #86efac;padding-top:8px;margin-top:4px"><span>Total payable</span><span id="sumTotal">—</span></div>' +
     '</div>' +
     (regApplies ? '' : '<div style="font-size:12px;color:#6b7280;margin-top:8px">✓ Your one-time registration charge is already paid — renewals are plan fee only.</div>') +
@@ -514,16 +517,18 @@ function selectSubPlan(name, amount, regCharge, labelEl) {
   labelEl.style.background = '#f0fdf4';
   labelEl.querySelector('input').checked = true;
 
-  var total = amount + (regCharge || 0);
+  // Coerce explicitly: these arrive as rupee strings from the API, and "200.00"
+  // + 100 concatenates into "200.00100" rather than adding.
+  var total = Number(amount || 0) + Number(regCharge || 0);
   document.getElementById('subGateSummary').style.display = 'block';
-  document.getElementById('sumPlan').textContent  = rupees(amount);
-  document.getElementById('sumTotal').textContent = rupees(total);
+  document.getElementById('sumPlan').textContent  = money(amount);
+  document.getElementById('sumTotal').textContent = money(total);
 
   var btn = document.getElementById('subPayBtn');
   btn.disabled = false;
   btn.style.background = '#15803d';
   btn.style.cursor = 'pointer';
-  btn.textContent = 'Pay ' + rupees(total) + ' & Activate';
+  btn.textContent = 'Pay ' + money(total) + ' & Activate';
 }
 
 async function submitSubscriptionPayment() {

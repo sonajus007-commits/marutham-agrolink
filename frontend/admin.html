@@ -4641,7 +4641,7 @@ function renderRegistrationList(list, status) {
       html += '</div>';
     }
     if (r.approval_status === 'payment_pending' && r.payment_reference) {
-      html += '<div style="margin-top:8px;font-size:11px;background:#fff7ed;padding:6px 10px;border-radius:6px">Ref: <strong>' + r.payment_reference + '</strong> &bull; ₹' + ((r.subscription_amount||0)/100).toFixed(0) + '</div>';
+      html += '<div style="margin-top:8px;font-size:11px;background:#fff7ed;padding:6px 10px;border-radius:6px">Ref: <strong>' + r.payment_reference + '</strong> &bull; ₹' + Number(r.subscription_amount || 0).toFixed(0) + '</div>';
     }
     html += '</div>';
   });
@@ -4711,7 +4711,7 @@ async function openRegDetail(id) {
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:14px">';
     html += row('Plan Selected', r.subscription_plan || '—');
     if (r.approval_status === 'payment_pending' || r.approval_status === 'active') {
-      html += row('Amount', r.subscription_amount ? '₹' + (r.subscription_amount/100).toFixed(0) : '—');
+      html += row('Amount', r.subscription_amount ? '₹' + Number(r.subscription_amount).toFixed(0) : '—');
       html += row('Payment Ref', '<span style="font-family:monospace">' + (r.payment_reference || '—') + '</span>');
       html += row('Approved By', r.approved_at ? new Date(r.approved_at).toLocaleString('en-IN') : '—');
       html += row('Payment Confirmed', r.payment_confirmed_at ? new Date(r.payment_confirmed_at).toLocaleString('en-IN') : 'Pending');
