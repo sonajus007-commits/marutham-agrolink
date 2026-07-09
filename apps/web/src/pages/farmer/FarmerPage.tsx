@@ -7,6 +7,7 @@ import { changeLanguage, type AppLanguage } from '@marutham/i18n';
 import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider } from '../../components/Toast';
 import { EarningsTab } from './EarningsTab';
+import { ProductsTab } from './ProductsTab';
 import { SubscriptionGate } from './SubscriptionGate';
 import './farmer.css';
 
@@ -90,8 +91,10 @@ function FarmerInner() {
       <div className="ma-appbody">
         {tab === 'earnings' ? (
           <EarningsTab onRenew={() => setRenewing(true)} />
+        ) : tab === 'products' ? (
+          <ProductsTab />
         ) : (
-          <EmptyState icon={tab === 'products' ? '🌾' : '📦'}>{t('farmer.comingSoon')}</EmptyState>
+          <EmptyState icon="📦">{t('farmer.comingSoon')}</EmptyState>
         )}
       </div>
 

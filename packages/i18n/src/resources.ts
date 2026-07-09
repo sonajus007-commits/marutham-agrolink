@@ -106,6 +106,8 @@ export const resources = {
       'farmer.sub.expiringIn_other': 'Expiring in {{count}} days',
       'farmer.sub.validUntil': 'Valid until',
       'farmer.sub.renew': 'Renew',
+      'farmer.prod.request': 'Request new product',
+      'farmer.prod.empty': 'No products yet. Request a product to get started — an admin approves it, then you set your price.',
     },
   },
   ta: {
@@ -212,6 +214,8 @@ export const resources = {
       'farmer.sub.expiringIn_other': '{{count}} நாட்களில் காலாவதி',
       'farmer.sub.validUntil': 'செல்லுபடியாகும் வரை',
       'farmer.sub.renew': 'புதுப்பி',
+      'farmer.prod.request': 'புதிய பொருள் கோரிக்கை',
+      'farmer.prod.empty': 'இதுவரை பொருட்கள் இல்லை. ஒரு பொருளைக் கோரி தொடங்குங்கள் — நிர்வாகி அனுமதித்த பிறகு விலையை நிர்ணயிக்கலாம்.',
     },
   },
 } as const;

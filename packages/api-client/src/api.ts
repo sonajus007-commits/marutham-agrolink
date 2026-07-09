@@ -8,7 +8,37 @@ import type {
   TrackResponse, ReturnRequestPayload, ReturnResponse, RateItemResponse,
   SubscriptionPlansResponse, SubscriptionPayResponse,
 } from './types';
-import type { Order, OrderDetail, Product, Offer, Payout } from '@marutham/lib';
+import type { Order, OrderDetail, Product, Offer, Payout, FarmerListing } from '@marutham/lib';
+import { rupeesToPaise } from '@marutham/lib';
+
+/**
+ * A listing as the seller's form holds it: price in RUPEES, as typed.
+ *
+ * convertMoney() converts paise → rupees on responses and nothing converts back
+ * on requests, so `farmer_price` read from a GET and posted straight back would
+ * be 100x wrong. The conversion happens once, here, and nowhere else.
+ */
+export interface ListingPayload {
+  product_id?: string;
+  /** Rupees. Converted to paise before it leaves. */
+  farmer_price?: number;
+  qty_available?: number;
+  time_available?: string;
+  cutoff_ts?: string;
+  bulk_qty?: number | null;
+  bulk_disc_pct?: number | null;
+  qty_type?: 'MOQ' | 'SPQ' | null;
+  qty_value?: number | null;
+  images?: string[];
+  listed?: boolean;
+  confirmed?: boolean;
+}
+
+function toListingBody(draft: Partial<ListingPayload>): Record<string, unknown> {
+  const body: Record<string, unknown> = { ...draft };
+  if (draft.farmer_price !== undefined) body.farmer_price = rupeesToPaise(draft.farmer_price);
+  return body;
+}
 
 export const api = {
   // ── Auth ──
@@ -85,6 +115,25 @@ export const api = {
   },
   placeOrder(payload: PlaceOrderPayload): Promise<{ order: Order }> {
     return apiFetch<{ order: Order }>('POST', '/orders', payload);
+  },
+
+  // ── Seller: listings ──
+  /** A farmer's own listings, with the product joined. */
+  getMyListings(): Promise<{ listings: FarmerListing[] }> {
+    return apiFetch<{ listings: FarmerListing[] }>('GET', '/listings');
+  },
+  createListing(draft: ListingPayload): Promise<{ listing: FarmerListing }> {
+    return apiFetch('POST', '/listings', toListingBody(draft));
+  },
+  updateListing(id: string, draft: Partial<ListingPayload>): Promise<{ listing: FarmerListing }> {
+    return apiFetch('PATCH', '/listings/' + id, toListingBody(draft));
+  },
+  /** Flip confirmed/listed without touching price or stock. */
+  setListingFlags(id: string, flags: { confirmed?: boolean; listed?: boolean }): Promise<{ listing: FarmerListing }> {
+    return apiFetch('PATCH', '/listings/' + id, flags);
+  },
+  deleteListing(id: string): Promise<{ message: string }> {
+    return apiFetch('DELETE', '/listings/' + id);
   },
 
   // ── Seller: earnings + subscription ──

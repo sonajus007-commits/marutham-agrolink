@@ -23,7 +23,13 @@ export interface PricePreview {
 
 /**
  * Project a seller's asking price into the customer's price.
- * `consumerPrice = farmerPrice × (1 + fee%) + handling`
+ * `consumerPrice = round_to_paise(farmerPrice × (1 + fee%)) + handling`
+ *
+ * The rounding happens in PAISE, mirroring routes/listings.js exactly:
+ *   Math.round(farmer_price_paise * (1 + feePct / 100))
+ * Rounding in rupees instead is off by a paisa — ₹33.50 at 5% previews as
+ * ₹35.17 but is actually charged at ₹35.18. The preview's whole job is to say
+ * what the customer pays, so it must round the same way the server does.
  */
 export function projectConsumerPrice(
   farmerPrice: number,
@@ -31,8 +37,15 @@ export function projectConsumerPrice(
   handling = 0,
 ): PricePreview {
   const feePct = sellerFeePct(sellerType);
-  const fee = farmerPrice * (feePct / 100);
-  return { farmerPrice, feePct, fee, handling, consumerPrice: farmerPrice + fee + handling };
+  const withFeePaise = Math.round(rupeesToPaise(farmerPrice) * (1 + feePct / 100));
+  const withFee = withFeePaise / 100;
+  return {
+    farmerPrice,
+    feePct,
+    fee: withFee - farmerPrice,
+    handling,
+    consumerPrice: withFee + handling,
+  };
 }
 
 /** The same projection at a bulk discount. Returns null when no bulk rule is set. */
@@ -50,57 +63,98 @@ export function projectBulkPrice(
 }
 
 /* ── Listing cutoff ────────────────────────────────────────────────────────
- * The legacy page parsed labels like "8 PM (previous evening)" back into a
- * timestamp with string surgery. Keep the labels for display, but derive the
- * hour from a table rather than by re-parsing prose. */
+ * `farmer_listings.time_available` stores the option VALUE ("8 PM", "8 PM
+ * (today)", "12 AM"), which is not the same as the label the seller sees
+ * ("8 PM (previous evening)"). Values already in the database include "9 AM"
+ * and "8 PM (today)".
+ *
+ * The hour is parsed rather than looked up, so a value the option list no
+ * longer offers still resolves — a lookup table would have returned null and
+ * silently blanked the cutoff when the seller edited an old listing.
+ *
+ * Note "8 PM" and "8 PM (today)" resolve identically: both mean 20:00, next
+ * occurrence. The grouping is presentation only, exactly as the legacy page
+ * treated it. */
 
 export interface CutoffOption {
   /** Stored verbatim in farmer_listings.time_available. */
+  value: string;
+  /** What the seller reads. */
   label: string;
-  /** 24-hour clock. */
-  hour: number;
+  /** Optgroup heading. */
+  group: 'Previous Evening' | 'Current Day';
 }
 
 export const CUTOFF_OPTIONS: readonly CutoffOption[] = [
-  { label: '6 AM', hour: 6 },
-  { label: '8 AM', hour: 8 },
-  { label: '10 AM', hour: 10 },
-  { label: '12 PM (noon)', hour: 12 },
-  { label: '2 PM', hour: 14 },
-  { label: '4 PM', hour: 16 },
-  { label: '6 PM', hour: 18 },
-  { label: '8 PM (previous evening)', hour: 20 },
-  { label: '10 PM', hour: 22 },
-  { label: '12 AM (midnight)', hour: 0 },
+  { value: '8 PM', label: '8 PM (previous evening)', group: 'Previous Evening' },
+  { value: '9 PM', label: '9 PM (previous evening)', group: 'Previous Evening' },
+  { value: '10 PM', label: '10 PM (previous evening)', group: 'Previous Evening' },
+  { value: '11 PM', label: '11 PM (previous evening)', group: 'Previous Evening' },
+  { value: '12 AM', label: '12 AM (midnight)', group: 'Current Day' },
+  { value: '4 AM', label: '4 AM', group: 'Current Day' },
+  { value: '6 AM', label: '6 AM', group: 'Current Day' },
+  { value: '7 AM', label: '7 AM', group: 'Current Day' },
+  { value: '8 AM', label: '8 AM', group: 'Current Day' },
+  { value: '9 AM', label: '9 AM', group: 'Current Day' },
+  { value: '10 AM', label: '10 AM', group: 'Current Day' },
+  { value: '12 PM', label: '12 PM (noon)', group: 'Current Day' },
+  { value: '2 PM', label: '2 PM', group: 'Current Day' },
+  { value: '4 PM', label: '4 PM', group: 'Current Day' },
+  { value: '6 PM', label: '6 PM', group: 'Current Day' },
+  { value: '8 PM (today)', label: '8 PM (current day)', group: 'Current Day' },
 ];
 
+export const DEFAULT_CUTOFF = '8 AM';
+
+/** 24-hour clock from a stored value like "8 PM (today)", or null if unreadable. */
+export function parseCutoffHour(value: string): number | null {
+  const m = /^\s*(\d{1,2})\s*(AM|PM)\b/i.exec(String(value || ''));
+  if (!m) return null;
+  let hour = parseInt(m[1], 10);
+  if (hour < 1 || hour > 12) return null;
+  const pm = m[2].toUpperCase() === 'PM';
+  if (pm && hour !== 12) hour += 12;
+  if (!pm && hour === 12) hour = 0;
+  return hour;
+}
+
 /**
- * Absolute timestamp for a cutoff label: the next occurrence of that hour.
+ * Absolute timestamp for a cutoff value: the next occurrence of that hour.
  * If the hour has already passed today, it rolls to tomorrow.
  */
-export function cutoffTimestamp(label: string, now: Date = new Date()): string | null {
-  const opt = CUTOFF_OPTIONS.find((o) => o.label === label);
-  if (!opt) return null;
+export function cutoffTimestamp(value: string, now: Date = new Date()): string | null {
+  const hour = parseCutoffHour(value);
+  if (hour === null) return null;
   const d = new Date(now);
-  d.setHours(opt.hour, 0, 0, 0);
+  d.setHours(hour, 0, 0, 0);
   if (d.getTime() <= now.getTime()) d.setDate(d.getDate() + 1);
   return d.toISOString();
+}
+
+/** Display label for a stored value, falling back to the value itself. */
+export function cutoffLabel(value: string): string {
+  return CUTOFF_OPTIONS.find((o) => o.value === value)?.label ?? value;
 }
 
 /* ── Listing validation ────────────────────────────────────────────────────
  * The server re-checks everything; this only decides what to tell the seller
  * before a pointless round trip. */
 
+/* Numeric fields are held as the raw string the seller typed, so an
+ * in-progress "3." is not collapsed to 3 while they are still typing. Coerced
+ * with Number() at validation and at the API boundary. */
+export type NumericInput = number | string | '';
+
 export interface ListingDraft {
   product_id: string;
   /** Rupees, as typed. Converted to paise at the API boundary. */
-  farmer_price: number | '';
-  qty_available: number | '';
+  farmer_price: NumericInput;
+  qty_available: NumericInput;
   time_available: string;
-  bulk_qty?: number | '';
-  bulk_disc_pct?: number | '';
+  bulk_qty?: NumericInput;
+  bulk_disc_pct?: NumericInput;
   qty_type?: 'MOQ' | 'SPQ' | '';
-  qty_value?: number | '';
+  qty_value?: NumericInput;
 }
 
 /** First problem with the draft, or null. */
@@ -110,7 +164,7 @@ export function validateListing(d: ListingDraft): string | null {
   if (!(price > 0)) return 'Enter your selling price.';
   const qty = Number(d.qty_available);
   if (!(qty > 0)) return 'Enter the quantity you have available.';
-  if (!cutoffTimestamp(d.time_available)) return 'Choose when orders should stop.';
+  if (parseCutoffHour(d.time_available) === null) return 'Choose when orders should stop.';
 
   const bulkQty = Number(d.bulk_qty || 0);
   const bulkDisc = Number(d.bulk_disc_pct || 0);
@@ -212,4 +266,90 @@ export function subscriptionStatus(
 /** A suspended seller must pay before they can sell. Mirrors requireAuth's needs_payment. */
 export function needsSubscriptionPayment(user: { role?: string; status?: string }): boolean {
   return user.role === 'farmer' && user.status === 'suspended';
+}
+
+/* ── Listing lifecycle ─────────────────────────────────────────────────────
+ * A listing carries four independent flags, and the legacy card re-derived the
+ * state from them inline at three call sites. Collapse them into one value.
+ *
+ *   listing_status  pending → admin has not reviewed the product request
+ *                   rejected → admin said no
+ *                   active   → approved; the seller may price it
+ *   farmer_price    0 until the seller sets one
+ *   listed          the hourly job clears this once cutoff_ts passes
+ *   confirmed       the seller has committed today's stock for delivery
+ */
+
+export type ListingState =
+  | 'pending'       // awaiting admin approval
+  | 'rejected'      // admin declined
+  | 'needs_price'   // approved, no price yet
+  | 'cutoff_passed' // priced, but the cutoff elapsed — re-price to re-list
+  | 'listed'        // live, awaiting the seller's confirmation
+  | 'confirmed';    // live and confirmed for delivery
+
+export interface FarmerListing {
+  id: string;
+  product_id: string;
+  /** Rupees, as a string — money crosses the boundary already converted. */
+  farmer_price: string | number;
+  qty_available?: number | null;
+  time_available?: string | null;
+  cutoff_ts?: string | null;
+  bulk_qty?: number | null;
+  bulk_disc_pct?: number | null;
+  qty_type?: 'MOQ' | 'SPQ' | null;
+  qty_value?: number | null;
+  images?: string[] | null;
+  listed?: boolean;
+  confirmed?: boolean;
+  listing_status?: 'pending' | 'active' | 'rejected' | (string & {});
+  /** Column does not exist yet — always undefined. See listings README. */
+  rejection_reason?: string | null;
+  product?: {
+    id: string;
+    name: string;
+    unit?: string;
+    regional_name?: string;
+    product_group?: string;
+    category?: string;
+    available?: boolean;
+  } | null;
+}
+
+export function listingPriceRs(l: FarmerListing): number {
+  return parseFloat(String(l.farmer_price ?? 0)) || 0;
+}
+
+export function listingState(l: FarmerListing): ListingState {
+  const status = l.listing_status || 'pending';
+  if (status === 'pending') return 'pending';
+  if (status === 'rejected') return 'rejected';
+  if (listingPriceRs(l) <= 0) return 'needs_price';
+  if (l.confirmed) return 'confirmed';
+  return l.listed ? 'listed' : 'cutoff_passed';
+}
+
+/** Only a live, priced, unconfirmed listing can be confirmed for delivery. */
+export function canConfirmListing(l: FarmerListing): boolean {
+  return listingState(l) === 'listed';
+}
+
+/** Products a seller has not already requested, in any state. */
+export function requestableProducts<T extends { id: string; available?: boolean }>(
+  products: T[],
+  listings: FarmerListing[],
+): T[] {
+  const taken = new Set(listings.map((l) => l.product?.id ?? l.product_id));
+  return products.filter((p) => p.available !== false && !taken.has(p.id));
+}
+
+/* ── Money at the API boundary ─────────────────────────────────────────────
+ * convertMoney() converts paise → rupees on RESPONSES only. Nothing converts
+ * back on the way in, so a value read from a GET and posted straight back is
+ * 100x wrong. Every write goes through here. */
+
+/** Rupees (as typed) → paise (as stored). */
+export function rupeesToPaise(rupees: number | string): number {
+  return Math.round((parseFloat(String(rupees)) || 0) * 100);
 }
