@@ -1,0 +1,24 @@
+-- SUPERSEDED — intentionally does nothing. Do not restore the statements below.
+--
+-- This migration tried to add payment_reference, renewal_amount and
+-- payment_confirmed_at to `profile_change_requests`. It was never applied to any
+-- database, and those columns do not exist there.
+--
+-- It targeted the wrong table. Renewal payment state actually lives on:
+--   * users.payment_reference / users.payment_confirmed_at  (005_stage4_approval.sql)
+--   * subscription_payments                                 (012_account_status.sql)
+-- and the requested plan is carried inside profile_change_requests.requested_changes
+-- (JSONB) by POST /auth/subscription-renewal. No code reads the three columns.
+--
+-- Kept as a tombstone so the numbering stays stable and so `npm run db:coverage`
+-- — which replays this directory and diffs it against the live database — keeps
+-- reporting a clean match.
+--
+-- The original statements, for the record:
+--
+--   ALTER TABLE profile_change_requests
+--     ADD COLUMN IF NOT EXISTS payment_reference    TEXT,
+--     ADD COLUMN IF NOT EXISTS renewal_amount       INTEGER DEFAULT 0,
+--     ADD COLUMN IF NOT EXISTS payment_confirmed_at TIMESTAMPTZ;
+
+SELECT 1;

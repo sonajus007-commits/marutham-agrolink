@@ -1,0 +1,1334 @@
+{
+  "tables": {
+    "code_counters": {
+      "columns": {
+        "date": {
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        "district_code": {
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        "next_seq": {
+          "type": "integer",
+          "notNull": true,
+          "default": "1"
+        },
+        "type": {
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        }
+      }
+    },
+    "employee_audit_log": {
+      "columns": {
+        "action": {
+          "type": "text",
+          "notNull": true
+        },
+        "changed_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "changed_by": {
+          "type": "uuid",
+          "notNull": false
+        },
+        "changed_fields": {
+          "type": "jsonb",
+          "notNull": false
+        },
+        "emp_id": {
+          "type": "text",
+          "notNull": false
+        },
+        "employee_id": {
+          "type": "uuid",
+          "notNull": false
+        },
+        "id": {
+          "type": "bigint",
+          "notNull": true,
+          "primaryKey": true
+        },
+        "row_snapshot": {
+          "type": "jsonb",
+          "notNull": false
+        }
+      }
+    },
+    "employees": {
+      "columns": {
+        "aadhar": {
+          "type": "text",
+          "notNull": false
+        },
+        "address_line": {
+          "type": "text",
+          "notNull": false
+        },
+        "approval_status": {
+          "type": "text",
+          "notNull": true,
+          "default": "pending"
+        },
+        "approved_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "approved_by": {
+          "type": "uuid",
+          "notNull": false
+        },
+        "city": {
+          "type": "text",
+          "notNull": false
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "date_of_joining": {
+          "type": "date",
+          "notNull": false
+        },
+        "department": {
+          "type": "text",
+          "notNull": false
+        },
+        "designation": {
+          "type": "text",
+          "notNull": false
+        },
+        "district": {
+          "type": "text",
+          "notNull": false
+        },
+        "dob": {
+          "type": "date",
+          "notNull": false
+        },
+        "email": {
+          "type": "text",
+          "notNull": false
+        },
+        "emp_id": {
+          "type": "text",
+          "notNull": false
+        },
+        "employment_type": {
+          "type": "text",
+          "notNull": true,
+          "default": "Permanent"
+        },
+        "fname": {
+          "type": "text",
+          "notNull": true
+        },
+        "gender": {
+          "type": "text",
+          "notNull": false
+        },
+        "house_no": {
+          "type": "text",
+          "notNull": false
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "is_board_director": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "false"
+        },
+        "is_hr_admin": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "false"
+        },
+        "is_manager": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "false"
+        },
+        "linked_user_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "lname": {
+          "type": "text",
+          "notNull": false
+        },
+        "notes": {
+          "type": "text",
+          "notNull": false
+        },
+        "phone": {
+          "type": "text",
+          "notNull": false
+        },
+        "pincode": {
+          "type": "text",
+          "notNull": false
+        },
+        "rejected_reason": {
+          "type": "text",
+          "notNull": false
+        },
+        "reporting_manager": {
+          "type": "text",
+          "notNull": false
+        },
+        "reporting_manager_emp_id": {
+          "type": "text",
+          "notNull": false
+        },
+        "requested_by": {
+          "type": "uuid",
+          "notNull": false
+        },
+        "state": {
+          "type": "text",
+          "notNull": false
+        },
+        "status": {
+          "type": "text",
+          "notNull": true,
+          "default": "active"
+        },
+        "street1": {
+          "type": "text",
+          "notNull": false
+        },
+        "street2": {
+          "type": "text",
+          "notNull": false
+        },
+        "taluk": {
+          "type": "text",
+          "notNull": false
+        },
+        "updated_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "village_town": {
+          "type": "text",
+          "notNull": false
+        },
+        "work_district": {
+          "type": "text",
+          "notNull": false
+        },
+        "work_location": {
+          "type": "text",
+          "notNull": false
+        },
+        "work_state": {
+          "type": "text",
+          "notNull": false
+        }
+      }
+    },
+    "farmer_listings": {
+      "columns": {
+        "bulk_disc_pct": {
+          "type": "numeric",
+          "notNull": false
+        },
+        "bulk_qty": {
+          "type": "numeric",
+          "notNull": false
+        },
+        "confirmed": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "false"
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "cutoff_ts": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "farmer_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "users.id"
+        },
+        "farmer_price": {
+          "type": "integer",
+          "notNull": true
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "image_date": {
+          "type": "date",
+          "notNull": false
+        },
+        "images": {
+          "type": "jsonb",
+          "notNull": false
+        },
+        "listed": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "true"
+        },
+        "listing_status": {
+          "type": "text",
+          "notNull": false,
+          "default": "pending"
+        },
+        "product_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "products.id"
+        },
+        "qty_available": {
+          "type": "numeric",
+          "notNull": true,
+          "default": "0"
+        },
+        "qty_type": {
+          "type": "text",
+          "notNull": false
+        },
+        "qty_value": {
+          "type": "numeric",
+          "notNull": false
+        },
+        "time_available": {
+          "type": "text",
+          "notNull": false
+        },
+        "updated_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        }
+      }
+    },
+    "locations": {
+      "columns": {
+        "district": {
+          "type": "text",
+          "notNull": true
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "state": {
+          "type": "text",
+          "notNull": true
+        },
+        "taluk": {
+          "type": "text",
+          "notNull": true
+        }
+      }
+    },
+    "order_history": {
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "label": {
+          "type": "text",
+          "notNull": true
+        },
+        "note": {
+          "type": "text",
+          "notNull": false
+        },
+        "order_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "orders.id"
+        },
+        "ts": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        }
+      }
+    },
+    "order_items": {
+      "columns": {
+        "base_farmer_price": {
+          "type": "integer",
+          "notNull": false
+        },
+        "farmer_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "farmer_name": {
+          "type": "text",
+          "notNull": false
+        },
+        "farmer_price": {
+          "type": "integer",
+          "notNull": true
+        },
+        "govt_price": {
+          "type": "integer",
+          "notNull": false
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": false
+        },
+        "order_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "orders.id"
+        },
+        "price": {
+          "type": "integer",
+          "notNull": true
+        },
+        "product_code": {
+          "type": "text",
+          "notNull": false
+        },
+        "product_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "products.id"
+        },
+        "qty": {
+          "type": "numeric",
+          "notNull": true
+        },
+        "rated": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "false"
+        },
+        "rated_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "rating_value": {
+          "type": "integer",
+          "notNull": false
+        },
+        "unit": {
+          "type": "text",
+          "notNull": false
+        }
+      }
+    },
+    "orders": {
+      "columns": {
+        "agent_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "agent_name": {
+          "type": "text",
+          "notNull": false
+        },
+        "agent_phone": {
+          "type": "text",
+          "notNull": false
+        },
+        "agent_vehicle": {
+          "type": "text",
+          "notNull": false
+        },
+        "cancel_reason": {
+          "type": "text",
+          "notNull": false
+        },
+        "cancelled": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "false"
+        },
+        "cancelled_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "code": {
+          "type": "text",
+          "notNull": true
+        },
+        "consumer_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "consumer_name": {
+          "type": "text",
+          "notNull": false
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "delivered_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "delivery": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
+        "delivery_address": {
+          "type": "jsonb",
+          "notNull": false
+        },
+        "delivery_village": {
+          "type": "text",
+          "notNull": false
+        },
+        "district": {
+          "type": "text",
+          "notNull": false
+        },
+        "eta_ts": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "handling": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "item_total": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
+        "market_fee": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
+        "pay_method": {
+          "type": "text",
+          "notNull": false
+        },
+        "pay_status": {
+          "type": "text",
+          "notNull": false
+        },
+        "picked_up_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "refund_amt": {
+          "type": "integer",
+          "notNull": false
+        },
+        "refund_to": {
+          "type": "text",
+          "notNull": false
+        },
+        "route": {
+          "type": "text",
+          "notNull": true,
+          "default": ""
+        },
+        "route_auto": {
+          "type": "text",
+          "notNull": false
+        },
+        "saved": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
+        "stage": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
+        "status": {
+          "type": "text",
+          "notNull": true,
+          "default": "Order Placed"
+        },
+        "total": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
+        "updated_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "village": {
+          "type": "text",
+          "notNull": false
+        }
+      }
+    },
+    "payouts": {
+      "columns": {
+        "amount": {
+          "type": "integer",
+          "notNull": true
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "farmer_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "users.id"
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "method": {
+          "type": "text",
+          "notNull": false
+        },
+        "order_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "orders.id"
+        },
+        "paid_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "reference": {
+          "type": "text",
+          "notNull": false
+        },
+        "status": {
+          "type": "text",
+          "notNull": true,
+          "default": "pending"
+        }
+      }
+    },
+    "product_district_prices": {
+      "columns": {
+        "district": {
+          "type": "text",
+          "notNull": true
+        },
+        "handling": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "market_price": {
+          "type": "integer",
+          "notNull": true
+        },
+        "product_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "products.id"
+        }
+      }
+    },
+    "product_ratings": {
+      "columns": {
+        "farmer_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "num_ratings": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
+        "product_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "products.id"
+        },
+        "sum_stars": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        }
+      }
+    },
+    "products": {
+      "columns": {
+        "available": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "true"
+        },
+        "category": {
+          "type": "text",
+          "notNull": false
+        },
+        "code": {
+          "type": "text",
+          "notNull": true
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "exotic": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "false"
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "platform_fee_pct": {
+          "type": "numeric",
+          "notNull": true,
+          "default": "5"
+        },
+        "price_date": {
+          "type": "date",
+          "notNull": false
+        },
+        "product_group": {
+          "type": "text",
+          "notNull": false
+        },
+        "regional_name": {
+          "type": "text",
+          "notNull": false
+        },
+        "sub_type": {
+          "type": "text",
+          "notNull": false
+        },
+        "unit": {
+          "type": "text",
+          "notNull": true
+        },
+        "updated_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        }
+      }
+    },
+    "profile_change_requests": {
+      "columns": {
+        "fname": {
+          "type": "text",
+          "notNull": false
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "login_id": {
+          "type": "text",
+          "notNull": true
+        },
+        "notes": {
+          "type": "text",
+          "notNull": false
+        },
+        "requested_at": {
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "default": "now()"
+        },
+        "requested_changes": {
+          "type": "jsonb",
+          "notNull": true
+        },
+        "reviewed_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "reviewed_by": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "reviewer_name": {
+          "type": "text",
+          "notNull": false
+        },
+        "status": {
+          "type": "text",
+          "notNull": false,
+          "default": "pending"
+        },
+        "user_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "users.id"
+        }
+      }
+    },
+    "return_lines": {
+      "columns": {
+        "farmer_name": {
+          "type": "text",
+          "notNull": false
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": false
+        },
+        "price": {
+          "type": "integer",
+          "notNull": true
+        },
+        "product_code": {
+          "type": "text",
+          "notNull": false
+        },
+        "qty": {
+          "type": "numeric",
+          "notNull": true
+        },
+        "reason": {
+          "type": "text",
+          "notNull": false
+        },
+        "return_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "returns.id"
+        },
+        "unit": {
+          "type": "text",
+          "notNull": false
+        }
+      }
+    },
+    "return_photos": {
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "return_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "returns.id"
+        },
+        "url": {
+          "type": "text",
+          "notNull": true
+        }
+      }
+    },
+    "returns": {
+      "columns": {
+        "code": {
+          "type": "text",
+          "notNull": true
+        },
+        "collected": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "false"
+        },
+        "decided_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "decision": {
+          "type": "text",
+          "notNull": false
+        },
+        "full_return": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "false"
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "order_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "orders.id"
+        },
+        "refund_amt": {
+          "type": "integer",
+          "notNull": false
+        },
+        "refund_to": {
+          "type": "text",
+          "notNull": false
+        },
+        "requested_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        }
+      }
+    },
+    "subscription_payments": {
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "is_renewal": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "false"
+        },
+        "paid_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "payment_reference": {
+          "type": "text",
+          "notNull": false
+        },
+        "plan": {
+          "type": "text",
+          "notNull": true
+        },
+        "plan_amount": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
+        "registration_charge": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
+        "total_amount": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
+        "user_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "users.id"
+        }
+      }
+    },
+    "user_audit_log": {
+      "columns": {
+        "action": {
+          "type": "text",
+          "notNull": true
+        },
+        "changed_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "changed_by": {
+          "type": "uuid",
+          "notNull": false
+        },
+        "changed_fields": {
+          "type": "jsonb",
+          "notNull": false
+        },
+        "id": {
+          "type": "bigint",
+          "notNull": true,
+          "primaryKey": true
+        },
+        "row_snapshot": {
+          "type": "jsonb",
+          "notNull": false
+        },
+        "user_id": {
+          "type": "uuid",
+          "notNull": false
+        }
+      }
+    },
+    "user_login_history": {
+      "columns": {
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "id": {
+          "type": "bigint",
+          "notNull": true,
+          "primaryKey": true
+        },
+        "ip_address": {
+          "type": "text",
+          "notNull": false
+        },
+        "login_id": {
+          "type": "text",
+          "notNull": false
+        },
+        "method": {
+          "type": "text",
+          "notNull": false
+        },
+        "outcome": {
+          "type": "text",
+          "notNull": false
+        },
+        "success": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "true"
+        },
+        "user_agent": {
+          "type": "text",
+          "notNull": false
+        },
+        "user_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        }
+      }
+    },
+    "user_status_history": {
+      "columns": {
+        "changed_by": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "new_status": {
+          "type": "text",
+          "notNull": true
+        },
+        "old_status": {
+          "type": "text",
+          "notNull": false
+        },
+        "reason": {
+          "type": "text",
+          "notNull": false
+        },
+        "user_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "users.id"
+        }
+      }
+    },
+    "users": {
+      "columns": {
+        "aadhar": {
+          "type": "text",
+          "notNull": false
+        },
+        "admin_role": {
+          "type": "text",
+          "notNull": false
+        },
+        "agent_vehicle": {
+          "type": "text",
+          "notNull": false
+        },
+        "alt_phone": {
+          "type": "text",
+          "notNull": false
+        },
+        "approval_status": {
+          "type": "text",
+          "notNull": true,
+          "default": "active"
+        },
+        "approved_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "approved_by": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "bank_account": {
+          "type": "text",
+          "notNull": false
+        },
+        "bank_name": {
+          "type": "text",
+          "notNull": false
+        },
+        "block_reason": {
+          "type": "text",
+          "notNull": false
+        },
+        "business_name": {
+          "type": "text",
+          "notNull": false
+        },
+        "business_type": {
+          "type": "text",
+          "notNull": false
+        },
+        "city": {
+          "type": "text",
+          "notNull": false
+        },
+        "country": {
+          "type": "text",
+          "notNull": false,
+          "default": "India"
+        },
+        "country_code": {
+          "type": "text",
+          "notNull": false,
+          "default": "+91"
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "delivery_addresses": {
+          "type": "jsonb",
+          "notNull": true
+        },
+        "district": {
+          "type": "text",
+          "notNull": false
+        },
+        "district_assign": {
+          "type": "text",
+          "notNull": false
+        },
+        "email": {
+          "type": "text",
+          "notNull": false
+        },
+        "emp_id": {
+          "type": "text",
+          "notNull": false
+        },
+        "employment_type": {
+          "type": "text",
+          "notNull": false
+        },
+        "fname": {
+          "type": "text",
+          "notNull": true
+        },
+        "gender": {
+          "type": "character varying",
+          "notNull": false
+        },
+        "gst_number": {
+          "type": "text",
+          "notNull": false
+        },
+        "house_no": {
+          "type": "text",
+          "notNull": false
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "ifsc": {
+          "type": "text",
+          "notNull": false
+        },
+        "landmark": {
+          "type": "text",
+          "notNull": false
+        },
+        "lname": {
+          "type": "text",
+          "notNull": false
+        },
+        "login_id": {
+          "type": "text",
+          "notNull": true
+        },
+        "password_hash": {
+          "type": "text",
+          "notNull": true
+        },
+        "payment_confirmed_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "payment_reference": {
+          "type": "text",
+          "notNull": false
+        },
+        "phone": {
+          "type": "text",
+          "notNull": true
+        },
+        "pincode": {
+          "type": "text",
+          "notNull": false
+        },
+        "registration_charge": {
+          "type": "integer",
+          "notNull": false,
+          "default": "0"
+        },
+        "rejection_reason": {
+          "type": "text",
+          "notNull": false
+        },
+        "role": {
+          "type": "text",
+          "notNull": true
+        },
+        "seller_type": {
+          "type": "text",
+          "notNull": false
+        },
+        "service_villages": {
+          "type": "text[]",
+          "notNull": true
+        },
+        "state": {
+          "type": "text",
+          "notNull": false
+        },
+        "status": {
+          "type": "text",
+          "notNull": true,
+          "default": "active"
+        },
+        "street1": {
+          "type": "text",
+          "notNull": false
+        },
+        "street2": {
+          "type": "text",
+          "notNull": false
+        },
+        "subscription_amount": {
+          "type": "integer",
+          "notNull": false,
+          "default": "0"
+        },
+        "subscription_expires_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "subscription_plan": {
+          "type": "text",
+          "notNull": false
+        },
+        "taluk": {
+          "type": "text",
+          "notNull": false
+        },
+        "updated_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "vco_city": {
+          "type": "text",
+          "notNull": false
+        },
+        "village_town": {
+          "type": "text",
+          "notNull": false
+        }
+      }
+    }
+  }
+}
