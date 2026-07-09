@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   projectConsumerPrice, projectBulkPrice, cutoffTimestamp, validateListing,
-  CUTOFF_OPTIONS, MAX_BULK_DISC_PCT, type ListingDraft,
+  farmerEarnings, subscriptionStatus, needsSubscriptionPayment,
+  CUTOFF_OPTIONS, MAX_BULK_DISC_PCT, SUBSCRIPTION_WARN_DAYS,
+  type ListingDraft, type Payout,
 } from './farmer';
+import type { Order } from './orders';
 import { sellerFeePct, FARMER_FEE_PCT, RETAILER_FEE_PCT } from './fees';
 import { offerConsumerPrice, type Offer, type Product } from './consumer';
 
@@ -171,5 +174,102 @@ describe('validateListing', () => {
 
   it('rejects an order rule bigger than the stock on hand', () => {
     expect(validateListing(draft({ qty_available: 1, qty_value: 5, qty_type: 'SPQ' }))).toMatch(/larger than the quantity/);
+  });
+});
+
+describe('farmerEarnings', () => {
+  // The API sends money as rupee strings; farmer_payout is computed per order.
+  const order = (over: Partial<Order>): Order => ({ id: 'o1', status: 'Delivered', ...over }) as Order;
+  const payout = (over: Partial<Payout>): Payout => ({ id: 'p1', amount: '100.00', status: 'paid', ...over }) as Payout;
+
+  it('sums paid and pending payouts separately', () => {
+    const e = farmerEarnings([], [
+      payout({ id: 'a', amount: '100.00', status: 'paid' }),
+      payout({ id: 'b', amount: '50.50', status: 'paid' }),
+      payout({ id: 'c', amount: '25.00', status: 'pending' }),
+    ]);
+    expect(e.paid).toBeCloseTo(150.5);
+    expect(e.pending).toBeCloseTo(25);
+  });
+
+  it('counts a delivered order with no payout record as awaiting settlement', () => {
+    const e = farmerEarnings([order({ id: 'o1', farmer_payout: '58.80' })], []);
+    expect(e.awaiting).toBeCloseTo(58.8);
+  });
+
+  it('never double-counts: a payout supersedes the awaiting bucket', () => {
+    const e = farmerEarnings(
+      [order({ id: 'o1', farmer_payout: '58.80' })],
+      [payout({ amount: '58.80', status: 'pending', order: { id: 'o1' } })],
+    );
+    expect(e.awaiting).toBe(0);
+    expect(e.pending).toBeCloseTo(58.8);
+    expect(e.lifetime).toBeCloseTo(58.8);
+  });
+
+  it('counts in-flight orders separately, and excludes them from lifetime', () => {
+    const e = farmerEarnings([order({ id: 'o2', status: 'Packaged', farmer_payout: '30.00' })], []);
+    expect(e.inFlight).toBeCloseTo(30);
+    expect(e.awaiting).toBe(0);
+    expect(e.lifetime).toBe(0);
+  });
+
+  it('ignores cancelled orders in both buckets', () => {
+    const e = farmerEarnings([order({ id: 'o3', status: 'Cancelled', farmer_payout: '99.00' })], []);
+    expect(e.awaiting).toBe(0);
+    expect(e.inFlight).toBe(0);
+  });
+
+  // Regression: orders.farmer_payout never existed, so the legacy screen summed
+  // `undefined` and showed ₹0 forever.
+  it('is zero, not NaN, when farmer_payout is absent', () => {
+    const e = farmerEarnings([order({ id: 'o4' })], []);
+    expect(e.awaiting).toBe(0);
+    expect(Number.isNaN(e.awaiting)).toBe(false);
+  });
+
+  it('an empty seller has an all-zero ledger', () => {
+    expect(farmerEarnings([], [])).toEqual({ paid: 0, pending: 0, awaiting: 0, inFlight: 0, lifetime: 0 });
+  });
+});
+
+describe('subscriptionStatus', () => {
+  const now = new Date('2026-07-09T12:00:00Z');
+  const days = (n: number) => new Date(now.getTime() + n * 86_400_000).toISOString();
+
+  it('reports no subscription when there is none', () => {
+    expect(subscriptionStatus({}, now).level).toBe('none');
+  });
+
+  it('is active well before expiry', () => {
+    const s = subscriptionStatus({ subscription_plan: 'Yearly', subscription_expires_at: days(200) }, now);
+    expect(s.level).toBe('active');
+    expect(s.daysLeft).toBe(200);
+  });
+
+  it('warns inside the reminder window', () => {
+    expect(subscriptionStatus({ subscription_expires_at: days(SUBSCRIPTION_WARN_DAYS) }, now).level).toBe('expiring');
+    expect(subscriptionStatus({ subscription_expires_at: days(1) }, now).level).toBe('expiring');
+  });
+
+  it('is expired on and after the expiry moment', () => {
+    expect(subscriptionStatus({ subscription_expires_at: days(0) }, now).level).toBe('expired');
+    expect(subscriptionStatus({ subscription_expires_at: days(-5) }, now).level).toBe('expired');
+  });
+
+  it('the boundary at warn+1 days is still active', () => {
+    expect(subscriptionStatus({ subscription_expires_at: days(SUBSCRIPTION_WARN_DAYS + 1) }, now).level).toBe('active');
+  });
+});
+
+describe('needsSubscriptionPayment', () => {
+  it('a suspended seller must pay', () => {
+    expect(needsSubscriptionPayment({ role: 'farmer', status: 'suspended' })).toBe(true);
+  });
+  it('an active seller does not', () => {
+    expect(needsSubscriptionPayment({ role: 'farmer', status: 'active' })).toBe(false);
+  });
+  it('a suspended consumer is not a seller', () => {
+    expect(needsSubscriptionPayment({ role: 'consumer', status: 'suspended' })).toBe(false);
   });
 });

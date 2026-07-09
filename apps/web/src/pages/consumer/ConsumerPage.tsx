@@ -71,12 +71,12 @@ function ConsumerInner() {
           </div>
         </a>
         <div className="cons-hdr__right">
-          <div className="cons-lang">
+          <div className="ma-lang">
             <button className={i18n.language === 'en' ? 'on' : ''} onClick={() => setLang('en')}>EN</button>
             <button className={`tamil ${i18n.language === 'ta' ? 'on' : ''}`} onClick={() => setLang('ta')}>த</button>
           </div>
           <button
-            className={`cons-iconbtn ${tab === 'profile' ? 'on' : ''}`}
+            className={`ma-iconbtn ${tab === 'profile' ? 'on' : ''}`}
             onClick={() => setTab(tab === 'profile' ? 'home' : 'profile')}
             aria-pressed={tab === 'profile'}
             aria-label={t('consumer.profile')}
@@ -84,7 +84,7 @@ function ConsumerInner() {
           >
             👤
           </button>
-          <button className="cons-iconbtn" onClick={logout} aria-label={t('consumer.logout')}>⎋</button>
+          <button className="ma-iconbtn" onClick={logout} aria-label={t('consumer.logout')}>⎋</button>
         </div>
       </header>
 
@@ -96,16 +96,16 @@ function ConsumerInner() {
         </div>
       </div>
 
-      <nav className="cons-nav">
+      <nav className="ma-tabs">
         {tabs.map((tb) => (
-          <button key={tb.id} className={`cons-tab ${tab === tb.id ? 'on' : ''}`} onClick={() => setTab(tb.id)}>
+          <button key={tb.id} className={`ma-tab ${tab === tb.id ? 'on' : ''}`} onClick={() => setTab(tb.id)}>
             {tb.label}
-            {tb.badge ? <span className="cons-tab__badge">{tb.badge}</span> : null}
+            {tb.badge ? <span className="ma-tab__badge">{tb.badge}</span> : null}
           </button>
         ))}
       </nav>
 
-      <div className="cons-body">
+      <div className="ma-appbody">
         {tab === 'profile' ? (
           <ProfileTab />
         ) : tab === 'home' ? (

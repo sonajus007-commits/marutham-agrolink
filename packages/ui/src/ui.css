@@ -181,6 +181,45 @@
 }
 .ma-qty__unit { font-size: 11px; color: var(--gray); }
 
+/* ── Mobile role shell ──────────────────────────────────────────────────
+ * Chrome shared by every role's phone-width screen: the tab bar, the language
+ * toggle and the header icon buttons. Lives here rather than in one role's
+ * stylesheet so a second role can use it without importing the first's CSS. */
+.ma-tabs {
+  display: flex; gap: 4px; padding: 8px 10px;
+  background: var(--white); border-bottom: 1px solid #eef4ee;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.ma-tab {
+  flex: 1; white-space: nowrap;
+  border: none; background: none; font-family: inherit; cursor: pointer;
+  padding: 9px 10px; border-radius: 10px;
+  font-size: 12px; font-weight: 700; color: var(--gray);
+}
+.ma-tab.on { background: #f0f9ec; color: var(--forest); }
+.ma-tab:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
+.ma-tab__badge {
+  background: var(--red); color: var(--white);
+  font-size: 9px; font-weight: 800; padding: 1px 5px;
+  border-radius: 50px; margin-left: 4px;
+}
+
+.ma-lang { display: inline-flex; gap: 4px; }
+.ma-lang button {
+  border: 1px solid #dde8dd; background: var(--white); color: var(--gray);
+  border-radius: 8px; padding: 5px 9px; font-size: 11px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+.ma-lang button.on { background: #f0f9ec; border-color: var(--leaf); color: var(--forest); }
+
+.ma-iconbtn {
+  border: 1px solid #dde8dd; background: var(--white); color: var(--forest);
+  border-radius: 10px; padding: 6px 11px; font-size: 14px; cursor: pointer;
+}
+.ma-iconbtn.on { background: #f0f9ec; border-color: var(--leaf); }
+
+.ma-appbody { flex: 1; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+
 /* ── Form controls ─────────────────────────────────────────────────────── */
 .ma-field { margin-bottom: 12px; }
 .ma-field__label {
@@ -250,6 +289,7 @@ textarea.ma-input { resize: vertical; min-height: 64px; }
   gap: 12px; padding: 16px 16px 10px;
 }
 .ma-modal__title { font-size: 15px; font-weight: 800; color: var(--forest); }
+.ma-modal__sub { font-size: 11px; color: var(--gray); margin-top: 3px; line-height: 1.5; }
 .ma-modal__x {
   border: none; background: none; cursor: pointer;
   font-size: 15px; color: var(--gray); line-height: 1; padding: 4px;

@@ -27,6 +27,15 @@ export interface User {
   district?: string | null;
   state?: string | null;
   emp_id?: string | null;
+  /* Seller (farmer/retailer) fields. Money arrives as rupee strings. */
+  seller_type?: 'Farmer' | 'Retailer' | null;
+  subscription_plan?: string | null;
+  subscription_expires_at?: string | null;
+  subscription_amount?: string | null;
+  registration_charge?: string | null;
+  payment_confirmed_at?: string | null;
+  /** Set by requireAuth: a suspended seller still owes their subscription. */
+  needs_payment?: boolean;
   [key: string]: unknown;
 }
 
@@ -110,6 +119,39 @@ export interface ReturnResponse {
 export interface RateItemResponse {
   message: string;
   rating_value: number;
+}
+
+/* ── Seller: payouts + subscription ──────────────────────────────────────── */
+
+/** Money fields arrive as rupee strings — see backend/utils/money.js. */
+export interface SubscriptionPlan {
+  name: string;
+  days: number;
+  /** Undiscounted price. Equals `amount` when no concession applies. */
+  base_amount: string;
+  amount: string;
+}
+
+export interface SubscriptionPlansResponse {
+  plans: SubscriptionPlan[];
+  /** Women & transgender concession, already applied to `amount`. */
+  concession_pct: number;
+  registration_charge: string;
+  registration_charge_applies: boolean;
+  current_status?: string;
+  current_plan?: string | null;
+  subscription_expires_at?: string | null;
+}
+
+export interface SubscriptionPayResponse {
+  message: string;
+  plan: string;
+  plan_amount: string;
+  registration_charge: string;
+  amount_paid: string;
+  payment_reference: string;
+  subscription_expires_at: string;
+  user: User;
 }
 
 export interface FieldDashboardResponse {

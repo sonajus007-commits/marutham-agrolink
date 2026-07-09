@@ -11,6 +11,7 @@ import { Login } from './pages/Login';
 const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
 const AgentPage = lazy(() => import('./pages/agent/AgentPage').then((m) => ({ default: m.AgentPage })));
 const ConsumerPage = lazy(() => import('./pages/consumer/ConsumerPage').then((m) => ({ default: m.ConsumerPage })));
+const FarmerPage = lazy(() => import('./pages/farmer/FarmerPage').then((m) => ({ default: m.FarmerPage })));
 
 function AppBar() {
   const { t, i18n } = useTranslation();
@@ -75,6 +76,16 @@ export function App() {
             element={
               <ProtectedRoute role="consumer">
                 <ConsumerPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Farmer / Retailer seller console */}
+          <Route
+            path="/farmer"
+            element={
+              <ProtectedRoute role="farmer">
+                <FarmerPage />
               </ProtectedRoute>
             }
           />

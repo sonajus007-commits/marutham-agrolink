@@ -6,8 +6,9 @@ import type {
   FieldDashboardResponse, MyEmployeeResponse, User,
   OrderingWindowResponse, TopRatingsResponse, LocationsResponse, PlaceOrderPayload,
   TrackResponse, ReturnRequestPayload, ReturnResponse, RateItemResponse,
+  SubscriptionPlansResponse, SubscriptionPayResponse,
 } from './types';
-import type { Order, OrderDetail, Product, Offer } from '@marutham/lib';
+import type { Order, OrderDetail, Product, Offer, Payout } from '@marutham/lib';
 
 export const api = {
   // ── Auth ──
@@ -84,6 +85,19 @@ export const api = {
   },
   placeOrder(payload: PlaceOrderPayload): Promise<{ order: Order }> {
     return apiFetch<{ order: Order }>('POST', '/orders', payload);
+  },
+
+  // ── Seller: earnings + subscription ──
+  /** Farmers see only their own payouts (scoped server-side). */
+  getPayouts(): Promise<{ payouts: Payout[] }> {
+    return apiFetch<{ payouts: Payout[] }>('GET', '/payouts');
+  },
+  getSubscriptionPlans(): Promise<SubscriptionPlansResponse> {
+    return apiFetch<SubscriptionPlansResponse>('GET', '/subscription/plans');
+  },
+  /** Only the plan name is sent — the server prices it, and never trusts a client amount. */
+  paySubscription(plan: string): Promise<SubscriptionPayResponse> {
+    return apiFetch<SubscriptionPayResponse>('POST', '/subscription/pay', { plan });
   },
 
   // ── Dashboards ──

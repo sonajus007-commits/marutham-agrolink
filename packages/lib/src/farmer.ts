@@ -2,6 +2,7 @@
  * listing stops accepting orders. Pure and framework-agnostic, so the web
  * listing form and a future React Native app project the same numbers. */
 import { sellerFeePct, type SellerType } from './fees';
+import { isOrderActive, isOrderCancelled, type Order } from './orders';
 
 /** The server clamps bulk discounts to this; the form should too. */
 export const MAX_BULK_DISC_PCT = 90;
@@ -122,4 +123,93 @@ export function validateListing(d: ListingDraft): string | null {
   if (qtyValue > 0 && qtyValue > qty) return 'The order rule is larger than the quantity available.';
 
   return null;
+}
+
+/* ── Earnings ──────────────────────────────────────────────────────────────
+ * Money arrives from the API as rupee strings (backend/utils/money.js), so
+ * coerce before adding. `farmer_payout` is computed per order by GET /orders;
+ * it is not a column, and the legacy screen summed it before it existed, which
+ * is why "awaiting" and "in flight" were permanently ₹0. */
+
+const rs = (v: unknown): number => parseFloat(String(v ?? 0)) || 0;
+
+export type PayoutStatus = 'pending' | 'paid' | (string & {});
+
+export interface Payout {
+  id: string;
+  amount: string | number;
+  status: PayoutStatus;
+  method?: string | null;
+  reference?: string | null;
+  created_at?: string;
+  paid_at?: string | null;
+  order?: { id: string; code?: string } | null;
+}
+
+export interface FarmerEarnings {
+  /** Settled and paid out. */
+  paid: number;
+  /** Payout raised, not yet transferred. */
+  pending: number;
+  /** Delivered, but no payout record exists yet. */
+  awaiting: number;
+  /** Orders still in flight — not yet earned. */
+  inFlight: number;
+  /** paid + pending + awaiting. Excludes in-flight, which may still be cancelled. */
+  lifetime: number;
+}
+
+/**
+ * Split a seller's money across the settlement pipeline.
+ * An order counts once: a payout record supersedes the "awaiting" bucket.
+ */
+export function farmerEarnings(orders: Order[], payouts: Payout[]): FarmerEarnings {
+  const paid = payouts.filter((p) => p.status === 'paid').reduce((s, p) => s + rs(p.amount), 0);
+  const pending = payouts.filter((p) => p.status === 'pending').reduce((s, p) => s + rs(p.amount), 0);
+
+  const settledOrderIds = new Set(payouts.map((p) => p.order?.id).filter(Boolean));
+
+  const awaiting = orders
+    .filter((o) => o.status === 'Delivered' && !isOrderCancelled(o) && !settledOrderIds.has(o.id))
+    .reduce((s, o) => s + rs(o.farmer_payout), 0);
+
+  const inFlight = orders.filter(isOrderActive).reduce((s, o) => s + rs(o.farmer_payout), 0);
+
+  return { paid, pending, awaiting, inFlight, lifetime: paid + pending + awaiting };
+}
+
+/* ── Subscription ─────────────────────────────────────────────────────────── */
+
+export type SubscriptionLevel = 'none' | 'active' | 'expiring' | 'expired';
+
+export interface SubscriptionStatus {
+  level: SubscriptionLevel;
+  plan: string | null;
+  expiresAt: string | null;
+  /** Whole days remaining; negative once expired, null when there is no plan. */
+  daysLeft: number | null;
+}
+
+/** Warn this many days before expiry — matches the server's reminder schedule. */
+export const SUBSCRIPTION_WARN_DAYS = 10;
+
+const MS_PER_DAY = 86_400_000;
+
+export function subscriptionStatus(
+  user: { subscription_plan?: string | null; subscription_expires_at?: string | null },
+  now: Date = new Date(),
+): SubscriptionStatus {
+  const plan = user.subscription_plan || null;
+  const expiresAt = user.subscription_expires_at || null;
+  if (!expiresAt) return { level: plan ? 'active' : 'none', plan, expiresAt: null, daysLeft: null };
+
+  const daysLeft = Math.ceil((new Date(expiresAt).getTime() - now.getTime()) / MS_PER_DAY);
+  const level: SubscriptionLevel =
+    daysLeft <= 0 ? 'expired' : daysLeft <= SUBSCRIPTION_WARN_DAYS ? 'expiring' : 'active';
+  return { level, plan, expiresAt, daysLeft };
+}
+
+/** A suspended seller must pay before they can sell. Mirrors requireAuth's needs_payment. */
+export function needsSubscriptionPayment(user: { role?: string; status?: string }): boolean {
+  return user.role === 'farmer' && user.status === 'suspended';
 }
