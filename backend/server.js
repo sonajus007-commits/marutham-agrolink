@@ -67,6 +67,13 @@ app.patch('/me', require('./middleware/auth').requireAuth, (req, res) => res.red
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
+// ── New React app (Phase 0) — served under /app, alongside the legacy site ────
+// Purely additive: if apps/web/dist doesn't exist yet, /app simply 404s and the
+// legacy frontend below is unaffected.
+const appDist = path.join(__dirname, '../apps/web/dist');
+app.use('/app', express.static(appDist));
+app.get('/app/*', (_req, res) => res.sendFile(path.join(appDist, 'index.html')));
+
 // ── Frontend (served from same origin — works in dev and production) ──────────
 app.use(express.static(path.join(__dirname, '../frontend'), { index: 'home.html' }));
 
