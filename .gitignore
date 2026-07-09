@@ -6,6 +6,10 @@
 # Node
 node_modules/
 
+# Build artifacts (React app — built in CI/deploy, served by Express at /app)
+apps/web/dist/
+.turbo/
+
 # Logs
 *.log
 

@@ -1,0 +1,40 @@
+/*
+ * Marutham AgroLink — design tokens
+ * Single source of truth ported verbatim from frontend/css/app.css.
+ * The legacy site keeps its own copy for now; both reference identical values,
+ * so the brand looks the same on both stacks. Converge to this file in Phase 2.
+ */
+:root {
+  /* ── Paddy greens ── */
+  --forest: #1a3d2b;        /* deep paddy green — primary dark */
+  --leaf: #4E9F3D;          /* fresh leaf green — links, active, highlights */
+  --sage: #74C25C;          /* mid leaf — borders, accents */
+  --mint: #A8D5A2;          /* light leaf — subtle tints */
+
+  /* ── Marutham bloom pink — use sparingly ── */
+  --bloom: #CB4E86;         /* marutham flower pink — offers, farmer's choice */
+  --bloom-light: #FDEDF5;   /* bloom background tint */
+
+  /* ── Brand warm ── */
+  --cream: #f7f3ee;
+  --gold: #d4a843;
+  --gold2: #e9c46a;
+  --sun: #f4a261;
+
+  /* ── System ── */
+  --red: #c0392b;
+  --redbg: #fde8e8;
+  --green: #1a7a4a;
+  --greenbg: #e8f7e8;
+  --gray: #5a6472;
+  --border: #BFE0B5;
+  --white: #fff;
+  --light: #f3f8f1;
+  --muted: #f0f4ee;
+  --text: #1c2820;
+
+  --shadow: 0 2px 16px rgba(26, 61, 43, .09);
+  --shadowmd: 0 6px 32px rgba(26, 61, 43, .13);
+  --radius: 12px;
+  --radiussm: 8px;
+}

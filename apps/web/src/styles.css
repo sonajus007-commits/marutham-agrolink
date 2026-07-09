@@ -1,0 +1,118 @@
+/* Global app styles. Brand tokens come from @marutham/tokens (imported in
+ * main.tsx). Component styles come from @marutham/ui. This file only holds
+ * app-shell layout. */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Outfit', system-ui, sans-serif;
+  background: #f3faf4;
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.tamil { font-family: 'Noto Serif Tamil', serif; }
+
+/* App header */
+.appbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px;
+  background: var(--forest);
+  color: var(--white);
+}
+.appbar__brand {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gold);
+}
+.appbar__brand span { color: var(--white); }
+.appbar__right { display: flex; align-items: center; gap: 10px; }
+
+.langtoggle button {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px solid rgba(255, 255, 255, .25);
+  background: transparent;
+  color: rgba(255, 255, 255, .7);
+  border-radius: 50px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.langtoggle button.on { background: var(--gold); color: var(--forest); border-color: var(--gold); }
+
+/* Page container */
+.page { max-width: 1000px; margin: 0 auto; padding: 26px 20px 60px; }
+.page__title { font-size: 22px; font-weight: 700; color: var(--forest); margin-bottom: 4px; }
+.page__sub { font-size: 13px; color: var(--gray); margin-bottom: 20px; }
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.stack { display: flex; flex-direction: column; gap: 16px; }
+
+/* Login */
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: radial-gradient(ellipse at 20% 50%, #0f2d1c 0%, #1a3d2b 40%, #0a1f12 100%);
+}
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--white);
+  border-radius: 20px;
+  padding: 32px 28px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, .4);
+}
+.login-card h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px;
+  color: var(--forest);
+  margin-bottom: 4px;
+}
+.login-card .sub { font-size: 13px; color: var(--gray); margin-bottom: 22px; }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 11px; font-weight: 700; color: var(--forest); margin-bottom: 6px; }
+.field input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid #d5e8d0;
+  border-radius: var(--radiussm);
+  font-size: 14px;
+  font-family: 'Outfit', sans-serif;
+  outline: none;
+}
+.field input:focus { border-color: var(--leaf); box-shadow: 0 0 0 3px rgba(78, 159, 61, .12); }
+.form-error {
+  background: var(--redbg);
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 9px 12px;
+  border-radius: var(--radiussm);
+  margin-bottom: 14px;
+}
+
+.centered { min-height: 60vh; display: flex; align-items: center; justify-content: center; color: var(--gray); }
+
+/* Toast */
+.toast {
+  position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+  padding: 12px 24px; border-radius: 50px; font-size: 13px; font-weight: 600;
+  z-index: 9999; min-width: 220px; max-width: 90vw; text-align: center;
+  box-shadow: var(--shadowmd);
+}
+.toast--ok { background: var(--forest); color: #fff; }
+.toast--er { background: #8b1a1a; color: #fecaca; }
+.toast--nfo { background: #1a3560; color: #bfdbfe; }
