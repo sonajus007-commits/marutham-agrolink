@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A newer push to the same ref makes the in-flight run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck · test · build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # pnpm version comes from the root package.json "packageManager" field.
+      - name: Enable corepack
+        run: corepack enable
+
+      # Ask pnpm where its store is rather than guessing — the path is
+      # version-dependent, and a wrong one caches nothing, silently.
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "dir=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.dir }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # backend/ has no typechecker. A parse check is a cheap floor: it catches
+      # the syntax error that would otherwise only surface when a route is hit.
+      - name: Parse-check backend sources
+        run: find backend -name '*.js' -not -path '*/node_modules/*' -print0 | xargs -0 -n1 node --check
+
+      - name: Test — packages/lib (pure domain logic)
+        run: pnpm test
+
+      # backend/ is CommonJS and deliberately outside the pnpm workspace. These
+      # tests cover the pure return/refund logic and need no database, so there
+      # is nothing to install.
+      - name: Test — backend (return + refund logic)
+        run: node --test backend/test/
+
+      - name: Build the React app
+        run: pnpm build
+
+      # apps/web/dist is gitignored and Express serves /app straight from it.
+      # A deploy that skips the build 404s on /app while the legacy site keeps
+      # serving, so the failure is silent. Fail loudly here instead.
+      - name: Verify /app bundle was produced
+        run: test -f apps/web/dist/index.html

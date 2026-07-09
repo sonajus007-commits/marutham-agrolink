@@ -2,23 +2,17 @@ const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { generateReturnCode } = require('../utils/codeGen');
+const {
+  RETURN_WINDOW_HOURS,
+  isWithinReturnWindow,
+  resolveReturnLines,
+  deriveFullReturn,
+  computeRefundPaise,
+  buildReturnLineRows,
+} = require('../utils/returns');
 
 const router = express.Router();
 router.use(requireAuth);
-
-const RETURN_WINDOW_HOURS = 24;
-
-/**
- * Resolve a client-supplied return line to the order_items row it refers to.
- * Accepts an order_item_id (what the React app sends); falls back to
- * product_code, then name, for the legacy consumer page.
- */
-function resolveLine(line, items) {
-  if (line.order_item_id) return items.find(i => i.id === line.order_item_id);
-  if (line.product_code)  return items.find(i => i.product_code === line.product_code);
-  if (line.name)          return items.find(i => i.name === line.name);
-  return undefined;
-}
 
 // ── POST /orders/:id/return  (consumer, within return window) ─────────────────
 // Body: { full_return?, lines: [{ order_item_id, qty?, reason }], photos?: [url] }
@@ -51,9 +45,7 @@ router.post('/:id/return', async (req, res) => {
   }
 
   // Check return window
-  const deliveredAt = new Date(order.delivered_at);
-  const hoursSinceDelivery = (Date.now() - deliveredAt.getTime()) / (1000 * 60 * 60);
-  if (hoursSinceDelivery > RETURN_WINDOW_HOURS) {
+  if (!isWithinReturnWindow(order.delivered_at)) {
     return res.status(400).json({ error: `Return window has closed. Returns must be requested within ${RETURN_WINDOW_HOURS} hours of delivery.` });
   }
 
@@ -77,42 +69,13 @@ router.post('/:id/return', async (req, res) => {
     .select('id, product_code, name, farmer_name, qty, unit, price')
     .eq('order_id', order.id);
 
-  if (!items || items.length === 0) {
-    return res.status(400).json({ error: 'Order has no items to return.' });
-  }
-
   // Build the authoritative line set. `full_return: true` with no lines means
   // "everything"; otherwise each requested line is matched to a real order item.
-  let resolved;
-  if (lines.length === 0) {
-    resolved = items.map(item => ({ item, qty: item.qty, reason: req.body.reason || null }));
-  } else {
-    resolved = [];
-    for (const line of lines) {
-      const item = resolveLine(line, items);
-      if (!item) {
-        return res.status(400).json({ error: `Item "${line.order_item_id || line.product_code || line.name}" is not part of this order.` });
-      }
-      if (resolved.some(r => r.item.id === item.id)) {
-        return res.status(400).json({ error: `Item "${item.name}" listed more than once.` });
-      }
-      // Quantity is clamped to what was actually bought — never trust the client.
-      const qty = line.qty == null ? item.qty : Number(line.qty);
-      if (!(qty > 0) || qty > item.qty) {
-        return res.status(400).json({ error: `Invalid return quantity for "${item.name}" (ordered ${item.qty} ${item.unit}).` });
-      }
-      resolved.push({ item, qty, reason: line.reason || null });
-    }
-  }
+  const { resolved, error: resolveErr } = resolveReturnLines(items, lines, req.body.reason || null);
+  if (resolveErr) return res.status(400).json({ error: resolveErr });
 
-  // Full only when every item is being returned in full — derived, not asserted.
-  const full_return =
-    resolved.length === items.length && resolved.every(r => Number(r.qty) === Number(r.item.qty));
-
-  // Refund = product value only, no delivery. All paise, all from the DB.
-  const refund_amt = full_return
-    ? order.item_total
-    : resolved.reduce((sum, r) => sum + Math.round(r.item.price * r.qty), 0);
+  const full_return = deriveFullReturn(items, resolved);
+  const refund_amt = computeRefundPaise(order, resolved, full_return);
 
   // Generate return code (inherits district code + date from parent order)
   let code;
@@ -142,18 +105,7 @@ router.post('/:id/return', async (req, res) => {
 
   // Insert return lines, copying the item details from order_items. A failure
   // here used to be swallowed, leaving a refund request with no items on it.
-  const lineRows = resolved.map(r => ({
-    return_id:    ret.id,
-    product_code: r.item.product_code,
-    name:         r.item.name,
-    farmer_name:  r.item.farmer_name,
-    qty:          r.qty,
-    unit:         r.item.unit,
-    price:        r.item.price, // paise, as stored
-    reason:       r.reason,
-  }));
-
-  const { error: lineErr } = await supabase.from('return_lines').insert(lineRows);
+  const { error: lineErr } = await supabase.from('return_lines').insert(buildReturnLineRows(ret.id, resolved));
   if (lineErr) {
     console.error('POST /return lines error:', lineErr);
     // Don't leave an itemless return behind.

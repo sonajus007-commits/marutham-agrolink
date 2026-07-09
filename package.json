@@ -2,12 +2,14 @@
   "name": "marutham-agrolink",
   "version": "1.0.0",
   "private": true,
-  "description": "Marutham AgroLink monorepo — legacy backend/frontend + new React app",
+  "description": "Marutham AgroLink monorepo \u2014 legacy backend/frontend + new React app",
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "pnpm --filter @marutham/web dev",
     "build": "pnpm --filter @marutham/web build",
     "preview": "pnpm --filter @marutham/web preview",
-    "typecheck": "pnpm --filter @marutham/web typecheck"
+    "typecheck": "pnpm --filter @marutham/web typecheck",
+    "test": "pnpm --filter @marutham/lib test",
+    "test:backend": "npm --prefix backend test"
   }
 }
