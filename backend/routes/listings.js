@@ -2,6 +2,7 @@ const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { getFeeForSeller } = require('../utils/fees');
+const { validateImages } = require('../utils/listings');
 const notify = require('../utils/notify');
 
 const router = express.Router();
@@ -138,6 +139,12 @@ router.post('/', async (req, res) => {
   if (farmer_price < 0) return res.status(400).json({ error: 'farmer_price must be ≥ 0.' });
   if (qty_available < 0) return res.status(400).json({ error: 'qty_available must be ≥ 0.' });
 
+  // `images` was omitted from the destructure above and never inserted, so every
+  // photo a farmer attached on create was silently discarded — they only stuck if
+  // she later edited the listing, because PATCH did allow the field.
+  const { images, error: imgErr } = validateImages(req.body.images);
+  if (imgErr) return res.status(400).json({ error: imgErr });
+
   // Verify the product exists and is active
   const { data: product } = await supabase
     .from('products')
@@ -155,6 +162,7 @@ router.post('/', async (req, res) => {
       product_id, farmer_price, qty_available,
       time_available, cutoff_ts, bulk_qty, bulk_disc_pct,
       qty_type, qty_value,
+      ...(images !== undefined ? { images } : {}),
       listed: req.body.listed !== undefined ? Boolean(req.body.listed) : true,
       listing_status: 'pending',
     })
@@ -189,6 +197,10 @@ router.patch('/:id', async (req, res) => {
   if (existing.farmer_id !== req.user.id) {
     return res.status(403).json({ error: 'You can only edit your own listings.' });
   }
+
+  // PATCH accepted `images` unvalidated — any array of anything, any size.
+  const { error: imgErr } = validateImages(req.body.images);
+  if (imgErr) return res.status(400).json({ error: imgErr });
 
   const ALLOWED = [
     'farmer_price', 'qty_available', 'listed', 'confirmed',

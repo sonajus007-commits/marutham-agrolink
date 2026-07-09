@@ -34,6 +34,8 @@ const MONEY_FIELDS = new Set([
   // users + subscription_payments + GET /subscription/plans
   'subscription_amount', 'registration_charge',
   'plan_amount', 'total_amount', 'base_amount', 'amount_paid',
+  // GET /orders (farmer) — computed per order, not a column
+  'farmer_payout',
 ]);
 
 function paiseToRupees(value) {

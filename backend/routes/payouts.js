@@ -1,6 +1,7 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { groupPayouts } = require('../utils/payouts');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -86,17 +87,9 @@ router.post('/run', async (req, res) => {
     return res.json({ message: 'No items found for settlement.', created: 0 });
   }
 
-  // Aggregate payout amount per farmer per order
-  const payoutMap = {};
-  for (const item of items) {
-    const key = `${item.order_id}::${item.farmer_id}`;
-    if (!payoutMap[key]) {
-      payoutMap[key] = { order_id: item.order_id, farmer_id: item.farmer_id, amount: 0 };
-    }
-    payoutMap[key].amount += Math.round(item.farmer_price * item.qty);
-  }
-
-  const payoutRows = Object.values(payoutMap).map(p => ({
+  // Aggregate payout amount per farmer per order. Shared with the per-order
+  // figure on GET /orders so the two cannot disagree.
+  const payoutRows = groupPayouts(items).map(p => ({
     farmer_id: p.farmer_id,
     order_id:  p.order_id,
     amount:    p.amount,

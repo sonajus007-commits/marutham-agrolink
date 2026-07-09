@@ -5,6 +5,7 @@ const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { generateOrderCode } = require('../utils/codeGen');
 const { getFeeForSeller } = require('../utils/fees');
+const { payoutByOrder } = require('../utils/payouts');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -261,6 +262,9 @@ router.get('/', async (req, res) => {
   const { village, district, route, status } = req.query;
   const u = req.user;
 
+  /** Farmers only: { order_id → paise this farmer is owed }. Attached below. */
+  let farmerPayouts = null;
+
   let query = supabase
     .from('orders')
     .select('id, code, consumer_name, district, village, delivery_village, total, status, stage, route, pay_method, pay_status, created_at, agent_name')
@@ -270,15 +274,19 @@ router.get('/', async (req, res) => {
     query = query.eq('consumer_id', u.id);
 
   } else if (u.role === 'farmer') {
-    // Orders that contain this farmer's produce
-    const { data: farmerOrderIds } = await supabase
+    // Orders that contain this farmer's produce. The same query gives us what
+    // she is owed on each one — the farmer earnings screen used to read
+    // `o.farmer_payout`, a column that has never existed, so every figure
+    // derived from it was silently zero.
+    const { data: myItems } = await supabase
       .from('order_items')
-      .select('order_id')
+      .select('order_id, farmer_price, qty')
       .eq('farmer_id', u.id);
 
-    const ids = (farmerOrderIds || []).map(r => r.order_id);
+    const ids = [...new Set((myItems || []).map(r => r.order_id))];
     if (ids.length === 0) return res.json({ orders: [] });
     query = query.in('id', ids);
+    farmerPayouts = payoutByOrder(myItems); // { order_id: paise }
 
   } else if (u.role === 'admin') {
     const role = u.admin_role;
@@ -311,7 +319,13 @@ router.get('/', async (req, res) => {
     return res.status(500).json({ error: 'Could not fetch orders.' });
   }
 
-  res.json({ orders: data });
+  // Computed, not stored: there is no orders.farmer_payout column. Paise here;
+  // convertMoney turns it into rupees on the way out.
+  const orders = farmerPayouts
+    ? data.map(o => ({ ...o, farmer_payout: farmerPayouts[o.id] || 0 }))
+    : data;
+
+  res.json({ orders });
 });
 
 // ── GET /orders/:id  (full detail) ───────────────────────────────────────────

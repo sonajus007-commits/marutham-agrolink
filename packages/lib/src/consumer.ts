@@ -1,6 +1,7 @@
 /* Consumer storefront domain — pricing, quantity rules, and the cart bill engine.
  * Ported verbatim in logic from frontend/consumer.html so charges match exactly.
  * Pure + framework-agnostic → testable and reusable by a future React Native app. */
+import { sellerFeePct } from './fees';
 
 export interface DistrictPrice {
   handling?: string | number;
@@ -89,13 +90,22 @@ export function unitStep(u?: string): number {
   return unitAllowsDecimal(u) ? 0.5 : 1;
 }
 
-/** Consumer price (rupees) for an offer: seller-aware price + handling. */
+/**
+ * Consumer price (rupees) for an offer: seller-aware price + handling.
+ *
+ * The server sends `consumer_price` (paise), already fee-adjusted, and that is
+ * authoritative. The fallback recomputes it from the SELLER's fee — not from
+ * `product.platform_fee_pct`, which the server ignores entirely and which reads
+ * 5% even for Retailers, who are charged 10%.
+ */
 export function offerConsumerPrice(offer: Offer, product: Product): number {
   const dp = product.district_price;
   const handling = dp ? parseFloat(String(dp.handling)) || 0 : 0;
-  const feePct = product.platform_fee_pct || 5;
   const farmerPrice = parseFloat(String(offer.farmer_price));
-  const base = offer.consumer_price != null ? offer.consumer_price / 100 : farmerPrice * (1 + feePct / 100);
+  const base =
+    offer.consumer_price != null
+      ? offer.consumer_price / 100
+      : farmerPrice * (1 + sellerFeePct(offer.farmer?.seller_type) / 100);
   return base + handling;
 }
 

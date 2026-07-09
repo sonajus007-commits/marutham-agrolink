@@ -102,14 +102,31 @@ describe('offerConsumerPrice', () => {
     expect(offerConsumerPrice({ farmer_price: '20', consumer_price: 2500 } as Offer, p)).toBe(27); // 25 + 2
   });
 
-  it('falls back to farmer price plus the platform fee', () => {
+  // The fallback uses the SELLER's fee. `product.platform_fee_pct` is ignored —
+  // the server never reads it, and it says 5% even for Retailers who pay 10%.
+  // This test previously asserted the opposite, and so pinned the bug in place.
+  it('ignores product.platform_fee_pct when falling back', () => {
     const p = product({ platform_fee_pct: 10, district_price: { handling: '0', market_price: '35' } });
-    expect(offerConsumerPrice({ farmer_price: '20', consumer_price: null } as Offer, p)).toBeCloseTo(22);
+    const offer = { farmer_price: '20', consumer_price: null, farmer: { seller_type: 'Farmer' } } as Offer;
+    expect(offerConsumerPrice(offer, p)).toBeCloseTo(21); // 20 + 5%, not + 10%
   });
 
-  it('defaults the platform fee to 5% when the product does not set one', () => {
+  it('falls back to 5% for a farmer', () => {
     const p = product({ platform_fee_pct: undefined, district_price: { handling: '0', market_price: '35' } });
-    expect(offerConsumerPrice({ farmer_price: '100', consumer_price: null } as Offer, p)).toBeCloseTo(105);
+    const offer = { farmer_price: '100', consumer_price: null, farmer: { seller_type: 'Farmer' } } as Offer;
+    expect(offerConsumerPrice(offer, p)).toBeCloseTo(105);
+  });
+
+  it('falls back to 10% for a retailer', () => {
+    const p = product({ platform_fee_pct: 5, district_price: { handling: '0', market_price: '35' } });
+    const offer = { farmer_price: '100', consumer_price: null, farmer: { seller_type: 'Retailer' } } as Offer;
+    expect(offerConsumerPrice(offer, p)).toBeCloseTo(110);
+  });
+
+  it('treats a seller with no seller_type as a farmer', () => {
+    const p = product({ district_price: { handling: '0', market_price: '35' } });
+    const offer = { farmer_price: '100', consumer_price: null } as Offer;
+    expect(offerConsumerPrice(offer, p)).toBeCloseTo(105);
   });
 });
 
