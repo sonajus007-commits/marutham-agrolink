@@ -1,0 +1,81 @@
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  api,
+  getToken,
+  getUser,
+  setSession,
+  clearSession,
+  type User,
+} from '@marutham/api-client';
+
+interface AuthState {
+  user: User | null;
+  loading: boolean;
+  login: (phone: string, password: string) => Promise<User>;
+  logout: () => void;
+  /** Persist an updated user record (e.g. after a profile edit). */
+  updateUser: (user: User) => void;
+}
+
+const AuthContext = createContext<AuthState | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(() => getUser());
+  const [loading, setLoading] = useState<boolean>(() => Boolean(getToken()));
+
+  // On mount, if a token exists (possibly set by a legacy page), verify it and
+  // refresh the user record from the backend.
+  useEffect(() => {
+    let active = true;
+    if (!getToken()) {
+      setLoading(false);
+      return;
+    }
+    api
+      .me()
+      .then((res) => {
+        if (!active) return;
+        setUser(res.user);
+      })
+      .catch(() => {
+        if (!active) return;
+        clearSession();
+        setUser(null);
+      })
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const value = useMemo<AuthState>(
+    () => ({
+      user,
+      loading,
+      async login(phone, password) {
+        const res = await api.login(phone, password);
+        setSession(res.token, res.user);
+        setUser(res.user);
+        return res.user;
+      },
+      logout() {
+        clearSession();
+        setUser(null);
+      },
+      updateUser(next) {
+        const token = getToken();
+        if (token) setSession(token, next);
+        setUser(next);
+      },
+    }),
+    [user, loading],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthState {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within <AuthProvider>');
+  return ctx;
+}
