@@ -263,7 +263,13 @@ function OrderDetailBody({
         </Button>
       ) : null}
 
-      {canRequestReturn(o) ? (
+      {o.return_id ? (
+        <div className="ord-card" style={{ background: '#fff8e6', borderColor: '#f5e0b0' }}>
+          <h3 style={{ color: '#92400e' }}>↩ Return Requested</h3>
+          <div className="irow"><span className="ilbl">Return Code</span><span className="ival">{o.return_code || '—'}</span></div>
+          <div className="irow"><span className="ilbl">Status</span><span className="ival">{o.return_status || 'pending'}</span></div>
+        </div>
+      ) : canRequestReturn(o) ? (
         <button className="cons-btn-outline-danger cons-btn-outline-danger--block" onClick={() => setShowReturn(true)}>
           ↩ Request Return / Refund
           <span style={{ display: 'block', fontWeight: 400, fontSize: 10, marginTop: 2 }}>

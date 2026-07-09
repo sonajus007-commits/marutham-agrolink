@@ -46,8 +46,13 @@ export interface Order {
   village?: string;
   created_at?: string;
   delivered_at?: string | null;
-  /** Set once a return has been requested — blocks a second request. */
+  /**
+   * Existing return for this order, or null. Not a column — GET /orders/:id
+   * derives it from the returns table, so it is absent on the list endpoint.
+   */
   return_id?: string | null;
+  return_code?: string | null;
+  return_status?: string | null;
   saved?: string | number;
   [key: string]: unknown;
 }

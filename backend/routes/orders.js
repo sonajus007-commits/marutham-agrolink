@@ -377,6 +377,20 @@ router.get('/:id', async (req, res) => {
     .eq('order_id', order.id)
     .order('ts', { ascending: true });
 
+  // Existing return, if any. Derived from the returns table rather than stored
+  // on the order: there is no orders.return_id column, and a denormalised copy
+  // would be one more thing to keep in sync. Clients use this to hide the
+  // "Request Return" button once a return has been raised.
+  const { data: ret } = await supabase
+    .from('returns')
+    .select('id, code, decision, collected')
+    .eq('order_id', order.id)
+    .maybeSingle();
+
+  order.return_id     = ret ? ret.id : null;
+  order.return_code   = ret ? ret.code : null;
+  order.return_status = ret ? (ret.decision || 'pending') : null;
+
   // QR token — signed with order code so the scan endpoint can trust it
   const qr_token = jwt.sign(
     { order_code: order.code },

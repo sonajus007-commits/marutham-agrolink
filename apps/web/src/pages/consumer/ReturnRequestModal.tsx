@@ -32,26 +32,27 @@ export function ReturnRequestModal({
   }
 
   async function submit() {
+    // Selection first: with nothing ticked, "enter a reason" is the wrong nudge.
+    if (selected.size === 0) return toast('Select at least one item', 'er');
     const trimmed = reason.trim();
     if (!trimmed) return toast('Please enter a reason', 'er');
-    if (selected.size === 0) return toast('Select at least one item', 'er');
 
-    const lines: ReturnLine[] = [...selected].map((idx) => {
-      const it = items[idx];
-      return {
-        product_code: it.product_code || '',
-        name: it.name,
-        farmer_name: it.farmer_name || '',
-        qty: it.qty,
-        unit: it.unit,
-        price: it.price,
-        reason: trimmed,
-      };
-    });
+    const chosen = [...selected].map((idx) => items[idx]);
+    if (chosen.some((it) => !it.id)) {
+      return toast('These items cannot be returned online. Please contact support.', 'er');
+    }
+
+    // Identify items by id only. The server owns price, name and the refund
+    // amount; full_return is derived there from what we send.
+    const lines: ReturnLine[] = chosen.map((it) => ({
+      order_item_id: it.id as string,
+      qty: it.qty,
+      reason: trimmed,
+    }));
 
     setBusy(true);
     try {
-      const res = await api.requestReturn(order.id, { full_return: lines.length === items.length, lines });
+      const res = await api.requestReturn(order.id, { lines });
       toast(`Return ${res.code} submitted!`, 'ok');
       onSubmitted();
     } catch (e) {

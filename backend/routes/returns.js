@@ -8,8 +8,26 @@ router.use(requireAuth);
 
 const RETURN_WINDOW_HOURS = 24;
 
+/**
+ * Resolve a client-supplied return line to the order_items row it refers to.
+ * Accepts an order_item_id (what the React app sends); falls back to
+ * product_code, then name, for the legacy consumer page.
+ */
+function resolveLine(line, items) {
+  if (line.order_item_id) return items.find(i => i.id === line.order_item_id);
+  if (line.product_code)  return items.find(i => i.product_code === line.product_code);
+  if (line.name)          return items.find(i => i.name === line.name);
+  return undefined;
+}
+
 // ── POST /orders/:id/return  (consumer, within return window) ─────────────────
-// Body: { full_return, lines: [{product_code, name, farmer_name, qty, unit, price, reason}], photos: [url] }
+// Body: { full_return?, lines: [{ order_item_id, qty?, reason }], photos?: [url] }
+//
+// Money and item details are NEVER taken from the request. `price`, `name`,
+// `farmer_name` etc. are read from order_items, and refund_amt is computed in
+// paise server-side. The client previously echoed back the rupee-converted
+// prices it received (convertMoney runs on responses but not on requests), so
+// a partial refund came out 100x too small — and the amount was forgeable.
 router.post('/:id/return', async (req, res) => {
   if (req.user.role !== 'consumer') {
     return res.status(403).json({ error: 'Only consumers can request returns.' });
@@ -48,11 +66,53 @@ router.post('/:id/return', async (req, res) => {
 
   if (existing) return res.status(409).json({ error: 'A return has already been requested for this order.' });
 
-  const { full_return = false, lines = [], photos = [] } = req.body;
+  const { full_return: wantsFull = false, lines = [], photos = [] } = req.body;
 
-  if (!full_return && lines.length === 0) {
+  if (!wantsFull && lines.length === 0) {
     return res.status(400).json({ error: 'Provide either full_return: true or at least one item in lines.' });
   }
+
+  const { data: items } = await supabase
+    .from('order_items')
+    .select('id, product_code, name, farmer_name, qty, unit, price')
+    .eq('order_id', order.id);
+
+  if (!items || items.length === 0) {
+    return res.status(400).json({ error: 'Order has no items to return.' });
+  }
+
+  // Build the authoritative line set. `full_return: true` with no lines means
+  // "everything"; otherwise each requested line is matched to a real order item.
+  let resolved;
+  if (lines.length === 0) {
+    resolved = items.map(item => ({ item, qty: item.qty, reason: req.body.reason || null }));
+  } else {
+    resolved = [];
+    for (const line of lines) {
+      const item = resolveLine(line, items);
+      if (!item) {
+        return res.status(400).json({ error: `Item "${line.order_item_id || line.product_code || line.name}" is not part of this order.` });
+      }
+      if (resolved.some(r => r.item.id === item.id)) {
+        return res.status(400).json({ error: `Item "${item.name}" listed more than once.` });
+      }
+      // Quantity is clamped to what was actually bought — never trust the client.
+      const qty = line.qty == null ? item.qty : Number(line.qty);
+      if (!(qty > 0) || qty > item.qty) {
+        return res.status(400).json({ error: `Invalid return quantity for "${item.name}" (ordered ${item.qty} ${item.unit}).` });
+      }
+      resolved.push({ item, qty, reason: line.reason || null });
+    }
+  }
+
+  // Full only when every item is being returned in full — derived, not asserted.
+  const full_return =
+    resolved.length === items.length && resolved.every(r => Number(r.qty) === Number(r.item.qty));
+
+  // Refund = product value only, no delivery. All paise, all from the DB.
+  const refund_amt = full_return
+    ? order.item_total
+    : resolved.reduce((sum, r) => sum + Math.round(r.item.price * r.qty), 0);
 
   // Generate return code (inherits district code + date from parent order)
   let code;
@@ -62,11 +122,6 @@ router.post('/:id/return', async (req, res) => {
     console.error('generateReturnCode error:', err);
     return res.status(500).json({ error: err.message || 'Could not generate return code.' });
   }
-
-  // Calculate refund amount from lines (product value only, no delivery)
-  const refund_amt = full_return
-    ? order.item_total
-    : lines.reduce((sum, l) => sum + Math.round(l.price * l.qty), 0);
 
   const { data: ret, error: retErr } = await supabase
     .from('returns')
@@ -85,16 +140,31 @@ router.post('/:id/return', async (req, res) => {
     return res.status(500).json({ error: 'Could not create return request.' });
   }
 
-  // Insert return lines
-  if (lines.length > 0) {
-    const lineRows = lines.map(l => ({ ...l, return_id: ret.id }));
-    await supabase.from('return_lines').insert(lineRows);
+  // Insert return lines, copying the item details from order_items. A failure
+  // here used to be swallowed, leaving a refund request with no items on it.
+  const lineRows = resolved.map(r => ({
+    return_id:    ret.id,
+    product_code: r.item.product_code,
+    name:         r.item.name,
+    farmer_name:  r.item.farmer_name,
+    qty:          r.qty,
+    unit:         r.item.unit,
+    price:        r.item.price, // paise, as stored
+    reason:       r.reason,
+  }));
+
+  const { error: lineErr } = await supabase.from('return_lines').insert(lineRows);
+  if (lineErr) {
+    console.error('POST /return lines error:', lineErr);
+    // Don't leave an itemless return behind.
+    await supabase.from('returns').delete().eq('id', ret.id);
+    return res.status(500).json({ error: 'Could not record the returned items.' });
   }
 
-  // Insert photos
   if (photos.length > 0) {
     const photoRows = photos.map(url => ({ return_id: ret.id, url }));
-    await supabase.from('return_photos').insert(photoRows);
+    const { error: photoErr } = await supabase.from('return_photos').insert(photoRows);
+    if (photoErr) console.error('POST /return photos error:', photoErr);
   }
 
   res.status(201).json({ message: 'Return requested successfully.', return: ret, code });

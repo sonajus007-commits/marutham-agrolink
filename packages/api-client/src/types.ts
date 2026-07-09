@@ -80,20 +80,25 @@ export interface TrackResponse {
   timeline: Array<{ label: string; note?: string; ts?: string }>;
 }
 
-/** One line of a return request. Shape is dictated by backend/routes/returns.js. */
+/**
+ * One line of a return request.
+ *
+ * Deliberately carries no money and no item details: the server reads price,
+ * name and farmer from order_items. Echoing back the rupee-converted `price`
+ * from a GET response used to make the refund 100x too small, and let a client
+ * name its own refund amount.
+ */
 export interface ReturnLine {
-  product_code: string;
-  name: string;
-  farmer_name: string;
-  qty: number;
-  unit?: string;
-  price?: number | string;
+  /** order_items row id. */
+  order_item_id: string;
+  /** Defaults to the full ordered quantity; the server clamps to it. */
+  qty?: number;
   reason: string;
 }
 
 export interface ReturnRequestPayload {
-  full_return: boolean;
   lines: ReturnLine[];
+  photos?: string[];
 }
 
 export interface ReturnResponse {
