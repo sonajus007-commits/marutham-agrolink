@@ -299,6 +299,21 @@ it is given. The collapse control uses an inset-shadow top divider, not
 `border-t`: the `<button>` reset is `border-0`, and the two are one
 tailwind-merge group.
 
+## Header (Phase 3)
+
+The top bar of the Admin / Executive shell, the horizontal partner to `Sidebar`.
+Chrome, not content: it lays out slots the app fills with pieces already built —
+a `Breadcrumbs`, a `SearchInput`, a `NotificationCenter`, a user `Dropdown` — and
+owns none of them, so it stays free of i18n, auth and routing. One `<header>`
+`banner` per page.
+
+Responsive by construction. Below `lg` the sidebar is a drawer, so the header
+grows a hamburger (wired to `onMenuClick`, hidden at `lg`+) and shows `brand`;
+the breadcrumb and search need width and drop away below `md`. The `actions`
+cluster is the one region visible at every width — notifications and the account
+menu must always be reachable — and `ml-auto` pins it right whether or not the
+search grows the middle.
+
 ## Migration status
 
 Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
@@ -310,8 +325,9 @@ Phase 2E adds what the brief needs and never existed: `Table`, `Skeleton`,
 `FileUpload`, `Alert`, `NotificationCenter`, `Pagination`, `SearchInput`. That
 completes the brief's primitive list. `Toast` stays app-level in
 `apps/web/src/components/Toast.tsx`. Phase 2D adds `ChartContainer` and
-`MapContainer` — the chart/map chrome, chart library handed in. Phase 3 begins
-the shared shell with `Sidebar` (Admin/Executive rail).
+`MapContainer` — the chart/map chrome, chart library handed in. Phase 3 builds the shared shell:
+`Sidebar` (Admin/Executive rail) and `Header` (the top bar); the `AppShell`
+layout that composes them is next.
 
 `OrderPipeline` keeps inline styles for two things on purpose: node width, which
 the SVG path arithmetic reads, and colour, which is a runtime string
