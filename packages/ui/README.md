@@ -176,6 +176,31 @@ Week starts on Sunday (India's convention); pass `weekStartsOn={1}` for Monday.
 `min`/`max` disable out-of-range days *and* the nav arrow that would only reach
 disabled months.
 
+## FileUpload
+
+A drag-and-drop + browse picker. It reports **selection, not upload**: it picks
+and validates files and reports them through `value`/`onChange`; the caller does
+the transport and feeds progress and errors back through each item's
+`status`/`progress`/`error`. Keeping transport out means one picker serves
+base64 listing photos, multipart documents and whatever comes next without
+knowing how any of them reach the server. An `uploading` item renders a
+`ProgressBar`; a `done` item shows a check and drops its remove button.
+
+Validation — `accept` matching (HTML syntax: `.pdf`, `image/*`, `image/png`),
+`maxSize`, `maxFiles`, and de-duplication by name+size — lives in
+`@marutham/lib/upload`, pure and unit-tested (17 tests), reading only
+`{ name, size, type }` so it needs no `File` and ports to a React Native asset.
+Rejections are reported most-specific-first (a wrong-type file that is *also*
+over the count says `type`, not `count`).
+
+This is **not** `apps/web`'s `ImagePicker`, which downscales to base64 data-URIs
+in three fixed slots and is image-only. FileUpload is the general primitive;
+ImagePicker stays as the specialised listing-photo control.
+
+The drop zone is a `<button>` wrapping a visually-hidden `<input type="file">`,
+so keyboard and pointer users reach the same OS dialog, and the input is cleared
+after each pick — otherwise choosing the same file twice fires no `change`.
+
 ## Migration status
 
 Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
@@ -183,9 +208,9 @@ Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
 `OrderTimeline` `Sheet` `Modal` `OrderPipeline`.
 
 Phase 2E adds what the brief needs and never existed: `Table`, `Skeleton`,
-`Breadcrumbs`, `Tabs`, `Accordion`, `Dropdown`, `ProgressBar`, `DatePicker`.
-Still missing — `Pagination` (lives inside `Table`; extract when a second caller
-appears), `FileUpload`, `Toast` (app-level in
+`Breadcrumbs`, `Tabs`, `Accordion`, `Dropdown`, `ProgressBar`, `DatePicker`,
+`FileUpload`. Still missing — `Pagination` (lives inside `Table`; extract when a
+second caller appears), `Toast` (app-level in
 `apps/web/src/components/Toast.tsx`), `Search` (likewise inside `Table`),
 `Notifications`. The chart and map containers are Phase 2D.
 

@@ -40,3 +40,5 @@ export { ProgressBar } from './ProgressBar';
 export type { ProgressBarProps } from './ProgressBar';
 export { DatePicker } from './DatePicker';
 export type { DatePickerProps } from './DatePicker';
+export { FileUpload } from './FileUpload';
+export type { FileUploadProps, UploadItem } from './FileUpload';
