@@ -8,3 +8,4 @@ export * from './employee';
 export * from './consumer';
 export * from './farmer';
 export * from './table';
+export * from './calendar';

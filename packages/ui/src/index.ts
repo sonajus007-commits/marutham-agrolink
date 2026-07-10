@@ -38,3 +38,5 @@ export { Dropdown } from './Dropdown';
 export type { DropdownItem, DropdownProps } from './Dropdown';
 export { ProgressBar } from './ProgressBar';
 export type { ProgressBarProps } from './ProgressBar';
+export { DatePicker } from './DatePicker';
+export type { DatePickerProps } from './DatePicker';

@@ -150,6 +150,32 @@ indeterminate sweep survives `prefers-reduced-motion` on purpose: it is the only
 thing reporting progress, and stopping it would leave a bar that says nothing. An
 indeterminate bar carries no `aria-valuenow` — "unknown" is not a number.
 
+## DatePicker
+
+A single-date picker: a Radix Popover over an ARIA `role="grid"` calendar. Its
+value on the wire is an ISO `YYYY-MM-DD` **string, never a `Date`** — a Date
+cannot hold a calendar day without also holding a timezone, and midnight-local
+round-trips to the previous day west of Greenwich.
+
+The calendar math — the 6×7 grid, month rollover, leap years, min/max, the
+per-day predicate — lives in `@marutham/lib/calendar`, pure and unit-tested (24
+tests), the same split as `Table`. Dates there are a `{ year, month, day }`
+civil triple; the one place a `Date` appears is UTC-boxed inside `weekdayOf` /
+`addDays`, where it is safe. `DatePicker.tsx` is the popover, the grid markup and
+the keyboard model (arrows day-by-day wrapping across months, PageUp/Down for
+month, Home/End for the week, Enter/Space to pick).
+
+**The trap this hides, found only by rendering under a western timezone:** the
+grid is built with `Date.UTC(...)`, so every `Intl.DateTimeFormat` that prints a
+month title, a trigger label or a weekday header **must pass `timeZone: 'UTC'`**.
+Without it Intl formats in the browser's zone, and a user in the Americas sees
+the trigger a day early, the title slipped into the previous month, and the
+weekday header rotated by one. Invisible on a UTC/IST test box.
+
+Week starts on Sunday (India's convention); pass `weekStartsOn={1}` for Monday.
+`min`/`max` disable out-of-range days *and* the nav arrow that would only reach
+disabled months.
+
 ## Migration status
 
 Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
@@ -157,9 +183,9 @@ Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
 `OrderTimeline` `Sheet` `Modal` `OrderPipeline`.
 
 Phase 2E adds what the brief needs and never existed: `Table`, `Skeleton`,
-`Breadcrumbs`, `Tabs`, `Accordion`, `Dropdown`, `ProgressBar`. Still missing —
-`Pagination` (lives inside `Table`; extract when a second caller appears),
-`DatePicker`, `FileUpload`, `Toast` (app-level in
+`Breadcrumbs`, `Tabs`, `Accordion`, `Dropdown`, `ProgressBar`, `DatePicker`.
+Still missing — `Pagination` (lives inside `Table`; extract when a second caller
+appears), `FileUpload`, `Toast` (app-level in
 `apps/web/src/components/Toast.tsx`), `Search` (likewise inside `Table`),
 `Notifications`. The chart and map containers are Phase 2D.
 
