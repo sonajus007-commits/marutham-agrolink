@@ -101,13 +101,38 @@ Select-all governs the current page only, and a selection survives paging away
 and back. Export sends the filtered, sorted rows — or just the selected ones,
 when there is a selection.
 
+## Tabs, Breadcrumbs, Skeleton
+
+`Tabs` is Radix. It is **not** `.ma-tabs` in ui.css — those are the mobile
+shell's *navigation* tabs, which swap routes and whose correct role is a nav.
+These switch panels within one screen. Do not merge them.
+
+Two things about Radix Tabs that will look like bugs and are not. Every panel
+stays mounted with `hidden` on the inactive ones, so assert against
+`[role="tabpanel"]:not([hidden])`. And **the tablist, not any trigger, is the
+single tab stop** — every trigger reads `tabindex="-1"` until focus enters, at
+which point Radix forwards it to the selected tab. That is roving focus working,
+not a keyboard trap.
+
+`Breadcrumbs` takes an `href` or an `onClick` per crumb, because `packages/ui`
+must not depend on react-router. The last crumb is never a link. `maxItems`
+collapses the middle behind a button — not an `…` character — so the hidden
+levels stay reachable; the map hierarchy is seven levels deep.
+
+Every `Skeleton` is `aria-hidden`. The caller owns the announcement by putting
+`aria-busy` on the container.
+
 ## Migration status
 
 Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
 `EmptyState` `StatTile` `FilterChips` `QtyStepper` `StarRating` `OrderProgress`
 `OrderTimeline` `Sheet` `Modal` `OrderPipeline`.
 
-Phase 2E adds what the brief needs and never existed. `Table` is the first.
+Phase 2E adds what the brief needs and never existed: `Table`, `Skeleton`,
+`Breadcrumbs`, `Tabs`. Still missing — `Accordion`, `Pagination` (lives inside
+`Table`; extract when a second caller appears), `DatePicker`, `FileUpload`,
+`Toast` (app-level in `apps/web/src/components/Toast.tsx`), `Search` (likewise
+inside `Table`), `Notifications`. The chart and map containers are Phase 2D.
 
 `OrderPipeline` keeps inline styles for two things on purpose: node width, which
 the SVG path arithmetic reads, and colour, which is a runtime string

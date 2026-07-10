@@ -61,12 +61,16 @@ const isClassLike = (t) =>
   // as `data-[state=open]:flex` carries a bracket or colon, so it survives.
   !/^(aria|data)-[a-z-]+$/.test(t);
 
-/** Present as a selector: `.token` followed by `{`, `:`, `,`, `>`, ` ` or `)`. */
+/** Present as a selector: `.token` followed by a character that ends the class
+ * name. `[` is one of them — a `data-[state=open]:flex` compiles to
+ * `.data-[state=open]:flex[data-state="open"]`, qualified by the very attribute
+ * the variant tests. `.` is deliberately *not* one: `.py-2` must not be
+ * considered emitted because the bundle happens to contain `.py-2.5`. */
 const emitted = (t) => {
   let i = -1;
   while ((i = flat.indexOf('.' + t, i + 1)) !== -1) {
     const next = flat[i + 1 + t.length];
-    if (next === undefined || '{:,> )~+'.includes(next)) return true;
+    if (next === undefined || '{:,> )~+['.includes(next)) return true;
   }
   return false;
 };

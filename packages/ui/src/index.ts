@@ -27,3 +27,8 @@ export { QtyStepper } from './QtyStepper';
 export type { QtyStepperProps } from './QtyStepper';
 export { Table } from './Table';
 export type { TableColumn, TableProps } from './Table';
+export { Skeleton, SkeletonText } from './Skeleton';
+export { Breadcrumbs } from './Breadcrumbs';
+export type { Crumb, BreadcrumbsProps } from './Breadcrumbs';
+export { Tabs } from './Tabs';
+export type { TabItem, TabsProps } from './Tabs';
