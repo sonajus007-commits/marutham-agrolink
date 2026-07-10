@@ -7,6 +7,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "dependencies": {
+    "@marutham/tokens": "workspace:*"
+  },
   "devDependencies": {
     "vitest": "^2.1.9"
   },

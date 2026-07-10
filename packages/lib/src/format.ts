@@ -1,5 +1,6 @@
 /* Framework-agnostic formatters — ported from frontend/js/shared.js.
  * Pure functions, safe to reuse from React web and React Native. */
+import { statusPalette, statusFallback } from '@marutham/tokens';
 
 /** Backend returns money as strings like "52.50" (already rupees). */
 export function fmtMoney(val: unknown): string {
@@ -64,12 +65,6 @@ export function resolveAddress(da: string | AddressObject | null | undefined): s
   return typeof da === 'object' ? buildAddress(da) : da;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  'Order Placed': '#f4a261', Packaged: '#e9c46a', 'VCO Verified': '#52b788',
-  'Picked Up': '#2d6a4f', 'Out for Delivery': '#1a7a4a', Delivered: '#155e38',
-  'In Transit': '#3a86ff', 'At Hub': '#8338ec', Cancelled: '#c0392b',
-};
-
 export function statusColor(status: string): string {
-  return STATUS_COLORS[status] || '#5a6472';
+  return (statusPalette as Record<string, string>)[status] ?? statusFallback;
 }

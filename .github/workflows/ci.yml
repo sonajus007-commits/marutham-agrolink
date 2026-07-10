@@ -46,6 +46,17 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # tokens.css is generated from tokens.ts. Hand-editing the CSS, or editing
+      # the TS and forgetting to regenerate, silently forks the design system —
+      # which is the exact failure the generator exists to prevent.
+      - name: Tokens — tokens.css is in sync with tokens.ts
+        run: pnpm tokens:check
+
+      # Every semantic colour pair must clear its WCAG threshold. A token that
+      # fails here is a bug in tokens.ts, not something a screen works around.
+      - name: Tokens — WCAG contrast audit
+        run: pnpm tokens:contrast
+
       # backend/ has no typechecker. A parse check is a cheap floor: it catches
       # the syntax error that would otherwise only surface when a route is hit.
       - name: Parse-check backend sources
