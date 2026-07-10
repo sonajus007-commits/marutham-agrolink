@@ -56,7 +56,7 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
                 {item.farmer_name ? <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 2 }}>from {item.farmer_name}</div> : null}
                 <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>₹{unitPrice.toFixed(0)} / {item.unit}</div>
                 {mkt > 0 && unitPrice < mkt ? (
-                  <div style={{ fontSize: 9, color: '#1a7a4a', fontWeight: 700, marginTop: 2 }}>Save ₹{Math.round((mkt - unitPrice) * item.qty)} vs market</div>
+                  <div style={{ fontSize: 9, color: 'var(--success)', fontWeight: 700, marginTop: 2 }}>Save ₹{Math.round((mkt - unitPrice) * item.qty)} vs market</div>
                 ) : null}
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -77,14 +77,14 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
         <div className="irow"><span className="ilbl">Item Total</span><span className="ival">₹{bill.itemSubtotal.toFixed(0)}</span></div>
         {bill.handling > 0 ? <div className="irow"><span className="ilbl">Handling charges</span><span className="ival">₹{bill.handling.toFixed(0)}</span></div> : null}
         {bill.marketFee > 0 ? <div className="irow"><span className="ilbl">Market fee (multiple farmers)</span><span className="ival">₹{bill.marketFee.toFixed(0)}</span></div> : null}
-        <div className="irow"><span className="ilbl">Delivery</span><span className="ival">{bill.delivery === 0 ? <span style={{ color: '#1a7a4a', fontWeight: 700 }}>FREE</span> : `₹${bill.delivery.toFixed(0)}`}</span></div>
+        <div className="irow"><span className="ilbl">Delivery</span><span className="ival">{bill.delivery === 0 ? <span style={{ color: 'var(--success)', fontWeight: 700 }}>FREE</span> : `₹${bill.delivery.toFixed(0)}`}</span></div>
         {bill.itemSubtotal > 0 && bill.itemSubtotal < 150 ? (
           <div style={{ fontSize: 10, color: '#c2620a', marginTop: 2 }}>Add ₹{(150 - bill.itemSubtotal).toFixed(0)} more for FREE delivery</div>
         ) : null}
         {bill.savings > 0 ? (
-          <div className="irow" style={{ color: '#1a7a4a', fontWeight: 700 }}><span className="ilbl">🎉 You Save</span><span className="ival">₹{bill.savings.toFixed(0)} vs Govt Rate</span></div>
+          <div className="irow" style={{ color: 'var(--success)', fontWeight: 700 }}><span className="ilbl">🎉 You Save</span><span className="ival">₹{bill.savings.toFixed(0)} vs Govt Rate</span></div>
         ) : null}
-        <div style={{ borderTop: '2px solid #2d6a4f', margin: '10px 0' }} />
+        <div style={{ borderTop: '2px solid var(--forest-soft)', margin: '10px 0' }} />
         <div className="irow"><span className="ilbl" style={{ fontSize: 14, fontWeight: 700, color: 'var(--forest)' }}>Grand Total</span><span className="ival" style={{ fontSize: 16, color: 'var(--forest)' }}>₹{bill.total.toFixed(0)}</span></div>
       </div>
 

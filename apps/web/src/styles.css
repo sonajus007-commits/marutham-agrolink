@@ -6,7 +6,7 @@
 
 body {
   font-family: 'Outfit', system-ui, sans-serif;
-  background: #f3faf4;
+  background: var(--bg);
   color: var(--text);
   min-height: 100vh;
 }
@@ -65,7 +65,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: radial-gradient(ellipse at 20% 50%, #0f2d1c 0%, #1a3d2b 40%, #0a1f12 100%);
+  background: radial-gradient(ellipse at 20% 50%, #0f2d1c 0%, var(--forest) 40%, #0a1f12 100%);
 }
 .login-card {
   width: 100%;
@@ -113,6 +113,6 @@ body {
   z-index: 9999; min-width: 220px; max-width: 90vw; text-align: center;
   box-shadow: var(--shadowmd);
 }
-.toast--ok { background: var(--forest); color: #fff; }
+.toast--ok { background: var(--forest); color: var(--white); }
 .toast--er { background: #8b1a1a; color: #fecaca; }
 .toast--nfo { background: #1a3560; color: #bfdbfe; }

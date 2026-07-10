@@ -43,7 +43,7 @@ export function PaymentSheet({
     <Sheet open={open} title="Payment" onClose={onClose}>
       <div style={{ textAlign: 'center', marginBottom: 16 }}>
         <div style={{ fontSize: 11, color: 'var(--gray)' }}>Amount payable</div>
-        <div style={{ fontSize: 28, fontWeight: 800, color: '#2d6a4f' }}>{fmtMoney(amount)}</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--forest-soft)' }}>{fmtMoney(amount)}</div>
       </div>
 
       {METHODS.map((m) => {
@@ -52,11 +52,11 @@ export function PaymentSheet({
           <button key={m.id} type="button" className={`pay-method ${on ? 'on' : ''}`} onClick={() => setMethod(m.id)}>
             <div style={{ fontSize: 22 }}>{m.icon}</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1a3d2b' }}>{m.label}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)' }}>{m.label}</div>
               <div style={{ fontSize: 10, color: '#7a8492' }}>{m.desc}</div>
             </div>
-            <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${on ? '#2d6a4f' : '#cbd5cb'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {on ? <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#2d6a4f' }} /> : null}
+            <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${on ? 'var(--forest-soft)' : '#cbd5cb'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {on ? <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--forest-soft)' }} /> : null}
             </div>
           </button>
         );

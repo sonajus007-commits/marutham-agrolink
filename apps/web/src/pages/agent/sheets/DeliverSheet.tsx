@@ -110,7 +110,7 @@ export function DeliverSheet({
           <div className="a-card">
             <h3>💳 Payment</h3>
             <div className="irow"><span>Method</span><span>{o.pay_method || '—'}</span></div>
-            <div className="irow"><span>Status</span><span style={{ color: o.pay_status === 'paid' ? 'var(--green)' : '#f4a261' }}>{o.pay_status || '—'}</span></div>
+            <div className="irow"><span>Status</span><span style={{ color: o.pay_status === 'paid' ? 'var(--green)' : 'var(--sun)' }}>{o.pay_status || '—'}</span></div>
             <div className="irow"><span>Total</span><span style={{ fontSize: 15, fontWeight: 800, color: 'var(--forest)' }}>{fmtMoney(o.total)}</span></div>
           </div>
 

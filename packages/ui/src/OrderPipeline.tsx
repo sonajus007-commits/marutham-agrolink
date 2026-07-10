@@ -19,12 +19,12 @@ function gapKind(nodes: PipelineNode[], i: number): GapKind {
 
 function Connector({ kind }: { kind: GapKind | 'spacer' }) {
   if (kind === 'spacer') return <div style={{ flex: 1 }} />;
-  if (kind === 'green') return <div style={{ flex: 1, height: 2, background: '#1a7a4a' }} />;
-  if (kind === 'dash') return <div style={{ flex: 1, height: 0, borderTop: '2px dashed #cbd5e1' }} />;
-  return <div style={{ flex: 1, height: 2, background: '#e2e8f0' }} />;
+  if (kind === 'green') return <div style={{ flex: 1, height: 2, background: 'var(--success)' }} />;
+  if (kind === 'dash') return <div style={{ flex: 1, height: 0, borderTop: '2px dashed var(--neutral-300)' }} />;
+  return <div style={{ flex: 1, height: 2, background: 'var(--neutral-200)' }} />;
 }
 
-export function OrderPipeline({ nodes, activeColor = '#f4a261' }: { nodes: PipelineNode[]; activeColor?: string }) {
+export function OrderPipeline({ nodes, activeColor = 'var(--sun)' }: { nodes: PipelineNode[]; activeColor?: string }) {
   const N = nodes.length;
   const totalW = N * NODE_W;
 
@@ -48,9 +48,9 @@ export function OrderPipeline({ nodes, activeColor = '#f4a261' }: { nodes: Pipel
             const active = node.status === 'active';
             const skipped = node.status === 'skipped';
             const green = done || (active && node.label === 'Delivered');
-            const dotBg = green ? '#1a7a4a' : active ? activeColor : '#e2e8f0';
-            const dotBd = green ? '#1a7a4a' : active ? activeColor : '#cbd5e1';
-            const lblCl = green ? '#1a7a4a' : active ? activeColor : '#94a3b8';
+            const dotBg = green ? 'var(--success)' : active ? activeColor : 'var(--neutral-200)';
+            const dotBd = green ? 'var(--success)' : active ? activeColor : 'var(--neutral-300)';
+            const lblCl = green ? 'var(--success)' : active ? activeColor : 'var(--neutral-400)';
             const glow: CSSProperties =
               green && active
                 ? { boxShadow: '0 0 0 4px rgba(26,122,74,.22)' }
@@ -81,9 +81,9 @@ export function OrderPipeline({ nodes, activeColor = '#f4a261' }: { nodes: Pipel
                     }}
                   >
                     {green ? (
-                      <span style={{ fontSize: 10, color: '#fff' }}>✓</span>
+                      <span style={{ fontSize: 10, color: 'var(--white)' }}>✓</span>
                     ) : active ? (
-                      <span style={{ fontSize: 7, color: '#fff' }}>●</span>
+                      <span style={{ fontSize: 7, color: 'var(--white)' }}>●</span>
                     ) : null}
                   </div>
                   <Connector kind={i < N - 1 ? gapKind(nodes, i) : 'spacer'} />
@@ -119,12 +119,12 @@ export function OrderPipeline({ nodes, activeColor = '#f4a261' }: { nodes: Pipel
                   <path
                     d={`M ${x1} 1 L ${x1} ${depth} L ${x2} ${depth} L ${x2} 8`}
                     fill="none"
-                    stroke="#94a3b8"
+                    stroke="var(--neutral-400)"
                     strokeWidth={2}
                     strokeDasharray="4 3"
                   />
-                  <path d={`M ${x2 - 4} 8 L ${x2 + 4} 8 L ${x2} 1 Z`} fill="#94a3b8" />
-                  <text x={midX} y={depth + 8} textAnchor="middle" fontSize={8} fill="#94a3b8" fontWeight={700}>
+                  <path d={`M ${x2 - 4} 8 L ${x2 + 4} 8 L ${x2} 1 Z`} fill="var(--neutral-400)" />
+                  <text x={midX} y={depth + 8} textAnchor="middle" fontSize={8} fill="var(--neutral-400)" fontWeight={700}>
                     skips ahead
                   </text>
                 </svg>

@@ -178,7 +178,7 @@ function OrderDetailBody({
         <div className="ord-card" style={{ textAlign: 'center' }}>
           <h3>📷 Order QR</h3>
           <div
-            style={{ display: 'inline-block', background: '#fff', padding: 8, borderRadius: 12, lineHeight: 0 }}
+            style={{ display: 'inline-block', background: 'var(--surface)', padding: 8, borderRadius: 12, lineHeight: 0 }}
             dangerouslySetInnerHTML={{ __html: qr_svg }}
           />
           <div style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 800, color: 'var(--forest)', marginTop: 6 }}>
@@ -196,7 +196,7 @@ function OrderDetailBody({
           <span className="ilbl">Payment</span>
           <span className="ival">
             {o.pay_method}{' · '}
-            <span style={{ color: o.pay_status === 'paid' ? '#1a7a4a' : '#f4a261' }}>{o.pay_status}</span>
+            <span style={{ color: o.pay_status === 'paid' ? 'var(--success)' : 'var(--sun)' }}>{o.pay_status}</span>
           </span>
         </div>
         {o.delivered_at ? (
@@ -209,7 +209,7 @@ function OrderDetailBody({
         {addressLabel ? (
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--forest)', marginBottom: 3 }}>{addressLabel}</div>
         ) : null}
-        <div style={{ fontSize: 12, color: '#374151', lineHeight: 1.55 }}>{address || '—'}</div>
+        <div style={{ fontSize: 12, color: 'var(--neutral-700)', lineHeight: 1.55 }}>{address || '—'}</div>
       </div>
 
       <div className="ord-card">
@@ -242,7 +242,7 @@ function OrderDetailBody({
         <div className="irow">
           <span className="ilbl">Delivery</span>
           <span className="ival">
-            {charges.delivery > 0 ? fmtMoney(charges.delivery) : <span style={{ color: '#1a7a4a', fontWeight: 700 }}>FREE</span>}
+            {charges.delivery > 0 ? fmtMoney(charges.delivery) : <span style={{ color: 'var(--success)', fontWeight: 700 }}>FREE</span>}
           </span>
         </div>
         <div className="irow">
@@ -264,8 +264,8 @@ function OrderDetailBody({
       ) : null}
 
       {o.return_id ? (
-        <div className="ord-card" style={{ background: '#fff8e6', borderColor: '#f5e0b0' }}>
-          <h3 style={{ color: '#92400e' }}>↩ Return Requested</h3>
+        <div className="ord-card" style={{ background: 'var(--warning-bg)', borderColor: '#f5e0b0' }}>
+          <h3 style={{ color: 'var(--warning-fg)' }}>↩ Return Requested</h3>
           <div className="irow"><span className="ilbl">Return Code</span><span className="ival">{o.return_code || '—'}</span></div>
           <div className="irow"><span className="ilbl">Status</span><span className="ival">{o.return_status || 'pending'}</span></div>
         </div>

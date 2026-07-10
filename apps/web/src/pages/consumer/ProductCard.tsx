@@ -44,7 +44,7 @@ export function ProductCard({
           {product.regional_name ? <div style={{ fontSize: 11, color: 'var(--leaf)' }}>{product.regional_name}</div> : null}
           <div className="prod-path">
             {product.product_group ? <span className="prod-chip">{product.product_group}</span> : null}
-            {product.category ? <span className="prod-chip" style={{ background: '#fffaf0', color: '#92400e' }}>{product.category}</span> : null}
+            {product.category ? <span className="prod-chip" style={{ background: '#fffaf0', color: 'var(--warning-fg)' }}>{product.category}</span> : null}
             {product.sub_type ? <span style={{ fontSize: 9, color: 'var(--gray)' }}>{product.sub_type}</span> : null}
           </div>
           {rating ? <div style={{ marginTop: 3 }}><Stars value={rating.avg_rating} count={rating.num_ratings} /></div> : null}
@@ -117,7 +117,7 @@ export function ProductCard({
 function SellerBadge({ type }: { type?: string }) {
   const retailer = type === 'Retailer';
   return (
-    <span style={{ fontSize: 9, fontWeight: 700, borderRadius: 4, padding: '2px 6px', background: retailer ? '#eff6ff' : '#e6f7ed', color: retailer ? '#1d4ed8' : '#1a7a4a' }}>
+    <span style={{ fontSize: 9, fontWeight: 700, borderRadius: 4, padding: '2px 6px', background: retailer ? '#eff6ff' : '#e6f7ed', color: retailer ? '#1d4ed8' : 'var(--success)' }}>
       {retailer ? '🏪 Retailer' : '🌱 Direct from Farmer'}
     </span>
   );

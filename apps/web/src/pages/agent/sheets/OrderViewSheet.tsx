@@ -50,7 +50,7 @@ function OrderViewBody({ data }: { data: OrderDetail }) {
       {qr_svg ? (
         <div className="a-card" style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 11, color: 'var(--gray)', fontWeight: 600, marginBottom: 8 }}>📷 Order QR — scan to advance</div>
-          <div style={{ display: 'inline-block', background: '#fff', padding: 8, borderRadius: 12, lineHeight: 0 }}
+          <div style={{ display: 'inline-block', background: 'var(--surface)', padding: 8, borderRadius: 12, lineHeight: 0 }}
             dangerouslySetInnerHTML={{ __html: qr_svg }} />
           <div style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 800, color: 'var(--forest)', marginTop: 6 }}>
             {o.code || ''}
@@ -94,7 +94,7 @@ function OrderViewBody({ data }: { data: OrderDetail }) {
           <div className="a-row"><span className="a-row__k">Market fee (multiple farmers)</span><span className="a-row__v">{fmtMoney(charges.marketFee)}</span></div>
         ) : null}
         <div className="a-row"><span className="a-row__k">Delivery</span><span className="a-row__v">{charges.delivery > 0 ? fmtMoney(charges.delivery) : 'FREE'}</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 800, color: 'var(--forest)', marginTop: 6, borderTop: '1px solid #eef4ee', paddingTop: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 800, color: 'var(--forest)', marginTop: 6, borderTop: '1px solid var(--surface-muted)', paddingTop: 6 }}>
           <span>Total</span><span>{fmtMoney(charges.total)}</span>
         </div>
         <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 4 }}>

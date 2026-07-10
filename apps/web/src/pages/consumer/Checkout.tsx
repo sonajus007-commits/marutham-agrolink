@@ -81,14 +81,14 @@ export function Checkout({ bill, onOrderPlaced }: { bill: CartBill; onOrderPlace
         </select>
 
         {choice !== 'new' ? (
-          <div style={{ fontSize: 11, color: 'var(--forest)', lineHeight: 1.55, marginTop: 6, padding: '9px 11px', background: '#f8fdf8', border: '1px solid #eef4ee', borderRadius: 9 }}>
+          <div style={{ fontSize: 11, color: 'var(--forest)', lineHeight: 1.55, marginTop: 6, padding: '9px 11px', background: 'var(--tint-50)', border: '1px solid var(--surface-muted)', borderRadius: 9 }}>
             📦 <b>Deliver to:</b>{' '}
             {choice === 'profile'
               ? (profileText || '⚠️ No profile address on file — add one in the Profile tab.')
               : addrLine(addrs[parseInt(choice)] || {}, parseInt(choice))}
           </div>
         ) : (
-          <div style={{ marginTop: 8, border: '1px dashed #cfe3cf', borderRadius: 10, padding: 12 }}>
+          <div style={{ marginTop: 8, border: '1px dashed var(--tint-400)', borderRadius: 10, padding: 12 }}>
             <AddressFields value={na} onChange={setNa} showPhone error={naError} />
           </div>
         )}

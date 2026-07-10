@@ -40,7 +40,7 @@ export function ProductDetailSheet({
       ) : null}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 14, background: '#f0faf4', borderRadius: 14, marginBottom: rating ? 8 : 16 }}>
-        <div style={{ width: 60, height: 60, borderRadius: 14, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34, flexShrink: 0, overflow: 'hidden' }}>
+        <div style={{ width: 60, height: 60, borderRadius: 14, background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34, flexShrink: 0, overflow: 'hidden' }}>
           {photos[0] ? <img src={photos[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : getProductEmoji(product.name)}
         </div>
         <div>
@@ -60,12 +60,12 @@ export function ProductDetailSheet({
       ) : null}
 
       {offers.length === 0 ? (
-        <div style={{ background: '#f8fdf8', borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 13, color: 'var(--gray)' }}>
+        <div style={{ background: 'var(--tint-50)', borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 13, color: 'var(--gray)' }}>
           No farmers have listed this product today.
         </div>
       ) : (
         <>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 10 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--neutral-700)', marginBottom: 10 }}>
             {offers.length} seller offer{offers.length > 1 ? 's' : ''} today
           </div>
           {offers.map((o, k) => (
@@ -131,13 +131,13 @@ function OfferRow({
   }
 
   return (
-    <div style={{ border: '1.5px solid #eef4ee', borderRadius: 14, padding: 14, marginBottom: 12, opacity: soldOut ? 0.65 : 1 }}>
+    <div style={{ border: '1.5px solid var(--surface-muted)', borderRadius: 14, padding: 14, marginBottom: 12, opacity: soldOut ? 0.65 : 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           {offer.images?.[0] ? (
             <img src={offer.images[0]} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
           ) : (
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--forest)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{initial}</div>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--forest)', color: 'var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{initial}</div>
           )}
           <div>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)' }}>{f.fname || 'Seller'}{f.lname ? ` ${f.lname}` : ''}</span>
@@ -155,11 +155,11 @@ function OfferRow({
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
         {!soldOut ? <span style={{ fontSize: 9, color: 'var(--gray)', background: '#f4f4f4', borderRadius: 4, padding: '2px 6px' }}>{offer.qty_available} {unit} available</span> : null}
         {qtyRule ? <span style={{ fontSize: 9, color: '#c2620a', background: '#fff7ed', borderRadius: 4, padding: '2px 6px' }}>{qtyRule}</span> : null}
-        {perSave > 0 ? <span style={{ fontSize: 9, color: '#1a7a4a', fontWeight: 700, background: '#e6f7ed', borderRadius: 4, padding: '2px 6px' }}>Save ₹{perSave.toFixed(0)}/{unit}</span> : null}
+        {perSave > 0 ? <span style={{ fontSize: 9, color: 'var(--success)', fontWeight: 700, background: '#e6f7ed', borderRadius: 4, padding: '2px 6px' }}>Save ₹{perSave.toFixed(0)}/{unit}</span> : null}
       </div>
 
       {soldOut ? (
-        <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--red)', fontWeight: 700, padding: 8, background: '#fde8e8', borderRadius: 8 }}>Sold out from this farmer</div>
+        <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--red)', fontWeight: 700, padding: 8, background: 'var(--danger-bg)', borderRadius: 8 }}>Sold out from this farmer</div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <QtyStepper value={qty} min={minQty} step={step} unit={unit} integer={!unitAllowsDecimal(unit)} onChange={setQty} />
