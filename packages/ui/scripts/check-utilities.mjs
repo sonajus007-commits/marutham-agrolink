@@ -80,8 +80,12 @@ for (const file of walk(UI)) {
     // opens a string literal that runs on until the next quote, swallowing code.
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/^\s*\/\/.*$/gm, '')
-    // Import specifiers are dash-bearing strings that are not utilities.
-    .replace(/^\s*(import|export)\b.*$/gm, '');
+    // Module specifiers are dash-bearing strings that are not utilities.
+    // Matched by the `from '…'` that introduces them rather than by line: a
+    // multi-line `import { A, B } from 'lucide-react'` puts the specifier on a
+    // line that does not itself start with `import`, and it was being scanned
+    // as a class list.
+    .replace(/\b(from|import)\s+'[^']*'/g, '');
 
   // Scanned per quote style, not with one combined character class: a class
   // list may legitimately embed the *other* quote — `before:content-['']` lives

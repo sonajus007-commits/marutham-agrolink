@@ -74,11 +74,40 @@ Two things Radix does **not** do for us, both found by driving a real browser:
 outside-pointer events are cancelled. It is the suspended seller's subscription
 gate; there is no way out but the action it asks for.
 
+## Table
+
+The one component here with enough logic to be worth testing. All of it —
+sorting, filtering, pagination, selection, CSV — lives in `@marutham/lib/table`,
+pure and DOM-free, so `pnpm test` covers it without a renderer and a React
+Native table can reuse it. `Table.tsx` is markup, ARIA and state.
+
+Four decisions that look arbitrary and are not:
+
+- **`border-separate`, not `border-collapse`.** Under `collapse` the borders
+  belong to the table, not the cell, and Chrome scrolls a sticky header's bottom
+  border away from it. The sticky header only sticks against a bounded scroller,
+  so it needs `maxHeight` to do anything.
+- **Empty cells sort last in both directions.** Reversing a sort surfaces the
+  largest values; it should not promote the rows missing the value entirely.
+- **Strings compare under numeric collation.** The API returns Postgres
+  `numeric` as a string, so one column holds `1200.50` and `900` — a plain
+  codepoint sort puts `1200.50` first.
+- **CSV export escapes formula leads** (`=`, `+`, `-`, `@`) and ships a BOM.
+  Cells carry user-typed names, and `=cmd|' /C calc'!A0` is a live formula the
+  moment Excel opens the file. Without the BOM, Excel reads the file in the
+  local ANSI codepage and mangles every Tamil name in it.
+
+Select-all governs the current page only, and a selection survives paging away
+and back. Export sends the filtered, sorted rows — or just the selected ones,
+when there is a selection.
+
 ## Migration status
 
 Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
 `EmptyState` `StatTile` `FilterChips` `QtyStepper` `StarRating` `OrderProgress`
 `OrderTimeline` `Sheet` `Modal` `OrderPipeline`.
+
+Phase 2E adds what the brief needs and never existed. `Table` is the first.
 
 `OrderPipeline` keeps inline styles for two things on purpose: node width, which
 the SVG path arithmetic reads, and colour, which is a runtime string

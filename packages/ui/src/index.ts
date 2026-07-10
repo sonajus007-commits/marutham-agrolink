@@ -25,3 +25,5 @@ export { FilterChips } from './FilterChips';
 export type { ChipOption } from './FilterChips';
 export { QtyStepper } from './QtyStepper';
 export type { QtyStepperProps } from './QtyStepper';
+export { Table } from './Table';
+export type { TableColumn, TableProps } from './Table';
