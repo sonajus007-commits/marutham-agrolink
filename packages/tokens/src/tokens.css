@@ -105,6 +105,7 @@
   --disabled-fg: #8a978c;
   --focus-ring: rgba(78, 159, 61, .12);
   --focus-ring-strong: rgba(78, 159, 61, .2);
+  --overlay-scrim: rgba(0, 0, 0, .55);
 
   /* ── Typography ── */
   --font-sans: 'Outfit', system-ui, sans-serif;
@@ -221,4 +222,5 @@
   --disabled-fg: #6b7a70;
   --focus-ring: rgba(116, 194, 92, .22);
   --focus-ring-strong: rgba(116, 194, 92, .32);
+  --overlay-scrim: rgba(0, 0, 0, .7);
 }

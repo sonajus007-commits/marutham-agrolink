@@ -1,55 +1,18 @@
-/* Component styles still awaiting the Phase 2C rebuild.
+/* The last of the pre-Tailwind component styles.
  *
- * What is left, and why:
+ * Every component in packages/ui has been rebuilt. What is left here is styling
+ * for class names that apps/web writes by hand, so deleting it means editing app
+ * screens — Phase 4's job, not the design system's:
  *
- *   Sheet, Modal        waiting on Radix Dialog, which replaces the hand-rolled
- *                       focus trap and escape handling rather than restyling it.
+ *   .ma-field, .ma-input,   PasswordInput, AddressFields, ProfileTab,
+ *   .ma-select, .ma-pw*     ListingFormSheet, ProductsTab
  *
- *   .ma-field, .ma-input,  apps/web writes these class names directly
- *   .ma-select, .ma-pw*    (PasswordInput, AddressFields, ProfileTab,
- *                          ListingFormSheet, ProductsTab). Converting them means
- *                          editing app code, so they move with their screens.
- *
- *   .ma-tabs, .ma-tab,  the shared mobile shell, likewise applied by hand in
- *   .ma-lang,           ConsumerPage and FarmerPage.
- *   .ma-iconbtn,
+ *   .ma-tabs, .ma-tab,      the shared mobile shell, applied in
+ *   .ma-lang, .ma-iconbtn,  ConsumerPage and FarmerPage
  *   .ma-appbody
  *
  * When this file is empty, turn preflight on and drop the `appearance-none
  * border-0 font-sans` resets the rebuilt components currently carry. */
-
-/* ── Sheet (full-screen mobile overlay) ── */
-.ma-sheet {
-  position: fixed;
-  inset: 0;
-  background: var(--bg);
-  z-index: 300;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-.ma-sheet__hdr {
-  background: linear-gradient(135deg, var(--forest), var(--forest-soft));
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-.ma-sheet__back {
-  background: rgba(255, 255, 255, .15);
-  color: var(--white);
-  border: none;
-  border-radius: 10px;
-  width: 36px; height: 36px;
-  font-size: 18px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.ma-sheet__title { color: var(--white); font-size: 16px; font-weight: 700; }
-.ma-sheet__body { padding: 18px; flex: 1; }
 
 /* ── Mobile role shell ──────────────────────────────────────────────────
  * Chrome shared by every role's phone-width screen: the tab bar, the language
@@ -136,36 +99,3 @@ textarea.ma-input { resize: vertical; min-height: 64px; }
   background: var(--neutral-300); flex-shrink: 0;
 }
 .ma-pwrules li.is-met .ma-pwrules__dot { background: var(--success); }
-
-/* ── Modal ─────────────────────────────────────────────────────────────── */
-.ma-modal__bg {
-  position: fixed; inset: 0; z-index: 800;
-  background: rgba(0, 0, 0, .55);
-  display: flex; align-items: center; justify-content: center;
-  padding: 20px 12px;
-  overflow-y: auto;
-}
-.ma-modal {
-  background: var(--surface);
-  border-radius: 16px;
-  width: 100%; max-width: 420px;
-  max-height: 88vh;
-  display: flex; flex-direction: column;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, .28);
-  outline: none;
-}
-.ma-modal__hdr {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; padding: 16px 16px 10px;
-}
-.ma-modal__title { font-size: 15px; font-weight: 800; color: var(--forest); }
-.ma-modal__sub { font-size: 11px; color: var(--gray); margin-top: 3px; line-height: 1.5; }
-.ma-modal__x {
-  border: none; background: none; cursor: pointer;
-  font-size: 15px; color: var(--gray); line-height: 1; padding: 4px;
-}
-.ma-modal__body { padding: 0 16px; overflow-y: auto; flex: 1; }
-.ma-modal__foot {
-  display: flex; gap: 8px; padding: 14px 16px 16px;
-}
-.ma-modal__foot > * { flex: 1; }

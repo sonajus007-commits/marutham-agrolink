@@ -50,26 +50,40 @@ Turn preflight on once `ui.css` is empty, and strip those three classes.
 - `pnpm tokens:literals` (CI) — no hard-coded colours anywhere.
 - `pnpm tokens:contrast` (CI) — every semantic pair clears WCAG.
 
+## Dialogs
+
+`Sheet` and `Modal` are Radix Dialog. Radix supplies the focus trap, the
+`inert` background, Escape, and — importantly — keeps nesting honest: a `Modal`
+opened from inside a `Sheet` takes the top of the dismissable-layer stack, so
+Escape closes the `Modal` and leaves the `Sheet` standing.
+
+Two things Radix does **not** do for us, both found by driving a real browser:
+
+- **Scroll lock lives in `Dialog.Overlay`, not `Dialog.Content`.** `Sheet` renders
+  an invisible Overlay purely for this. Delete it and the page scrolls behind a
+  full-screen sheet.
+- **Focus is returned to `Dialog.Trigger`.** Every dialog here is controlled by an
+  `open` prop, so there is no Trigger, and Radix hands focus to `<body>`.
+  `lib/useReturnFocus.ts` captures the real trigger and both dialogs restore it
+  via `onCloseAutoFocus`.
+
+`Modal`'s `dismissible={false}` closes all three exits — no ✕, and Escape and
+outside-pointer events are cancelled. It is the suspended seller's subscription
+gate; there is no way out but the action it asks for.
+
 ## Migration status
 
-Rebuilt on Tailwind + cva: `Button` `Card` `KpiCard` `Badge` `Spinner`
+Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
 `EmptyState` `StatTile` `FilterChips` `QtyStepper` `StarRating` `OrderProgress`
-`OrderTimeline`.
+`OrderTimeline` `Sheet` `Modal`. `OrderPipeline` never used `ui.css` — it is
+inline styles and SVG.
 
-`OrderPipeline` never used `ui.css` — it is inline styles and SVG, and converts
-with the rest.
+What is left in `ui.css` is styling for class names **`apps/web` writes by
+hand**, so deleting it means editing app screens — Phase 4's job:
 
-Still on `ui.css`, and why:
+- `.ma-field`, `.ma-input`, `.ma-select`, `.ma-pw*` — `PasswordInput`,
+  `AddressFields`, `ProfileTab`, `ListingFormSheet`, `ProductsTab`.
+- `.ma-tabs`, `.ma-tab`, `.ma-lang`, `.ma-iconbtn`, `.ma-appbody` — the shared
+  mobile shell, in `ConsumerPage` and `FarmerPage`.
 
-- **`Sheet`, `Modal`** — waiting on Radix Dialog. Both hand-roll a focus trap
-  and escape handling (`useEscapeDismiss.ts`); that is behaviour to replace, not
-  CSS to restyle, so it gets its own commit.
-- **`Field`, `.ma-input`, `.ma-select`, `.ma-pw*`** — `apps/web` applies these
-  class names directly, in `PasswordInput`, `AddressFields`, `ProfileTab`,
-  `ListingFormSheet` and `ProductsTab`. Converting them means editing app code,
-  so they move with their screens.
-- **`.ma-tabs`, `.ma-tab`, `.ma-lang`, `.ma-iconbtn`, `.ma-appbody`** — the
-  shared mobile shell, likewise applied by hand in `ConsumerPage` and
-  `FarmerPage`.
-
-355 lines at the start of Stage 0, 171 now.
+355 lines at the start of Stage 0, 101 now.

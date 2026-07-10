@@ -174,6 +174,8 @@ export const semantic = {
     /* Heavier halo, for a marker that must read as "you are here" rather than
      * "this input has focus" — the live dot on the order timeline. */
     focusRingStrong: 'rgba(78, 159, 61, .2)',
+    /** Scrim behind a modal dialog. */
+    overlayScrim: 'rgba(0, 0, 0, .55)',
   },
   dark: {
     bg: '#0e1512',
@@ -225,6 +227,9 @@ export const semantic = {
 
     focusRing: 'rgba(116, 194, 92, .22)',
     focusRingStrong: 'rgba(116, 194, 92, .32)',
+    /* Darker on dark: the surface beneath is already near-black, so a .55 scrim
+     * would barely separate the dialog from its background. */
+    overlayScrim: 'rgba(0, 0, 0, .7)',
   },
 } as const;
 

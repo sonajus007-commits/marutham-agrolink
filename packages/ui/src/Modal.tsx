@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
-import { useEscapeDismiss } from './useEscapeDismiss';
+import type { ReactNode } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { useReturnFocus } from './lib/useReturnFocus';
 
 export interface ModalProps {
   open: boolean;
@@ -22,53 +23,59 @@ export interface ModalProps {
  * Centred confirmation dialog — the small-decision counterpart to <Sheet>,
  * which takes over the whole screen and suits browsing, not confirming.
  *
- * Accessibility: role="dialog" + aria-modal, labelled by its heading, locks
- * background scroll, moves focus in on open and restores it to the trigger on
- * close. A dismissible dialog also closes on Escape and on backdrop click.
+ * Radix Dialog provides the focus trap, focus restoration to the trigger, the
+ * scroll lock and Escape. `dismissible={false}` closes all three exits: the ✕ is
+ * not rendered, and Escape and outside-pointer events are cancelled before Radix
+ * acts on them. The dialog is still announced as modal; it simply has no way out
+ * but the action it asks for.
+ *
+ * Content sits inside Overlay so a dialog taller than the viewport scrolls the
+ * scrim with it, rather than being clipped by a fixed, centred panel.
  */
 export function Modal({ open, title, onClose, children, footer, dismissible = true, subtitle }: ModalProps) {
-  const titleId = useId();
-  const panelRef = useRef<HTMLDivElement>(null);
+  const returnFocus = useReturnFocus(open);
 
-  // A non-dismissible dialog does not register on the escape stack at all, so
-  // Escape falls through to whatever overlay sits beneath it — nothing here.
-  useEscapeDismiss(open && dismissible, onClose);
-
-  useEffect(() => {
-    if (!open) return;
-    const restoreTo = document.activeElement as HTMLElement | null;
-    // Nested locks nest correctly: the Sheet beneath restores 'hidden', not ''.
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    panelRef.current?.focus();
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      restoreTo?.focus?.();
-    };
-  }, [open]);
-
-  if (!open) return null;
+  /** Cancel the event when the dialog must not be escaped. */
+  const block = (e: Event) => {
+    if (!dismissible) e.preventDefault();
+  };
 
   return (
-    <div
-      className="ma-modal__bg"
-      onClick={(e) => {
-        if (dismissible && e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="ma-modal" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={panelRef} tabIndex={-1}>
-        <div className="ma-modal__hdr">
-          <div>
-            <h3 id={titleId} className="ma-modal__title">{title}</h3>
-            {subtitle ? <p className="ma-modal__sub">{subtitle}</p> : null}
-          </div>
-          {dismissible ? (
-            <button className="ma-modal__x" onClick={onClose} aria-label="Close">✕</button>
-          ) : null}
-        </div>
-        <div className="ma-modal__body">{children}</div>
-        {footer ? <div className="ma-modal__foot">{footer}</div> : null}
-      </div>
-    </div>
+    <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-[var(--z-overlay)] grid place-items-center overflow-y-auto bg-[var(--overlay-scrim)] px-3 py-5">
+          <Dialog.Content
+            className="flex max-h-[88vh] w-full max-w-[420px] flex-col rounded-lg bg-surface shadow-lg outline-none"
+            onEscapeKeyDown={block}
+            onPointerDownOutside={block}
+            onInteractOutside={block}
+            onCloseAutoFocus={(e) => {
+              e.preventDefault();
+              returnFocus();
+            }}
+            aria-describedby={undefined}
+          >
+            <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2.5">
+              <div>
+                <Dialog.Title className="text-[15px] font-black text-primary">{title}</Dialog.Title>
+                {subtitle ? (
+                  <p className="mt-[3px] text-sm leading-normal text-fg-muted">{subtitle}</p>
+                ) : null}
+              </div>
+              {dismissible ? (
+                <Dialog.Close
+                  className="cursor-pointer appearance-none border-0 bg-transparent p-1 text-[15px] leading-none text-fg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
+                  aria-label="Close"
+                >
+                  ✕
+                </Dialog.Close>
+              ) : null}
+            </div>
+            <div className="flex-1 overflow-y-auto px-4">{children}</div>
+            {footer ? <div className="flex gap-2 px-4 pt-3.5 pb-4 [&>*]:flex-1">{footer}</div> : null}
+          </Dialog.Content>
+        </Dialog.Overlay>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
