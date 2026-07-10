@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
 
 // API path prefixes served by the Express backend. In dev these are proxied to
@@ -16,7 +17,7 @@ export default defineConfig({
   // Built assets and routes live under /app so Express can serve the SPA there
   // alongside the legacy HTML site at the root.
   base: '/app/',
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     // Ensure a single React instance across the app and the aliased UI package.
     dedupe: ['react', 'react-dom'],

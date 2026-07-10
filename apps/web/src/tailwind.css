@@ -1,0 +1,178 @@
+/*
+ * Tailwind v4, themed from @marutham/tokens.
+ *
+ * Two deliberate omissions:
+ *
+ * 1. PREFLIGHT IS NOT IMPORTED. Tailwind's reset restyles buttons, headings,
+ *    lists and images, and every existing stylesheet was written against the
+ *    app's own reset in styles.css. Pulling preflight in now would repaint
+ *    screens that this phase is supposed to leave alone. It goes in during
+ *    Phase 2C, when the components are rebuilt on shadcn/ui and each screen is
+ *    being looked at anyway.
+ *
+ * 2. THE DEFAULT PALETTE IS RESET (`--color-*: initial`). There is exactly one
+ *    palette, and it lives in tokens.ts. `bg-red-500` should not resolve.
+ *
+ * PRECEDENCE, while both systems coexist: utilities live in the `utilities`
+ * cascade layer, and every legacy stylesheet (ui.css, styles.css, the three
+ * page stylesheets) is unlayered. Unlayered CSS outranks layered CSS, so a
+ * legacy rule currently beats a utility on the same element and property. That
+ * is the safe direction during migration — nothing you have already shipped can
+ * be knocked over by a stray class — and it inverts on its own as those files
+ * are deleted in 2C and Phase 4.
+ */
+
+/* tokens.css FIRST, and unlayered on purpose.
+ *
+ * Several theme keys below map a Tailwind variable onto a token of the same
+ * name — `--radius-md: var(--radius-md)`. Tailwind emits its copy inside
+ * `@layer theme`; tokens.css is unlayered, and unlayered CSS outranks layered
+ * CSS, so the token's real value wins and there is no cycle. Drop tokens.css
+ * and that stops being true: the self-reference becomes the only declaration,
+ * the custom property is invalid at computed-value time, and every rounded-*,
+ * font-* and shadow-* utility silently does nothing. Importing it here means
+ * the two can never be separated. */
+@import '@marutham/tokens/tokens.css';
+
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* packages/ui is outside this app's root, so its class names are invisible to
+ * Tailwind's scanner unless we say so. */
+@source '../../../packages/ui/src';
+
+/* Tailwind's stock `dark:` variant keys off prefers-color-scheme. The token
+ * layer deliberately does not — a dark-OS user must not be flipped into an
+ * unreviewed theme. Point the variant at the same [data-theme] switch the
+ * tokens use, so `dark:bg-primary` and `var(--primary)` never disagree. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme inline {
+  /* `inline` matters. It tells Tailwind not to re-declare these as its own
+   * custom properties, but to substitute the text `var(--surface)` straight
+   * into the utility. So `bg-surface` compiles to
+   * `background-color: var(--surface)` and follows [data-theme='dark'] for
+   * free, instead of freezing the light value at build time. */
+
+  --color-*: initial;
+  --font-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-inherit: inherit;
+
+  /* Semantic roles — reach for these. */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-muted: var(--surface-muted);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+
+  --color-primary: var(--primary);
+  --color-primary-on: var(--primary-on);
+  --color-primary-hover: var(--primary-hover);
+
+  --color-accent: var(--accent);
+  --color-accent-on: var(--accent-on);
+  --color-accent-bg: var(--accent-bg);
+  --color-accent-fg: var(--accent-fg);
+
+  --color-success: var(--success);
+  --color-success-on: var(--success-on);
+  --color-success-bg: var(--success-bg);
+  --color-success-fg: var(--success-fg);
+
+  --color-warning: var(--warning);
+  --color-warning-on: var(--warning-on);
+  --color-warning-strong: var(--warning-strong);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-fg: var(--warning-fg);
+
+  --color-danger: var(--danger);
+  --color-danger-on: var(--danger-on);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-fg: var(--danger-fg);
+
+  --color-info: var(--info);
+  --color-info-on: var(--info-on);
+  --color-info-bg: var(--info-bg);
+  --color-info-fg: var(--info-fg);
+
+  --color-schedule: var(--schedule);
+  --color-schedule-on: var(--schedule-on);
+  --color-schedule-bg: var(--schedule-bg);
+  --color-schedule-fg: var(--schedule-fg);
+
+  --color-disabled-bg: var(--disabled-bg);
+  --color-disabled-fg: var(--disabled-fg);
+
+  /* Brand primitives — decoration only: gradients, illustration, display type.
+   * `bloom` in particular cannot legibly carry text; use `accent` for that. */
+  --color-forest: var(--forest);
+  --color-forest-soft: var(--forest-soft);
+  --color-forest-deep: var(--forest-deep);
+  --color-forest-night: var(--forest-night);
+  --color-leaf: var(--leaf);
+  --color-sage: var(--sage);
+  --color-mint: var(--mint);
+  --color-bloom: var(--bloom);
+  --color-cream: var(--cream);
+  --color-gold: var(--gold);
+  --color-sun: var(--sun);
+  --color-white: var(--white);
+
+  /* Ramps. */
+  --color-tint-25: var(--tint-25);
+  --color-tint-50: var(--tint-50);
+  --color-tint-100: var(--tint-100);
+  --color-tint-200: var(--tint-200);
+  --color-tint-300: var(--tint-300);
+  --color-tint-400: var(--tint-400);
+  --color-tint-500: var(--tint-500);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-700: var(--neutral-700);
+
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+  --font-tamil: var(--font-tamil);
+
+  --text-2xs: var(--fs-2xs);
+  --text-xs: var(--fs-xs);
+  --text-sm: var(--fs-sm);
+  --text-base: var(--fs-base);
+  --text-md: var(--fs-md);
+  --text-lg: var(--fs-lg);
+  --text-xl: var(--fs-xl);
+  --text-2xl: var(--fs-2xl);
+  --text-3xl: var(--fs-3xl);
+  --text-4xl: var(--fs-4xl);
+
+  /* Tailwind derives p-1, p-2, gap-3 … by multiplying this. 4px makes the
+   * utility scale land exactly on the token spacing scale: p-3 is 12px. */
+  --spacing: 4px;
+
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radiussm);
+  --radius-md: var(--radius-md);
+  --radius-base: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-pill: var(--radius-pill);
+  --radius-full: var(--radius-full);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-base: var(--shadow);
+  --shadow-md: var(--shadowmd);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+}
