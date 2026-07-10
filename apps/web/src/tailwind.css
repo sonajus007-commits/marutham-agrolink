@@ -39,6 +39,26 @@
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
+/* The app's own reset, in `base` so utilities outrank it.
+ *
+ * This used to sit unlayered at the top of styles.css, where it beat every
+ * `p-*`, `m-*` and `gap-*` utility in packages/ui — unlayered CSS wins over any
+ * cascade layer no matter how specific the layered selector is. Buttons rendered
+ * with no vertical padding. Nothing caught it: the class was in the bundle, the
+ * build was green, and check-utilities.mjs only asserts that a class exists, not
+ * that it wins.
+ *
+ * Preflight replaces this block when it lands in 2C. */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+}
+
 /* packages/ui is outside this app's root, so its class names are invisible to
  * Tailwind's scanner unless we say so. */
 @source '../../../packages/ui/src';

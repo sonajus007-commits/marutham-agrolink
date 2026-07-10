@@ -2,7 +2,9 @@
  * main.tsx). Component styles come from @marutham/ui. This file only holds
  * app-shell layout. */
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+/* The global reset moved to @layer base in tailwind.css. Unlayered CSS outranks
+ * every cascade layer regardless of specificity, so a `* { padding: 0 }` here
+ * silently beat the `py-*` utility on every rebuilt component in packages/ui. */
 
 body {
   font-family: 'Outfit', system-ui, sans-serif;
