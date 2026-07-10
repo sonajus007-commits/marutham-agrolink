@@ -222,6 +222,13 @@
   --animate-accordion-up: accordion-up 180ms var(--ease-standard);
 
   --animate-progress-slide: progress-slide 1.2s var(--ease-standard) infinite;
+
+  /* The mobile nav drawer (<AppShell>). Radix holds the unmount until the
+   * -out animation ends, so the panel slides away instead of vanishing. */
+  --animate-drawer-in: drawer-in 200ms var(--ease-standard);
+  --animate-drawer-out: drawer-out 160ms var(--ease-standard);
+  --animate-scrim-in: scrim-in 200ms var(--ease-standard);
+  --animate-scrim-out: scrim-out 160ms var(--ease-standard);
 }
 
 @keyframes spin-ring {
@@ -255,5 +262,41 @@
   }
   to {
     transform: translateX(300%);
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes drawer-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scrim-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }

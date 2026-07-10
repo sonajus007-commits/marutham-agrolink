@@ -314,6 +314,29 @@ cluster is the one region visible at every width — notifications and the accou
 menu must always be reachable — and `ml-auto` pins it right whether or not the
 search grows the middle.
 
+## AppShell (Phase 3)
+
+The Admin / Executive console layout, and the last piece of the shell: it puts
+`Sidebar` and `Header` around the page and, below `lg`, turns the sidebar into a
+slide-in drawer the Header's hamburger opens.
+
+AppShell owns the drawer's open state, because two components must agree on it —
+the Header raises it, the drawer consumes it. So `header` is a **render function**
+handed `openNav` to wire onto the hamburger, while `sidebar` is a plain node used
+in both places: the static rail at `lg`+ and the drawer below. Pass `currentPath`
+and a navigation closes the drawer (setting it closed when already closed is a
+no-op, so it is safe every render); a tap on a drawer link closes it too, while a
+group toggle — a `<button>`, not an `<a>` — leaves it open. Growing back to `lg`
+retires the drawer via a `matchMedia` listener.
+
+The drawer is Radix Dialog, like `Sheet`: focus trap, scroll lock, Escape, and an
+`aria-hidden` background. It has no `Dialog.Trigger`, so focus is returned to the
+hamburger by hand with `useReturnFocus`. (Radix does **not** set `aria-modal` — it
+hides the background instead, which is the more robust signal; don't assert on
+`aria-modal`.) The slide uses `drawer-in`/`drawer-out` keyframes in
+`apps/web/src/tailwind.css`, so Radix holds the unmount until the exit animation
+ends.
+
 ## Migration status
 
 Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
@@ -326,8 +349,8 @@ Phase 2E adds what the brief needs and never existed: `Table`, `Skeleton`,
 completes the brief's primitive list. `Toast` stays app-level in
 `apps/web/src/components/Toast.tsx`. Phase 2D adds `ChartContainer` and
 `MapContainer` — the chart/map chrome, chart library handed in. Phase 3 builds the shared shell:
-`Sidebar` (Admin/Executive rail) and `Header` (the top bar); the `AppShell`
-layout that composes them is next.
+`Sidebar` (Admin/Executive rail), `Header` (the top bar), and `AppShell` (the
+console layout that composes them, with the sidebar as a mobile drawer).
 
 `OrderPipeline` keeps inline styles for two things on purpose: node width, which
 the SVG path arithmetic reads, and colour, which is a runtime string
