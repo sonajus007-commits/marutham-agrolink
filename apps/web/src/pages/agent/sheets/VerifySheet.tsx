@@ -91,7 +91,7 @@ export function VerifySheet({
               ✓ {matched.length} agent{matched.length > 1 ? 's' : ''} cover this village — auto-selected.
             </div>
           ) : (
-            <div style={{ fontSize: 11, color: 'var(--warning-fg)', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: 'var(--warning-fg)', background: 'var(--warning-bg)', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }}>
               No agent is tagged to this village. Pick one manually.
             </div>
           )}

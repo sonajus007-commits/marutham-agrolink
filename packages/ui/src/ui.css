@@ -241,7 +241,7 @@
   border-color: var(--leaf); box-shadow: 0 0 0 3px rgba(78, 159, 61, .12);
 }
 .ma-input[aria-invalid='true'], .ma-select[aria-invalid='true'] { border-color: var(--red); }
-.ma-input:disabled, .ma-select:disabled { background: #f5f7f5; cursor: not-allowed; }
+.ma-input:disabled, .ma-select:disabled { background: var(--tint-25); cursor: not-allowed; }
 textarea.ma-input { resize: vertical; min-height: 64px; }
 
 /* Password input with a reveal toggle. */

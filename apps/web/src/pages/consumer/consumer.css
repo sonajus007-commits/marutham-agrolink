@@ -48,7 +48,7 @@
 /* Product card */
 .prod-card { background: var(--surface); border: 1px solid var(--surface-muted); border-radius: 14px; padding: 14px; box-shadow: 0 2px 10px rgba(31, 107, 59, .05); }
 .prod-top { display: flex; align-items: flex-start; }
-.prod-thumb { width: 52px; height: 52px; border-radius: 12px; overflow: hidden; flex-shrink: 0; margin-right: 10px; background: linear-gradient(135deg, #e8f5e9, #f1f8e9); display: flex; align-items: center; justify-content: center; font-size: 28px; }
+.prod-thumb { width: 52px; height: 52px; border-radius: 12px; overflow: hidden; flex-shrink: 0; margin-right: 10px; background: linear-gradient(135deg, var(--success-bg), #f1f8e9); display: flex; align-items: center; justify-content: center; font-size: 28px; }
 .prod-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .prod-name { font-weight: 800; font-size: 14px; color: var(--forest); }
 .prod-path { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; align-items: center; }
@@ -56,7 +56,7 @@
 .prod-price-box { text-align: right; margin-left: auto; }
 .prod-price { font-size: 18px; font-weight: 800; color: var(--leaf); }
 .prod-unit { font-size: 9px; color: var(--gray); }
-.prod-meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f4f0; }
+.prod-meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--muted); }
 .prod-actions { margin-left: auto; display: flex; align-items: center; }
 .stars { color: var(--sun); letter-spacing: 1px; font-size: 12px; }
 
@@ -93,7 +93,7 @@
   display: flex; align-items: center; gap: 12px; padding: 13px 14px;
   border: 2px solid #e3e8e3; background: var(--surface); border-radius: 12px; margin-bottom: 10px; cursor: pointer; width: 100%; font-family: inherit; text-align: left;
 }
-.pay-method.on { border-color: var(--forest-soft); background: #f0faf4; }
+.pay-method.on { border-color: var(--forest-soft); background: var(--bg); }
 
 /* ── Home + Orders (Phase 2B) ──────────────────────────────────────────── */
 .cons-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -114,7 +114,7 @@
 .ord-list { display: flex; flex-direction: column; }
 .ord-item {
   display: flex; align-items: center; gap: 10px; width: 100%;
-  padding: 12px 0; border: none; border-bottom: 1px solid #f0f4f0;
+  padding: 12px 0; border: none; border-bottom: 1px solid var(--muted);
   background: none; font-family: inherit; text-align: left; cursor: pointer;
 }
 .ord-item:last-child { border-bottom: none; }
@@ -150,7 +150,7 @@
 
 /* Agent + ETA boxes inside the detail sheet. */
 .track-box { flex: 1; min-width: 130px; border-radius: 8px; padding: 8px 12px; }
-.track-box--agent { background: #f0faf4; }
+.track-box--agent { background: var(--bg); }
 .track-box--eta { background: var(--warning-bg); }
 .track-box__k { font-size: 10px; font-weight: 600; color: var(--gray); }
 .track-box--eta .track-box__k { color: var(--warning-fg); }
@@ -181,7 +181,7 @@
 }
 .prof-empty { font-size: 11px; color: var(--gray); padding: 4px 0; }
 
-.lid-box { background: #f0faf4; border: 1px dashed #b7e4c7; border-radius: 12px; padding: 12px; margin-bottom: 12px; text-align: center; }
+.lid-box { background: var(--bg); border: 1px dashed #b7e4c7; border-radius: 12px; padding: 12px; margin-bottom: 12px; text-align: center; }
 .lid-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--gray); }
 .lid-val { font-family: monospace; font-size: 16px; font-weight: 800; color: var(--forest); margin: 3px 0; }
 .lid-note { font-size: 9px; color: var(--gray); }
@@ -189,7 +189,7 @@
 .prof-rows { margin: 0; }
 .prof-row {
   display: flex; justify-content: space-between; gap: 12px;
-  font-size: 12px; padding: 7px 0; border-bottom: 1px solid #f0f4f0;
+  font-size: 12px; padding: 7px 0; border-bottom: 1px solid var(--muted);
 }
 .prof-row:last-child { border-bottom: none; }
 .prof-row dt { color: var(--gray); flex-shrink: 0; }
@@ -198,7 +198,7 @@
 
 .prof-editbtn {
   width: 100%; margin-top: 12px; padding: 10px;
-  background: #f0faf4; color: var(--forest); border: 1.5px solid #b7e4c7;
+  background: var(--bg); color: var(--forest); border: 1.5px solid #b7e4c7;
   border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
 }
 .prof-form { margin-top: 14px; border-top: 1px solid var(--surface-muted); padding-top: 14px; }
@@ -230,7 +230,7 @@
   background: #f8f8ff; color: var(--neutral-700); border-radius: 6px; cursor: pointer; font-family: inherit;
 }
 .addr-btn:disabled { opacity: .5; cursor: not-allowed; }
-.addr-btn--default { border-color: #c3e6cb; background: #f0faf4; color: var(--forest); }
+.addr-btn--default { border-color: #c3e6cb; background: var(--bg); color: var(--forest); }
 .addr-btn--danger { border-color: #fee2e2; background: #fff5f5; color: var(--danger); }
 
 /* Return-modal item picker. */

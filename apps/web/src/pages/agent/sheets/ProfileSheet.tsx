@@ -185,7 +185,7 @@ export function ProfileSheet({ open, onClose, isVCO }: { open: boolean; onClose:
 
       <button
         onClick={logout}
-        style={{ background: '#fdeaea', color: 'var(--red)', border: '1px solid #f5c6c6', borderRadius: 12, padding: 13, fontSize: 13, fontWeight: 700, cursor: 'pointer', width: '100%' }}
+        style={{ background: 'var(--danger-bg)', color: 'var(--red)', border: '1px solid #f5c6c6', borderRadius: 12, padding: 13, fontSize: 13, fontWeight: 700, cursor: 'pointer', width: '100%' }}
       >
         {t('agent.profile.signOut')}
       </button>

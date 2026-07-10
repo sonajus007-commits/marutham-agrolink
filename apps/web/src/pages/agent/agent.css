@@ -117,7 +117,7 @@
 .fd-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
 @media (max-width: 360px) { .fd-grid { grid-template-columns: repeat(2, 1fr); } }
 .fd-refresh {
-  padding: 5px 11px; background: #f0faf4; border: 1.5px solid #c3e6cb; border-radius: 9px;
+  padding: 5px 11px; background: var(--bg); border: 1.5px solid #c3e6cb; border-radius: 9px;
   font-size: 11px; font-weight: 700; color: var(--forest); cursor: pointer; font-family: inherit;
 }
 
@@ -127,7 +127,7 @@
 .cod-bar { background: linear-gradient(135deg, var(--warning-fg), #d97706); border-radius: 14px; padding: 16px; text-align: center; margin-bottom: 16px; }
 .cod-bar__amt { font-size: 28px; font-weight: 800; color: var(--white); font-family: 'JetBrains Mono', monospace; }
 .cod-bar__label { font-size: 11px; color: rgba(255, 255, 255, .8); margin-top: 4px; }
-.irow { display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid #f0f4f0; }
+.irow { display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid var(--muted); }
 .irow:last-child { border-bottom: none; }
 .route-toggle { display: flex; gap: 8px; }
 .route-btn {

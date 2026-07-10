@@ -39,7 +39,7 @@ export function ProductDetailSheet({
         </div>
       ) : null}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 14, background: '#f0faf4', borderRadius: 14, marginBottom: rating ? 8 : 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 14, background: 'var(--bg)', borderRadius: 14, marginBottom: rating ? 8 : 16 }}>
         <div style={{ width: 60, height: 60, borderRadius: 14, background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34, flexShrink: 0, overflow: 'hidden' }}>
           {photos[0] ? <img src={photos[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : getProductEmoji(product.name)}
         </div>
@@ -54,7 +54,7 @@ export function ProductDetailSheet({
       </div>
 
       {rating ? (
-        <div style={{ background: '#fffbeb', borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}>
+        <div style={{ background: 'var(--warning-bg)', borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}>
           <Stars value={rating.avg_rating} count={rating.num_ratings} />
         </div>
       ) : null}

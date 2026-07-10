@@ -48,7 +48,7 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
         return (
           <div key={idx} className="prod-card" style={{ padding: '12px 14px' }}>
             <div className="cart-line">
-              <div style={{ width: 44, height: 44, borderRadius: 10, background: 'linear-gradient(135deg,#e8f5e9,#f1f8e9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: 'linear-gradient(135deg,var(--success-bg),#f1f8e9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
                 {getProductEmoji(item.product_name)}
               </div>
               <div style={{ flex: 1 }}>
