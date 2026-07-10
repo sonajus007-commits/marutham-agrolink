@@ -83,8 +83,15 @@ for (const file of walk(UI)) {
     // Import specifiers are dash-bearing strings that are not utilities.
     .replace(/^\s*(import|export)\b.*$/gm, '');
 
-  for (const m of src.matchAll(/(['"])([^'"\n]*)\1/g)) {
-    const literal = m[2];
+  // Scanned per quote style, not with one combined character class: a class
+  // list may legitimately embed the *other* quote — `before:content-['']` lives
+  // inside a double-quoted string — and a shared [^'"] would skip it silently.
+  const literals = [
+    ...[...src.matchAll(/"([^"\n]*)"/g)].map((m) => m[1]),
+    ...[...src.matchAll(/'([^'\n]*)'/g)].map((m) => m[1]),
+  ];
+
+  for (const literal of literals) {
     if (!isClassList(literal)) continue;
     for (const tok of literal.split(/\s+/)) {
       if (!tok || !isClassLike(tok)) continue;

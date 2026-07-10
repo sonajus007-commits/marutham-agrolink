@@ -1,4 +1,5 @@
 import type { PipelineNode } from '@marutham/lib';
+import { cn } from './lib/cn';
 
 /**
  * Compact, fixed-width progress bar for order summary cards.
@@ -17,15 +18,15 @@ export function OrderProgress({ nodes }: { nodes: PipelineNode[] }) {
   const current = activeIdx >= 0 ? live[activeIdx].label : null;
 
   return (
-    <div className="ma-progress">
-      <div className="ma-progress__head">
-        <span className="ma-progress__label">{current ?? '—'}</span>
-        <span className="ma-progress__count">
+    <div className="mt-2.5 mb-0.5">
+      <div className="mb-1.5 flex items-baseline justify-between gap-2">
+        <span className="text-xs font-bold text-primary">{current ?? '—'}</span>
+        <span className="shrink-0 text-2xs text-fg-muted">
           {reached > 0 ? `Step ${reached} of ${live.length}` : `${live.length} steps`}
         </span>
       </div>
       <div
-        className="ma-progress__track"
+        className="flex gap-[3px]"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={live.length}
@@ -33,7 +34,13 @@ export function OrderProgress({ nodes }: { nodes: PipelineNode[] }) {
         aria-valuetext={current ? `${current}, step ${reached} of ${live.length}` : undefined}
       >
         {live.map((n, i) => (
-          <span key={n.label} className={`ma-progress__seg${i < reached ? ' is-filled' : ''}${i === reached - 1 ? ' is-current' : ''}`} />
+          <span
+            key={n.label}
+            className={cn(
+              'h-1 flex-1 rounded-[2px]',
+              i === reached - 1 ? 'bg-sun' : i < reached ? 'bg-success' : 'bg-neutral-200',
+            )}
+          />
         ))}
       </div>
     </div>

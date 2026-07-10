@@ -171,6 +171,9 @@ export const semantic = {
     disabledFg: '#8a978c',
 
     focusRing: 'rgba(78, 159, 61, .12)',
+    /* Heavier halo, for a marker that must read as "you are here" rather than
+     * "this input has focus" — the live dot on the order timeline. */
+    focusRingStrong: 'rgba(78, 159, 61, .2)',
   },
   dark: {
     bg: '#0e1512',
@@ -221,6 +224,7 @@ export const semantic = {
     disabledFg: '#6b7a70',
 
     focusRing: 'rgba(116, 194, 92, .22)',
+    focusRingStrong: 'rgba(116, 194, 92, .32)',
   },
 } as const;
 

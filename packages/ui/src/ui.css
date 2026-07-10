@@ -1,9 +1,22 @@
 /* Component styles still awaiting the Phase 2C rebuild.
  *
- * Button, Card, KpiCard, Badge, Spinner, EmptyState and StatTile have left this
- * file — they are Tailwind + cva now, styled from @marutham/tokens. What remains
- * is styled the old way and is being migrated component by component. When this
- * file is empty, preflight can be turned on. */
+ * What is left, and why:
+ *
+ *   Sheet, Modal        waiting on Radix Dialog, which replaces the hand-rolled
+ *                       focus trap and escape handling rather than restyling it.
+ *
+ *   .ma-field, .ma-input,  apps/web writes these class names directly
+ *   .ma-select, .ma-pw*    (PasswordInput, AddressFields, ProfileTab,
+ *                          ListingFormSheet, ProductsTab). Converting them means
+ *                          editing app code, so they move with their screens.
+ *
+ *   .ma-tabs, .ma-tab,  the shared mobile shell, likewise applied by hand in
+ *   .ma-lang,           ConsumerPage and FarmerPage.
+ *   .ma-iconbtn,
+ *   .ma-appbody
+ *
+ * When this file is empty, turn preflight on and drop the `appearance-none
+ * border-0 font-sans` resets the rebuilt components currently carry. */
 
 /* ── Sheet (full-screen mobile overlay) ── */
 .ma-sheet {
@@ -37,47 +50,6 @@
 }
 .ma-sheet__title { color: var(--white); font-size: 16px; font-weight: 700; }
 .ma-sheet__body { padding: 18px; flex: 1; }
-
-/* ── Filter chips ── */
-.ma-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.ma-chip {
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--gray);
-  background: var(--white);
-  border: 1.5px solid var(--surface-muted);
-  border-radius: 50px;
-  padding: 6px 12px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.ma-chip.on { background: var(--success-bg); border-color: var(--leaf); color: var(--forest); box-shadow: inset 0 0 0 1px var(--leaf); }
-
-/* ── Quantity stepper ── */
-.ma-qty { display: inline-flex; align-items: center; gap: 6px; }
-.ma-qty__btn {
-  width: 34px; height: 34px;
-  border: 1.5px solid var(--tint-300);
-  background: var(--white);
-  border-radius: 9px;
-  font-size: 18px; font-weight: 700;
-  color: var(--leaf);
-  cursor: pointer;
-}
-.ma-qty__btn:disabled { opacity: .5; cursor: not-allowed; }
-.ma-qty__input {
-  width: 56px;
-  border: 1.5px solid var(--tint-300);
-  border-radius: 9px;
-  text-align: center;
-  font-size: 14px; font-weight: 700;
-  padding: 7px 4px;
-  font-family: inherit;
-  color: var(--forest);
-  outline: none;
-}
-.ma-qty__unit { font-size: 11px; color: var(--gray); }
 
 /* ── Mobile role shell ──────────────────────────────────────────────────
  * Chrome shared by every role's phone-width screen: the tab bar, the language
@@ -197,57 +169,3 @@ textarea.ma-input { resize: vertical; min-height: 64px; }
   display: flex; gap: 8px; padding: 14px 16px 16px;
 }
 .ma-modal__foot > * { flex: 1; }
-
-/* ── Star rating ───────────────────────────────────────────────────────── */
-.ma-stars { display: inline-flex; align-items: center; gap: 2px; line-height: 1; }
-.ma-stars > * { font-size: 16px; color: var(--neutral-300); }
-.ma-stars > .on { color: var(--sun); }
-.ma-stars--input button {
-  background: none; border: none; padding: 2px;
-  font-size: 20px; cursor: pointer; line-height: 1;
-  border-radius: 4px;
-}
-.ma-stars--input button:disabled { cursor: default; }
-.ma-stars--input button:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
-
-/* ── Compact order progress (summary cards) ────────────────────────────── */
-.ma-progress { margin: 10px 0 2px; }
-.ma-progress__head {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
-  margin-bottom: 6px;
-}
-.ma-progress__label { font-size: 10px; font-weight: 700; color: var(--forest); }
-.ma-progress__count { font-size: 9px; color: var(--gray); flex-shrink: 0; }
-.ma-progress__track { display: flex; gap: 3px; }
-.ma-progress__seg {
-  flex: 1; height: 4px; border-radius: 2px; background: var(--neutral-200);
-}
-.ma-progress__seg.is-filled { background: var(--success); }
-.ma-progress__seg.is-current { background: var(--sun); }
-
-/* ── Order timeline ────────────────────────────────────────────────────── */
-.ma-timeline { list-style: none; margin: 0; padding: 0; }
-.ma-timeline__item {
-  position: relative;
-  display: flex; gap: 10px;
-  padding: 0 0 14px 0;
-}
-.ma-timeline__item::before {
-  content: ''; position: absolute;
-  left: 4px; top: 12px; bottom: 0;
-  width: 2px; background: var(--neutral-200);
-}
-.ma-timeline__item:last-child::before { display: none; }
-.ma-timeline__dot {
-  width: 10px; height: 10px; border-radius: 50%;
-  background: var(--neutral-300); flex-shrink: 0; margin-top: 3px;
-  position: relative; z-index: 1;
-}
-.ma-timeline__item.is-current .ma-timeline__dot {
-  background: var(--leaf);
-  box-shadow: 0 0 0 3px rgba(78, 159, 61, .2);
-}
-.ma-timeline__label { font-size: 12px; font-weight: 700; color: var(--forest); }
-.ma-timeline__time { font-size: 10px; color: var(--gray); margin-top: 1px; }
-.ma-timeline__note { font-size: 11px; color: var(--gray); margin-top: 2px; font-style: italic; }
-

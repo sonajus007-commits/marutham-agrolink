@@ -104,6 +104,7 @@
   --disabled-bg: #cbd5c9;
   --disabled-fg: #8a978c;
   --focus-ring: rgba(78, 159, 61, .12);
+  --focus-ring-strong: rgba(78, 159, 61, .2);
 
   /* ── Typography ── */
   --font-sans: 'Outfit', system-ui, sans-serif;
@@ -219,4 +220,5 @@
   --disabled-bg: #2a3830;
   --disabled-fg: #6b7a70;
   --focus-ring: rgba(116, 194, 92, .22);
+  --focus-ring-strong: rgba(116, 194, 92, .32);
 }

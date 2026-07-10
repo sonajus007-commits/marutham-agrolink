@@ -53,8 +53,23 @@ Turn preflight on once `ui.css` is empty, and strip those three classes.
 ## Migration status
 
 Rebuilt on Tailwind + cva: `Button` `Card` `KpiCard` `Badge` `Spinner`
-`EmptyState` `StatTile`.
+`EmptyState` `StatTile` `FilterChips` `QtyStepper` `StarRating` `OrderProgress`
+`OrderTimeline`.
 
-Still on `ui.css`: `Sheet` `Modal` `Field` `FilterChips` `QtyStepper`
-`StarRating` `OrderPipeline` `OrderProgress` `OrderTimeline`, plus the shared
-mobile shell (`.ma-tabs`, `.ma-lang`, `.ma-iconbtn`).
+`OrderPipeline` never used `ui.css` — it is inline styles and SVG, and converts
+with the rest.
+
+Still on `ui.css`, and why:
+
+- **`Sheet`, `Modal`** — waiting on Radix Dialog. Both hand-roll a focus trap
+  and escape handling (`useEscapeDismiss.ts`); that is behaviour to replace, not
+  CSS to restyle, so it gets its own commit.
+- **`Field`, `.ma-input`, `.ma-select`, `.ma-pw*`** — `apps/web` applies these
+  class names directly, in `PasswordInput`, `AddressFields`, `ProfileTab`,
+  `ListingFormSheet` and `ProductsTab`. Converting them means editing app code,
+  so they move with their screens.
+- **`.ma-tabs`, `.ma-tab`, `.ma-lang`, `.ma-iconbtn`, `.ma-appbody`** — the
+  shared mobile shell, likewise applied by hand in `ConsumerPage` and
+  `FarmerPage`.
+
+355 lines at the start of Stage 0, 171 now.
