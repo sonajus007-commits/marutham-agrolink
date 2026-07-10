@@ -47,7 +47,10 @@ Turn preflight on once `ui.css` is empty, and strip those three classes.
 - `pnpm ui:classes` (CI, after build) — every Tailwind class used here must
   produce CSS. Tailwind silently emits nothing for a class whose theme key does
   not exist, so a typo animates nothing and fails no test.
-- `pnpm tokens:literals` (CI) — no hard-coded colours anywhere.
+- `pnpm tokens:literals` (CI) — no hard-coded colours. Hex everywhere; **and
+  `rgba()`/`hsla()` inside `packages/`**, where a bare alpha colour must instead
+  be a token or a `color-mix()` derived from one. `apps/web`'s page stylesheets
+  still hold 24 of them and are exempt until Phase 4 rewrites those screens.
 - `pnpm tokens:contrast` (CI) — every semantic pair clears WCAG.
 
 ## Dialogs
@@ -75,8 +78,11 @@ gate; there is no way out but the action it asks for.
 
 Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
 `EmptyState` `StatTile` `FilterChips` `QtyStepper` `StarRating` `OrderProgress`
-`OrderTimeline` `Sheet` `Modal`. `OrderPipeline` never used `ui.css` — it is
-inline styles and SVG.
+`OrderTimeline` `Sheet` `Modal` `OrderPipeline`.
+
+`OrderPipeline` keeps inline styles for two things on purpose: node width, which
+the SVG path arithmetic reads, and colour, which is a runtime string
+(`activeColor`). Everything static is a utility.
 
 What is left in `ui.css` is styling for class names **`apps/web` writes by
 hand**, so deleting it means editing app screens — Phase 4's job:

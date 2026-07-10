@@ -71,7 +71,7 @@
 }
 .ma-select { padding: 9px 10px; font-size: 12px; }
 .ma-input:focus, .ma-select:focus {
-  border-color: var(--leaf); box-shadow: 0 0 0 3px rgba(78, 159, 61, .12);
+  border-color: var(--leaf); box-shadow: 0 0 0 3px var(--focus-ring);
 }
 .ma-input[aria-invalid='true'], .ma-select[aria-invalid='true'] { border-color: var(--red); }
 .ma-input:disabled, .ma-select:disabled { background: var(--tint-25); cursor: not-allowed; }

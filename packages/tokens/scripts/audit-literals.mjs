@@ -27,6 +27,18 @@ const SKIP = [
 const SCAN = ['apps/web/src', 'packages/ui/src', 'packages/lib/src'];
 const EXTS = new Set(['.css', '.ts', '.tsx']);
 
+/* Alpha colours — rgba()/hsla() — are colour literals too, and the hex scan is
+ * blind to them. Three slipped past it that way: the timeline's focus halo, the
+ * modal scrim, and the pipeline's active-node glow.
+ *
+ * They are enforced in packages/ only. apps/web's three page stylesheets still
+ * hold 24 of them; those files are rewritten screen-by-screen in Phase 4, and
+ * failing CI on them today would just mean disabling this check. When the last
+ * page stylesheet goes, delete ALPHA_EXEMPT and the guard covers everything. */
+const ALPHA_ENFORCED = ['packages/ui/src', 'packages/lib/src'];
+const ALPHA_EXEMPT = ['apps/web/src'];
+const ALPHA_RE = /\b(?:rgba?|hsla?)\([^)]*\)/gi;
+
 /* Every token a literal is allowed to collapse into, as `cssVar → hex`.
  * Semantic roles come first so the report prefers `--fg` over `--text`. */
 const TOKENS = {
@@ -83,12 +95,15 @@ function* walk(dir) {
 }
 
 const hits = new Map(); // hex → { count, files:Set }
+const alpha = new Map(); // rgba(…) → { count, files:Set }
 
 for (const base of SCAN) {
+  const alphaEnforced = ALPHA_ENFORCED.includes(base);
   for (const file of walk(resolve(ROOT, base))) {
     const rel = relative(ROOT, file);
     if (SKIP.includes(rel)) continue;
     const src = readFileSync(file, 'utf8');
+
     for (const m of src.matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
       const key = `#${expand(m[0])}`;
       if (!hits.has(key)) hits.set(key, { count: 0, files: new Set() });
@@ -96,19 +111,45 @@ for (const base of SCAN) {
       h.count++;
       h.files.add(rel);
     }
+
+    if (!alphaEnforced) continue;
+    for (const m of src.matchAll(ALPHA_RE)) {
+      // `color-mix(in srgb, var(--x) 22%, transparent)` is derived from a token,
+      // not a literal. Only bare numeric channels count.
+      if (!/[\d.]+\s*[, ]/.test(m[0])) continue;
+      const key = m[0].replace(/\s+/g, '');
+      if (!alpha.has(key)) alpha.set(key, { count: 0, files: new Set() });
+      const a = alpha.get(key);
+      a.count++;
+      a.files.add(rel);
+    }
   }
 }
 
 if (process.argv.includes('--check')) {
   const total = [...hits.values()].reduce((s, h) => s + h.count, 0);
+  const alphaTotal = [...alpha.values()].reduce((s, h) => s + h.count, 0);
+
   if (total > 0) {
     console.error(`${total} colour literal(s) outside packages/tokens. Use a token.`);
     for (const [hex, h] of [...hits].sort((a, b) => b[1].count - a[1].count).slice(0, 15)) {
       console.error(`  ${hex}  ×${h.count}  ${[...h.files].join(', ')}`);
     }
-    process.exit(1);
   }
-  console.log('no colour literals outside packages/tokens');
+  if (alphaTotal > 0) {
+    console.error(`\n${alphaTotal} alpha colour literal(s) in ${ALPHA_ENFORCED.join(', ')}.`);
+    console.error('Add a token, or derive it with color-mix() from one.');
+    for (const [c, h] of [...alpha].sort((a, b) => b[1].count - a[1].count)) {
+      console.error(`  ${c}  ×${h.count}  ${[...h.files].join(', ')}`);
+    }
+  }
+  if (total > 0 || alphaTotal > 0) process.exit(1);
+
+  console.log(
+    `no colour literals outside packages/tokens ` +
+      `(alpha colours enforced in ${ALPHA_ENFORCED.join(', ')}; ` +
+      `${ALPHA_EXEMPT.join(', ')} exempt until Phase 4)`,
+  );
   process.exit(0);
 }
 
