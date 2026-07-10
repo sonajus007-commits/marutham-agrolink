@@ -27,6 +27,9 @@ export const colors = {
   bloom: '#CB4E86', // marutham flower pink — the signature accent
   bloomLight: '#FDEDF5', // bloom background tint
 
+  forestDeep: '#0f2d1c', // login radial-gradient inner stop
+  forestNight: '#0a1f12', // login radial-gradient outer stop
+
   cream: '#f7f3ee',
   gold: '#d4a843',
   gold2: '#e9c46a',
@@ -138,6 +141,7 @@ export const semantic = {
 
     warning: colors.gold,
     warningOn: colors.text, // white on gold is 2.21:1 — gold takes dark text
+    warningStrong: '#d97706', // amber fill: dots, left borders, gradients. Never text.
     warningBg: '#fff8e6',
     warningFg: '#92400e',
 
@@ -145,6 +149,26 @@ export const semantic = {
     dangerOn: colors.white,
     dangerBg: colors.redbg,
     dangerFg: colors.red,
+
+    /* Neither blue nor violet is in the brand palette, and both earned their
+     * place: `info` marks neutral notices (info toast, retailer badge, the
+     * agent's verify queue); `schedule` marks time-bound things (an order-by
+     * cutoff, a pickup window). They were already in the app as raw Tailwind
+     * hexes — this names them. */
+    info: '#1d4ed8',
+    infoOn: colors.white,
+    infoBg: '#eff6ff',
+    infoFg: '#1d4ed8',
+
+    schedule: '#7c3aed',
+    scheduleOn: colors.white,
+    scheduleBg: '#f5f0ff',
+    scheduleFg: '#7c3aed',
+
+    /* WCAG 1.4.3 exempts inactive controls from contrast, so this pair carries
+     * no floor and keeps its original values. */
+    disabledBg: '#cbd5c9',
+    disabledFg: '#8a978c',
 
     focusRing: 'rgba(78, 159, 61, .12)',
   },
@@ -174,6 +198,7 @@ export const semantic = {
 
     warning: colors.gold2,
     warningOn: '#0e1512',
+    warningStrong: '#f59e0b',
     warningBg: '#2e2412',
     warningFg: colors.gold2,
 
@@ -181,6 +206,19 @@ export const semantic = {
     dangerOn: '#0e1512',
     dangerBg: '#331916',
     dangerFg: '#ef6b5e',
+
+    info: '#7aa7ff',
+    infoOn: '#0e1512',
+    infoBg: '#12203a',
+    infoFg: '#9cc0ff',
+
+    schedule: '#b794f6',
+    scheduleOn: '#0e1512',
+    scheduleBg: '#2a1f3d',
+    scheduleFg: '#c4a7fb',
+
+    disabledBg: '#2a3830',
+    disabledFg: '#6b7a70',
 
     focusRing: 'rgba(116, 194, 92, .22)',
   },

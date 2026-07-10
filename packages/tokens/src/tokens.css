@@ -19,6 +19,8 @@
   --mint: #A8D5A2;
   --bloom: #CB4E86;
   --bloom-light: #FDEDF5;
+  --forest-deep: #0f2d1c;
+  --forest-night: #0a1f12;
   --cream: #f7f3ee;
   --gold: #d4a843;
   --gold2: #e9c46a;
@@ -84,12 +86,23 @@
   --success-fg: #1a7a4a;
   --warning: #d4a843;
   --warning-on: #1c2820;
+  --warning-strong: #d97706;
   --warning-bg: #fff8e6;
   --warning-fg: #92400e;
   --danger: #c0392b;
   --danger-on: #fff;
   --danger-bg: #fde8e8;
   --danger-fg: #c0392b;
+  --info: #1d4ed8;
+  --info-on: #fff;
+  --info-bg: #eff6ff;
+  --info-fg: #1d4ed8;
+  --schedule: #7c3aed;
+  --schedule-on: #fff;
+  --schedule-bg: #f5f0ff;
+  --schedule-fg: #7c3aed;
+  --disabled-bg: #cbd5c9;
+  --disabled-fg: #8a978c;
   --focus-ring: rgba(78, 159, 61, .12);
 
   /* ── Typography ── */
@@ -188,11 +201,22 @@
   --success-fg: #5fbf87;
   --warning: #e9c46a;
   --warning-on: #0e1512;
+  --warning-strong: #f59e0b;
   --warning-bg: #2e2412;
   --warning-fg: #e9c46a;
   --danger: #ef6b5e;
   --danger-on: #0e1512;
   --danger-bg: #331916;
   --danger-fg: #ef6b5e;
+  --info: #7aa7ff;
+  --info-on: #0e1512;
+  --info-bg: #12203a;
+  --info-fg: #9cc0ff;
+  --schedule: #b794f6;
+  --schedule-on: #0e1512;
+  --schedule-bg: #2a1f3d;
+  --schedule-fg: #c4a7fb;
+  --disabled-bg: #2a3830;
+  --disabled-fg: #6b7a70;
   --focus-ring: rgba(116, 194, 92, .22);
 }

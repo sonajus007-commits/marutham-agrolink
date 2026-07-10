@@ -50,16 +50,23 @@ const pairs = (t) => [
   [t.successOn, t.success, AA, 'successOn on success'],
   [t.warningOn, t.warning, AA, 'warningOn on warning'],
   [t.dangerOn, t.danger, AA, 'dangerOn on danger'],
+  [t.infoOn, t.info, AA, 'infoOn on info'],
+  [t.scheduleOn, t.schedule, AA, 'scheduleOn on schedule'],
 
   // text on tints
   [t.accentFg, t.accentBg, AA, 'accentFg on accentBg'],
   [t.successFg, t.successBg, AA, 'successFg on successBg'],
   [t.warningFg, t.warningBg, AA, 'warningFg on warningBg'],
   [t.dangerFg, t.dangerBg, AA, 'dangerFg on dangerBg'],
+  [t.infoFg, t.infoBg, AA, 'infoFg on infoBg'],
+  [t.scheduleFg, t.scheduleBg, AA, 'scheduleFg on scheduleBg'],
 
-  // non-text contrast (WCAG 1.4.11)
+  // non-text contrast (WCAG 1.4.11). warningStrong is a fill — dots, left
+  // borders, gradient stops — and never carries text, so 3:1 is its bar.
   [t.primary, t.surface, AA_LARGE, 'primary on surface (UI)'],
   [t.borderStrong, t.surface, AA_LARGE, 'borderStrong on surface (UI)'],
+  [t.warningStrong, t.surface, AA_LARGE, 'warningStrong on surface (UI)'],
+  [t.info, t.surface, AA_LARGE, 'info on surface (UI)'],
 ];
 
 let failed = 0;
