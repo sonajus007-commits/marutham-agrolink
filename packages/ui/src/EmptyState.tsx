@@ -1,7 +1,9 @@
-export function EmptyState({ icon, children }: { icon?: string; children: React.ReactNode }) {
+import type { ReactNode } from 'react';
+
+export function EmptyState({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
   return (
-    <div className="ma-empty">
-      {icon ? <div className="ma-empty__icon">{icon}</div> : null}
+    <div className="text-center px-5 py-8 text-md text-fg-muted">
+      {icon ? <div className="text-[40px] mb-3">{icon}</div> : null}
       <div>{children}</div>
     </div>
   );

@@ -1,7 +1,21 @@
+import type { ReactNode } from 'react';
+import { cva } from 'class-variance-authority';
+
 export type BadgeVariant = 'cod' | 'upi' | 'neutral';
 
-export function Badge({ variant = 'neutral', children }: { variant?: BadgeVariant; children: React.ReactNode }) {
-  return <span className={`ma-badge ma-badge--${variant}`}>{children}</span>;
+const badge = cva('inline-block text-xs font-bold px-[9px] py-[3px] rounded-pill leading-snug', {
+  variants: {
+    variant: {
+      cod: 'bg-warning-bg text-warning-fg',
+      upi: 'bg-success-bg text-success',
+      neutral: 'bg-success-bg text-primary',
+    },
+  },
+  defaultVariants: { variant: 'neutral' },
+});
+
+export function Badge({ variant = 'neutral', children }: { variant?: BadgeVariant; children: ReactNode }) {
+  return <span className={badge({ variant })}>{children}</span>;
 }
 
 /** Convenience: pick the badge variant + label from a payment method string. */

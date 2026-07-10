@@ -92,3 +92,10 @@ jobs:
       # serving, so the failure is silent. Fail loudly here instead.
       - name: Verify /app bundle was produced
         run: test -f apps/web/dist/index.html
+
+      # Tailwind does not error on a class it cannot resolve — it emits nothing.
+      # `duration-base` reads exactly like `duration-200` and compiles to no CSS,
+      # because --duration-* is not a theme namespace. A passing build, typecheck
+      # and test suite all miss it. Needs the build above, so it runs last.
+      - name: UI — every Tailwind class resolves to CSS
+        run: pnpm ui:classes

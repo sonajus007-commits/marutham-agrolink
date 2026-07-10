@@ -128,6 +128,7 @@
   --color-gold: var(--gold);
   --color-sun: var(--sun);
   --color-white: var(--white);
+  --color-red-dark: var(--red-dark); /* danger button hover */
 
   /* Ramps. */
   --color-tint-25: var(--tint-25);
@@ -175,4 +176,28 @@
   --shadow-md: var(--shadowmd);
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
+
+  --tracking-normal: var(--ls-normal);
+  --tracking-wide: var(--ls-wide);
+  --tracking-wider: var(--ls-wider);
+
+  --leading-tight: var(--lh-tight);
+  --leading-snug: var(--lh-snug);
+  --leading-normal: var(--lh-normal);
+
+  /* `--ease-*` is a Tailwind namespace, so `ease-standard` becomes a utility.
+   * There is no `--duration-*` namespace — `duration-base` would compile to
+   * nothing at all, silently. Durations are written as
+   * `duration-[var(--duration-base)]` at the call site instead. */
+  --ease-standard: var(--ease-standard);
+
+  /* The spinner ran at 0.8s in ui.css; Tailwind's stock `animate-spin` is 1s.
+   * Keep the original cadence rather than let a rebuild quietly retime it. */
+  --animate-spin-ring: spin-ring 0.8s linear infinite;
+}
+
+@keyframes spin-ring {
+  to {
+    transform: rotate(360deg);
+  }
 }
