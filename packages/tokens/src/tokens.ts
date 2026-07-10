@@ -332,3 +332,15 @@ export const chartPalette = [
   colors.sun,
   colors.sage,
 ] as const;
+
+/* Single-hue green sequential ramp for magnitude — choropleth maps, heatmaps.
+ * Stops run low→high value. Each theme's near-zero step recedes toward its own
+ * surface (light greens toward white, dark greens toward the dark panel), so the
+ * two arrays are not reverses of each other but separately stepped for their
+ * background. Both pass the dataviz ordinal validator (single hue, monotone
+ * lightness, ΔL gaps ≥ 0.06, low-value step ≥ 2:1 on its surface) — do not hand-
+ * edit a stop without re-running scripts/validate_palette.js. */
+export const sequential = {
+  light: ['#74C25C', '#479439', '#2f6a4a', '#1f4a30', '#0f2d1c'],
+  dark: ['#2f6a4a', '#3d8a4f', '#4E9F3D', '#74C25C', '#A8D5A2'],
+} as const;

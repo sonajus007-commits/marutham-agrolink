@@ -246,6 +246,31 @@ calendar day, and `now` is injectable so the grouping is deterministic under
 test. The bell's `aria-label` carries the unread count; the count pill itself is
 `aria-hidden` so a screen reader hears the number once, not twice.
 
+## ChartContainer, MapContainer (Phase 2D)
+
+The frame around a chart — never the chart. `packages/ui` must not pull in the
+~1 MB ECharts bundle, so the chart is `children`: ECharts (or any other library,
+or an RN chart) lives in the app and is handed in. The container gives every
+dashboard tile the header, the fixed-height plot area, and the loading / empty /
+error states the hand-rolled `<Card><h2/><EChart/></Card>` blocks never had. The
+plot area holds its height across all four states, so a tile does not jump as
+data loads. It is a `<figure>` named by its `<figcaption>` with an optional
+`summary`, because a canvas chart is opaque to a screen reader.
+
+`MapContainer` composes `ChartContainer` and adds two map things: a drill
+breadcrumb (`drillPath`, reusing `Breadcrumbs` — country → state → district) and
+a choropleth legend rendered as an accessible HTML scale, not the one ECharts
+paints inside the canvas. The legend `stops` are passed in — from `sequential`
+in `@marutham/tokens` — so the component stays palette-agnostic and light/dark is
+the caller's choice of ramp.
+
+`sequential` (in tokens) is the single-hue green magnitude ramp, one array per
+theme, each stepped so its low-value end recedes toward *that* theme's surface.
+Both arrays pass the dataviz ordinal validator (single hue, monotone lightness,
+ΔL ≥ 0.06, low-value step ≥ 2:1 on its surface). **Re-run
+`scripts/validate_palette.js` before touching a stop** — the greens are chosen,
+not guessed.
+
 ## Migration status
 
 Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
@@ -256,7 +281,8 @@ Phase 2E adds what the brief needs and never existed: `Table`, `Skeleton`,
 `Breadcrumbs`, `Tabs`, `Accordion`, `Dropdown`, `ProgressBar`, `DatePicker`,
 `FileUpload`, `Alert`, `NotificationCenter`, `Pagination`, `SearchInput`. That
 completes the brief's primitive list. `Toast` stays app-level in
-`apps/web/src/components/Toast.tsx`. The chart and map containers are Phase 2D.
+`apps/web/src/components/Toast.tsx`. Phase 2D adds `ChartContainer` and
+`MapContainer` — the chart/map chrome, chart library handed in.
 
 `OrderPipeline` keeps inline styles for two things on purpose: node width, which
 the SVG path arithmetic reads, and colour, which is a runtime string

@@ -50,3 +50,7 @@ export { Alert } from './Alert';
 export type { AlertProps, AlertTone } from './Alert';
 export { NotificationCenter } from './NotificationCenter';
 export type { NotificationCenterProps } from './NotificationCenter';
+export { ChartContainer } from './ChartContainer';
+export type { ChartContainerProps } from './ChartContainer';
+export { MapContainer } from './MapContainer';
+export type { MapContainerProps, ChoroplethLegend } from './MapContainer';
