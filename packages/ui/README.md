@@ -122,6 +122,34 @@ levels stay reachable; the map hierarchy is seven levels deep.
 Every `Skeleton` is `aria-hidden`. The caller owns the announcement by putting
 `aria-busy` on the container.
 
+## Accordion, Dropdown, ProgressBar
+
+`Accordion` is Radix. A closed panel is **unmounted** — the opposite of `Tabs`,
+whose inactive panels stay mounted with `hidden`. Do not assert on the text of a
+collapsed section. The open/close animation needs a pixel height to travel to
+(`height: auto` is not interpolable); Radix measures the panel and publishes it
+as `--radix-accordion-content-height`, which the `accordion-down`/`-up` keyframes
+in `apps/web/src/tailwind.css` consume. The content wrapper carries
+`overflow-hidden` — drop it and the panel spills over the section below for the
+180ms it animates. The chevron rotates via Tailwind v4's independent `rotate`
+property, not a `transform`; `.transition-transform` covers it because v4's
+`transition-transform` lists `rotate` among its properties. `type="single" |
+"multiple"` is a discriminated union so `value` can't be the wrong shape.
+
+`Dropdown` is Radix DropdownMenu — a *menu* (every item runs a command), never a
+value picker. A field that picks a value stays a `<select>`. It sits at
+`--z-overlay`, one below a dialog, and Radix portals it to the end of `<body>`,
+so a Modal opened afterwards still wins on DOM order. Its panel uses a real
+`border` (v4 gives `--tw-border-style` an initial `solid`, so no preflight
+needed) rather than `Button`'s `shadow-[inset_…]` trick — an inset shadow and
+`shadow-md` are one tailwind-merge group, and the second silently drops the
+first.
+
+`ProgressBar` is determinate with `value`, indeterminate without. The
+indeterminate sweep survives `prefers-reduced-motion` on purpose: it is the only
+thing reporting progress, and stopping it would leave a bar that says nothing. An
+indeterminate bar carries no `aria-valuenow` — "unknown" is not a number.
+
 ## Migration status
 
 Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
@@ -129,10 +157,11 @@ Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
 `OrderTimeline` `Sheet` `Modal` `OrderPipeline`.
 
 Phase 2E adds what the brief needs and never existed: `Table`, `Skeleton`,
-`Breadcrumbs`, `Tabs`. Still missing — `Accordion`, `Pagination` (lives inside
-`Table`; extract when a second caller appears), `DatePicker`, `FileUpload`,
-`Toast` (app-level in `apps/web/src/components/Toast.tsx`), `Search` (likewise
-inside `Table`), `Notifications`. The chart and map containers are Phase 2D.
+`Breadcrumbs`, `Tabs`, `Accordion`, `Dropdown`, `ProgressBar`. Still missing —
+`Pagination` (lives inside `Table`; extract when a second caller appears),
+`DatePicker`, `FileUpload`, `Toast` (app-level in
+`apps/web/src/components/Toast.tsx`), `Search` (likewise inside `Table`),
+`Notifications`. The chart and map containers are Phase 2D.
 
 `OrderPipeline` keeps inline styles for two things on purpose: node width, which
 the SVG path arithmetic reads, and colour, which is a runtime string

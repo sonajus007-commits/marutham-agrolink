@@ -214,10 +214,46 @@
   /* The spinner ran at 0.8s in ui.css; Tailwind's stock `animate-spin` is 1s.
    * Keep the original cadence rather than let a rebuild quietly retime it. */
   --animate-spin-ring: spin-ring 0.8s linear infinite;
+
+  /* Radix measures the collapsed panel and publishes its height as
+   * --radix-accordion-content-height on the content element. Without it there
+   * is nothing to animate to: `height: auto` is not interpolable. */
+  --animate-accordion-down: accordion-down 180ms var(--ease-standard);
+  --animate-accordion-up: accordion-up 180ms var(--ease-standard);
+
+  --animate-progress-slide: progress-slide 1.2s var(--ease-standard) infinite;
 }
 
 @keyframes spin-ring {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+/* An indeterminate bar has no value to show, so it sweeps. */
+@keyframes progress-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
   }
 }
