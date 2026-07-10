@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  clampPage, filterRows, nextSort, pageCount, pageSlice, selectionState,
+  clampPage, filterRows, nextSort, pageSlice, selectionState,
   sortRows, toCsv, toggleAll, toggleOne,
   type Accessors, type CellValue, type SortState,
 } from '@marutham/lib';
-import {
-  ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown, Download, Search, X,
-} from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronsUpDown, Download, X } from 'lucide-react';
 import { Button } from './Button';
 import { EmptyState } from './EmptyState';
 import { Spinner } from './Spinner';
+import { Pagination } from './Pagination';
+import { SearchInput } from './SearchInput';
 import { cn } from './lib/cn';
 
 /* The enterprise table: sticky header, sort, filter, pagination, CSV export and
@@ -135,9 +135,9 @@ export function Table<T>({
 
   const total = sorted.length;
   /* Clamped rather than stored: a refetch that shrinks the table must not strand
-   * the reader on a page that no longer exists. */
+   * the reader on a page that no longer exists. <Pagination> clamps for display;
+   * this clamps for the slice, so both agree on the current page. */
   const current = clampPage(page, total, pageSize);
-  const pages = pageCount(total, pageSize);
   const pageRows = useMemo(() => pageSlice(sorted, current, pageSize), [sorted, current, pageSize]);
 
   const visibleIds = useMemo(() => pageRows.map(rowId), [pageRows, rowId]);
@@ -202,25 +202,12 @@ export function Table<T>({
             </>
           ) : (
             searchable && (
-              <div className="relative flex-1 min-w-[180px]">
-                <Search
-                  size={14}
-                  aria-hidden="true"
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted"
-                />
-                <input
-                  type="search"
-                  value={query}
-                  onChange={(e) => onQuery(e.target.value)}
-                  placeholder={searchPlaceholder}
-                  aria-label={searchPlaceholder}
-                  className={
-                    'w-full appearance-none rounded-sm border-[1.5px] border-border-strong bg-surface ' +
-                    'pl-8 pr-3 py-2 font-sans text-sm text-fg outline-none ' +
-                    'focus:border-leaf focus:shadow-[0_0_0_3px_var(--focus-ring)]'
-                  }
-                />
-              </div>
+              <SearchInput
+                value={query}
+                onChange={onQuery}
+                placeholder={searchPlaceholder}
+                className="min-w-[180px] flex-1"
+              />
             )
           )}
 
@@ -350,39 +337,7 @@ export function Table<T>({
         ) : null}
       </div>
 
-      {pageSize > 0 && total > 0 ? (
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          {/* Announced, so a filter that narrows the table tells a screen-reader
-              user how far it narrowed it. */}
-          <span className="text-xs text-fg-muted" aria-live="polite">
-            {(current - 1) * pageSize + 1}–{Math.min(current * pageSize, total)} of {total}
-          </span>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              className="px-2 py-1.5"
-              onClick={() => setPage(current - 1)}
-              disabled={current <= 1}
-              aria-label="Previous page"
-            >
-              <ChevronLeft size={16} aria-hidden="true" />
-            </Button>
-            <span className="text-xs text-fg-muted">
-              Page {current} of {pages}
-            </span>
-            <Button
-              variant="ghost"
-              className="px-2 py-1.5"
-              onClick={() => setPage(current + 1)}
-              disabled={current >= pages}
-              aria-label="Next page"
-            >
-              <ChevronRight size={16} aria-hidden="true" />
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      <Pagination page={current} pageSize={pageSize} total={total} onPageChange={setPage} />
     </div>
   );
 }

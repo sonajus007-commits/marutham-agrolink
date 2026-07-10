@@ -101,6 +101,26 @@ Select-all governs the current page only, and a selection survives paging away
 and back. Export sends the filtered, sorted rows — or just the selected ones,
 when there is a selection.
 
+Its pager and search box are now the standalone `Pagination` and `SearchInput`;
+`Table` renders them, it does not reimplement them.
+
+## Pagination, SearchInput
+
+Extracted from `Table` once a second caller wanted them on their own. `Table`
+still renders both — there is one pager and one search box in the codebase, not
+two.
+
+`Pagination` is controlled: the caller owns the page, and the "X–Y of Z" range
+plus prev/next are drawn from `pageCount`/`clampPage` in `@marutham/lib/table`.
+It clamps the incoming `page`, so a stale page after the dataset shrinks lands on
+the last real page, never an empty one, and it renders nothing when there is a
+single page or no rows.
+
+`SearchInput` is a controlled `type="search"` box with a magnifier — logic-free,
+holding no query and doing no filtering. `Table` wires its value to `filterRows`;
+another caller wires it wherever it likes. The focus ring is a box-shadow, not an
+outline, so it follows the rounded corners.
+
 ## Tabs, Breadcrumbs, Skeleton
 
 `Tabs` is Radix. It is **not** `.ma-tabs` in ui.css — those are the mobile
@@ -234,10 +254,9 @@ Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
 
 Phase 2E adds what the brief needs and never existed: `Table`, `Skeleton`,
 `Breadcrumbs`, `Tabs`, `Accordion`, `Dropdown`, `ProgressBar`, `DatePicker`,
-`FileUpload`, `Alert`, `NotificationCenter`. Still missing — `Pagination` (lives
-inside `Table`; extract when a second caller appears), `Search` (likewise inside
-`Table`). `Toast` stays app-level in `apps/web/src/components/Toast.tsx`. The
-chart and map containers are Phase 2D.
+`FileUpload`, `Alert`, `NotificationCenter`, `Pagination`, `SearchInput`. That
+completes the brief's primitive list. `Toast` stays app-level in
+`apps/web/src/components/Toast.tsx`. The chart and map containers are Phase 2D.
 
 `OrderPipeline` keeps inline styles for two things on purpose: node width, which
 the SVG path arithmetic reads, and colour, which is a runtime string
