@@ -4,6 +4,8 @@ export type { ButtonProps } from './Button';
 export { Card } from './Card';
 export { Field } from './Field';
 export type { FieldProps } from './Field';
+export { Input, INPUT_CLASS } from './Input';
+export type { InputProps } from './Input';
 export { KpiCard } from './KpiCard';
 export type { KpiCardProps } from './KpiCard';
 export { Badge, PaymentBadge } from './Badge';

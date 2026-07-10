@@ -4,8 +4,10 @@
  * for class names that apps/web writes by hand, so deleting it means editing app
  * screens — Phase 4's job, not the design system's:
  *
- *   .ma-field, .ma-input,   PasswordInput, AddressFields, ProfileTab,
- *   .ma-select, .ma-pw*     ListingFormSheet, ProductsTab
+ *   .ma-field, .ma-input,   AddressFields, ProfileTab,
+ *   .ma-select              ListingFormSheet, ProductsTab
+ *                           (PasswordInput is on Tailwind now — its .ma-pw* and
+ *                            .ma-pwrules* blocks are gone)
  *
  *   .ma-tabs, .ma-tab,      the shared mobile shell, applied in
  *   .ma-lang, .ma-iconbtn,  ConsumerPage and FarmerPage
@@ -76,26 +78,3 @@
 .ma-input[aria-invalid='true'], .ma-select[aria-invalid='true'] { border-color: var(--red); }
 .ma-input:disabled, .ma-select:disabled { background: var(--tint-25); cursor: not-allowed; }
 textarea.ma-input { resize: vertical; min-height: 64px; }
-
-/* Password input with a reveal toggle. */
-.ma-pw { position: relative; display: flex; }
-.ma-pw .ma-input { padding-right: 42px; }
-.ma-pw__eye {
-  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-  background: none; border: none; cursor: pointer;
-  font-size: 14px; line-height: 1; padding: 6px; border-radius: 6px; color: var(--gray);
-}
-.ma-pw__eye:focus-visible { outline: 2px solid var(--leaf); }
-
-/* Live password-rule checklist. */
-.ma-pwrules { list-style: none; margin: 8px 0 0; padding: 0; }
-.ma-pwrules li {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 10px; color: var(--gray); padding: 2px 0;
-}
-.ma-pwrules li.is-met { color: var(--success); }
-.ma-pwrules__dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--neutral-300); flex-shrink: 0;
-}
-.ma-pwrules li.is-met .ma-pwrules__dot { background: var(--success); }

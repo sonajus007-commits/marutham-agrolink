@@ -337,6 +337,21 @@ hides the background instead, which is the more robust signal; don't assert on
 `apps/web/src/tailwind.css`, so Radix holds the unmount until the exit animation
 ends.
 
+## Input (Phase 4)
+
+The text form control, and the first primitive of the Phase 4 form-screen
+migration — the Tailwind replacement for the `.ma-input` class the app screens
+wrote by hand. `INPUT_CLASS` is exported so `Select` and `Textarea` can wear the
+same border, focus ring and invalid state when their screens move over. Styling
+reads `aria-invalid`, which `Field` already sets on error, so a field goes red
+with no extra prop.
+
+`apps/web` can use it because `@tailwindcss/vite` scans the app source and
+`ui.css` only styles the `.ma-*` *classes*, never bare elements — so a Tailwind
+`<input>` without `.ma-input` is not outranked by the unlayered legacy CSS. (One
+trap for the driver, not the code: `getComputedStyle` rounds a `1.5px` border to
+`"1px"` — assert the border *colour* and style, not its sub-pixel width.)
+
 ## Migration status
 
 Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
@@ -357,11 +372,12 @@ the SVG path arithmetic reads, and colour, which is a runtime string
 (`activeColor`). Everything static is a utility.
 
 What is left in `ui.css` is styling for class names **`apps/web` writes by
-hand**, so deleting it means editing app screens — Phase 4's job:
+hand**, so deleting it means editing app screens — Phase 4's job, now underway:
 
-- `.ma-field`, `.ma-input`, `.ma-select`, `.ma-pw*` — `PasswordInput`,
-  `AddressFields`, `ProfileTab`, `ListingFormSheet`, `ProductsTab`.
+- `.ma-field`, `.ma-input`, `.ma-select` — `AddressFields`, `ProfileTab`,
+  `ListingFormSheet`, `ProductsTab`. (`PasswordInput` is done: on `Input`, its
+  `.ma-pw*`/`.ma-pwrules*` blocks deleted.)
 - `.ma-tabs`, `.ma-tab`, `.ma-lang`, `.ma-iconbtn`, `.ma-appbody` — the shared
   mobile shell, in `ConsumerPage` and `FarmerPage`.
 
-355 lines at the start of Stage 0, 101 now.
+355 lines at the start of Stage 0, 80 now.

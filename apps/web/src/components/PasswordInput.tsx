@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Input, cn } from '@marutham/ui';
 import { passwordRuleResults } from '@marutham/lib';
 
 /** Password box with a reveal toggle. `id`/aria props come from <Field>. */
@@ -20,11 +21,11 @@ export function PasswordInput({
 }) {
   const [shown, setShown] = useState(false);
   return (
-    <div className="ma-pw">
-      <input
+    <div className="relative flex">
+      <Input
         {...aria}
         id={id}
-        className="ma-input"
+        className="pr-11"
         type={shown ? 'text' : 'password'}
         value={value}
         placeholder={placeholder}
@@ -33,7 +34,7 @@ export function PasswordInput({
       />
       <button
         type="button"
-        className="ma-pw__eye"
+        className="absolute right-1.5 top-1/2 -translate-y-1/2 cursor-pointer appearance-none rounded-xs border-0 bg-transparent p-1.5 text-sm leading-none text-fg-muted focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-leaf"
         aria-label={shown ? 'Hide password' : 'Show password'}
         aria-pressed={shown}
         onClick={() => setShown((s) => !s)}
@@ -50,14 +51,18 @@ export function PasswordInput({
  */
 export function PasswordRules({ value }: { value: string }) {
   return (
-    <ul className="ma-pwrules">
+    <ul className="m-0 mt-2 list-none p-0">
       {passwordRuleResults(value).map((r) => (
-        <li key={r.id} className={r.met ? 'is-met' : ''}>
-          <span className="ma-pwrules__dot" aria-hidden="true" />
+        <li
+          key={r.id}
+          className={cn('flex items-center gap-[7px] py-0.5 text-2xs', r.met ? 'text-success' : 'text-fg-muted')}
+        >
+          <span
+            className={cn('h-1.5 w-1.5 shrink-0 rounded-full', r.met ? 'bg-success' : 'bg-neutral-300')}
+            aria-hidden="true"
+          />
           <span>{r.label}</span>
-          <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
-            {r.met ? ' — met' : ' — not met'}
-          </span>
+          <span className="sr-only">{r.met ? ' — met' : ' — not met'}</span>
         </li>
       ))}
     </ul>
