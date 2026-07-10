@@ -201,6 +201,31 @@ The drop zone is a `<button>` wrapping a visually-hidden `<input type="file">`,
 so keyboard and pointer users reach the same OS dialog, and the input is cleared
 after each pick — otherwise choosing the same file twice fires no `change`.
 
+## Alert vs NotificationCenter vs Toast
+
+Three different jobs, easy to confuse:
+
+- **`Toast`** (app-level, `apps/web`) — transient, floats over the page, gone in
+  a few seconds. Fire-and-forget confirmations.
+- **`Alert`** — one persistent in-page callout (`info`/`success`/`warning`/
+  `danger`) with an icon, optional title, body, action and dismiss. It sits in
+  the layout and stays until the situation changes: the suspended-seller banner,
+  an expiring subscription, a form-level error summary. `danger`/`warning` take
+  `role="alert"` (interrupts); `info`/`success` take `role="status"`. Each tone
+  is its semantic pair — `{tone}-bg` fill under `{tone}-fg` text — so it inherits
+  the contrast-audited inks (warning text is `warning-fg`, not the 2.09:1 gold).
+- **`NotificationCenter`** — the standing inbox: a header bell with an unread
+  badge over a Radix Popover panel, items grouped Today / Yesterday / Earlier.
+
+`NotificationCenter` is controlled and transport-free — the app owns `items` and
+reacts to `onItemClick`/`onMarkRead`/`onMarkAllRead`. The list logic (unread
+count, recency grouping, "time ago") is in `@marutham/lib/notifications`, pure
+and unit-tested (18 tests). Unlike the calendar, its times are **real instants**
+read in *local* time on purpose: a notification is grouped by the reader's
+calendar day, and `now` is injectable so the grouping is deterministic under
+test. The bell's `aria-label` carries the unread count; the count pill itself is
+`aria-hidden` so a screen reader hears the number once, not twice.
+
 ## Migration status
 
 Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
@@ -209,10 +234,10 @@ Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
 
 Phase 2E adds what the brief needs and never existed: `Table`, `Skeleton`,
 `Breadcrumbs`, `Tabs`, `Accordion`, `Dropdown`, `ProgressBar`, `DatePicker`,
-`FileUpload`. Still missing — `Pagination` (lives inside `Table`; extract when a
-second caller appears), `Toast` (app-level in
-`apps/web/src/components/Toast.tsx`), `Search` (likewise inside `Table`),
-`Notifications`. The chart and map containers are Phase 2D.
+`FileUpload`, `Alert`, `NotificationCenter`. Still missing — `Pagination` (lives
+inside `Table`; extract when a second caller appears), `Search` (likewise inside
+`Table`). `Toast` stays app-level in `apps/web/src/components/Toast.tsx`. The
+chart and map containers are Phase 2D.
 
 `OrderPipeline` keeps inline styles for two things on purpose: node width, which
 the SVG path arithmetic reads, and colour, which is a runtime string
