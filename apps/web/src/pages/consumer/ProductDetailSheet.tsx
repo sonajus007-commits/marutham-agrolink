@@ -153,9 +153,9 @@ function OfferRow({
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
-        {!soldOut ? <span style={{ fontSize: 9, color: 'var(--gray)', background: '#f4f4f4', borderRadius: 4, padding: '2px 6px' }}>{offer.qty_available} {unit} available</span> : null}
-        {qtyRule ? <span style={{ fontSize: 9, color: '#c2620a', background: '#fff7ed', borderRadius: 4, padding: '2px 6px' }}>{qtyRule}</span> : null}
-        {perSave > 0 ? <span style={{ fontSize: 9, color: 'var(--success)', fontWeight: 700, background: '#e6f7ed', borderRadius: 4, padding: '2px 6px' }}>Save ₹{perSave.toFixed(0)}/{unit}</span> : null}
+        {!soldOut ? <span style={{ fontSize: 9, color: 'var(--gray)', background: 'var(--surface-muted)', borderRadius: 4, padding: '2px 6px' }}>{offer.qty_available} {unit} available</span> : null}
+        {qtyRule ? <span style={{ fontSize: 9, color: 'var(--warning-fg)', background: 'var(--warning-bg)', borderRadius: 4, padding: '2px 6px' }}>{qtyRule}</span> : null}
+        {perSave > 0 ? <span style={{ fontSize: 9, color: 'var(--success)', fontWeight: 700, background: 'var(--success-bg)', borderRadius: 4, padding: '2px 6px' }}>Save ₹{perSave.toFixed(0)}/{unit}</span> : null}
       </div>
 
       {soldOut ? (

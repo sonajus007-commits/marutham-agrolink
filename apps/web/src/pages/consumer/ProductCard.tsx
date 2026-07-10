@@ -44,7 +44,7 @@ export function ProductCard({
           {product.regional_name ? <div style={{ fontSize: 11, color: 'var(--leaf)' }}>{product.regional_name}</div> : null}
           <div className="prod-path">
             {product.product_group ? <span className="prod-chip">{product.product_group}</span> : null}
-            {product.category ? <span className="prod-chip" style={{ background: '#fffaf0', color: 'var(--warning-fg)' }}>{product.category}</span> : null}
+            {product.category ? <span className="prod-chip" style={{ background: 'var(--warning-bg)', color: 'var(--warning-fg)' }}>{product.category}</span> : null}
             {product.sub_type ? <span style={{ fontSize: 9, color: 'var(--gray)' }}>{product.sub_type}</span> : null}
           </div>
           {rating ? <div style={{ marginTop: 3 }}><Stars value={rating.avg_rating} count={rating.num_ratings} /></div> : null}
@@ -77,8 +77,8 @@ export function ProductCard({
       </div>
 
       <div className="prod-meta-row">
-        {product.exotic ? <span className="prod-chip" style={{ background: '#fff1f2', color: '#be123c' }}>🌶 Perishable</span> : null}
-        {best?.time_available ? <span style={{ fontSize: 10, color: '#7c3aed' }}>Order by {best.time_available}</span> : null}
+        {product.exotic ? <span className="prod-chip" style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}>🌶 Perishable</span> : null}
+        {best?.time_available ? <span style={{ fontSize: 10, color: 'var(--schedule)' }}>Order by {best.time_available}</span> : null}
         {availLeft != null ? (
           <span style={{ fontSize: 10, color: availLeft <= 0 ? 'var(--red)' : 'var(--gray)' }}>
             {availLeft} {product.unit || ''} avail{cartQty > 0 ? ` (${cartQty} in cart)` : ''}
@@ -117,7 +117,7 @@ export function ProductCard({
 function SellerBadge({ type }: { type?: string }) {
   const retailer = type === 'Retailer';
   return (
-    <span style={{ fontSize: 9, fontWeight: 700, borderRadius: 4, padding: '2px 6px', background: retailer ? '#eff6ff' : '#e6f7ed', color: retailer ? '#1d4ed8' : 'var(--success)' }}>
+    <span style={{ fontSize: 9, fontWeight: 700, borderRadius: 4, padding: '2px 6px', background: retailer ? 'var(--info-bg)' : 'var(--success-bg)', color: retailer ? 'var(--info)' : 'var(--success)' }}>
       {retailer ? '🏪 Retailer' : '🌱 Direct from Farmer'}
     </span>
   );

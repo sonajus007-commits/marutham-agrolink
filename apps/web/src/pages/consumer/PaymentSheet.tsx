@@ -53,9 +53,9 @@ export function PaymentSheet({
             <div style={{ fontSize: 22 }}>{m.icon}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)' }}>{m.label}</div>
-              <div style={{ fontSize: 10, color: '#7a8492' }}>{m.desc}</div>
+              <div style={{ fontSize: 10, color: 'var(--gray)' }}>{m.desc}</div>
             </div>
-            <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${on ? 'var(--forest-soft)' : '#cbd5cb'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${on ? 'var(--forest-soft)' : 'var(--tint-300)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {on ? <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--forest-soft)' }} /> : null}
             </div>
           </button>

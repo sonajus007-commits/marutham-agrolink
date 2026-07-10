@@ -46,9 +46,9 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
 
       <div className="fm-stats">
         <StatTile label={t('farmer.earn.paid')} value={fmtMoney(earnings.paid)} hint={t('farmer.earn.paidHint')} />
-        <StatTile label={t('farmer.earn.pending')} value={fmtMoney(earnings.pending)} hint={t('farmer.earn.pendingHint')} accent="#d97706" />
+        <StatTile label={t('farmer.earn.pending')} value={fmtMoney(earnings.pending)} hint={t('farmer.earn.pendingHint')} accent="var(--warning-strong)" />
         <StatTile label={t('farmer.earn.awaiting')} value={fmtMoney(earnings.awaiting)} hint={t('farmer.earn.awaitingHint')} />
-        <StatTile label={t('farmer.earn.inFlight')} value={fmtMoney(earnings.inFlight)} hint={t('farmer.earn.inFlightHint')} accent="#2563eb" />
+        <StatTile label={t('farmer.earn.inFlight')} value={fmtMoney(earnings.inFlight)} hint={t('farmer.earn.inFlightHint')} accent="var(--info)" />
       </div>
 
       <section className="fm-card">

@@ -13,6 +13,8 @@
     "test:backend": "npm --prefix backend test",
     "tokens:build": "pnpm --filter @marutham/tokens tokens:build",
     "tokens:check": "pnpm --filter @marutham/tokens tokens:check",
-    "tokens:contrast": "pnpm --filter @marutham/tokens tokens:contrast"
+    "tokens:contrast": "pnpm --filter @marutham/tokens tokens:contrast",
+    "tokens:literals": "pnpm --filter @marutham/tokens tokens:literals",
+    "tokens:audit": "pnpm --filter @marutham/tokens tokens:audit"
   }
 }

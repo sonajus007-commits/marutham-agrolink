@@ -57,6 +57,12 @@ jobs:
       - name: Tokens — WCAG contrast audit
         run: pnpm tokens:contrast
 
+      # The app once carried 358 hard-coded colours against 16 variables, which
+      # is how a design system dies. Now there are none, and a new one fails
+      # here. `pnpm tokens:audit` prints the nearest token for each offender.
+      - name: Tokens — no hard-coded colour literals
+        run: pnpm tokens:literals
+
       # backend/ has no typechecker. A parse check is a cheap floor: it catches
       # the syntax error that would otherwise only surface when a route is hit.
       - name: Parse-check backend sources

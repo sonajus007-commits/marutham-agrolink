@@ -87,11 +87,11 @@ export function VerifySheet({
 
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--forest)', margin: '6px 0 8px' }}>Collection agent</div>
           {matched.length ? (
-            <div style={{ fontSize: 11, color: '#166534', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: 'var(--success-fg)', background: 'var(--success-bg)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }}>
               ✓ {matched.length} agent{matched.length > 1 ? 's' : ''} cover this village — auto-selected.
             </div>
           ) : (
-            <div style={{ fontSize: 11, color: 'var(--warning-fg)', background: 'var(--warning-bg)', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: 'var(--warning-fg)', background: 'var(--warning-bg)', border: '1px solid var(--gold2)', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }}>
               No agent is tagged to this village. Pick one manually.
             </div>
           )}

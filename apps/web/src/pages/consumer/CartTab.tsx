@@ -48,7 +48,7 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
         return (
           <div key={idx} className="prod-card" style={{ padding: '12px 14px' }}>
             <div className="cart-line">
-              <div style={{ width: 44, height: 44, borderRadius: 10, background: 'linear-gradient(135deg,var(--success-bg),#f1f8e9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: 'linear-gradient(135deg,var(--success-bg),var(--success-bg))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
                 {getProductEmoji(item.product_name)}
               </div>
               <div style={{ flex: 1 }}>
@@ -79,7 +79,7 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
         {bill.marketFee > 0 ? <div className="irow"><span className="ilbl">Market fee (multiple farmers)</span><span className="ival">₹{bill.marketFee.toFixed(0)}</span></div> : null}
         <div className="irow"><span className="ilbl">Delivery</span><span className="ival">{bill.delivery === 0 ? <span style={{ color: 'var(--success)', fontWeight: 700 }}>FREE</span> : `₹${bill.delivery.toFixed(0)}`}</span></div>
         {bill.itemSubtotal > 0 && bill.itemSubtotal < 150 ? (
-          <div style={{ fontSize: 10, color: '#c2620a', marginTop: 2 }}>Add ₹{(150 - bill.itemSubtotal).toFixed(0)} more for FREE delivery</div>
+          <div style={{ fontSize: 10, color: 'var(--warning-fg)', marginTop: 2 }}>Add ₹{(150 - bill.itemSubtotal).toFixed(0)} more for FREE delivery</div>
         ) : null}
         {bill.savings > 0 ? (
           <div className="irow" style={{ color: 'var(--success)', fontWeight: 700 }}><span className="ilbl">🎉 You Save</span><span className="ival">₹{bill.savings.toFixed(0)} vs Govt Rate</span></div>

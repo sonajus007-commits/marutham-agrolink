@@ -61,7 +61,7 @@ function OrderViewBody({ data }: { data: OrderDetail }) {
       <div className="a-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
           <span style={{ fontWeight: 800, color: 'var(--forest)' }}>{o.consumer_name || 'Consumer'}</span>
-          <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: '#eef7ea', color: 'var(--forest)' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: 'var(--success-bg)', color: 'var(--forest)' }}>
             {o.status}
           </span>
         </div>

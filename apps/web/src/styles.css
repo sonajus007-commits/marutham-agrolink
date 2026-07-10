@@ -65,7 +65,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: radial-gradient(ellipse at 20% 50%, #0f2d1c 0%, var(--forest) 40%, #0a1f12 100%);
+  background: radial-gradient(ellipse at 20% 50%, var(--forest-deep) 0%, var(--forest) 40%, var(--forest-night) 100%);
 }
 .login-card {
   width: 100%;
@@ -87,7 +87,7 @@ body {
 .field input {
   width: 100%;
   padding: 11px 14px;
-  border: 1.5px solid #d5e8d0;
+  border: 1.5px solid var(--border-strong);
   border-radius: var(--radiussm);
   font-size: 14px;
   font-family: 'Outfit', sans-serif;
@@ -114,5 +114,5 @@ body {
   box-shadow: var(--shadowmd);
 }
 .toast--ok { background: var(--forest); color: var(--white); }
-.toast--er { background: #8b1a1a; color: #fecaca; }
-.toast--nfo { background: #1a3560; color: #bfdbfe; }
+.toast--er { background: var(--danger); color: var(--white); }
+.toast--nfo { background: var(--info); color: var(--white); }

@@ -16,7 +16,7 @@
 .fm-hdr__right { display: flex; align-items: center; gap: 8px; }
 
 .fm-hero {
-  background: linear-gradient(135deg, #14532d, var(--forest-soft));
+  background: linear-gradient(135deg, var(--forest), var(--forest-soft));
   color: var(--white); padding: 16px; display: flex; align-items: center; gap: 12px;
 }
 .fm-hero__icon {
@@ -25,7 +25,7 @@
   display: flex; align-items: center; justify-content: center; font-size: 22px;
 }
 .fm-hero h2 { font-size: 18px; font-weight: 800; }
-.fm-hero p { font-size: 11px; color: #cde6d6; margin-top: 2px; }
+.fm-hero p { font-size: 11px; color: var(--tint-400); margin-top: 2px; }
 
 .fm-card {
   background: var(--white); border: 1px solid var(--surface-muted); border-radius: 14px;
@@ -42,9 +42,9 @@
   display: flex; justify-content: space-between; align-items: center; gap: 10px;
   border: 1.5px solid; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;
 }
-.fm-sub--active   { background: #f0fdf4; border-color: #16a34a; color: #166534; }
-.fm-sub--expiring { background: var(--warning-bg); border-color: #d97706; color: var(--warning-fg); }
-.fm-sub--expired  { background: #fef2f2; border-color: #dc2626; color: #991b1b; }
+.fm-sub--active   { background: var(--success-bg); border-color: var(--success); color: var(--success-fg); }
+.fm-sub--expiring { background: var(--warning-bg); border-color: var(--warning-strong); color: var(--warning-fg); }
+.fm-sub--expired  { background: var(--danger-bg); border-color: var(--danger); color: var(--red-dark); }
 .fm-sub__label {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .5px; opacity: .7; margin-bottom: 3px;
@@ -64,27 +64,27 @@
 }
 .payout:last-child { border-bottom: none; }
 .payout__dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.payout__dot--paid { background: #16a34a; }
-.payout__dot--pending { background: #d97706; }
+.payout__dot--paid { background: var(--success); }
+.payout__dot--pending { background: var(--warning-strong); }
 .payout__main { flex: 1; min-width: 0; }
 .payout__order { display: block; font-size: 12px; font-weight: 800; color: var(--forest); }
 .payout__meta { display: block; font-size: 10px; color: var(--gray); margin-top: 1px; }
 .payout__right { text-align: right; flex-shrink: 0; }
 .payout__amt { display: block; font-size: 13px; font-weight: 800; color: var(--forest); }
 .payout__status { display: block; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
-.payout__status--paid { color: #16a34a; }
-.payout__status--pending { color: #d97706; }
+.payout__status--paid { color: var(--success); }
+.payout__status--pending { color: var(--warning-strong); }
 
 /* ── Subscription gate ──────────────────────────────────────────────────── */
 .sub-concession {
-  background: linear-gradient(135deg, #fce4ec, #f8bbd0);
-  border: 1px solid #e85d8a; border-radius: 10px;
-  padding: 9px 12px; margin-bottom: 12px; font-size: 12px; color: #880e4f; line-height: 1.5;
+  background: linear-gradient(135deg, var(--accent-bg), var(--accent-bg));
+  border: 1px solid var(--bloom); border-radius: 10px;
+  padding: 9px 12px; margin-bottom: 12px; font-size: 12px; color: var(--accent-fg); line-height: 1.5;
 }
 .sub-plans { border: none; padding: 0; margin: 0 0 12px; }
 .sub-plan {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  border: 2px solid #e5e7eb; border-radius: 12px;
+  border: 2px solid var(--neutral-200); border-radius: 12px;
   padding: 12px 14px; margin-bottom: 10px; cursor: pointer;
 }
 .sub-plan.is-on { border-color: var(--forest); background: var(--bg); }
@@ -94,14 +94,14 @@
 .sub-plan__name { display: block; font-weight: 700; color: var(--forest); }
 .sub-plan__days { display: block; font-size: 12px; color: var(--gray); }
 .sub-plan__price { font-weight: 800; color: var(--forest); display: flex; gap: 6px; align-items: baseline; }
-.sub-plan__price s { color: #9ca3af; font-weight: 500; font-size: 12px; }
+.sub-plan__price s { color: var(--neutral-400); font-weight: 500; font-size: 12px; }
 
-.sub-summary { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px; }
+.sub-summary { background: var(--success-bg); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 14px; }
 .sub-summary__row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
 .sub-summary__row small { color: var(--gray); }
 .sub-summary__row--total {
   font-weight: 800; color: var(--forest);
-  border-top: 1px dashed #86efac; padding-top: 8px; margin-top: 4px; margin-bottom: 0;
+  border-top: 1px dashed var(--mint); padding-top: 8px; margin-top: 4px; margin-bottom: 0;
 }
 .sub-note { font-size: 12px; color: var(--gray); margin-top: 8px; }
 
@@ -117,7 +117,7 @@
 .listing__top { display: flex; align-items: flex-start; gap: 12px; }
 .listing__thumb {
   width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0; overflow: hidden;
-  background: linear-gradient(135deg, var(--success-bg), #f1f8e9);
+  background: linear-gradient(135deg, var(--success-bg), var(--success-bg));
   display: flex; align-items: center; justify-content: center; font-size: 28px;
 }
 .listing__thumb img { width: 100%; height: 100%; object-fit: cover; }
@@ -126,7 +126,7 @@
 .listing__regional { font-size: 11px; color: var(--leaf); }
 .listing__chip {
   display: inline-block; margin-top: 4px;
-  font-size: 9px; font-weight: 700; background: #f0f7ea; color: var(--forest);
+  font-size: 9px; font-weight: 700; background: var(--success-bg); color: var(--forest);
   border-radius: 4px; padding: 2px 6px;
 }
 .listing__pricebox { text-align: right; flex-shrink: 0; }
@@ -135,16 +135,16 @@
 
 .listing__badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
 .listing__badge { font-size: 10px; font-weight: 700; border-radius: 6px; padding: 2px 8px; }
-.listing__badge.is-approved { color: #166534; background: #dcfce7; border: 1px solid #86efac; }
-.listing__badge.is-pending  { color: var(--warning-fg); background: #fef3c7; border: 1px solid #fcd34d; }
-.listing__badge.is-rejected { color: #991b1b; background: #fee2e2; border: 1px solid #fca5a5; }
+.listing__badge.is-approved { color: var(--success-fg); background: var(--success-bg); border: 1px solid var(--mint); }
+.listing__badge.is-pending  { color: var(--warning-fg); background: var(--warning-bg); border: 1px solid var(--gold2); }
+.listing__badge.is-rejected { color: var(--red-dark); background: var(--danger-bg); border: 1px solid var(--danger-bg); }
 .listing__tag {
-  font-size: 10px; color: var(--gray); background: #f4f4f4;
+  font-size: 10px; color: var(--gray); background: var(--surface-muted);
   border-radius: 6px; padding: 2px 7px;
 }
-.listing__tag--cutoff { color: #7c3aed; background: #f5f0ff; }
-.listing__tag--bulk   { color: var(--success); background: #e6f7ed; }
-.listing__tag--ok     { color: var(--success); background: #e6f7ed; font-weight: 700; }
+.listing__tag--cutoff { color: var(--schedule); background: var(--schedule-bg); }
+.listing__tag--bulk   { color: var(--success); background: var(--success-bg); }
+.listing__tag--ok     { color: var(--success); background: var(--success-bg); font-weight: 700; }
 .listing__tag--warn   { color: var(--danger); background: var(--danger-bg); font-weight: 700; }
 
 .listing__actions {
@@ -158,12 +158,12 @@
 }
 .listing__link:disabled { opacity: .5; cursor: not-allowed; }
 .listing__link--danger { color: var(--red); margin-left: auto; }
-.listing__btn--warn { background: #d97706; }
-.listing__btn--warn:hover:not(:disabled) { background: #b45309; }
+.listing__btn--warn { background: var(--warning-strong); }
+.listing__btn--warn:hover:not(:disabled) { background: var(--warning-fg); }
 
 /* ── Listing form ───────────────────────────────────────────────────────── */
 .price-preview {
-  background: var(--bg); border: 1px solid #b7e4c7; border-radius: 10px;
+  background: var(--bg); border: 1px solid var(--border-subtle); border-radius: 10px;
   padding: 10px 12px; margin: -4px 0 12px; font-size: 12px; color: var(--forest);
   display: flex; flex-direction: column; gap: 3px;
 }

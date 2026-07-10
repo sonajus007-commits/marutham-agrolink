@@ -264,7 +264,7 @@ function OrderDetailBody({
       ) : null}
 
       {o.return_id ? (
-        <div className="ord-card" style={{ background: 'var(--warning-bg)', borderColor: '#f5e0b0' }}>
+        <div className="ord-card" style={{ background: 'var(--warning-bg)', borderColor: 'var(--warning-bg)' }}>
           <h3 style={{ color: 'var(--warning-fg)' }}>↩ Return Requested</h3>
           <div className="irow"><span className="ilbl">Return Code</span><span className="ival">{o.return_code || '—'}</span></div>
           <div className="irow"><span className="ilbl">Status</span><span className="ival">{o.return_status || 'pending'}</span></div>
@@ -332,7 +332,7 @@ function ItemRow({
   }
 
   return (
-    <div style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>
+    <div style={{ padding: '10px 0', borderBottom: '1px solid var(--surface-muted)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)' }}>
           {getProductEmoji(item.name)} {item.name}

@@ -11,7 +11,9 @@
   "scripts": {
     "tokens:build": "node --import tsx scripts/generate-css.mjs",
     "tokens:check": "node --import tsx scripts/generate-css.mjs --check",
-    "tokens:contrast": "node --import tsx scripts/check-contrast.mjs"
+    "tokens:contrast": "node --import tsx scripts/check-contrast.mjs",
+    "tokens:literals": "node --import tsx scripts/audit-literals.mjs --check",
+    "tokens:audit": "node --import tsx scripts/audit-literals.mjs"
   },
   "devDependencies": {
     "tsx": "^4.19.2"
