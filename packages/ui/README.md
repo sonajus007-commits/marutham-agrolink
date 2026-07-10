@@ -271,6 +271,34 @@ Both arrays pass the dataviz ordinal validator (single hue, monotone lightness,
 `scripts/validate_palette.js` before touching a stop** — the greens are chosen,
 not guessed.
 
+## Sidebar (Phase 3)
+
+The desktop navigation rail for the **Admin and Executive** portals only —
+Farmer / Consumer / VCO / Delivery keep the `.ma-tabs` bottom bar, because a side
+rail suits a wide console and a bottom bar suits a phone.
+
+Router-agnostic like `Breadcrumbs`: an item carries an `href` or an `onClick`.
+Which item is lit, and which groups open, come from `@marutham/lib/nav` against
+`currentPath` — the same tested matcher the app can share, so "active" is never a
+second hand-rolled string compare. Two rules there are load-bearing and easy to
+get wrong:
+
+- **Active is the single most-specific match, not per-item.** An Overview at
+  `/admin` is an ancestor of every `/admin/*` route; a naïve per-item test keeps
+  it lit on nested pages. `activeTrail` picks the item whose href is the *longest*
+  prefix of the path — so on `/admin/employees/42` the Employees leaf wins over
+  its Overview sibling, and only the real leaf is `aria-current`.
+- **Groups on the active branch auto-expand** on load and on every route change,
+  but a group the user opened or closed by hand is left alone — expansion state
+  only ever gains the active trail, never loses the user's choices.
+
+`collapsed` is the icon-only rail. A group can't expand inline there (no room for
+a label), so clicking a collapsed group expands the rail first. Role-gating is
+the caller's job via `filterNavByRole` *before* render — the component draws what
+it is given. The collapse control uses an inset-shadow top divider, not
+`border-t`: the `<button>` reset is `border-0`, and the two are one
+tailwind-merge group.
+
 ## Migration status
 
 Every component is rebuilt: `Button` `Card` `KpiCard` `Badge` `Spinner`
@@ -282,7 +310,8 @@ Phase 2E adds what the brief needs and never existed: `Table`, `Skeleton`,
 `FileUpload`, `Alert`, `NotificationCenter`, `Pagination`, `SearchInput`. That
 completes the brief's primitive list. `Toast` stays app-level in
 `apps/web/src/components/Toast.tsx`. Phase 2D adds `ChartContainer` and
-`MapContainer` — the chart/map chrome, chart library handed in.
+`MapContainer` — the chart/map chrome, chart library handed in. Phase 3 begins
+the shared shell with `Sidebar` (Admin/Executive rail).
 
 `OrderPipeline` keeps inline styles for two things on purpose: node width, which
 the SVG path arithmetic reads, and colour, which is a runtime string

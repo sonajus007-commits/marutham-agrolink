@@ -54,3 +54,5 @@ export { ChartContainer } from './ChartContainer';
 export type { ChartContainerProps } from './ChartContainer';
 export { MapContainer } from './MapContainer';
 export type { MapContainerProps, ChoroplethLegend } from './MapContainer';
+export { Sidebar } from './Sidebar';
+export type { SidebarProps, SidebarItem, SidebarSection } from './Sidebar';
