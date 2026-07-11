@@ -76,10 +76,11 @@ export function ProductEditSheet({
 
   const [form, setForm] = useState<Form>(blankForm);
   const [prices, setPrices] = useState<PriceRow[]>([]);
-  // Districts already persisted on this product. The price endpoint only upserts
-  // (never deletes), so a persisted district can be re-priced but NOT removed —
-  // only session-added rows get a remove affordance.
+  // Districts already persisted on this product, and the persisted ones the user
+  // has removed this session — deleted server-side on Save (the price PUT only
+  // upserts, so a removal needs an explicit DELETE).
   const [savedDistricts, setSavedDistricts] = useState<Set<string>>(new Set());
+  const [removedSaved, setRemovedSaved] = useState<Set<string>>(new Set());
   const [addDistrict, setAddDistrict] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -91,6 +92,7 @@ export function ProductEditSheet({
     setForm(product ? formFrom(product) : blankForm);
     setPrices(initial);
     setSavedDistricts(new Set(initial.map((r) => r.district)));
+    setRemovedSaved(new Set());
     setAddDistrict('');
     setError(null);
     setShowDelete(false);
@@ -104,6 +106,8 @@ export function ProductEditSheet({
   function addPriceRow() {
     if (!addDistrict) return;
     setPrices((rows) => [...rows, { district: addDistrict, market_price_rs: '', handling_rs: '0' }].sort((a, b) => a.district.localeCompare(b.district)));
+    // Re-adding a district that was slated for deletion cancels the delete.
+    setRemovedSaved((s) => { const n = new Set(s); n.delete(addDistrict); return n; });
     setAddDistrict('');
   }
   function setPrice(district: string, field: 'market_price_rs' | 'handling_rs', v: string) {
@@ -111,6 +115,8 @@ export function ProductEditSheet({
   }
   function removePriceRow(district: string) {
     setPrices((rows) => rows.filter((r) => r.district !== district));
+    // A persisted district must be deleted server-side on Save, not just hidden.
+    if (savedDistricts.has(district)) setRemovedSaved((s) => new Set(s).add(district));
   }
 
   async function save() {
@@ -142,6 +148,8 @@ export function ProductEditSheet({
       const res = isCreate ? await api.createProduct(payload) : await api.updateProduct(product!.id, payload);
       const id = isCreate ? res.product.id : product!.id;
       if (priceInput.length > 0) await api.saveProductPrices(id, priceInput);
+      // Persisted districts the user removed — the PUT can't delete, so do it here.
+      for (const district of removedSaved) await api.deleteProductPrice(id, district);
       toast(isCreate ? t('admin.prod.created') : t('admin.prod.updated'), 'ok');
       onChanged();
       onClose();
@@ -231,10 +239,8 @@ export function ProductEditSheet({
                 <span className="text-2xs text-fg-muted">₹</span>
                 <input className={`${INPUT_CLASS} w-20 text-xs`} inputMode="decimal" value={r.market_price_rs} onChange={(e) => setPrice(r.district, 'market_price_rs', e.target.value)} placeholder={t('admin.prod.market')} disabled={ro} aria-label={`${r.district} ${t('admin.prod.market')}`} />
               </div>
-              {!ro && !savedDistricts.has(r.district) ? (
+              {!ro ? (
                 <button type="button" onClick={() => removePriceRow(r.district)} aria-label={t('admin.prod.removeRow')} className="cursor-pointer rounded-sm border-0 bg-surface-muted px-2 py-1 text-2xs text-danger hover:bg-danger hover:text-white">✕</button>
-              ) : !ro ? (
-                <span className="w-7" aria-hidden="true" />
               ) : null}
             </div>
           ))}

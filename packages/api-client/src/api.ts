@@ -246,6 +246,11 @@ export const api = {
   saveProductPrices(id: string, prices: ProductPriceInput[]): Promise<{ message: string }> {
     return apiFetch('PUT', '/products/' + id + '/prices', { prices });
   },
+  /** Removes one district's price — the only way to take a district off a product
+   *  (saveProductPrices upserts and never deletes). */
+  deleteProductPrice(id: string, district: string): Promise<{ message: string }> {
+    return apiFetch('DELETE', '/products/' + id + '/prices/' + encodeURIComponent(district));
+  },
   deleteProduct(id: string): Promise<{ message: string }> {
     return apiFetch('DELETE', '/products/' + id);
   },

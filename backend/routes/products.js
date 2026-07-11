@@ -193,6 +193,26 @@ router.put('/:id/prices', requireAuth, requireHeadOffice, async (req, res) => {
   res.json({ message: `Saved ${rows.length} district price(s).` });
 });
 
+// ── DELETE /products/:id/prices/:district  (Head Office only) ─────────────────
+// Removes one district's govt price. PUT only upserts, so this is the only way to
+// take a district off a product. District arrives URL-encoded (Express decodes it).
+router.delete('/:id/prices/:district', requireAuth, requireHeadOffice, async (req, res) => {
+  const { id, district } = req.params;
+
+  const { error } = await supabase
+    .from('product_district_prices')
+    .delete()
+    .eq('product_id', id)
+    .eq('district', district);
+
+  if (error) {
+    console.error('DELETE /products/:id/prices/:district error:', error);
+    return res.status(500).json({ error: 'Could not remove the district price.' });
+  }
+
+  res.json({ message: `Removed price for ${district}.` });
+});
+
 // ── GET /products/sync-prices/status  (admin only) ───────────────────────────
 router.get('/sync-prices/status', requireAuth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
