@@ -50,6 +50,16 @@ export const ADMIN_NAV: AdminNavSection[] = [
     ],
   },
   {
+    id: 'people',
+    labelKey: 'admin.nav.people',
+    items: [
+      // The employee tracker is HR-owned. Head Office / State Head always have it;
+      // a Board of Director does too. HR-Admin-flagged staff with another role reach
+      // it by deep link (the page and backend both enforce the real authority).
+      { id: 'employees', labelKey: 'admin.nav.employees', icon: '🧑‍💼', to: '/admin/employees', roles: ['Head Office', 'State Head', 'Board of Director'] },
+    ],
+  },
+  {
     id: 'catalog',
     labelKey: 'admin.nav.catalog',
     items: [

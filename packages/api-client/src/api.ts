@@ -12,6 +12,7 @@ import type {
   Registration, ProfileChangeRequest, ProductPayload, ProductPriceInput,
   AdminReturnsResponse, AdminReturn,
   AdminPayoutsResponse, RunSettlementResponse,
+  EmployeesResponse, Employee, EmployeeAuditResponse,
 } from './types';
 import type { Order, OrderDetail, Product, Offer, Payout, FarmerListing } from '@marutham/lib';
 import { rupeesToPaise } from '@marutham/lib';
@@ -285,6 +286,26 @@ export const api = {
   // ── Employees ──
   getMyEmployeeRecord(): Promise<MyEmployeeResponse> {
     return apiFetch<MyEmployeeResponse>('GET', '/employees/me');
+  },
+
+  // ── Admin: employee tracker (Head Office / State Head / HR Admin / BoD) ──
+  /** Optional filters: status, approval_status, q (search). */
+  getEmployees(params?: Record<string, string>): Promise<EmployeesResponse> {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiFetch<EmployeesResponse>('GET', '/employees' + qs);
+  },
+  getEmployee(id: string): Promise<{ employee: Employee }> {
+    return apiFetch<{ employee: Employee }>('GET', '/employees/' + id);
+  },
+  getEmployeeHistory(id: string): Promise<EmployeeAuditResponse> {
+    return apiFetch<EmployeeAuditResponse>('GET', '/employees/' + id + '/history');
+  },
+  /** Approve a pending employee → issues the Employee ID and marks them active. */
+  approveEmployee(id: string): Promise<{ message: string; employee: Employee }> {
+    return apiFetch('PATCH', '/employees/' + id + '/approve', {});
+  },
+  rejectEmployee(id: string, reason?: string): Promise<{ message: string; employee: Employee }> {
+    return apiFetch('PATCH', '/employees/' + id + '/reject', { reason: reason || null });
   },
 };
 

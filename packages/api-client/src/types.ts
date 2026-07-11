@@ -220,13 +220,57 @@ export interface FieldDashboardResponse {
   generated_at: string;
 }
 
+export type EmployeeApprovalStatus = 'pending' | 'approved' | 'rejected' | (string & {});
+
 export interface Employee {
-  emp_id?: string;
-  designation?: string;
-  department?: string;
-  employment_type?: string;
-  date_of_joining?: string;
+  id?: string;
+  /** Null until the request is approved — issued as MA…/CE… on approval. */
+  emp_id?: string | null;
+  fname?: string | null;
+  lname?: string | null;
+  gender?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  designation?: string | null;
+  department?: string | null;
+  employment_type?: string | null;
+  date_of_joining?: string | null;
+  work_location?: string | null;
+  work_district?: string | null;
+  work_state?: string | null;
+  district?: string | null;
+  state?: string | null;
+  reporting_manager?: string | null;
+  reporting_manager_emp_id?: string | null;
+  is_manager?: boolean;
+  /** Trust flags — only Head Office / a Board of Director may set them. */
+  is_board_director?: boolean;
+  is_hr_admin?: boolean;
+  status?: string | null;
+  approval_status?: EmployeeApprovalStatus;
+  approved_at?: string | null;
+  rejected_reason?: string | null;
+  created_at?: string | null;
+  notes?: string | null;
   [key: string]: unknown;
+}
+
+export interface EmployeesResponse {
+  employees: Employee[];
+}
+
+/** One row from the employee_audit_log (DB audit trigger). */
+export interface EmployeeAuditEntry {
+  id: string;
+  action: string;
+  changed_fields?: string[] | null;
+  row_snapshot?: Record<string, unknown> | null;
+  changed_at: string;
+  changed_by?: string | null;
+}
+
+export interface EmployeeAuditResponse {
+  audit: EmployeeAuditEntry[];
 }
 
 export interface MyEmployeeResponse {
