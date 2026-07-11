@@ -12,7 +12,7 @@ import type {
   Registration, ProfileChangeRequest, ProductPayload, ProductPriceInput,
   AdminReturnsResponse, AdminReturn,
   AdminPayoutsResponse, RunSettlementResponse,
-  EmployeesResponse, Employee, EmployeeAuditResponse,
+  EmployeesResponse, Employee, EmployeeAuditResponse, EmployeePayload,
 } from './types';
 import type { Order, OrderDetail, Product, Offer, Payout, FarmerListing } from '@marutham/lib';
 import { rupeesToPaise } from '@marutham/lib';
@@ -306,6 +306,25 @@ export const api = {
   },
   rejectEmployee(id: string, reason?: string): Promise<{ message: string; employee: Employee }> {
     return apiFetch('PATCH', '/employees/' + id + '/reject', { reason: reason || null });
+  },
+  /** Managers for the reporting-manager picker — scoped to a Work District +
+   *  Department (both required); pass the employee's own id to exclude self. */
+  getManagers(params: { district: string; department: string; exclude?: string }): Promise<{ managers: Employee[] }> {
+    const qs = new URLSearchParams({
+      district: params.district,
+      department: params.department,
+      ...(params.exclude ? { exclude: params.exclude } : {}),
+    }).toString();
+    return apiFetch<{ managers: Employee[] }>('GET', '/employees/managers?' + qs);
+  },
+  /** BoD/HR-flagged records auto-approve and get an Employee ID immediately;
+   *  everyone else is created pending. */
+  createEmployee(body: EmployeePayload): Promise<{ message: string; employee: Employee }> {
+    return apiFetch('POST', '/employees', body);
+  },
+  /** emp_id is never editable; trust flags honoured only for minters. */
+  updateEmployee(id: string, body: EmployeePayload): Promise<{ message: string; employee: Employee }> {
+    return apiFetch('PATCH', '/employees/' + id, body);
   },
 };
 

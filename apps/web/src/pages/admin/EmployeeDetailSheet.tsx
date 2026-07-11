@@ -20,14 +20,18 @@ export function EmployeeDetailSheet({
   employeeId,
   open,
   canApprove,
+  canManage,
   onClose,
   onChanged,
+  onEdit,
 }: {
   employeeId: string | null;
   open: boolean;
   canApprove: boolean;
+  canManage: boolean;
   onClose: () => void;
   onChanged: () => void;
+  onEdit: (emp: Employee) => void;
 }) {
   const { t } = useTranslation();
   const [emp, setEmp] = useState<Employee | null>(null);
@@ -60,13 +64,13 @@ export function EmployeeDetailSheet({
       ) : !emp ? (
         <Spinner />
       ) : (
-        <Body emp={emp} history={history} canApprove={canApprove} onDone={() => { onChanged(); onClose(); }} />
+        <Body emp={emp} history={history} canApprove={canApprove} canManage={canManage} onDone={() => { onChanged(); onClose(); }} onEdit={onEdit} />
       )}
     </Sheet>
   );
 }
 
-function Body({ emp, history, canApprove, onDone }: { emp: Employee; history: EmployeeAuditEntry[]; canApprove: boolean; onDone: () => void }) {
+function Body({ emp, history, canApprove, canManage, onDone, onEdit }: { emp: Employee; history: EmployeeAuditEntry[]; canApprove: boolean; canManage: boolean; onDone: () => void; onEdit: (emp: Employee) => void }) {
   const { t } = useTranslation();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -102,6 +106,7 @@ function Body({ emp, history, canApprove, onDone }: { emp: Employee; history: Em
         {emp.is_manager ? <Tag label={t('admin.emp.mgr')} bg="var(--info)" /> : null}
         {emp.is_board_director ? <Tag label={t('admin.emp.bod')} bg="var(--warning-strong)" /> : null}
         {emp.is_hr_admin ? <Tag label={t('admin.emp.hr')} bg="var(--info)" /> : null}
+        {canManage ? <Button variant="ghost" onClick={() => onEdit(emp)} className="ml-auto">{t('admin.emp.edit')}</Button> : null}
       </div>
 
       {status === 'pending' && canApprove ? (

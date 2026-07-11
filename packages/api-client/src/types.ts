@@ -273,6 +273,41 @@ export interface EmployeeAuditResponse {
   audit: EmployeeAuditEntry[];
 }
 
+/** Create/update body. The server whitelists fields (emp_id is never writable);
+ *  the trust flags are honoured only for callers allowed to mint them. */
+export interface EmployeePayload {
+  fname?: string;
+  lname?: string;
+  gender?: string;
+  dob?: string;
+  phone?: string;
+  email?: string;
+  aadhar?: string;
+  house_no?: string;
+  street1?: string;
+  street2?: string;
+  state?: string;
+  district?: string;
+  taluk?: string;
+  pincode?: string;
+  city?: string;
+  village_town?: string;
+  designation?: string;
+  department?: string;
+  employment_type?: string;
+  date_of_joining?: string;
+  work_state?: string;
+  work_district?: string;
+  work_location?: string;
+  is_manager?: boolean;
+  reporting_manager?: string | null;
+  reporting_manager_emp_id?: string | null;
+  status?: string;
+  notes?: string;
+  is_board_director?: boolean;
+  is_hr_admin?: boolean;
+}
+
 export interface MyEmployeeResponse {
   employee: Employee | null;
 }

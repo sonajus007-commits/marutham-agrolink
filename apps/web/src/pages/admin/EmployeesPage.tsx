@@ -5,6 +5,7 @@ import { api, type Employee } from '@marutham/api-client';
 import { fmtDateShort } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { EmployeeDetailSheet, EMP_APPROVAL_TONE } from './EmployeeDetailSheet';
+import { EmployeeFormSheet } from './EmployeeFormSheet';
 
 const approvalOf = (e: Employee) => String(e.approval_status || 'pending');
 const empName = (e: Employee) => `${e.fname || ''} ${e.lname || ''}`.trim();
@@ -17,9 +18,14 @@ export function EmployeesPage() {
   const [error, setError] = useState<string | null>(null);
   const [approval, setApproval] = useState('pending');
   const [openId, setOpenId] = useState<string | null>(null);
-  // Approval authority mirrors the backend: Head Office / State Head by role, or
-  // anyone carrying the is_board_director / is_hr_admin flag on their own record.
+  // null = form closed; { emp: null } = create; { emp } = edit.
+  const [formMode, setFormMode] = useState<{ emp: Employee | null } | null>(null);
+  // Authority mirrors the backend: Head Office / State Head by role, or anyone
+  // carrying is_board_director / is_hr_admin. canApprove also gates create/edit
+  // (canAccessTracker is the same set); canMintTrust (BoD flag / HR-owner) additionally
+  // gates the trust-role checkboxes — an HR Admin may approve but not mint them.
   const [canApprove, setCanApprove] = useState(false);
+  const [canMintTrust, setCanMintTrust] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -38,10 +44,14 @@ export function EmployeesPage() {
 
   useEffect(() => {
     const isHrOwner = user?.admin_role === 'Head Office' || user?.admin_role === 'State Head';
-    if (isHrOwner) { setCanApprove(true); return; }
+    if (isHrOwner) { setCanApprove(true); setCanMintTrust(true); return; }
     api.getMyEmployeeRecord()
-      .then((res) => setCanApprove(!!res.employee?.is_board_director || !!res.employee?.is_hr_admin))
-      .catch(() => setCanApprove(false));
+      .then((res) => {
+        const bod = !!res.employee?.is_board_director;
+        setCanApprove(bod || !!res.employee?.is_hr_admin);
+        setCanMintTrust(bod);
+      })
+      .catch(() => { setCanApprove(false); setCanMintTrust(false); });
   }, [user?.admin_role]);
 
   const approvalOptions = useMemo(() => {
@@ -130,7 +140,10 @@ export function EmployeesPage() {
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-primary">{t('admin.emp.title')}</h1>
-        <Button variant="ghost" onClick={load} disabled={loading}>↻ {t('admin.emp.refresh')}</Button>
+        <div className="flex items-center gap-2">
+          {canApprove ? <Button onClick={() => setFormMode({ emp: null })}>+ {t('admin.emp.add')}</Button> : null}
+          <Button variant="ghost" onClick={load} disabled={loading}>↻ {t('admin.emp.refresh')}</Button>
+        </div>
       </div>
 
       <div className="mb-3">
@@ -154,8 +167,18 @@ export function EmployeesPage() {
         employeeId={openId}
         open={openId !== null}
         canApprove={canApprove}
+        canManage={canApprove}
         onClose={() => setOpenId(null)}
         onChanged={load}
+        onEdit={(emp) => { setOpenId(null); setFormMode({ emp }); }}
+      />
+
+      <EmployeeFormSheet
+        employee={formMode?.emp ?? null}
+        open={formMode !== null}
+        canMintTrust={canMintTrust}
+        onClose={() => setFormMode(null)}
+        onSaved={load}
       />
     </>
   );
