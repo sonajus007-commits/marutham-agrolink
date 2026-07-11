@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { ProtectedRoute, roleHome } from './auth/ProtectedRoute';
+import { MANAGEMENT_ADMIN_ROLES } from './pages/admin/adminNav';
 import { Login } from './pages/Login';
 
 // Code-split per role so each user only downloads their screen's bundle.
@@ -12,6 +13,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default:
 const AgentPage = lazy(() => import('./pages/agent/AgentPage').then((m) => ({ default: m.AgentPage })));
 const ConsumerPage = lazy(() => import('./pages/consumer/ConsumerPage').then((m) => ({ default: m.ConsumerPage })));
 const FarmerPage = lazy(() => import('./pages/farmer/FarmerPage').then((m) => ({ default: m.FarmerPage })));
+const AdminPage = lazy(() => import('./pages/admin/AdminPage').then((m) => ({ default: m.AdminPage })));
 
 function AppBar() {
   const { t, i18n } = useTranslation();
@@ -86,6 +88,16 @@ export function App() {
             element={
               <ProtectedRoute role="farmer">
                 <FarmerPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin / management console — the tiers above Delivery Agent/VCO */}
+          <Route
+            path="/admin/*"
+            element={
+              <ProtectedRoute role="admin" adminRoles={[...MANAGEMENT_ADMIN_ROLES]}>
+                <AdminPage />
               </ProtectedRoute>
             }
           />

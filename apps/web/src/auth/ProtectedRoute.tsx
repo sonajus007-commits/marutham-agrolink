@@ -31,5 +31,6 @@ export function roleHome(user: User): string {
   }
   if (user.role === 'consumer') return '/consumer';
   if (user.role === 'farmer') return '/farmer';
+  if (user.role === 'admin') return '/admin';
   return '/dashboard';
 }

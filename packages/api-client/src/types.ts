@@ -238,3 +238,50 @@ export interface ProfileChangeRequestResponse {
 export interface MyChangeRequestsResponse {
   requests: ProfileChangeRequest[];
 }
+
+/* ── Admin Overview dashboard (GET /dashboard) ──────────────────────────────
+ * Role-scoped by the server from the caller's admin_role. Money fields are
+ * already in rupees (string, 2dp) — named to bypass the paise→rupee middleware. */
+export interface DashboardKpis {
+  total_orders: number;
+  active_orders: number;
+  delivered_orders: number;
+  cancelled_orders: number;
+  gmv_rupees: string;
+  platform_fee_rupees: string;
+  total_farmers: number;
+  total_consumers: number;
+  total_returns: number;
+}
+
+export interface DashboardTrendPoint {
+  date: string;
+  day_label: string;
+  order_count: number;
+  revenue: number;
+}
+
+export interface DashboardTopProduct {
+  product_id: string;
+  name: string;
+  unit?: string;
+  qty: number;
+  revenue: number;
+}
+
+export interface DashboardSubscriptionSummary {
+  active: number;
+  expiring_soon: number;
+  expired: number;
+  by_plan: Record<string, number>;
+}
+
+export interface DashboardResponse {
+  scope: string;
+  kpis: DashboardKpis;
+  /** status label → order count. */
+  status_breakdown: Record<string, number>;
+  daily_trend: DashboardTrendPoint[];
+  top_products: DashboardTopProduct[];
+  subscription_summary: DashboardSubscriptionSummary;
+}

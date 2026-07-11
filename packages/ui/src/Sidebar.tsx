@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import { ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { activeTrail, type NavNode } from '@marutham/lib';
 import { cn } from './lib/cn';
@@ -22,7 +22,11 @@ import { cn } from './lib/cn';
 export interface SidebarItem extends NavNode {
   label: string;
   icon?: ReactNode;
-  onClick?: () => void;
+  /** Fires on click for both the button (no href) and the link (with href). A
+   *  link item can use it for SPA navigation: check for a plain left-click
+   *  (no modifier keys), `preventDefault()`, and route — `href` still drives the
+   *  active highlight and lets middle/modifier-click open a real tab. */
+  onClick?: (e: MouseEvent<HTMLElement>) => void;
   badge?: ReactNode;
   children?: SidebarItem[];
 }
@@ -77,7 +81,7 @@ function Leaf({ item, active, collapsed }: { item: SidebarItem; active: boolean;
 
   if (item.href) {
     return (
-      <a href={item.href} className={cls} title={title} aria-current={active ? 'page' : undefined}>
+      <a href={item.href} onClick={item.onClick} className={cls} title={title} aria-current={active ? 'page' : undefined}>
         {inner}
       </a>
     );

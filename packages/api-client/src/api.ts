@@ -8,6 +8,7 @@ import type {
   TrackResponse, ReturnRequestPayload, ReturnResponse, RateItemResponse,
   SubscriptionPlansResponse, SubscriptionPayResponse,
   ProfileChangeRequestResponse, MyChangeRequestsResponse,
+  DashboardResponse,
 } from './types';
 import type { Order, OrderDetail, Product, Offer, Payout, FarmerListing } from '@marutham/lib';
 import { rupeesToPaise } from '@marutham/lib';
@@ -161,6 +162,10 @@ export const api = {
   },
 
   // ── Dashboards ──
+  /** The admin Overview — role-scoped server-side from the caller's admin_role. */
+  getDashboard(): Promise<DashboardResponse> {
+    return apiFetch<DashboardResponse>('GET', '/dashboard');
+  },
   getFieldDashboard(): Promise<FieldDashboardResponse> {
     return apiFetch<FieldDashboardResponse>('GET', '/dashboard/field');
   },
