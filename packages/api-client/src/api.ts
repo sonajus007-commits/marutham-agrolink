@@ -9,7 +9,7 @@ import type {
   SubscriptionPlansResponse, SubscriptionPayResponse,
   ProfileChangeRequestResponse, MyChangeRequestsResponse,
   DashboardResponse, AccountStatus, UserStatusHistoryEntry,
-  Registration, ProfileChangeRequest,
+  Registration, ProfileChangeRequest, ProductPayload, ProductPriceInput,
 } from './types';
 import type { Order, OrderDetail, Product, Offer, Payout, FarmerListing } from '@marutham/lib';
 import { rupeesToPaise } from '@marutham/lib';
@@ -229,6 +229,25 @@ export const api = {
   /** Renewal step 2: mark the payment received → extends the subscription. */
   confirmRenewalPayment(id: string): Promise<{ message: string }> {
     return apiFetch('POST', '/users/change-requests/' + id + '/confirm-renewal-payment', {});
+  },
+
+  // ── Admin: product catalog (writes are Head Office only, enforced server-side) ──
+  /** Full catalogue detail: the product + every farmer listing for it. */
+  getProduct(id: string): Promise<{ product: Product; listings: unknown[] }> {
+    return apiFetch<{ product: Product; listings: unknown[] }>('GET', '/products/' + id);
+  },
+  createProduct(body: ProductPayload): Promise<{ message: string; product: Product }> {
+    return apiFetch('POST', '/products', body);
+  },
+  updateProduct(id: string, body: ProductPayload): Promise<{ message: string; product: Product }> {
+    return apiFetch('PATCH', '/products/' + id, body);
+  },
+  /** Upserts per-district govt/market prices. Amounts are RUPEES here. */
+  saveProductPrices(id: string, prices: ProductPriceInput[]): Promise<{ message: string }> {
+    return apiFetch('PUT', '/products/' + id + '/prices', { prices });
+  },
+  deleteProduct(id: string): Promise<{ message: string }> {
+    return apiFetch('DELETE', '/products/' + id);
   },
 
   // ── Employees ──

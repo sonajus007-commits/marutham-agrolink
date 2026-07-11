@@ -251,6 +251,37 @@ export type RegistrationStatus =
 
 export type Registration = User;
 
+/* ── Admin product catalog (GET/POST/PATCH/PUT/DELETE /products) ─────────────
+ * Head Office only for writes. `market_price`/`handling` are backend money
+ * fields → they arrive as RUPEE strings and must be sent back in rupees. */
+export interface AdminDistrictPrice {
+  district: string;
+  market_price?: string | number;
+  handling?: string | number;
+}
+
+/** The editable product fields (create + update). `code` is create-only. */
+export interface ProductPayload {
+  code?: string;
+  name?: string;
+  regional_name?: string | null;
+  product_group?: string | null;
+  category?: string | null;
+  sub_type?: string | null;
+  unit?: string;
+  exotic?: boolean;
+  platform_fee_pct?: number;
+  available?: boolean;
+}
+
+/** One district-price row as the PUT endpoint wants it: rupees, converted to
+ *  paise server-side. */
+export interface ProductPriceInput {
+  district: string;
+  market_price_rs: number;
+  handling_rs?: number;
+}
+
 export interface ProfileChangeRequestResponse {
   message: string;
   request: ProfileChangeRequest;
