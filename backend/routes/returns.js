@@ -128,11 +128,23 @@ router.get('/', async (req, res) => {
     return res.status(403).json({ error: 'Only admins can list returns.' });
   }
 
+  const scoped = req.user.admin_role === 'VCO'
+    || ['District Manager', 'Hub Incharge'].includes(req.user.admin_role);
+
+  // Scoped roles filter on a joined order column. That filter only EXCLUDES
+  // non-matching returns with an INNER join — a plain embed nulls the order but
+  // still returns the row, leaking every out-of-scope return (just with its
+  // order details blanked). Head Office / State / Regional are unscoped, so a
+  // plain embed is fine and still surfaces a return whose order is missing.
+  const orderEmbed = scoped
+    ? 'order:orders!inner ( id, code, consumer_name, village, district )'
+    : 'order:orders ( id, code, consumer_name, village, district )';
+
   let query = supabase
     .from('returns')
     .select(`
       id, code, full_return, decision, collected, refund_amt, refund_to, requested_at, decided_at,
-      order:orders ( id, code, consumer_name, village, district )
+      ${orderEmbed}
     `)
     .order('requested_at', { ascending: false });
 
