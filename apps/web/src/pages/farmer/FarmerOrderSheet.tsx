@@ -43,7 +43,10 @@ export function FarmerOrderSheet({
         if (!active) return;
         const mine = (detail.items || []).filter((it) => it.farmer_id === user?.id);
         setItems(mine);
-        setHistory(detail.history || []);
+        // The status-timeline notes are server-authored and name the buyer
+        // (e.g. "…placed by Kavitha R."). A seller has no need for the buyer's
+        // name, so redact it out of the notes before showing them.
+        setHistory(scrubBuyerName(detail.history || [], order.consumer_name));
       })
       .catch((e) => active && setError(e instanceof Error ? e.message : 'Could not load order'));
     return () => {
@@ -115,6 +118,23 @@ export function FarmerOrderSheet({
       )}
     </Sheet>
   );
+}
+
+/**
+ * Redact the buyer's name from server-authored timeline notes. Handles both the
+ * full name and its first-name token (a note may carry either), replacing the
+ * longer form first so "…placed by Kavitha R." becomes "…placed by the customer".
+ */
+function scrubBuyerName(entries: OrderHistoryEntry[], buyerName?: string): OrderHistoryEntry[] {
+  const name = (buyerName || '').trim();
+  if (!name) return entries;
+  const tokens = [name, name.split(/\s+/)[0]].filter((t) => t.length > 1);
+  return entries.map((h) => {
+    if (!h.note) return h;
+    let note = h.note;
+    for (const tok of tokens) note = note.split(tok).join('the customer');
+    return note === h.note ? h : { ...h, note };
+  });
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
