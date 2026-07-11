@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Field } from '@marutham/ui';
+import { Button, Field, Input, Select, FIELD_ERR_CLASS } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import { buildAddress } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
@@ -105,40 +105,40 @@ export function ProfileTab() {
 
             <Field label="Gender">
               {(p) => (
-                <select {...p} className="ma-select" value={draft.gender} onChange={(e) => set('gender', e.target.value)}>
+                <Select {...p} value={draft.gender} onChange={(e) => set('gender', e.target.value)}>
                   <option value="">— Select Gender —</option>
                   {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
-                </select>
+                </Select>
               )}
             </Field>
 
             <Field label="Email">
               {(p) => (
-                <input {...p} className="ma-input" type="email" autoComplete="email" placeholder="your@email.com"
+                <Input {...p} type="email" autoComplete="email" placeholder="your@email.com"
                   value={draft.email} onChange={(e) => set('email', e.target.value)} />
               )}
             </Field>
 
             <Field label="Street Line 1">
-              {(p) => <input {...p} className="ma-input" type="text" value={draft.street1} onChange={(e) => set('street1', e.target.value)} />}
+              {(p) => <Input {...p} type="text" value={draft.street1} onChange={(e) => set('street1', e.target.value)} />}
             </Field>
             <Field label="Street Line 2">
-              {(p) => <input {...p} className="ma-input" type="text" value={draft.street2} onChange={(e) => set('street2', e.target.value)} />}
+              {(p) => <Input {...p} type="text" value={draft.street2} onChange={(e) => set('street2', e.target.value)} />}
             </Field>
             <Field label="Village / Town">
-              {(p) => <input {...p} className="ma-input" type="text" value={draft.village_town} onChange={(e) => set('village_town', e.target.value)} />}
+              {(p) => <Input {...p} type="text" value={draft.village_town} onChange={(e) => set('village_town', e.target.value)} />}
             </Field>
             <Field label="City">
-              {(p) => <input {...p} className="ma-input" type="text" value={draft.city} onChange={(e) => set('city', e.target.value)} />}
+              {(p) => <Input {...p} type="text" value={draft.city} onChange={(e) => set('city', e.target.value)} />}
             </Field>
             <Field label="Pincode">
               {(p) => (
-                <input {...p} className="ma-input" type="text" inputMode="numeric" autoComplete="postal-code"
+                <Input {...p} type="text" inputMode="numeric" autoComplete="postal-code"
                   value={draft.pincode} onChange={(e) => set('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))} />
               )}
             </Field>
 
-            {error ? <div className="ma-field__err" role="alert" style={{ marginBottom: 8 }}>{error}</div> : null}
+            {error ? <div className={FIELD_ERR_CLASS} role="alert" style={{ marginBottom: 8 }}>{error}</div> : null}
 
             <div className="prof-actions">
               <Button onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save Changes'}</Button>

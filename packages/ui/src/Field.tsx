@@ -1,5 +1,16 @@
 import { useId, type ReactNode } from 'react';
 
+/* The labelled form control, on Tailwind — the last of the `.ma-field*` classes.
+ *
+ * The label and error strings are exported so screens that render a bare label,
+ * a <legend>, or a standalone error message (outside a <Field>) can match this
+ * one without re-deriving the type scale. Error text is the semantic `danger`
+ * token, the same red <Input> turns its border on an invalid field. */
+
+export const FIELD_LABEL_CLASS = 'block text-[11px] font-bold text-forest mb-1.5';
+export const FIELD_ERR_CLASS = 'mt-1 text-[11px] text-danger';
+const FIELD_HINT_CLASS = 'mt-1 text-[10px] text-fg-muted';
+
 export interface FieldProps {
   label: ReactNode;
   required?: boolean;
@@ -25,18 +36,18 @@ export function Field({ label, required = false, error, hint, children }: FieldP
   const describedBy = [error ? errId : null, hint ? hintId : null].filter(Boolean).join(' ');
 
   return (
-    <div className="ma-field">
-      <label className="ma-field__label" htmlFor={id}>
+    <div className="mb-3">
+      <label className={FIELD_LABEL_CLASS} htmlFor={id}>
         {label}
-        {required ? <span className="ma-field__req" aria-hidden="true"> *</span> : null}
+        {required ? <span className="text-danger" aria-hidden="true"> *</span> : null}
       </label>
       {children({
         id,
         ...(error ? { 'aria-invalid': true } : {}),
         ...(describedBy ? { 'aria-describedby': describedBy } : {}),
       })}
-      {hint ? <div id={hintId} className="ma-field__hint">{hint}</div> : null}
-      {error ? <div id={errId} className="ma-field__err" role="alert">{error}</div> : null}
+      {hint ? <div id={hintId} className={FIELD_HINT_CLASS}>{hint}</div> : null}
+      {error ? <div id={errId} className={FIELD_ERR_CLASS} role="alert">{error}</div> : null}
     </div>
   );
 }

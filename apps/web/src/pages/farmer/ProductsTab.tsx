@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, EmptyState, Modal, Spinner } from '@marutham/ui';
+import { Button, EmptyState, Modal, Spinner, Select, FIELD_LABEL_CLASS } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import {
   DEFAULT_CUTOFF, cutoffTimestamp, requestableProducts,
@@ -192,16 +192,16 @@ function RequestProductModal({
       {products.length === 0 ? (
         <p className="fm-note">You have already requested every available product.</p>
       ) : (
-        <label className="ma-field">
-          <span className="ma-field__label">Product</span>
-          <select className="ma-select" value={pick} onChange={(e) => setPick(e.target.value)}>
+        <label className="mb-3">
+          <span className={FIELD_LABEL_CLASS}>Product</span>
+          <Select value={pick} onChange={(e) => setPick(e.target.value)}>
             <option value="">— Select a product —</option>
             {products.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}{p.regional_name ? ` — ${p.regional_name}` : ''} ({p.unit})
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       )}
     </Modal>

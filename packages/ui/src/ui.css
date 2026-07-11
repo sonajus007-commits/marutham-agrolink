@@ -2,12 +2,10 @@
  *
  * Every component in packages/ui has been rebuilt. What is left here is styling
  * for class names that apps/web writes by hand, so deleting it means editing app
- * screens — Phase 4's job, not the design system's:
- *
- *   .ma-field, .ma-input,   AddressFields, ProfileTab,
- *   .ma-select              ListingFormSheet, ProductsTab
- *                           (PasswordInput is on Tailwind now — its .ma-pw* and
- *                            .ma-pwrules* blocks are gone)
+ * screens — Phase 4's job, not the design system's. The form controls
+ * (.ma-field/.ma-input/.ma-select) are gone: <Field>, <Input> and <Select> now
+ * carry those styles, and the six screens that wrote the classes by hand have
+ * moved over. All that is left is the mobile shell:
  *
  *   .ma-tabs, .ma-tab,      the shared mobile shell, applied in
  *   .ma-lang, .ma-iconbtn,  ConsumerPage and FarmerPage
@@ -54,27 +52,3 @@
 .ma-iconbtn.on { background: var(--success-bg); border-color: var(--leaf); }
 
 .ma-appbody { flex: 1; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
-
-/* ── Form controls ─────────────────────────────────────────────────────── */
-.ma-field { margin-bottom: 12px; }
-.ma-field__label {
-  display: block; font-size: 11px; font-weight: 700;
-  color: var(--forest); margin-bottom: 6px;
-}
-.ma-field__req { color: var(--red); }
-.ma-field__hint { font-size: 10px; color: var(--gray); margin-top: 4px; }
-.ma-field__err { font-size: 11px; color: var(--red); margin-top: 4px; }
-
-.ma-input, .ma-select {
-  width: 100%; padding: 10px 12px;
-  border: 1.5px solid var(--border-strong); border-radius: var(--radiussm);
-  font-size: 13px; font-family: inherit; color: var(--text);
-  background: var(--white); outline: none;
-}
-.ma-select { padding: 9px 10px; font-size: 12px; }
-.ma-input:focus, .ma-select:focus {
-  border-color: var(--leaf); box-shadow: 0 0 0 3px var(--focus-ring);
-}
-.ma-input[aria-invalid='true'], .ma-select[aria-invalid='true'] { border-color: var(--red); }
-.ma-input:disabled, .ma-select:disabled { background: var(--tint-25); cursor: not-allowed; }
-textarea.ma-input { resize: vertical; min-height: 64px; }

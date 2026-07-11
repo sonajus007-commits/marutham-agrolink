@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Modal, Spinner } from '@marutham/ui';
+import { Button, Modal, Spinner, FIELD_LABEL_CLASS, FIELD_ERR_CLASS } from '@marutham/ui';
 import { api, type SubscriptionPlan, type SubscriptionPlansResponse } from '@marutham/api-client';
 import { fmtMoney } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
@@ -95,7 +95,7 @@ export function SubscriptionGate({
       }
     >
       {error && !data ? (
-        <p className="ma-field__err" role="alert">{error}</p>
+        <p className={FIELD_ERR_CLASS} role="alert">{error}</p>
       ) : !data ? (
         <Spinner />
       ) : (
@@ -108,7 +108,7 @@ export function SubscriptionGate({
           ) : null}
 
           <fieldset className="sub-plans">
-            <legend className="ma-field__label">Choose a plan</legend>
+            <legend className={FIELD_LABEL_CLASS}>Choose a plan</legend>
             {data.plans.map((p) => (
               <PlanOption key={p.name} plan={p} checked={selected === p.name} onSelect={() => setSelected(p.name)} />
             ))}
@@ -135,7 +135,7 @@ export function SubscriptionGate({
             <p className="sub-note">✓ Your one-time registration charge is already paid — renewals are plan fee only.</p>
           ) : null}
 
-          {error ? <p className="ma-field__err" role="alert" style={{ marginTop: 8 }}>{error}</p> : null}
+          {error ? <p className={FIELD_ERR_CLASS} role="alert" style={{ marginTop: 8 }}>{error}</p> : null}
         </>
       )}
     </Modal>

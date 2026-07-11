@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Field } from '@marutham/ui';
+import { Button, Field, FIELD_ERR_CLASS } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import { isStrongPassword } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
@@ -63,7 +63,7 @@ export function ChangePasswordCard() {
           </Field>
 
           {/* Form-level: the fault may be the current password, the new one, or the server. */}
-          {error ? <div className="ma-field__err" role="alert" style={{ marginBottom: 8 }}>{error}</div> : null}
+          {error ? <div className={FIELD_ERR_CLASS} role="alert" style={{ marginBottom: 8 }}>{error}</div> : null}
 
           <div className="prof-actions">
             <Button onClick={submit} disabled={busy}>{busy ? 'Updating…' : 'Update Password'}</Button>

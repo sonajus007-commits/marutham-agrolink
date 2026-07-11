@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Field, Sheet } from '@marutham/ui';
+import { Button, Field, Input, Select, Sheet, FIELD_ERR_CLASS } from '@marutham/ui';
 import { api, type ListingPayload } from '@marutham/api-client';
 import {
   CUTOFF_OPTIONS, DEFAULT_CUTOFF, cutoffTimestamp, cutoffLabel,
@@ -113,12 +113,12 @@ export function ListingFormSheet({
   return (
     <Sheet open={open} title={listing.product?.name ?? 'Listing'} onClose={onClose}>
       <Field label="Product">
-        {(p) => <input {...p} className="ma-input" value={listing.product?.name || ''} readOnly />}
+        {(p) => <Input {...p} value={listing.product?.name || ''} readOnly />}
       </Field>
 
       <Field label={`Your selling price (₹ per ${unit})`} required>
         {(p) => (
-          <input {...p} className="ma-input" type="text" inputMode="decimal" placeholder="30"
+          <Input {...p} type="text" inputMode="decimal" placeholder="30"
             value={draft.farmer_price} onChange={(e) => set('farmer_price', numeric(e.target.value))} />
         )}
       </Field>
@@ -140,14 +140,14 @@ export function ListingFormSheet({
 
       <Field label={`Quantity available (${unit})`} required>
         {(p) => (
-          <input {...p} className="ma-input" type="text" inputMode="decimal" placeholder="10"
+          <Input {...p} type="text" inputMode="decimal" placeholder="10"
             value={draft.qty_available} onChange={(e) => set('qty_available', numeric(e.target.value))} />
         )}
       </Field>
 
       <Field label="Stop taking orders at" required hint="Orders close at this time; you re-list the next day.">
         {(p) => (
-          <select {...p} className="ma-select" value={draft.time_available} onChange={(e) => set('time_available', e.target.value)}>
+          <Select {...p} value={draft.time_available} onChange={(e) => set('time_available', e.target.value)}>
             {(['Previous Evening', 'Current Day'] as const).map((group) => (
               <optgroup key={group} label={group}>
                 {CUTOFF_OPTIONS.filter((o) => o.group === group).map((o) => (
@@ -160,7 +160,7 @@ export function ListingFormSheet({
             {CUTOFF_OPTIONS.some((o) => o.value === draft.time_available) ? null : (
               <option value={draft.time_available}>{cutoffLabel(draft.time_available)}</option>
             )}
-          </select>
+          </Select>
         )}
       </Field>
 
@@ -169,13 +169,13 @@ export function ListingFormSheet({
         <div className="lf-row">
           <Field label={`Buy at least (${unit})`}>
             {(p) => (
-              <input {...p} className="ma-input" type="text" inputMode="decimal"
+              <Input {...p} type="text" inputMode="decimal"
                 value={draft.bulk_qty} onChange={(e) => set('bulk_qty', numeric(e.target.value))} />
             )}
           </Field>
           <Field label="Discount (%)">
             {(p) => (
-              <input {...p} className="ma-input" type="text" inputMode="decimal"
+              <Input {...p} type="text" inputMode="decimal"
                 value={draft.bulk_disc_pct} onChange={(e) => set('bulk_disc_pct', numeric(e.target.value))} />
             )}
           </Field>
@@ -187,16 +187,16 @@ export function ListingFormSheet({
         <div className="lf-row">
           <Field label="Type">
             {(p) => (
-              <select {...p} className="ma-select" value={draft.qty_type || ''} onChange={(e) => set('qty_type', e.target.value as 'MOQ' | 'SPQ' | '')}>
+              <Select {...p} value={draft.qty_type || ''} onChange={(e) => set('qty_type', e.target.value as 'MOQ' | 'SPQ' | '')}>
                 <option value="">— None —</option>
                 <option value="MOQ">Minimum order</option>
                 <option value="SPQ">Fixed pack size</option>
-              </select>
+              </Select>
             )}
           </Field>
           <Field label={`Amount (${unit})`}>
             {(p) => (
-              <input {...p} className="ma-input" type="text" inputMode="decimal"
+              <Input {...p} type="text" inputMode="decimal"
                 value={draft.qty_value} onChange={(e) => set('qty_value', numeric(e.target.value))} />
             )}
           </Field>
@@ -212,7 +212,7 @@ export function ListingFormSheet({
         {() => <ImagePicker images={images} onChange={setImages} onError={(m) => toast(m, 'er')} />}
       </Field>
 
-      {error ? <div className="ma-field__err" role="alert" style={{ marginBottom: 8 }}>{error}</div> : null}
+      {error ? <div className={FIELD_ERR_CLASS} role="alert" style={{ marginBottom: 8 }}>{error}</div> : null}
 
       <div className="prof-actions">
         <Button onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save & list'}</Button>
