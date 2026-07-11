@@ -142,6 +142,39 @@ export interface AdminReturnsResponse {
   returns: AdminReturn[];
 }
 
+/* ── Admin payouts (GET /payouts, role-scoped server-side) ───────────────────
+ * `amount` is a backend money field → RUPEE string. Admins get the farmer +
+ * bank join the farmer-facing getPayouts doesn't carry. */
+export interface AdminPayout {
+  id: string;
+  amount: string | number;
+  status: 'pending' | 'paid' | (string & {});
+  method?: string | null;
+  reference?: string | null;
+  created_at?: string;
+  paid_at?: string | null;
+  farmer?: {
+    id: string;
+    fname?: string | null;
+    lname?: string | null;
+    phone?: string | null;
+    bank_name?: string | null;
+    bank_account?: string | null;
+    ifsc?: string | null;
+  } | null;
+  order?: { id: string; code?: string | null } | null;
+}
+
+export interface AdminPayoutsResponse {
+  payouts: AdminPayout[];
+}
+
+export interface RunSettlementResponse {
+  message: string;
+  created: number;
+  payouts?: AdminPayout[];
+}
+
 export interface RateItemResponse {
   message: string;
   rating_value: number;

@@ -11,6 +11,7 @@ import type {
   DashboardResponse, AccountStatus, UserStatusHistoryEntry,
   Registration, ProfileChangeRequest, ProductPayload, ProductPriceInput,
   AdminReturnsResponse, AdminReturn,
+  AdminPayoutsResponse, RunSettlementResponse,
 } from './types';
 import type { Order, OrderDetail, Product, Offer, Payout, FarmerListing } from '@marutham/lib';
 import { rupeesToPaise } from '@marutham/lib';
@@ -268,6 +269,17 @@ export const api = {
   /** Mark accepted goods collected → triggers the refund. */
   collectReturn(id: string): Promise<{ message: string; return: AdminReturn; refund: { amount_paise: number; to: string } }> {
     return apiFetch('PATCH', '/returns/' + id + '/collect', {});
+  },
+
+  // ── Admin: payouts (role-scoped list; settlement is a global batch) ──
+  /** Admin view: carries the farmer + bank join (unlike the farmer getPayouts). */
+  getAdminPayouts(): Promise<AdminPayoutsResponse> {
+    return apiFetch<AdminPayoutsResponse>('GET', '/payouts');
+  },
+  /** Creates pending payout records for every delivered, unsettled order. Global,
+   *  not district-scoped — the UI restricts the trigger to Head Office. */
+  runSettlement(): Promise<RunSettlementResponse> {
+    return apiFetch<RunSettlementResponse>('POST', '/payouts/run', {});
   },
 
   // ── Employees ──

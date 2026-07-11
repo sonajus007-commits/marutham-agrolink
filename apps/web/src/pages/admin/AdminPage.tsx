@@ -13,6 +13,7 @@ import { ADMIN_NAV, APP_BASE } from './adminNav';
 import { OverviewPage } from './OverviewPage';
 import { OrdersPage } from './OrdersPage';
 import { ReturnsPage } from './ReturnsPage';
+import { PayoutsPage } from './PayoutsPage';
 import { UsersPage } from './UsersPage';
 import { RegistrationsPage } from './RegistrationsPage';
 import { ChangeRequestsPage } from './ChangeRequestsPage';
@@ -101,6 +102,7 @@ export function AdminPage() {
           <Route index element={<OverviewPage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="returns" element={<ReturnsPage />} />
+          <Route path="payouts" element={<PayoutsPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="registrations" element={<RegistrationsPage />} />
           <Route path="change-requests" element={<ChangeRequestsPage />} />

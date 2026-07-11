@@ -47,8 +47,11 @@ router.get('/', async (req, res) => {
 // ── POST /payouts/run  (admin only — trigger settlement batch) ────────────────
 // Creates pending payout records for all delivered orders that don't have one yet.
 router.post('/run', async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Only admins can trigger payouts.' });
+  // Settlement is a GLOBAL batch (every delivered order, all districts), so it is
+  // restricted to Head Office — a district-scoped admin has no business running a
+  // company-wide payout run. The list (GET /) stays open to scoped admins.
+  if (req.user.role !== 'admin' || req.user.admin_role !== 'Head Office') {
+    return res.status(403).json({ error: 'Only Head Office can run a settlement batch.' });
   }
 
   // Fetch delivered order items that haven't been paid out yet

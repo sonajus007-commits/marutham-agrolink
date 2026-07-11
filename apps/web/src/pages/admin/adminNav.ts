@@ -35,6 +35,7 @@ export const ADMIN_NAV: AdminNavSection[] = [
       { id: 'overview', labelKey: 'admin.nav.overview', icon: '📊', to: '/admin' },
       { id: 'orders', labelKey: 'admin.nav.orders', icon: '📦', to: '/admin/orders' },
       { id: 'returns', labelKey: 'admin.nav.returns', icon: '↩️', to: '/admin/returns' },
+      { id: 'payouts', labelKey: 'admin.nav.payouts', icon: '💸', to: '/admin/payouts' },
       { id: 'users', labelKey: 'admin.nav.users', icon: '👥', to: '/admin/users' },
     ],
   },
