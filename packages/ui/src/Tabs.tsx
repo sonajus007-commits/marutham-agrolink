@@ -8,9 +8,9 @@ import { cn } from './lib/cn';
  * Left/Right/Home/End on the tab list, and the `aria-controls` /
  * `aria-labelledby` pairing between each tab and its panel.
  *
- * Not to be confused with `.ma-tabs` in ui.css. Those are the mobile shell's
- * *navigation* tabs — they swap routes, and their correct role is a nav, not a
- * tablist. These switch panels within one screen. Do not merge them.
+ * Not to be confused with <TabBar>, the mobile shell's *navigation* tabs —
+ * those swap whole screens, and their correct role is a nav, not a tablist.
+ * These switch panels within one screen. Do not merge them.
  *
  * Uncontrolled by default; pass `value` + `onValueChange` to control it. */
 

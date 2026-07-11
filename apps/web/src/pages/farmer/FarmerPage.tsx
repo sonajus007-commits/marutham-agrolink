@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { EmptyState } from '@marutham/ui';
+import { EmptyState, TabBar, IconButton, LangToggle } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import { needsSubscriptionPayment } from '@marutham/lib';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
@@ -64,11 +64,15 @@ function FarmerInner() {
           </div>
         </a>
         <div className="fm-hdr__right">
-          <div className="ma-lang">
-            <button className={i18n.language === 'en' ? 'on' : ''} onClick={() => setLang('en')}>EN</button>
-            <button className={`tamil ${i18n.language === 'ta' ? 'on' : ''}`} onClick={() => setLang('ta')}>த</button>
-          </div>
-          <button className="ma-iconbtn" onClick={logout} aria-label={t('farmer.logout')}>⎋</button>
+          <LangToggle
+            value={i18n.language}
+            onChange={(v) => setLang(v as AppLanguage)}
+            options={[
+              { value: 'en', label: 'EN' },
+              { value: 'ta', label: 'த', className: 'tamil' },
+            ]}
+          />
+          <IconButton onClick={logout} aria-label={t('farmer.logout')}>⎋</IconButton>
         </div>
       </header>
 
@@ -80,15 +84,9 @@ function FarmerInner() {
         </div>
       </div>
 
-      <nav className="ma-tabs">
-        {tabs.map((tb) => (
-          <button key={tb.id} className={`ma-tab ${tab === tb.id ? 'on' : ''}`} onClick={() => setTab(tb.id)}>
-            {tb.label}
-          </button>
-        ))}
-      </nav>
+      <TabBar items={tabs} active={tab} onSelect={(id) => setTab(id as Tab)} />
 
-      <div className="ma-appbody">
+      <div className="flex flex-1 flex-col gap-3 p-3.5">
         {tab === 'earnings' ? (
           <EarningsTab onRenew={() => setRenewing(true)} />
         ) : tab === 'products' ? (

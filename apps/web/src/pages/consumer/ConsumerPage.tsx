@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { TabBar, IconButton, LangToggle } from '@marutham/ui';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
 import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider } from '../../components/Toast';
@@ -71,20 +72,24 @@ function ConsumerInner() {
           </div>
         </a>
         <div className="cons-hdr__right">
-          <div className="ma-lang">
-            <button className={i18n.language === 'en' ? 'on' : ''} onClick={() => setLang('en')}>EN</button>
-            <button className={`tamil ${i18n.language === 'ta' ? 'on' : ''}`} onClick={() => setLang('ta')}>த</button>
-          </div>
-          <button
-            className={`ma-iconbtn ${tab === 'profile' ? 'on' : ''}`}
+          <LangToggle
+            value={i18n.language}
+            onChange={(v) => setLang(v as AppLanguage)}
+            options={[
+              { value: 'en', label: 'EN' },
+              { value: 'ta', label: 'த', className: 'tamil' },
+            ]}
+          />
+          <IconButton
+            active={tab === 'profile'}
             onClick={() => setTab(tab === 'profile' ? 'home' : 'profile')}
             aria-pressed={tab === 'profile'}
             aria-label={t('consumer.profile')}
             title={t('consumer.profile')}
           >
             👤
-          </button>
-          <button className="ma-iconbtn" onClick={logout} aria-label={t('consumer.logout')}>⎋</button>
+          </IconButton>
+          <IconButton onClick={logout} aria-label={t('consumer.logout')}>⎋</IconButton>
         </div>
       </header>
 
@@ -96,16 +101,9 @@ function ConsumerInner() {
         </div>
       </div>
 
-      <nav className="ma-tabs">
-        {tabs.map((tb) => (
-          <button key={tb.id} className={`ma-tab ${tab === tb.id ? 'on' : ''}`} onClick={() => setTab(tb.id)}>
-            {tb.label}
-            {tb.badge ? <span className="ma-tab__badge">{tb.badge}</span> : null}
-          </button>
-        ))}
-      </nav>
+      <TabBar items={tabs} active={tab} onSelect={(id) => setTab(id as Tab)} />
 
-      <div className="ma-appbody">
+      <div className="flex flex-1 flex-col gap-3 p-3.5">
         {tab === 'profile' ? (
           <ProfileTab />
         ) : tab === 'home' ? (

@@ -5,7 +5,7 @@ import { cn } from './lib/cn';
 
 /* The desktop navigation rail for the Admin and Executive portals.
  *
- * Not for Farmer / Consumer / VCO / Delivery — those keep the `.ma-tabs` mobile
+ * Not for Farmer / Consumer / VCO / Delivery — those keep the <TabBar> mobile
  * tab bar (a bottom nav suits a phone; a side rail suits a wide admin console).
  *
  * Router-agnostic, like <Breadcrumbs>: an item carries an `href` for a real link

@@ -1,54 +1,12 @@
-/* The last of the pre-Tailwind component styles.
+/* Intentionally empty.
  *
- * Every component in packages/ui has been rebuilt. What is left here is styling
- * for class names that apps/web writes by hand, so deleting it means editing app
- * screens — Phase 4's job, not the design system's. The form controls
- * (.ma-field/.ma-input/.ma-select) are gone: <Field>, <Input> and <Select> now
- * carry those styles, and the six screens that wrote the classes by hand have
- * moved over. All that is left is the mobile shell:
+ * This file held the pre-Tailwind component styles. Every one has been rebuilt:
+ * the form controls became <Field>/<Input>/<Select>, and the mobile role shell
+ * (the tab bar, language toggle and header icon buttons) became <TabBar>,
+ * <LangToggle> and <IconButton>. No `.ma-*` class is written by hand anywhere.
  *
- *   .ma-tabs, .ma-tab,      the shared mobile shell, applied in
- *   .ma-lang, .ma-iconbtn,  ConsumerPage and FarmerPage
- *   .ma-appbody
- *
- * When this file is empty, turn preflight on and drop the `appearance-none
- * border-0 font-sans` resets the rebuilt components currently carry. */
-
-/* ── Mobile role shell ──────────────────────────────────────────────────
- * Chrome shared by every role's phone-width screen: the tab bar, the language
- * toggle and the header icon buttons. Lives here rather than in one role's
- * stylesheet so a second role can use it without importing the first's CSS. */
-.ma-tabs {
-  display: flex; gap: 4px; padding: 8px 10px;
-  background: var(--white); border-bottom: 1px solid var(--surface-muted);
-  overflow-x: auto; -webkit-overflow-scrolling: touch;
-}
-.ma-tab {
-  flex: 1; white-space: nowrap;
-  border: none; background: none; font-family: inherit; cursor: pointer;
-  padding: 9px 10px; border-radius: 10px;
-  font-size: 12px; font-weight: 700; color: var(--gray);
-}
-.ma-tab.on { background: var(--success-bg); color: var(--forest); }
-.ma-tab:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
-.ma-tab__badge {
-  background: var(--red); color: var(--white);
-  font-size: 9px; font-weight: 800; padding: 1px 5px;
-  border-radius: 50px; margin-left: 4px;
-}
-
-.ma-lang { display: inline-flex; gap: 4px; }
-.ma-lang button {
-  border: 1px solid var(--tint-300); background: var(--white); color: var(--gray);
-  border-radius: 8px; padding: 5px 9px; font-size: 11px; font-weight: 700;
-  cursor: pointer; font-family: inherit;
-}
-.ma-lang button.on { background: var(--success-bg); border-color: var(--leaf); color: var(--forest); }
-
-.ma-iconbtn {
-  border: 1px solid var(--tint-300); background: var(--white); color: var(--forest);
-  border-radius: 10px; padding: 6px 11px; font-size: 14px; cursor: pointer;
-}
-.ma-iconbtn.on { background: var(--success-bg); border-color: var(--leaf); }
-
-.ma-appbody { flex: 1; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+ * PREFLIGHT IS NOW UNBLOCKED. The next slice can import Tailwind's Preflight in
+ * apps/web/src/tailwind.css and drop the `appearance-none border-0 font-sans`
+ * resets the rebuilt components carry to survive without it. Once Preflight
+ * lands and this file is confirmed unused, delete it along with its import in
+ * apps/web/src/main.tsx and the `./ui.css` export in package.json. */
