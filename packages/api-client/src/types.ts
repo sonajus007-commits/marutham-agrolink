@@ -285,3 +285,17 @@ export interface DashboardResponse {
   top_products: DashboardTopProduct[];
   subscription_summary: DashboardSubscriptionSummary;
 }
+
+/* ── Admin user management ──────────────────────────────────────────────────
+ * Account status. `suspended` = temporarily withheld (e.g. a seller who owes
+ * their subscription); `blocked` = barred and needs a reason. */
+export type AccountStatus = 'active' | 'suspended' | 'blocked';
+
+export interface UserStatusHistoryEntry {
+  id: string;
+  old_status: string;
+  new_status: string;
+  reason: string | null;
+  created_at: string;
+  changer?: { fname?: string; lname?: string; login_id?: string } | null;
+}

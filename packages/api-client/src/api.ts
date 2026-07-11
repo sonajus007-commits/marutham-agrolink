@@ -8,7 +8,7 @@ import type {
   TrackResponse, ReturnRequestPayload, ReturnResponse, RateItemResponse,
   SubscriptionPlansResponse, SubscriptionPayResponse,
   ProfileChangeRequestResponse, MyChangeRequestsResponse,
-  DashboardResponse,
+  DashboardResponse, AccountStatus, UserStatusHistoryEntry,
 } from './types';
 import type { Order, OrderDetail, Product, Offer, Payout, FarmerListing } from '@marutham/lib';
 import { rupeesToPaise } from '@marutham/lib';
@@ -168,6 +168,23 @@ export const api = {
   },
   getFieldDashboard(): Promise<FieldDashboardResponse> {
     return apiFetch<FieldDashboardResponse>('GET', '/dashboard/field');
+  },
+
+  // ── Admin: users ──
+  /** Role-scoped by the server. Filters: role, admin_role, district. */
+  getUsers(params?: Record<string, string>): Promise<{ users: User[] }> {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiFetch<{ users: User[] }>('GET', '/users' + qs);
+  },
+  getUser(id: string): Promise<{ user: User }> {
+    return apiFetch<{ user: User }>('GET', '/users/' + id);
+  },
+  /** active | suspended | blocked. A block needs a reason (server enforces). */
+  setUserStatus(id: string, status: AccountStatus, reason?: string): Promise<{ message: string; user: User }> {
+    return apiFetch('PATCH', '/users/' + id + '/status', { status, reason: reason || null });
+  },
+  getUserStatusHistory(id: string): Promise<{ history: UserStatusHistoryEntry[] }> {
+    return apiFetch<{ history: UserStatusHistoryEntry[] }>('GET', '/users/' + id + '/status-history');
   },
 
   // ── Employees ──
