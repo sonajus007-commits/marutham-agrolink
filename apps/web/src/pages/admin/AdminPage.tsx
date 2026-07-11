@@ -13,6 +13,8 @@ import { ADMIN_NAV, APP_BASE } from './adminNav';
 import { OverviewPage } from './OverviewPage';
 import { OrdersPage } from './OrdersPage';
 import { UsersPage } from './UsersPage';
+import { RegistrationsPage } from './RegistrationsPage';
+import { ChangeRequestsPage } from './ChangeRequestsPage';
 
 /**
  * The Admin / management console. Wires the Phase-3 shell (AppShell + Sidebar +
@@ -97,8 +99,8 @@ export function AdminPage() {
           <Route index element={<OverviewPage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="users" element={<UsersPage />} />
-          <Route path="registrations" element={<Placeholder titleKey="admin.nav.registrations" />} />
-          <Route path="change-requests" element={<Placeholder titleKey="admin.nav.changeRequests" />} />
+          <Route path="registrations" element={<RegistrationsPage />} />
+          <Route path="change-requests" element={<ChangeRequestsPage />} />
           <Route path="products" element={<Placeholder titleKey="admin.nav.products" />} />
           <Route path="*" element={<Placeholder titleKey="admin.nav.overview" />} />
         </Routes>

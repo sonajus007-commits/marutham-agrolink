@@ -9,6 +9,7 @@ import type {
   SubscriptionPlansResponse, SubscriptionPayResponse,
   ProfileChangeRequestResponse, MyChangeRequestsResponse,
   DashboardResponse, AccountStatus, UserStatusHistoryEntry,
+  Registration, ProfileChangeRequest,
 } from './types';
 import type { Order, OrderDetail, Product, Offer, Payout, FarmerListing } from '@marutham/lib';
 import { rupeesToPaise } from '@marutham/lib';
@@ -185,6 +186,49 @@ export const api = {
   },
   getUserStatusHistory(id: string): Promise<{ history: UserStatusHistoryEntry[] }> {
     return apiFetch<{ history: UserStatusHistoryEntry[] }>('GET', '/users/' + id + '/status-history');
+  },
+
+  // ── Admin: registrations (seller signups awaiting review) ──
+  /** Role-scoped server-side. status: pending_review|payment_pending|active|rejected|all. */
+  getRegistrations(status?: string): Promise<{ registrations: Registration[] }> {
+    const qs = status ? '?status=' + encodeURIComponent(status) : '';
+    return apiFetch<{ registrations: Registration[] }>('GET', '/registrations' + qs);
+  },
+  getRegistration(id: string): Promise<{ registration: Registration }> {
+    return apiFetch<{ registration: Registration }>('GET', '/registrations/' + id);
+  },
+  /** Activates the seller's login → 'suspended' (payment screen only). No amount here. */
+  approveRegistration(id: string): Promise<{ message: string; registration: Registration }> {
+    return apiFetch('POST', '/registrations/' + id + '/approve', {});
+  },
+  rejectRegistration(id: string, reason: string): Promise<{ message: string }> {
+    return apiFetch('POST', '/registrations/' + id + '/reject', { reason });
+  },
+  /** Manual (offline-paid) activation: only valid while approval_status = payment_pending. */
+  confirmRegistrationPayment(id: string): Promise<{ message: string; registration: Registration }> {
+    return apiFetch('POST', '/registrations/' + id + '/confirm-payment', {});
+  },
+
+  // ── Admin: profile change requests (Head Office only) ──
+  /** status: pending|approved|rejected|payment_pending. Default pending. */
+  getChangeRequests(status?: string): Promise<{ requests: ProfileChangeRequest[] }> {
+    const qs = status ? '?status=' + encodeURIComponent(status) : '';
+    return apiFetch<{ requests: ProfileChangeRequest[] }>('GET', '/users/change-requests' + qs);
+  },
+  /** A renewal needs renewal_amount (RUPEES) → sends the seller a payment request.
+   *  A regular change applies the fields straight away. */
+  approveChangeRequest(id: string, opts?: { notes?: string; renewal_amount?: number }): Promise<{ message: string; payment_reference?: string }> {
+    return apiFetch('POST', '/users/change-requests/' + id + '/approve', {
+      notes: opts?.notes || null,
+      ...(opts?.renewal_amount != null ? { renewal_amount: opts.renewal_amount } : {}),
+    });
+  },
+  rejectChangeRequest(id: string, notes?: string): Promise<{ message: string }> {
+    return apiFetch('POST', '/users/change-requests/' + id + '/reject', { notes: notes || null });
+  },
+  /** Renewal step 2: mark the payment received → extends the subscription. */
+  confirmRenewalPayment(id: string): Promise<{ message: string }> {
+    return apiFetch('POST', '/users/change-requests/' + id + '/confirm-renewal-payment', {});
   },
 
   // ── Employees ──

@@ -222,13 +222,34 @@ export type ChangeRequestStatus =
 export interface ProfileChangeRequest {
   id: string;
   status: ChangeRequestStatus;
-  /** The field → new-value map the seller asked for. */
-  requested_changes: Record<string, string> | null;
+  /** The field → new-value map the seller asked for. A subscription renewal is
+   *  encoded as { subscription_renewal: true, new_plan }, not a field map. */
+  requested_changes: (Record<string, string> & { subscription_renewal?: boolean; new_plan?: string }) | null;
   requested_at?: string;
   reviewed_at?: string | null;
   reviewer_name?: string | null;
   notes?: string | null;
+  /* ── Admin-review fields (present on GET /users/change-requests) ── */
+  user_id?: string;
+  /** Requesting seller — denormalised onto the request row at submit time. */
+  login_id?: string;
+  fname?: string | null;
+  /** Renewal only: the payment reference + amount (PAISE) once approved. */
+  payment_reference?: string | null;
+  renewal_amount?: number | null;
+  payment_confirmed_at?: string | null;
+  /** Joined from the seller's user row for context in the review sheet. */
+  subscription_plan?: string | null;
+  subscription_expires_at?: string | null;
 }
+
+/* ── Admin registrations (GET /registrations) ───────────────────────────────
+ * A seller signup awaiting review. It's a users row, so it reuses the User
+ * shape; `approval_status` drives the workflow (not `status`). */
+export type RegistrationStatus =
+  | 'pending_review' | 'approved' | 'payment_pending' | 'active' | 'rejected' | (string & {});
+
+export type Registration = User;
 
 export interface ProfileChangeRequestResponse {
   message: string;
