@@ -76,6 +76,10 @@ export function ProductEditSheet({
 
   const [form, setForm] = useState<Form>(blankForm);
   const [prices, setPrices] = useState<PriceRow[]>([]);
+  // Districts already persisted on this product. The price endpoint only upserts
+  // (never deletes), so a persisted district can be re-priced but NOT removed —
+  // only session-added rows get a remove affordance.
+  const [savedDistricts, setSavedDistricts] = useState<Set<string>>(new Set());
   const [addDistrict, setAddDistrict] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -83,8 +87,10 @@ export function ProductEditSheet({
 
   useEffect(() => {
     if (!open) return;
+    const initial = product ? pricesFrom(product) : [];
     setForm(product ? formFrom(product) : blankForm);
-    setPrices(product ? pricesFrom(product) : []);
+    setPrices(initial);
+    setSavedDistricts(new Set(initial.map((r) => r.district)));
     setAddDistrict('');
     setError(null);
     setShowDelete(false);
@@ -225,8 +231,10 @@ export function ProductEditSheet({
                 <span className="text-2xs text-fg-muted">₹</span>
                 <input className={`${INPUT_CLASS} w-20 text-xs`} inputMode="decimal" value={r.market_price_rs} onChange={(e) => setPrice(r.district, 'market_price_rs', e.target.value)} placeholder={t('admin.prod.market')} disabled={ro} aria-label={`${r.district} ${t('admin.prod.market')}`} />
               </div>
-              {!ro ? (
+              {!ro && !savedDistricts.has(r.district) ? (
                 <button type="button" onClick={() => removePriceRow(r.district)} aria-label={t('admin.prod.removeRow')} className="cursor-pointer rounded-sm border-0 bg-surface-muted px-2 py-1 text-2xs text-danger hover:bg-danger hover:text-white">✕</button>
+              ) : !ro ? (
+                <span className="w-7" aria-hidden="true" />
               ) : null}
             </div>
           ))}
