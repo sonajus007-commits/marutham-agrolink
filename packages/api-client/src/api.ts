@@ -13,6 +13,7 @@ import type {
   AdminReturnsResponse, AdminReturn,
   AdminPayoutsResponse, RunSettlementResponse,
   EmployeesResponse, Employee, EmployeeAuditResponse, EmployeePayload,
+  OtpSendResponse,
 } from './types';
 import type { Order, OrderDetail, Product, Offer, Payout, FarmerListing } from '@marutham/lib';
 import { rupeesToPaise } from '@marutham/lib';
@@ -53,6 +54,18 @@ export const api = {
   },
   me(): Promise<MeResponse> {
     return apiFetch<MeResponse>('GET', '/auth/me');
+  },
+  /** Send a one-time code to a registered phone (for OTP login or reset). */
+  sendOtp(phone: string): Promise<OtpSendResponse> {
+    return apiFetch<OtpSendResponse>('POST', '/auth/send-otp', { phone }, false);
+  },
+  /** OTP login — returns a session just like password login. */
+  verifyOtp(phone: string, otp: string): Promise<LoginResponse> {
+    return apiFetch<LoginResponse>('POST', '/auth/verify-otp', { phone, otp }, false);
+  },
+  /** Forgot-password: reset using a code from sendOtp. */
+  resetPassword(phone: string, otp: string, new_password: string): Promise<{ message: string }> {
+    return apiFetch('POST', '/auth/reset-password', { phone, otp, new_password }, false);
   },
   patchMe(data: Record<string, unknown>): Promise<{ user: User }> {
     return apiFetch<{ user: User }>('PATCH', '/auth/me', data);

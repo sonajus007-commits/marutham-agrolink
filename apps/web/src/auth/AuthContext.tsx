@@ -12,6 +12,8 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   login: (phone: string, password: string) => Promise<User>;
+  /** OTP login — verifies a code from api.sendOtp and starts a session. */
+  loginWithOtp: (phone: string, otp: string) => Promise<User>;
   logout: () => void;
   /** Persist an updated user record (e.g. after a profile edit). */
   updateUser: (user: User) => void;
@@ -54,6 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       async login(phone, password) {
         const res = await api.login(phone, password);
+        setSession(res.token, res.user);
+        setUser(res.user);
+        return res.user;
+      },
+      async loginWithOtp(phone, otp) {
+        const res = await api.verifyOtp(phone, otp);
         setSession(res.token, res.user);
         setUser(res.user);
         return res.user;

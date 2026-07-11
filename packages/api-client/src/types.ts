@@ -46,6 +46,12 @@ export interface LoginResponse {
   needs_payment?: boolean;
 }
 
+/** POST /auth/send-otp. `otp` is echoed back in the sandbox only (no SMS wired). */
+export interface OtpSendResponse {
+  message: string;
+  otp?: string;
+}
+
 export interface MeResponse {
   user: User;
 }
