@@ -3,23 +3,33 @@
  *
  * Two deliberate omissions:
  *
- * 1. PREFLIGHT IS NOT IMPORTED. Tailwind's reset restyles buttons, headings,
- *    lists and images, and every existing stylesheet was written against the
- *    app's own reset in styles.css. Pulling preflight in now would repaint
- *    screens that this phase is supposed to leave alone. It goes in during
- *    Phase 2C, when the components are rebuilt on shadcn/ui and each screen is
- *    being looked at anyway.
+ * 1. PREFLIGHT IS NOT IMPORTED — a considered decision, not a leftover TODO.
+ *    Tailwind's reset restyles buttons, headings, lists, images and borders
+ *    globally, and the five role screens (Login, Consumer, Farmer, Agent,
+ *    Dashboard) are still styled by legacy CSS (styles.css + the three page
+ *    stylesheets) that predates it. Turning preflight on now would repaint bare
+ *    elements on screens this migration has NOT rebuilt, for almost no gain: the
+ *    only thing it would buy is letting packages/ui drop a few self-reset
+ *    utilities (`appearance-none`, `border-0`, `bg-transparent`, `font-sans`) —
+ *    and those cost nothing to keep. A component that resets itself is in fact
+ *    the more robust pattern while legacy CSS coexists (and closer to the
+ *    RN-portable goal). So preflight waits for the screen rebuilds, when each
+ *    screen is being looked at anyway AND can be rendered to verify the repaint.
+ *    Whoever flips it: import it into `@layer base` (replacing the reset below),
+ *    strip those self-resets, and DRIVE EVERY ROLE in a browser — the
+ *    layered-preflight-vs-unlayered-legacy interaction only shows its bugs when
+ *    rendered.
  *
  * 2. THE DEFAULT PALETTE IS RESET (`--color-*: initial`). There is exactly one
  *    palette, and it lives in tokens.ts. `bg-red-500` should not resolve.
  *
  * PRECEDENCE, while both systems coexist: utilities live in the `utilities`
- * cascade layer, and every legacy stylesheet (ui.css, styles.css, the three
- * page stylesheets) is unlayered. Unlayered CSS outranks layered CSS, so a
- * legacy rule currently beats a utility on the same element and property. That
- * is the safe direction during migration — nothing you have already shipped can
- * be knocked over by a stray class — and it inverts on its own as those files
- * are deleted in 2C and Phase 4.
+ * cascade layer, and every legacy stylesheet (styles.css + the three page
+ * stylesheets) is unlayered. Unlayered CSS outranks layered CSS, so a legacy
+ * rule currently beats a utility on the same element and property. That is the
+ * safe direction during migration — nothing you have already shipped can be
+ * knocked over by a stray class — and it inverts on its own as those files are
+ * deleted when their screens are rebuilt.
  */
 
 /* tokens.css FIRST, and unlayered on purpose.
@@ -48,7 +58,7 @@
  * build was green, and check-utilities.mjs only asserts that a class exists, not
  * that it wins.
  *
- * Preflight replaces this block when it lands in 2C. */
+ * Preflight replaces this block if and when it lands (see the header note). */
 @layer base {
   *,
   ::before,
