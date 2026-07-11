@@ -10,6 +10,7 @@ import type {
   ProfileChangeRequestResponse, MyChangeRequestsResponse,
   DashboardResponse, AccountStatus, UserStatusHistoryEntry,
   Registration, ProfileChangeRequest, ProductPayload, ProductPriceInput,
+  AdminReturnsResponse, AdminReturn,
 } from './types';
 import type { Order, OrderDetail, Product, Offer, Payout, FarmerListing } from '@marutham/lib';
 import { rupeesToPaise } from '@marutham/lib';
@@ -253,6 +254,20 @@ export const api = {
   },
   deleteProduct(id: string): Promise<{ message: string }> {
     return apiFetch('DELETE', '/products/' + id);
+  },
+
+  // ── Admin: returns queue (role-scoped server-side) ──
+  getReturns(): Promise<AdminReturnsResponse> {
+    return apiFetch<AdminReturnsResponse>('GET', '/returns');
+  },
+  /** Accept or reject a pending return. A rejected return is closed; an accepted
+   *  one still needs collectReturn to trigger the refund. */
+  decideReturn(id: string, decision: 'accepted' | 'rejected'): Promise<{ message: string; return: AdminReturn }> {
+    return apiFetch('PATCH', '/returns/' + id + '/decide', { decision });
+  },
+  /** Mark accepted goods collected → triggers the refund. */
+  collectReturn(id: string): Promise<{ message: string; return: AdminReturn; refund: { amount_paise: number; to: string } }> {
+    return apiFetch('PATCH', '/returns/' + id + '/collect', {});
   },
 
   // ── Employees ──

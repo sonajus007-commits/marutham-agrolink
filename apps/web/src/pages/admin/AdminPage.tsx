@@ -12,6 +12,7 @@ import { ToastProvider } from '../../components/Toast';
 import { ADMIN_NAV, APP_BASE } from './adminNav';
 import { OverviewPage } from './OverviewPage';
 import { OrdersPage } from './OrdersPage';
+import { ReturnsPage } from './ReturnsPage';
 import { UsersPage } from './UsersPage';
 import { RegistrationsPage } from './RegistrationsPage';
 import { ChangeRequestsPage } from './ChangeRequestsPage';
@@ -99,6 +100,7 @@ export function AdminPage() {
         <Routes>
           <Route index element={<OverviewPage />} />
           <Route path="orders" element={<OrdersPage />} />
+          <Route path="returns" element={<ReturnsPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="registrations" element={<RegistrationsPage />} />
           <Route path="change-requests" element={<ChangeRequestsPage />} />

@@ -116,6 +116,32 @@ export interface ReturnResponse {
   code: string;
 }
 
+/* ── Admin returns queue (GET /returns, role-scoped server-side) ─────────────
+ * `refund_amt` is a backend money field → arrives as a RUPEE string. `decision`
+ * is null until an admin accepts/rejects; `collected` gates the refund. */
+export interface AdminReturn {
+  id: string;
+  code: string;
+  full_return: boolean;
+  decision: 'accepted' | 'rejected' | null;
+  collected: boolean;
+  refund_amt: string | number;
+  refund_to?: string | null;
+  requested_at?: string;
+  decided_at?: string | null;
+  order?: {
+    id: string;
+    code?: string | null;
+    consumer_name?: string | null;
+    village?: string | null;
+    district?: string | null;
+  } | null;
+}
+
+export interface AdminReturnsResponse {
+  returns: AdminReturn[];
+}
+
 export interface RateItemResponse {
   message: string;
   rating_value: number;
