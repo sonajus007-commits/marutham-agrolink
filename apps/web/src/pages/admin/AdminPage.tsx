@@ -8,8 +8,10 @@ import {
 import { filterNavByRole } from '@marutham/lib';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
 import { useAuth } from '../../auth/AuthContext';
+import { ToastProvider } from '../../components/Toast';
 import { ADMIN_NAV, APP_BASE } from './adminNav';
 import { OverviewPage } from './OverviewPage';
+import { OrdersPage } from './OrdersPage';
 
 /**
  * The Admin / management console. Wires the Phase-3 shell (AppShell + Sidebar +
@@ -83,6 +85,7 @@ export function AdminPage() {
   );
 
   return (
+    <ToastProvider>
     <AppShell
       currentPath={currentPath}
       sidebar={sidebar}
@@ -91,7 +94,7 @@ export function AdminPage() {
       <div className="mx-auto w-full max-w-[1100px] p-4 sm:p-6">
         <Routes>
           <Route index element={<OverviewPage />} />
-          <Route path="orders" element={<Placeholder titleKey="admin.nav.orders" />} />
+          <Route path="orders" element={<OrdersPage />} />
           <Route path="users" element={<Placeholder titleKey="admin.nav.users" />} />
           <Route path="registrations" element={<Placeholder titleKey="admin.nav.registrations" />} />
           <Route path="change-requests" element={<Placeholder titleKey="admin.nav.changeRequests" />} />
@@ -100,6 +103,7 @@ export function AdminPage() {
         </Routes>
       </div>
     </AppShell>
+    </ToastProvider>
   );
 }
 
