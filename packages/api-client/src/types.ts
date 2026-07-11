@@ -205,3 +205,36 @@ export interface PlaceOrderPayload {
   delivery_fee: number;
   delivery_address?: Record<string, unknown> | null;
 }
+
+/* ── Seller profile change requests ─────────────────────────────────────────
+ * Sensitive seller fields (bank/GST/business) are never written directly.
+ * The seller submits the new values as a request; Head Office reviews it in the
+ * admin portal and the approval applies it. Mirrors backend SENSITIVE_FIELDS in
+ * routes/auth.js. See [[project-profile-change-requests]]. */
+export const SENSITIVE_FIELDS = [
+  'bank_name', 'bank_account', 'ifsc', 'gst_number', 'business_name', 'business_type',
+] as const;
+export type SensitiveField = (typeof SENSITIVE_FIELDS)[number];
+
+export type ChangeRequestStatus =
+  | 'pending' | 'approved' | 'rejected' | 'payment_pending' | (string & {});
+
+export interface ProfileChangeRequest {
+  id: string;
+  status: ChangeRequestStatus;
+  /** The field → new-value map the seller asked for. */
+  requested_changes: Record<string, string> | null;
+  requested_at?: string;
+  reviewed_at?: string | null;
+  reviewer_name?: string | null;
+  notes?: string | null;
+}
+
+export interface ProfileChangeRequestResponse {
+  message: string;
+  request: ProfileChangeRequest;
+}
+
+export interface MyChangeRequestsResponse {
+  requests: ProfileChangeRequest[];
+}

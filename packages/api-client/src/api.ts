@@ -7,6 +7,7 @@ import type {
   OrderingWindowResponse, TopRatingsResponse, LocationsResponse, PlaceOrderPayload,
   TrackResponse, ReturnRequestPayload, ReturnResponse, RateItemResponse,
   SubscriptionPlansResponse, SubscriptionPayResponse,
+  ProfileChangeRequestResponse, MyChangeRequestsResponse,
 } from './types';
 import type { Order, OrderDetail, Product, Offer, Payout, FarmerListing } from '@marutham/lib';
 import { rupeesToPaise } from '@marutham/lib';
@@ -53,6 +54,16 @@ export const api = {
   },
   changePassword(current_password: string, new_password: string): Promise<{ message: string }> {
     return apiFetch('POST', '/auth/change-password', { current_password, new_password });
+  },
+
+  /* Sensitive seller fields (bank/GST/business) — submitted as a change request
+   * for Head Office review, never written straight to the record. The server
+   * 409s if a pending request already exists. See getMyChangeRequest for status. */
+  profileChangeRequest(data: Record<string, string>): Promise<ProfileChangeRequestResponse> {
+    return apiFetch<ProfileChangeRequestResponse>('POST', '/auth/profile-change-request', data);
+  },
+  getMyChangeRequest(): Promise<MyChangeRequestsResponse> {
+    return apiFetch<MyChangeRequestsResponse>('GET', '/auth/my-change-request');
   },
 
   // ── Orders ──

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { EmptyState, TabBar, IconButton, LangToggle } from '@marutham/ui';
+import { TabBar, IconButton, LangToggle } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import { needsSubscriptionPayment } from '@marutham/lib';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
@@ -8,11 +8,12 @@ import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider } from '../../components/Toast';
 import { EarningsTab } from './EarningsTab';
 import { ProductsTab } from './ProductsTab';
+import { FarmerOrdersTab } from './FarmerOrdersTab';
+import { FarmerProfileTab } from './FarmerProfileTab';
 import { SubscriptionGate } from './SubscriptionGate';
 import './farmer.css';
 
-/* 3B and 3C fill in Products and Orders. */
-type Tab = 'earnings' | 'products' | 'orders';
+type Tab = 'earnings' | 'products' | 'orders' | 'profile';
 
 export function FarmerPage() {
   return (
@@ -51,6 +52,7 @@ function FarmerInner() {
     { id: 'earnings', label: t('farmer.tab.earnings') },
     { id: 'products', label: t('farmer.tab.products') },
     { id: 'orders', label: t('farmer.tab.orders') },
+    { id: 'profile', label: t('farmer.tab.profile') },
   ];
 
   return (
@@ -91,8 +93,10 @@ function FarmerInner() {
           <EarningsTab onRenew={() => setRenewing(true)} />
         ) : tab === 'products' ? (
           <ProductsTab />
+        ) : tab === 'orders' ? (
+          <FarmerOrdersTab />
         ) : (
-          <EmptyState icon="📦">{t('farmer.comingSoon')}</EmptyState>
+          <FarmerProfileTab onRenew={() => setRenewing(true)} />
         )}
       </div>
 

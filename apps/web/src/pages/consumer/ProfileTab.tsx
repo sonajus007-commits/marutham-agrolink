@@ -5,7 +5,7 @@ import { buildAddress } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
 import { AddressBook } from './AddressBook';
-import { ChangePasswordCard } from './ChangePasswordCard';
+import { ChangePasswordCard } from '../../components/ChangePasswordCard';
 
 const GENDERS = ['Male', 'Female', 'Transgender'];
 

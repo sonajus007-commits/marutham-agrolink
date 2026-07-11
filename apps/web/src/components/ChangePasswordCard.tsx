@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { Button, Field, FIELD_ERR_CLASS } from '@marutham/ui';
+import { Button, Card, Field, FIELD_ERR_CLASS } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import { isStrongPassword } from '@marutham/lib';
-import { useToast } from '../../components/Toast';
-import { PasswordInput, PasswordRules } from '../../components/PasswordInput';
+import { useToast } from './Toast';
+import { PasswordInput, PasswordRules } from './PasswordInput';
 
+/**
+ * Shared "Change Password" card — used by the consumer and seller profiles.
+ * Lives in components/ (not a role page) because both portals render it. Styled
+ * with the design-system primitives so it carries no legacy page CSS.
+ */
 export function ChangePasswordCard() {
   const toast = useToast();
   const [open, setOpen] = useState(false);
@@ -39,12 +44,12 @@ export function ChangePasswordCard() {
   }
 
   return (
-    <section className="ord-card">
-      <h3>🔒 Change Password</h3>
+    <Card>
+      <h3 className="mb-3 text-md font-bold text-primary">🔒 Change Password</h3>
       {!open ? (
-        <button className="prof-editbtn" onClick={() => setOpen(true)}>🔒 Change Password</button>
+        <Button variant="ghost" onClick={() => setOpen(true)}>🔒 Change Password</Button>
       ) : (
-        <div className="prof-form">
+        <div className="flex flex-col gap-3">
           <Field label="Current Password">
             {(p) => (
               <PasswordInput {...p} value={current} onChange={setCurrent}
@@ -63,14 +68,14 @@ export function ChangePasswordCard() {
           </Field>
 
           {/* Form-level: the fault may be the current password, the new one, or the server. */}
-          {error ? <div className={FIELD_ERR_CLASS} role="alert" style={{ marginBottom: 8 }}>{error}</div> : null}
+          {error ? <div className={FIELD_ERR_CLASS} role="alert">{error}</div> : null}
 
-          <div className="prof-actions">
+          <div className="flex gap-2">
             <Button onClick={submit} disabled={busy}>{busy ? 'Updating…' : 'Update Password'}</Button>
             <Button variant="ghost" onClick={close} disabled={busy}>Cancel</Button>
           </div>
         </div>
       )}
-    </section>
+    </Card>
   );
 }
