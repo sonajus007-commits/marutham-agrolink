@@ -14,6 +14,7 @@ import type {
   AdminPayoutsResponse, RunSettlementResponse,
   EmployeesResponse, Employee, EmployeeAuditResponse, EmployeePayload,
   OtpSendResponse, RegisterPayload, RegisterResponse,
+  UserAuditResponse, LoginHistoryResponse,
 } from './types';
 import type { Order, OrderDetail, Product, Offer, Payout, FarmerListing } from '@marutham/lib';
 import { rupeesToPaise } from '@marutham/lib';
@@ -206,6 +207,15 @@ export const api = {
   },
   getUserStatusHistory(id: string): Promise<{ history: UserStatusHistoryEntry[] }> {
     return apiFetch<{ history: UserStatusHistoryEntry[] }>('GET', '/users/' + id + '/status-history');
+  },
+  /* Record-change trail from the DB audit trigger, and every login attempt.
+   * Both are Head Office / State Head only — a scoped admin gets a 403, so
+   * callers must gate the UI (canSeeAudit) rather than let the sheet fault. */
+  getUserAuditLog(id: string): Promise<UserAuditResponse> {
+    return apiFetch<UserAuditResponse>('GET', '/users/' + id + '/audit-log');
+  },
+  getUserLoginHistory(id: string): Promise<LoginHistoryResponse> {
+    return apiFetch<LoginHistoryResponse>('GET', '/users/' + id + '/login-history');
   },
 
   // ── Admin: registrations (seller signups awaiting review) ──

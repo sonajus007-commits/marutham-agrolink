@@ -4,6 +4,7 @@ import { Button, INPUT_CLASS, Modal, Sheet, Spinner } from '@marutham/ui';
 import { api, type Employee, type EmployeeAuditEntry } from '@marutham/api-client';
 import { fmtDate, fmtDateShort } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
+import { AuditLogList } from './HistoryPanels';
 
 export const EMP_APPROVAL_TONE: Record<string, string> = {
   pending: 'var(--warning-strong)',
@@ -153,22 +154,11 @@ function Body({ emp, history, canApprove, canManage, onDone, onEdit }: { emp: Em
         {emp.approved_at ? <Row label={t('admin.emp.approvedOn')} value={fmtDate(emp.approved_at)} /> : null}
       </Section>
 
+      {/* Was hand-rolled here and rendered every diff blank: the trigger writes
+          changed_fields as an object, not the string[] this sheet assumed. Same
+          renderer as the user audit trail now. */}
       <Section title={`📍 ${t('admin.emp.history')}`}>
-        {history.length === 0 ? (
-          <p className="text-2xs text-fg-muted">{t('admin.emp.noHistory')}</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {history.map((h) => (
-              <li key={h.id} className="border-b border-border-subtle pb-2 text-2xs last:border-b-0">
-                <span className="font-semibold text-fg">{h.action}</span>
-                <span className="text-fg-muted"> · {fmtDate(h.changed_at)}</span>
-                {h.changed_fields && h.changed_fields.length ? (
-                  <div className="text-fg-muted">{h.changed_fields.join(', ')}</div>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
+        <AuditLogList rows={history} loading={false} emptyText={t('admin.emp.noHistory')} />
       </Section>
 
       <Modal

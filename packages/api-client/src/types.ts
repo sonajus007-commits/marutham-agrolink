@@ -1,6 +1,8 @@
 /* User shape — mirrors backend safeUser() (users row minus password_hash).
  * Only the commonly-used fields are typed; the index signature keeps the rest
  * accessible without fighting the compiler during the migration. */
+import type { AuditEntry } from '@marutham/lib';
+
 export type UserRole = 'consumer' | 'farmer' | 'admin';
 
 export type AdminRole =
@@ -311,18 +313,40 @@ export interface EmployeesResponse {
   employees: Employee[];
 }
 
-/** One row from the employee_audit_log (DB audit trigger). */
-export interface EmployeeAuditEntry {
-  id: string;
-  action: string;
-  changed_fields?: string[] | null;
-  row_snapshot?: Record<string, unknown> | null;
-  changed_at: string;
-  changed_by?: string | null;
-}
+/** One row from the employee_audit_log (DB audit trigger).
+ *
+ * `changed_fields` was typed `string[]` here, which the trigger never writes —
+ * it writes `{ field: { old, new } }` (021_employee_org.sql). The sheet guarded
+ * on `.length`, an object has none, so every employee diff rendered blank. It
+ * is an AuditEntry like the user log; both go through auditChanges(). */
+export type EmployeeAuditEntry = AuditEntry;
 
 export interface EmployeeAuditResponse {
   audit: EmployeeAuditEntry[];
+}
+
+/** One row from user_audit_log — same trigger shape as the employee log.
+ *  Head Office / State Head only (backend isHeadOffice). */
+export type UserAuditEntry = AuditEntry;
+
+export interface UserAuditResponse {
+  audit: UserAuditEntry[];
+}
+
+/** One login attempt — success AND failure. HO / State Head only. */
+export interface LoginHistoryEntry {
+  id: string | number;
+  method?: string | null;
+  success?: boolean | null;
+  /** success | invalid_credentials | otp_invalid | blocked | pending_review | approved | rejected */
+  outcome?: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at: string;
+}
+
+export interface LoginHistoryResponse {
+  logins: LoginHistoryEntry[];
 }
 
 /** Create/update body. The server whitelists fields (emp_id is never writable);

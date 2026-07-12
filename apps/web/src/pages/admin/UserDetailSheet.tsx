@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, INPUT_CLASS, Modal, Sheet, Spinner } from '@marutham/ui';
-import { api, type AccountStatus, type User, type UserStatusHistoryEntry } from '@marutham/api-client';
+import { Button, INPUT_CLASS, Modal, Sheet, Spinner, Tabs } from '@marutham/ui';
+import {
+  api,
+  type AccountStatus, type LoginHistoryEntry, type User,
+  type UserAuditEntry, type UserStatusHistoryEntry,
+} from '@marutham/api-client';
 import { buildAddress, fmtDate } from '@marutham/lib';
+import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
+import { AuditLogList, LoginHistoryList } from './HistoryPanels';
+import { canSeeAudit } from './adminNav';
 
 /** Account-status → semantic colour. Distinct from order statusColor. */
 export const USER_STATUS_TONE: Record<string, string> = {
@@ -135,22 +142,7 @@ function Body({ user, history, onChanged }: { user: User; history: UserStatusHis
         </Section>
       ) : null}
 
-      <Section title={`📍 ${t('admin.users.statusHistory')}`}>
-        {history.length === 0 ? (
-          <p className="text-2xs text-fg-muted">{t('admin.users.noHistory')}</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {history.map((h) => (
-              <li key={h.id} className="border-b border-border-subtle pb-2 text-2xs last:border-b-0">
-                <span className="font-semibold text-fg">{h.old_status} → {h.new_status}</span>
-                <span className="text-fg-muted"> · {fmtDate(h.created_at)}</span>
-                {h.changer ? <span className="text-fg-muted"> · {h.changer.fname || h.changer.login_id}</span> : null}
-                {h.reason ? <div className="text-fg-muted italic">“{h.reason}”</div> : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Section>
+      <HistorySection userId={user.id} status={history} />
 
       <Modal
         open={showBlock}
@@ -178,6 +170,102 @@ function Body({ user, history, onChanged }: { user: User; history: UserStatusHis
         />
       </Modal>
     </div>
+  );
+}
+
+/* Three trails on one record: the status changes any admin may see, and — for
+ * Head Office / State Head only — the full record-change audit and every login
+ * attempt. The two privileged trails are fetched only when their tab is first
+ * opened: they are per-user queries capped at 100 rows server-side, and opening
+ * a user sheet should not pay for them.
+ *
+ * The backend 403s a scoped admin, so the tabs are not merely hidden — a
+ * District Manager has no way to reach the data. */
+function HistorySection({ userId, status }: { userId: string; status: UserStatusHistoryEntry[] }) {
+  const { t } = useTranslation();
+  const { user: me } = useAuth();
+  const privileged = canSeeAudit(me?.admin_role);
+
+  const [audit, setAudit] = useState<UserAuditEntry[]>([]);
+  const [logins, setLogins] = useState<LoginHistoryEntry[]>([]);
+  const [loading, setLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState<Record<string, boolean>>({});
+
+  async function openTab(tab: string) {
+    setError(null);
+    if (!privileged || tab === 'status' || loaded[tab]) return;
+
+    setLoading(tab);
+    try {
+      if (tab === 'profile') {
+        setAudit((await api.getUserAuditLog(userId)).audit || []);
+      } else {
+        setLogins((await api.getUserLoginHistory(userId)).logins || []);
+      }
+      setLoaded((l) => ({ ...l, [tab]: true }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('admin.users.historyFailed'));
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  const statusPanel =
+    status.length === 0 ? (
+      <p className="py-2 text-2xs text-fg-muted">{t('admin.users.noHistory')}</p>
+    ) : (
+      <ul className="flex list-none flex-col gap-2 p-0">
+        {status.map((h) => (
+          <li key={h.id} className="border-b border-border-subtle pb-2 text-2xs last:border-b-0">
+            <span className="font-semibold text-fg">{h.old_status} → {h.new_status}</span>
+            <span className="text-fg-muted"> · {fmtDate(h.created_at)}</span>
+            {h.changer ? <span className="text-fg-muted"> · {h.changer.fname || h.changer.login_id}</span> : null}
+            {h.reason ? <div className="text-fg-muted italic">“{h.reason}”</div> : null}
+          </li>
+        ))}
+      </ul>
+    );
+
+  if (!privileged) {
+    return <Section title={`📍 ${t('admin.users.statusHistory')}`}>{statusPanel}</Section>;
+  }
+
+  return (
+    <Section title={`📍 ${t('admin.users.history')}`}>
+      <Tabs
+        aria-label={t('admin.users.history')}
+        defaultValue="status"
+        onValueChange={(v) => void openTab(v)}
+        items={[
+          { value: 'status', label: `🕘 ${t('admin.users.statusHistory')}`, content: statusPanel },
+          {
+            value: 'profile',
+            label: `✏️ ${t('admin.users.profileChanges')}`,
+            content: (
+              <AuditLogList
+                rows={audit}
+                loading={loading === 'profile'}
+                error={error}
+                emptyText={t('admin.users.noAudit')}
+              />
+            ),
+          },
+          {
+            value: 'logins',
+            label: `🔐 ${t('admin.users.logins')}`,
+            content: (
+              <LoginHistoryList
+                rows={logins}
+                loading={loading === 'logins'}
+                error={error}
+                emptyText={t('admin.users.noLogins')}
+              />
+            ),
+          },
+        ]}
+      />
+    </Section>
   );
 }
 

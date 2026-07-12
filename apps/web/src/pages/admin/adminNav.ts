@@ -13,6 +13,16 @@ export const MANAGEMENT_ADMIN_ROLES = [
   'Hub Incharge', 'Board of Director',
 ] as const;
 
+/* Who may read a record's audit trail and login history. Mirrors the backend's
+ * isHeadOffice() (routes/users.js), which — despite the name — admits State
+ * Head as well; anyone else gets a 403. Gate the UI with this so a scoped admin
+ * never opens a tab that can only fail. */
+export const AUDIT_ADMIN_ROLES = ['Head Office', 'State Head'] as const;
+
+export function canSeeAudit(adminRole?: string | null): boolean {
+  return AUDIT_ADMIN_ROLES.includes(adminRole as (typeof AUDIT_ADMIN_ROLES)[number]);
+}
+
 export interface AdminNavItem {
   id: string;
   labelKey: string;
