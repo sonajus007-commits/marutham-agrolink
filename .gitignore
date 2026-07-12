@@ -6,9 +6,15 @@
 # Node
 node_modules/
 
-# Build artifacts (React app — built in CI/deploy, served by Express at /app)
+# Build artifacts — produced by the build, never committed.
+# (A trailing "# comment" here would be read as part of the pattern, so these
+#  stay on their own lines.)
+# React SPA, served by Express at /app:
 apps/web/dist/
+# Next.js marketplace, served by Express at /:
+apps/shop/.next/
 .turbo/
+*.tsbuildinfo
 
 # Logs
 *.log
