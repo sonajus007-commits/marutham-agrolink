@@ -85,8 +85,62 @@ export function OverviewPage() {
     };
   }, [data, t]);
 
+  /* Top products — ranked magnitude, so horizontal bars read fastest (the labels
+   * sit flat and the eye compares lengths against one baseline).
+   *
+   * ONE series → ONE colour for every bar. Colouring each product differently, or
+   * ramping the hue with the value, would double-encode length as colour and burn
+   * the only free channel on nothing — colour belongs to an entity, never to a
+   * rank. No legend for a single series: the title already says what is plotted,
+   * and the value rides the tip of each bar. Bars are drawn from the shortest at
+   * the bottom, so ECharts' inverted category axis puts the biggest on top.
+   *
+   * `revenue` is PAISE (like daily_trend) — divide by 100. */
+  const topProductsOption = useMemo<EChartsOption>(() => {
+    const top = [...(data?.top_products ?? [])].sort((a, b) => a.revenue - b.revenue);
+    return {
+      color: [chartPalette[0]],
+      tooltip: {
+        trigger: 'item',
+        valueFormatter: (v) => '₹' + Number(v).toLocaleString('en-IN'),
+      },
+      grid: { left: 8, right: 64, top: 8, bottom: 8, containLabel: true },
+      xAxis: {
+        type: 'value',
+        splitLine: { lineStyle: { color: colors.muted } },
+        axisLabel: { show: false },
+      },
+      yAxis: {
+        type: 'category',
+        data: top.map((p) => p.name),
+        axisLine: { lineStyle: { color: colors.border } },
+        axisTick: { show: false },
+        axisLabel: { fontSize: 11, color: colors.gray },
+      },
+      series: [
+        {
+          name: t('admin.overview.revenue'),
+          type: 'bar',
+          data: top.map((p) => Math.round(p.revenue / 100)),
+          barMaxWidth: 24,
+          // Rounded at the data end, square against the baseline.
+          itemStyle: { borderRadius: [0, 4, 4, 0] },
+          label: {
+            show: true,
+            position: 'right',
+            formatter: (p) => '₹' + Number(p.value).toLocaleString('en-IN'),
+            fontSize: 11,
+            // Text wears text ink, never the series colour.
+            color: colors.gray,
+          },
+        },
+      ],
+    };
+  }, [data, t]);
+
   const trendEmpty = (data?.daily_trend ?? []).every((p) => p.revenue === 0);
   const statusEmpty = Object.keys(data?.status_breakdown ?? {}).length === 0;
+  const topEmpty = (data?.top_products ?? []).length === 0;
 
   return (
     <>
@@ -122,6 +176,19 @@ export function OverviewPage() {
           height={280}
         >
           <EChart option={statusOption} height={280} />
+        </ChartContainer>
+      </div>
+
+      {/* Top products — full width: the product names need the horizontal room. */}
+      <div className="mt-4">
+        <ChartContainer
+          title={t('admin.overview.topProducts')}
+          loading={loading}
+          error={error || undefined}
+          empty={!loading && !error && topEmpty ? t('admin.overview.noTopProducts') : false}
+          height={260}
+        >
+          <EChart option={topProductsOption} height={260} />
         </ChartContainer>
       </div>
     </>

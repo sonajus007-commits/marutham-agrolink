@@ -1130,11 +1130,12 @@ async function renderOverview() {
 
     // ── 7-day revenue trend chart ─────────────────────────────────────────────
     if (dt.length > 0) {
-      var maxRev = Math.max.apply(null, dt.map(function(d){ return parseFloat(d.revenue||0); }));
+      // revenue is PAISE (not a money-middleware field) — convert before display.
+      var maxRev = Math.max.apply(null, dt.map(function(d){ return parseFloat(d.revenue||0) / 100; }));
       html += '<div class="card"><h3>📈 7-Day Revenue Trend</h3>';
       html += '<div style="display:flex;align-items:flex-end;height:96px;gap:5px;padding-bottom:0">';
       dt.forEach(function(day) {
-        var rev  = parseFloat(day.revenue || 0);
+        var rev  = parseFloat(day.revenue || 0) / 100;
         var barH = maxRev > 0 ? Math.max(rev > 0 ? 6 : 0, Math.round((rev / maxRev) * 80)) : 0;
         var isToday = dt.indexOf(day) === dt.length - 1;
         html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end">';
@@ -1151,14 +1152,16 @@ async function renderOverview() {
 
     // ── Top 5 products ────────────────────────────────────────────────────────
     if (tp.length > 0) {
-      var maxProdRev = Math.max.apply(null, tp.map(function(p){ return parseFloat(p.revenue||0); }));
+      // revenue is PAISE here too.
+      var maxProdRev = Math.max.apply(null, tp.map(function(p){ return parseFloat(p.revenue||0) / 100; }));
       html += '<div class="card"><h3>🌿 Top Products by Revenue</h3>';
       tp.forEach(function(p) {
-        var pct = maxProdRev > 0 ? Math.round(parseFloat(p.revenue||0) / maxProdRev * 100) : 0;
+        var prodRev = parseFloat(p.revenue || 0) / 100;
+        var pct = maxProdRev > 0 ? Math.round(prodRev / maxProdRev * 100) : 0;
         html += '<div style="margin-bottom:10px">';
         html += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">';
         html += '<span style="font-weight:700;color:var(--forest)">' + p.name + '</span>';
-        html += '<span style="color:var(--gray)">' + fmt(p.revenue) + (p.qty ? '  ·  ' + parseFloat(p.qty).toFixed(1) + ' ' + (p.unit||'') : '') + '</span>';
+        html += '<span style="color:var(--gray)">' + fmt(prodRev) + (p.qty ? '  ·  ' + parseFloat(p.qty).toFixed(1) + ' ' + (p.unit||'') : '') + '</span>';
         html += '</div>';
         html += '<div style="height:6px;background:#e8f5e9;border-radius:3px"><div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#1a7a4a,#52b788);border-radius:3px"></div></div>';
         html += '</div>';

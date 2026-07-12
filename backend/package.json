@@ -10,7 +10,8 @@
     "db:check": "node db/check-schema.js",
     "db:coverage": "node db/check-schema.js --coverage",
     "db:offline": "node db/check-schema.js --offline",
-    "db:snapshot": "node db/check-schema.js --write"
+    "db:snapshot": "node db/check-schema.js --write",
+    "db:check-embeds": "node db/check-embeds.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

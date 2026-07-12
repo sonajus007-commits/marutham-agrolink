@@ -65,14 +65,28 @@ router.get('/', async (req, res) => {
   });
   const daily_trend = Object.values(dayBuckets);
 
-  // ── Top products by order count ───────────────────────────────────────────
+  // ── Top products by revenue ───────────────────────────────────────────────
+  //
+  // This asked for `order_items.subtotal`, a column that does not exist. The
+  // error was never checked, so `items` came back null and Top Products has been
+  // EMPTY on every dashboard since it shipped. A line's value is price × qty —
+  // the same rule the order writes (orders.js: lineTotal = consumerPrice × qty)
+  // and the same one refunds are computed from.
+  //
+  // `revenue` is PAISE, like daily_trend[].revenue: neither is a MONEY_FIELDS
+  // name, so the money middleware does not convert it. Clients divide by 100.
   let topProducts = [];
   if (activeOrders.length > 0) {
     const orderIds = activeOrders.map(o => o.id);
-    const { data: items } = await supabase
+    const { data: items, error: ie } = await supabase
       .from('order_items')
-      .select('product_id, qty, subtotal, product:products(name, unit)')
+      .select('product_id, qty, price, product:products(name, unit)')
       .in('order_id', orderIds);
+
+    if (ie) {
+      console.error('GET /dashboard top-products error:', ie);
+      return res.status(500).json({ error: 'Could not fetch top products.' });
+    }
 
     const prodMap = {};
     (items || []).forEach(item => {
@@ -80,8 +94,9 @@ router.get('/', async (req, res) => {
       const name = item.product?.name || 'Unknown';
       const unit = item.product?.unit || '';
       if (!prodMap[pid]) prodMap[pid] = { name, unit, qty: 0, revenue: 0 };
-      prodMap[pid].qty     += parseFloat(item.qty    || 0);
-      prodMap[pid].revenue += parseFloat(item.subtotal || 0);
+      const qty = parseFloat(item.qty || 0);
+      prodMap[pid].qty     += qty;
+      prodMap[pid].revenue += Math.round(parseFloat(item.price || 0) * qty);
     });
     topProducts = Object.entries(prodMap)
       .map(([id, v]) => ({ product_id: id, ...v }))
