@@ -1,7 +1,8 @@
 const express = require('express');
 const supabase = require('../db/supabase');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
 const { syncPrices, getLastSync } = require('../utils/priceSync');
+const { publicFarmer } = require('../utils/publicShape');
 
 const router = express.Router();
 
@@ -63,8 +64,10 @@ router.get('/', async (req, res) => {
 });
 
 // ── GET /products/:id ─────────────────────────────────────────────────────────
-// Full detail: product + each farmer's listing + that farmer's rating for this product
-router.get('/:id', async (req, res) => {
+// Full detail: product + each farmer's listing + that farmer's rating for this
+// product. PUBLIC, so it runs optionalAuth: a signed-in customer sees who they
+// are buying from, a stranger sees only the district (see utils/publicShape.js).
+router.get('/:id', optionalAuth, async (req, res) => {
   const { data: product, error } = await supabase
     .from('products')
     .select(`
@@ -76,25 +79,51 @@ router.get('/:id', async (req, res) => {
 
   if (error || !product) return res.status(404).json({ error: 'Product not found.' });
 
-  // Fetch active farmer listings for this product + farmer profile + their rating
-  const { data: listings } = await supabase
+  // Active farmer listings for this product, with the grower behind each one.
+  //
+  // The rating is NOT embedded here: product_ratings has no foreign key to
+  // farmer_listings (it is keyed by farmer_id + product_id), so asking PostgREST
+  // for `rating:product_ratings(...)` failed with "could not find a relationship"
+  // — and because the error was never checked, this endpoint quietly served an
+  // EMPTY listings array to every caller. Ratings are fetched separately and
+  // matched on farmer_id, the same way GET /products does it.
+  const { data: listings, error: le } = await supabase
     .from('farmer_listings')
     .select(`
       id, farmer_price, qty_available, listed, confirmed,
       time_available, cutoff_ts, bulk_qty, bulk_disc_pct,
-      farmer:users ( id, fname, lname, village_town, district ),
-      rating:product_ratings ( sum_stars, num_ratings )
+      farmer:users ( id, fname, lname, village_town, district )
     `)
     .eq('product_id', req.params.id)
     .eq('listed', true);
 
-  const enrichedListings = (listings || []).map(l => ({
-    ...l,
-    farmer_avg_rating: l.rating && l.rating.num_ratings > 0
-      ? (l.rating.sum_stars / l.rating.num_ratings).toFixed(1)
-      : null,
-    rating: undefined,
-  }));
+  if (le) {
+    console.error('GET /products/:id listings error:', le);
+    return res.status(500).json({ error: 'Could not fetch listings for this product.' });
+  }
+
+  const { data: ratings, error: re } = await supabase
+    .from('product_ratings')
+    .select('farmer_id, sum_stars, num_ratings')
+    .eq('product_id', req.params.id);
+
+  if (re) {
+    console.error('GET /products/:id ratings error:', re);
+    return res.status(500).json({ error: 'Could not fetch ratings for this product.' });
+  }
+
+  const ratingByFarmer = new Map((ratings || []).map(r => [r.farmer_id, r]));
+
+  const enrichedListings = (listings || []).map(l => {
+    const r = ratingByFarmer.get(l.farmer?.id);
+    return {
+      ...l,
+      farmer: publicFarmer(l.farmer, req.user),
+      farmer_avg_rating: r && r.num_ratings > 0
+        ? (r.sum_stars / r.num_ratings).toFixed(1)
+        : null,
+    };
+  });
 
   res.json({ product, listings: enrichedListings });
 });

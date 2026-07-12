@@ -67,6 +67,35 @@ async function requireAuth(req, res, next) {
   next();
 }
 
+/**
+ * Identify the caller if they present a valid token; never reject.
+ *
+ * For endpoints that are PUBLIC but show a signed-in user more than they show a
+ * stranger — the product page being the first: an anonymous visitor (and any
+ * search-engine crawler) sees a grower's district, a signed-in customer sees who
+ * they are buying from. Anything invalid or missing simply means "anonymous", so
+ * a bad token can never turn a public page into a 401.
+ */
+async function optionalAuth(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) return next();
+
+  try {
+    const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+    const { data: user } = await supabase
+      .from('users')
+      .select('id, login_id, role, admin_role, status, fname, lname, district')
+      .eq('id', payload.sub)
+      .single();
+    // A blocked account is treated as anonymous here rather than 403'd: this is a
+    // public page, and it must not become an account-status oracle.
+    if (user && user.status !== 'blocked') req.user = user;
+  } catch {
+    /* expired / forged / unknown → anonymous */
+  }
+  next();
+}
+
 // Middleware factory — requireRole('admin') or requireRole('farmer', 'admin')
 function requireRole(...roles) {
   return [
@@ -80,4 +109,4 @@ function requireRole(...roles) {
   ];
 }
 
-module.exports = { requireAuth, requireRole };
+module.exports = { requireAuth, optionalAuth, requireRole };
