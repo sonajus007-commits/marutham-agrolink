@@ -19,7 +19,9 @@ import type { Product } from '@marutham/lib';
  * is a worse outcome than a marketing page with no product grid.
  */
 
-const API = process.env.INTERNAL_API_URL || 'http://localhost:3000';
+// The API answers under /api. The root of this origin is the shop itself — these
+// requests would otherwise fetch our own pages and try to parse HTML as JSON.
+const API = (process.env.INTERNAL_API_URL || 'http://localhost:3000') + '/api';
 
 /** Revalidate the cached render this often (seconds). Produce prices move daily. */
 export const REVALIDATE_SECONDS = 300;

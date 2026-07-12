@@ -5,11 +5,11 @@ import path from 'node:path';
 
 // API path prefixes served by the Express backend. In dev these are proxied to
 // the running backend (:3000) so the app hits the real API + DB with HMR.
-const API_PREFIXES = [
-  '/auth', '/products', '/listings', '/orders', '/ratings', '/returns',
-  '/dashboard', '/payouts', '/users', '/farmers', '/consumers', '/config',
-  '/registrations', '/subscription', '/locations', '/employees', '/me', '/health',
-];
+//
+// This used to list all sixteen routers by name, because the API answered at the
+// root. It now lives under a single /api prefix — the root belongs to the public
+// marketplace — so a new endpoint no longer needs a line here to work in dev.
+const API_PREFIXES = ['/api', '/health'];
 
 const BACKEND = process.env.BACKEND_URL || 'http://localhost:3000';
 

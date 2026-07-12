@@ -1,9 +1,15 @@
 /* Core fetch wrapper — typed port of frontend/js/api.js `apiFetch`.
- * Base URL defaults to relative (same origin as the page), matching the legacy
- * config.js `API_BASE: ''`. In dev, Vite proxies these paths to the backend. */
+ * Base URL is relative (same origin as the page), matching the legacy
+ * config.js. In dev, Vite proxies /api to the backend.
+ *
+ * The API lives under /api. It used to sit at the root, but the root is the
+ * public marketplace's SEO surface (a product page must be able to live at
+ * /products/…), so the API moved. Callers still pass root-relative paths —
+ * apiFetch('GET', '/orders') — and this prefixes them; nothing else in the app
+ * should know the prefix exists. */
 import { getToken } from './session';
 
-let API_BASE = '';
+let API_BASE = '/api';
 
 export function setApiBase(base: string): void {
   API_BASE = base;

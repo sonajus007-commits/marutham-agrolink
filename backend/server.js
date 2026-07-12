@@ -40,29 +40,64 @@ const subscriptionRouter  = require('./routes/subscription');
 const locationsRouter     = require('./routes/locations');
 const employeesRouter     = require('./routes/employees');
 
-app.use('/auth',          authRouter);
-app.use('/products',  productsRouter);
-app.use('/listings',  listingsRouter);
-app.use('/orders',    ordersRouter);
-app.use('/orders',    deliveryRouter);
-app.use('/orders',    ratingsRouter);
-app.use('/orders',    returnsRouter);
-app.use('/ratings',   ratingsRouter);
-app.use('/returns',   returnsRouter);
-app.use('/dashboard', dashboardRouter);
-app.use('/payouts',   payoutsRouter);
-app.use('/users',     usersRouter);
-app.use('/farmers',   farmersRouter);
-app.use('/consumers', consumersRouter);
-app.use('/config',        configRouter);
-app.use('/registrations', registrationsRouter);
-app.use('/subscription',  subscriptionRouter);
-app.use('/locations',     locationsRouter);
-app.use('/employees',     employeesRouter);
+// The whole API lives under /api. It used to own the ROOT namespace (/products,
+// /orders, /users …), which made the root unusable for anything else: a public
+// product page at /products/tomatoes could never render, because the API
+// answered there first, with JSON. The root is the marketplace's SEO surface and
+// is worth more to the business than a short API path, so the API moved and the
+// shop (apps/shop) now owns / — see docs/adr-001-frontend-framework.md.
+//
+// This was a breaking change for every client, which was affordable exactly once:
+// nothing hardcodes API paths (every caller goes through a single API_BASE) and
+// there is no production deployment. It gets more expensive with every client
+// added, so it was done before the marketplace shipped rather than after.
+const api = express.Router();
+
+api.use('/auth',          authRouter);
+api.use('/products',  productsRouter);
+api.use('/listings',  listingsRouter);
+api.use('/orders',    ordersRouter);
+api.use('/orders',    deliveryRouter);
+api.use('/orders',    ratingsRouter);
+api.use('/orders',    returnsRouter);
+api.use('/ratings',   ratingsRouter);
+api.use('/returns',   returnsRouter);
+api.use('/dashboard', dashboardRouter);
+api.use('/payouts',   payoutsRouter);
+api.use('/users',     usersRouter);
+api.use('/farmers',   farmersRouter);
+api.use('/consumers', consumersRouter);
+api.use('/config',        configRouter);
+api.use('/registrations', registrationsRouter);
+api.use('/subscription',  subscriptionRouter);
+api.use('/locations',     locationsRouter);
+api.use('/employees',     employeesRouter);
 
 // /me lives under /auth but the spec exposes it at /me — alias both
-app.get('/me',   require('./middleware/auth').requireAuth, (req, res) => res.redirect(307, '/auth/me'));
-app.patch('/me', require('./middleware/auth').requireAuth, (req, res) => res.redirect(307, '/auth/me'));
+api.get('/me',   require('./middleware/auth').requireAuth, (req, res) => res.redirect(307, '/api/auth/me'));
+api.patch('/me', require('./middleware/auth').requireAuth, (req, res) => res.redirect(307, '/api/auth/me'));
+
+// Mounted ahead of the shop proxy and the static site: /api is unambiguous and
+// must never be reachable by anything else.
+app.use('/api', api);
+
+// An API path that no longer exists is a client that was never migrated. Say so
+// loudly rather than letting it fall through to the static handler, which would
+// answer a stale GET /products with the homepage's HTML and turn a one-line fix
+// into a confusing JSON-parse error.
+const API_SEGMENTS = [
+  'auth', 'products', 'listings', 'orders', 'ratings', 'returns', 'dashboard',
+  'payouts', 'users', 'farmers', 'consumers', 'config', 'registrations',
+  'subscription', 'locations', 'employees', 'me',
+];
+app.use(`/:segment(${API_SEGMENTS.join('|')})`, (req, res, next) => {
+  // The shop owns /products/* as PAGES. Only shout when the caller clearly wanted
+  // the API: no browser navigation asks for JSON.
+  if (req.accepts(['html', 'json']) === 'html') return next();
+  res.status(404).json({
+    error: `The API moved to /api. Use /api${req.baseUrl}${req.path === '/' ? '' : req.path}.`,
+  });
+});
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
@@ -89,17 +124,26 @@ app.get('/app/*', (_req, res) => res.sendFile(path.join(appDist, 'index.html')))
 // unset — or with the Next server simply not running — every one of these routes
 // falls through to the legacy static site below, which still answers on
 // home.html. The shop can never take the existing site down with it.
-// THE URL SPACE IS ALREADY TAKEN. The API owns the ROOT namespace — /products,
-// /orders, /users, /returns … are all routers mounted above. So the shop cannot
-// claim /products/[id] for a public product page: the API answers there first,
-// with JSON. Its future pages need their own prefix, or the API moves under /api
-// (the cleaner end-state, and a breaking change for every existing client).
-// Until that is decided the shop owns only the root document and its assets.
 const SHOP_URL = process.env.SHOP_URL; // e.g. http://localhost:3001
 
-/** The paths the shop owns. */
+/** The paths the shop owns.
+ *
+ * An ALLOW-LIST, deliberately. The API has moved to /api, so the root namespace
+ * is free — but "free" is not the same as "the shop's". The legacy static site
+ * still answers here (home.html, /css, /js, every *.html page the strangler-fig
+ * has not replaced yet), so a deny-list — "anything that isn't /api or /app" —
+ * would hand the shop URLs it has no page for and 404 the legacy site.
+ *
+ * Each slice adds the routes it actually implements. That keeps the shop
+ * reversible: delete a line and the old page answers again.
+ */
 function isShopPath(pathname) {
-  return pathname === '/' || pathname.startsWith('/_next/');
+  return (
+    pathname === '/' ||
+    pathname.startsWith('/_next/') ||
+    pathname === '/products' ||
+    pathname.startsWith('/products/')
+  );
 }
 
 if (SHOP_URL) {
