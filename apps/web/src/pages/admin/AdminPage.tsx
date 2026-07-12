@@ -19,6 +19,7 @@ import { RegistrationsPage } from './RegistrationsPage';
 import { ChangeRequestsPage } from './ChangeRequestsPage';
 import { ProductsPage } from './ProductsPage';
 import { EmployeesPage } from './EmployeesPage';
+import { ProfilePage } from './ProfilePage';
 
 /**
  * The Admin / management console. Wires the Phase-3 shell (AppShell + Sidebar +
@@ -57,7 +58,7 @@ export function AdminPage() {
   })).filter((s) => s.items.length > 0);
 
   const brand = (
-    <a href={`${APP_BASE}/admin`} onClick={go('/admin')} className="flex items-center gap-2">
+    <a href={`${APP_BASE}/admin`} onClick={go('/admin')} className="flex items-center gap-2 no-underline">
       <img src="/img/logo-sm.jpg" alt="" className="h-7 w-7 rounded-sm" />
       <span className="text-md font-bold text-primary">Marutham</span>
     </a>
@@ -69,10 +70,10 @@ export function AdminPage() {
       currentPath={currentPath}
       brand={<div className="px-1">{brand}</div>}
       footer={
-        <div className="min-w-0">
+        <a href={`${APP_BASE}/admin/profile`} onClick={go('/admin/profile')} className="block min-w-0 no-underline">
           <div className="truncate text-sm font-semibold text-fg">{user.fname || user.login_id}</div>
           <div className="truncate text-2xs text-fg-muted">{user.admin_role || 'Admin'}</div>
-        </div>
+        </a>
       }
     />
   );
@@ -87,6 +88,7 @@ export function AdminPage() {
           { value: 'ta', label: 'த', className: 'tamil' },
         ]}
       />
+      <IconButton onClick={() => navigate('/admin/profile')} aria-label={t('admin.profile.title')}>👤</IconButton>
       <IconButton onClick={logout} aria-label={t('nav.logout')}>⎋</IconButton>
     </>
   );
@@ -109,6 +111,7 @@ export function AdminPage() {
           <Route path="change-requests" element={<ChangeRequestsPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="employees" element={<EmployeesPage />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="*" element={<Placeholder titleKey="admin.nav.overview" />} />
         </Routes>
       </div>

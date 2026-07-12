@@ -54,7 +54,7 @@ export interface SidebarProps {
 
 const ITEM_BASE =
   'group/item flex w-full items-center gap-3 rounded-sm px-3 py-2 text-left ' +
-  'font-sans text-sm cursor-pointer appearance-none border-0 bg-transparent ' +
+  'font-sans text-sm cursor-pointer appearance-none border-0 bg-transparent no-underline ' +
   'focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-leaf';
 
 const ITEM_IDLE = 'text-fg-muted hover:bg-surface-muted hover:text-fg';
