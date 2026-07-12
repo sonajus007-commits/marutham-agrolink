@@ -1,5 +1,5 @@
 import 'server-only';
-import type { Product } from '@marutham/lib';
+import type { Product, PublicListing } from '@marutham/lib';
 
 /* Server-side reads for the public marketplace.
  *
@@ -62,4 +62,49 @@ export async function getPublicStats(): Promise<PublicStats> {
     activeDistricts: 0,
     activeStates: 0,
   });
+}
+
+/** The whole public catalogue, for the /products index. */
+export async function getAllProducts(): Promise<Product[]> {
+  const data = await getJson<{ products?: Product[] }>('/products', {});
+  return data.products || [];
+}
+
+/** A product and the live offers under it, as an anonymous visitor sees them. */
+export interface ProductDetail {
+  product: Product;
+  listings: PublicListing[];
+}
+
+/**
+ * One product, or null when it genuinely does not exist.
+ *
+ * This does NOT follow the degrade-to-empty rule the rest of this file does, and
+ * the difference is the whole point:
+ *
+ *   404 from the API  → null → the page calls notFound() → we serve a real 404.
+ *   anything else     → THROW → Next serves a 5xx.
+ *
+ * Degrading a dead backend to "product not found" would be an SEO own-goal. A
+ * 404 tells a crawler the product is gone and to drop it from the index; a 5xx
+ * tells it to come back later. So a slow database must never be allowed to
+ * quietly de-list the catalogue — it has to fail loudly instead.
+ *
+ * The homepage can degrade because an empty marketing page is still a page. A
+ * product page with no product is not.
+ */
+export async function getProduct(id: string): Promise<ProductDetail | null> {
+  const res = await fetch(`${API}/products/${encodeURIComponent(id)}`, {
+    next: { revalidate: REVALIDATE_SECONDS },
+    headers: { Accept: 'application/json' },
+  });
+
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`[shop] GET /products/${id} → HTTP ${res.status}`);
+  }
+
+  const data = (await res.json()) as Partial<ProductDetail>;
+  if (!data.product) return null;
+  return { product: data.product, listings: data.listings || [] };
 }

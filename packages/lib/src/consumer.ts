@@ -28,7 +28,17 @@ export interface Product {
   sub_type?: string;
   platform_fee_pct?: number;
   exotic?: boolean;
+  /** The single price the API collapses to when you filter by district. */
   district_price?: DistrictPrice | null;
+  /** Every district's price — what the API returns when you DON'T filter by one
+   *  (the admin catalogue and the public marketplace both take this path).
+   *  Declared because the index signature below would otherwise type it
+   *  `unknown`, and every reader would have to cast it back. */
+  product_district_prices?: Array<{
+    district?: string | null;
+    market_price?: string | number | null;
+    handling?: string | number | null;
+  }> | null;
   avg_rating?: string | number;
   [key: string]: unknown;
 }

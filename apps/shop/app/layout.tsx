@@ -1,12 +1,16 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang } from '@/lib/dict';
+import { SITE_URL } from '@/lib/site';
 import './globals.css';
 
 /* The metadata a crawler reads. This is the whole reason the shop is server-
  * rendered: the portal at /app is a Vite SPA that ships an empty <div> to a
  * bot, so nothing about the marketplace was ever indexable. */
 export const metadata: Metadata = {
+  // Without this, Next resolves nothing: `canonical` stays relative and og:url
+  // is dropped from the document entirely, so a shared link previews as bare.
+  metadataBase: new URL(SITE_URL),
   title: 'Marutham AgroLink — Fresh from Tamil Nadu farms, straight to your home',
   description:
     'Buy fruit and vegetables direct from farmers in Pudukkottai and across Tamil Nadu. ' +

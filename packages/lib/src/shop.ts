@@ -71,3 +71,120 @@ export function productEmoji(name?: string | null): string {
 
 /** How many products the homepage shows before "View all". */
 export const HOME_PRODUCT_LIMIT = 10;
+
+/* ── Product detail page ──────────────────────────────────────────────────────
+ *
+ * A live offer as an ANONYMOUS caller sees it. The grower is a DISTRICT and
+ * nothing else: `GET /products/:id` runs through backend/utils/publicShape.js,
+ * which is an allow-list, so `farmer` carries no name, village, phone or id.
+ *
+ * That is enforced by the API, not here — but this type is deliberately narrow
+ * so a page cannot render a field the public endpoint does not send, and so
+ * anyone widening it has to go and widen the server's allow-list first.
+ */
+export interface PublicListing {
+  id?: string;
+  farmer_price?: string | number | null;
+  qty_available?: number | null;
+  time_available?: string | null;
+  bulk_qty?: number | null;
+  bulk_disc_pct?: string | number | null;
+  /** District only. Never a name. */
+  farmer?: { district?: string | null } | null;
+  farmer_avg_rating?: string | number | null;
+}
+
+/** An offer's asking price in RUPEES, or null when it has none.
+ *  `farmer_price` is a money-middleware field → a rupee STRING, never paise. */
+export function offerPrice(listing: PublicListing): number | null {
+  const n = Number(listing.farmer_price ?? NaN);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** Is this offer actually buyable? A listing with nothing left is not an offer. */
+export function offerInStock(listing: PublicListing): boolean {
+  const qty = Number(listing.qty_available ?? 0);
+  return offerPrice(listing) !== null && Number.isFinite(qty) && qty > 0;
+}
+
+/**
+ * The offers worth showing, cheapest first.
+ *
+ * Sold-out and priceless rows are dropped rather than rendered greyed-out: this
+ * is a shop window for someone who has not signed in, and a row they cannot buy
+ * is only a reason to leave. Ties break on the larger quantity, so the offer
+ * most likely to survive to checkout sorts first.
+ */
+export function sortedOffers(listings: PublicListing[] | null | undefined): PublicListing[] {
+  return (listings || [])
+    .filter(offerInStock)
+    .sort((a, b) => {
+      const byPrice = (offerPrice(a) as number) - (offerPrice(b) as number);
+      if (byPrice !== 0) return byPrice;
+      return Number(b.qty_available ?? 0) - Number(a.qty_available ?? 0);
+    });
+}
+
+/** Every district this product is priced in, alphabetical, priceless rows dropped. */
+export function districtPriceRows(
+  product: Partial<Pick<Product, 'product_district_prices'>>,
+): Array<{ district: string; amount: number }> {
+  return (product.product_district_prices || [])
+    .map((row) => ({
+      district: (row.district || '').trim(),
+      amount: Number(row.market_price ?? NaN),
+    }))
+    .filter((row) => row.district && Number.isFinite(row.amount) && row.amount > 0)
+    .sort((a, b) => a.district.localeCompare(b.district));
+}
+
+/**
+ * schema.org Product JSON-LD — the payload that makes server-rendering this page
+ * pay for itself. It is what puts a price, a rating and an in-stock flag into a
+ * Google result; the SPA at /app could never produce it, because a crawler gets
+ * an empty <div> there.
+ *
+ * Emitted only with a real price: a bogus `price: 0` is worse than no rich
+ * result at all, and Google penalises structured data that disagrees with the
+ * page. Everything here must be visible on the page too — that is Google's rule,
+ * and it is why availability tracks the same `sortedOffers` the markup renders.
+ */
+export function productJsonLd(args: {
+  product: Pick<Product, 'name' | 'unit'> & { regional_name?: string; category?: string; avg_rating?: string | number };
+  price: number | null;
+  listings: PublicListing[] | null | undefined;
+  url: string;
+}): Record<string, unknown> | null {
+  const { product, price, listings, url } = args;
+  if (price === null) return null;
+
+  const offers = sortedOffers(listings);
+  const rating = Number(product.avg_rating ?? NaN);
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    ...(product.regional_name ? { alternateName: product.regional_name } : {}),
+    ...(product.category ? { category: product.category } : {}),
+    url,
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'INR',
+      price: price.toFixed(2),
+      availability: offers.length
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/OutOfStock',
+      url,
+    },
+    ...(Number.isFinite(rating) && rating > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: rating.toFixed(1),
+            bestRating: '5',
+          },
+        }
+      : {}),
+  };
+}

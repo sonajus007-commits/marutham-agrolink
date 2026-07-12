@@ -25,6 +25,31 @@ export interface Dict {
   founder: { title: string; heading: string; body: string; role: string };
   stories: { title: string; sub: string };
   footer: { tagline: string; rights: string };
+  catalogue: { title: string; sub: string; metaTitle: string; metaDesc: string; count: string; empty: string };
+  product: {
+    home: string;
+    all: string;
+    from: string;
+    offers: string;
+    offersSub: string;
+    /* The grower is a district and nothing else until you sign in — say so, so
+     * the missing name reads as a deliberate promise rather than missing data. */
+    grower: string;
+    privacy: string;
+    perUnit: string;
+    available: string;
+    window: string;
+    noOffers: string;
+    noOffersSub: string;
+    prices: string;
+    pricesSub: string;
+    district: string;
+    price: string;
+    notFound: string;
+    notFoundSub: string;
+    back: string;
+    metaDesc: (name: string, price: string) => string;
+  };
 }
 
 const en: Dict = {
@@ -66,6 +91,40 @@ const en: Dict = {
     tagline: 'Fair prices for farmers. Fresh produce for families.',
     rights: 'Marutham AgroLink. All rights reserved.',
   },
+  catalogue: {
+    title: 'All Produce',
+    sub: 'Everything our farmers are growing — browse freely, no account needed.',
+    metaTitle: 'All Produce — Marutham AgroLink',
+    metaDesc:
+      'Browse every fruit, vegetable and staple sold direct by Tamil Nadu farmers on Marutham AgroLink. ' +
+      'Fair prices for farmers, fresh produce for families.',
+    count: 'products',
+    empty: 'No products available right now. Check back soon! 🌱',
+  },
+  product: {
+    home: 'Home',
+    all: 'All Produce',
+    from: 'from',
+    offers: "Today's Offers",
+    offersSub: 'Growers selling this right now, cheapest first.',
+    grower: 'Grower',
+    privacy: 'Sign in to see who grows your food.',
+    perUnit: 'per',
+    available: 'available',
+    window: 'Ready',
+    noOffers: 'No grower is selling this today.',
+    noOffersSub: 'Listings open each morning and close at the daily cutoff. Check back tomorrow. 🌱',
+    prices: 'Market Price by District',
+    pricesSub: "Today's reference price where we operate.",
+    district: 'District',
+    price: 'Price',
+    notFound: 'We could not find that product.',
+    notFoundSub: 'It may have been removed, or the link may be wrong.',
+    back: 'Browse all produce',
+    metaDesc: (name, price) =>
+      `Buy ${name} direct from Tamil Nadu farmers${price ? ` from ${price}` : ''} on Marutham AgroLink. ` +
+      'Fresh from the farm, fair prices for the grower.',
+  },
 };
 
 const ta: Dict = {
@@ -106,6 +165,40 @@ const ta: Dict = {
   footer: {
     tagline: 'விவசாயிகளுக்கு நியாயமான விலை. குடும்பங்களுக்கு புதிய காய்கறிகள்.',
     rights: 'மருதம் அக்ரோலிங்க். அனைத்து உரிமைகளும் பாதுகாக்கப்பட்டவை.',
+  },
+  catalogue: {
+    title: 'அனைத்து பொருட்கள்',
+    sub: 'எங்கள் விவசாயிகள் விளைவிக்கும் அனைத்தும் — கணக்கு தேவையில்லை, சுதந்திரமாகப் பாருங்கள்.',
+    metaTitle: 'அனைத்து பொருட்கள் — மருதம் அக்ரோலிங்க்',
+    metaDesc:
+      'தமிழ்நாட்டு விவசாயிகள் நேரடியாக விற்கும் அனைத்து பழங்கள், காய்கறிகள் மற்றும் தானியங்களைப் பாருங்கள். ' +
+      'விவசாயிகளுக்கு நியாயமான விலை, குடும்பங்களுக்கு புதிய காய்கறிகள்.',
+    count: 'பொருட்கள்',
+    empty: 'தற்போது பொருட்கள் எதுவும் இல்லை. விரைவில் மீண்டும் பாருங்கள்! 🌱',
+  },
+  product: {
+    home: 'முகப்பு',
+    all: 'அனைத்து பொருட்கள்',
+    from: 'முதல்',
+    offers: 'இன்றைய சலுகைகள்',
+    offersSub: 'இப்போது இதை விற்கும் விவசாயிகள் — குறைந்த விலை முதலில்.',
+    grower: 'விவசாயி',
+    privacy: 'உங்கள் உணவை வளர்ப்பவரைப் பார்க்க உள்நுழையுங்கள்.',
+    perUnit: 'ஒன்றுக்கு',
+    available: 'கிடைக்கிறது',
+    window: 'தயார்',
+    noOffers: 'இன்று இதை யாரும் விற்கவில்லை.',
+    noOffersSub: 'ஒவ்வொரு காலையிலும் பட்டியல் திறக்கப்பட்டு, தினசரி நேரத்தில் மூடப்படும். நாளை மீண்டும் பாருங்கள். 🌱',
+    prices: 'மாவட்ட வாரியான சந்தை விலை',
+    pricesSub: 'நாங்கள் செயல்படும் இடங்களில் இன்றைய குறிப்பு விலை.',
+    district: 'மாவட்டம்',
+    price: 'விலை',
+    notFound: 'அந்தப் பொருளைக் கண்டுபிடிக்க முடியவில்லை.',
+    notFoundSub: 'அது நீக்கப்பட்டிருக்கலாம், அல்லது இணைப்பு தவறாக இருக்கலாம்.',
+    back: 'அனைத்து பொருட்களையும் பார்க்க',
+    metaDesc: (name, price) =>
+      `${name} — தமிழ்நாட்டு விவசாயிகளிடமிருந்து நேரடியாக${price ? ` ${price} முதல்` : ''} மருதம் அக்ரோலிங்கில் வாங்குங்கள். ` +
+      'வயலில் இருந்து புதிது, விவசாயிக்கு நியாயமான விலை.',
   },
 };
 

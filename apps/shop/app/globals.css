@@ -17,6 +17,10 @@
   --color-primary: var(--primary);
   --color-primary-on: var(--primary-on);
   --color-primary-hover: var(--primary-hover);
+  /* Gold is a FILL, not an ink. It is 2.21:1 on white — it cannot carry text
+     there. The token set says as much (warning/warningOn: "gold takes dark
+     text"), so a gold thing is `bg-gold text-fg` (6.90:1), never `text-gold`
+     on a light surface. Same trap as --leaf above; axe caught both. */
   --color-gold: var(--gold);
   --color-surface: var(--white);
   --color-muted: var(--muted);

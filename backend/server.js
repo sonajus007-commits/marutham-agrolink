@@ -142,7 +142,13 @@ function isShopPath(pathname) {
     pathname === '/' ||
     pathname.startsWith('/_next/') ||
     pathname === '/products' ||
-    pathname.startsWith('/products/')
+    pathname.startsWith('/products/') ||
+    // Next generates these (app/sitemap.ts, app/robots.ts). They are the shop's
+    // whole reason for existing — a crawler that cannot fetch them will not find
+    // the product pages — and without a line here they fall through to the
+    // static site and 404.
+    pathname === '/sitemap.xml' ||
+    pathname === '/robots.txt'
   );
 }
 

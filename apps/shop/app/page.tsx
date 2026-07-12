@@ -1,10 +1,10 @@
 import { cookies } from 'next/headers';
-import { homepagePrice, productEmoji, HOME_PRODUCT_LIMIT, type Product } from '@marutham/lib';
+import { HOME_PRODUCT_LIMIT, type Product } from '@marutham/lib';
 import { getAvailableProducts, getPublicStats, REVALIDATE_SECONDS } from '@/lib/api';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Dict, type Lang } from '@/lib/dict';
-import { PORTAL_LOGIN, PORTAL_REGISTER } from '@/lib/portal';
-import { LangToggle } from '@/components/LangToggle';
-import { OrderButton } from '@/components/OrderButton';
+import { PORTAL_REGISTER } from '@/lib/portal';
+import { SiteHeader, SiteFooter } from '@/components/SiteChrome';
+import { ProductCard } from '@/components/ProductCard';
 
 /* The public marketplace homepage — a Server Component.
  *
@@ -39,30 +39,6 @@ export default async function HomePage() {
 
       <SiteFooter t={t} />
     </>
-  );
-}
-
-function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
-  return (
-    <header className="sticky top-0 z-10 border-b border-border bg-surface/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center gap-4 px-5 py-3">
-        <a href="/" className="font-display text-xl font-bold text-forest no-underline">
-          Marutham <span className="text-leaf">AgroLink</span>
-        </a>
-        <nav className="ml-auto hidden items-center gap-6 sm:flex">
-          <a href="#shop" className="text-sm font-semibold text-fg-muted no-underline hover:text-forest">{t.nav.shop}</a>
-          <a href="#about" className="text-sm font-semibold text-fg-muted no-underline hover:text-forest">{t.nav.about}</a>
-          <a href="#stories" className="text-sm font-semibold text-fg-muted no-underline hover:text-forest">{t.nav.stories}</a>
-        </nav>
-        <LangToggle current={lang} />
-        <a
-          href={PORTAL_LOGIN}
-          className="rounded-full bg-forest px-4 py-2 text-sm font-bold text-white no-underline hover:bg-forest-deep"
-        >
-          {t.nav.login}
-        </a>
-      </div>
-    </header>
   );
 }
 
@@ -110,8 +86,11 @@ function FreshToday({ t, products, hasMore }: { t: Dict; products: Product[]; ha
 
       {hasMore ? (
         <div className="mt-8 text-center">
+          {/* Was PORTAL_LOGIN — "View all products" put an anonymous visitor at a
+              sign-in wall, on the one page whose job is to let them browse
+              without an account. It goes to the catalogue now. */}
           <a
-            href={PORTAL_LOGIN}
+            href="/products"
             className="inline-block rounded-full bg-muted px-8 py-3 text-sm font-bold text-forest no-underline hover:bg-primary hover:text-primary-on"
           >
             {t.fresh.viewAll}
@@ -119,33 +98,6 @@ function FreshToday({ t, products, hasMore }: { t: Dict; products: Product[]; ha
         </div>
       ) : null}
     </section>
-  );
-}
-
-function ProductCard({ t, product }: { t: Dict; product: Product }) {
-  const price = homepagePrice(product);
-  return (
-    <li className="rounded-2xl border border-border bg-surface p-4 text-center transition-shadow hover:shadow-lg">
-      <div className="text-5xl" aria-hidden="true">{productEmoji(product.name)}</div>
-      <span className="mt-2 inline-block rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-forest">
-        {t.fresh.badge}
-      </span>
-      <h3 className="mt-2 text-sm font-bold text-fg">{product.name}</h3>
-      <p className="mt-1 text-lg font-extrabold text-forest">
-        {price ? (
-          <>
-            ₹{price.amount.toFixed(0)}
-            <span className="text-xs font-semibold text-fg-muted">/{price.unit}</span>
-          </>
-        ) : (
-          <span className="text-xs font-semibold text-fg-muted">{t.fresh.unavailable}</span>
-        )}
-      </p>
-      {product.avg_rating ? (
-        <p className="mt-0.5 text-xs font-semibold text-gold">★ {product.avg_rating}</p>
-      ) : null}
-      <OrderButton productId={String(product.id)} label={t.fresh.order} />
-    </li>
   );
 }
 
@@ -195,19 +147,5 @@ function Stories({ t }: { t: Dict }) {
         🌾
       </div>
     </section>
-  );
-}
-
-function SiteFooter({ t }: { t: Dict }) {
-  return (
-    <footer className="border-t border-border bg-muted px-5 py-10">
-      <div className="mx-auto max-w-6xl text-center">
-        <p className="font-display text-lg font-bold text-forest">Marutham AgroLink</p>
-        <p className="mt-1 text-xs text-fg-muted">{t.footer.tagline}</p>
-        <p className="mt-4 text-xs text-fg-muted">
-          © {new Date().getFullYear()} {t.footer.rights}
-        </p>
-      </div>
-    </footer>
   );
 }
