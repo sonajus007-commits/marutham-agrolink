@@ -152,6 +152,66 @@ body {
 .auth-link.muted { color: var(--gray); }
 .auth-link:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; border-radius: 3px; }
 .auth-sub-step { font-size: 12px; color: var(--gray); margin: -6px 0 16px; }
+.auth-footer {
+  margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border, #eef2ee);
+  font-size: 12.5px; color: var(--gray); text-align: center;
+}
+
+/* Registration — the long form, on the same card language as the login card.
+ * Controls themselves come from packages/ui (Field/Input/Select), so this is
+ * only the chrome the design system has no component for yet. */
+.login-card--wide { max-width: 560px; }
+.reg-roles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+.reg-role {
+  appearance: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 8px;
+  border: 1.5px solid var(--border-strong); border-radius: var(--radiussm);
+  background: var(--white); color: var(--gray);
+  font-family: inherit; font-size: 12.5px; font-weight: 700;
+}
+.reg-role.on { border-color: var(--leaf); background: var(--greenbg, #e6f7ed); color: var(--forest); }
+.reg-role:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
+.reg-role-icon { font-size: 20px; }
+.reg-section {
+  font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--forest); margin: 22px 0 12px;
+  padding-bottom: 6px; border-bottom: 1px solid var(--border, #eef2ee);
+}
+.reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+@media (max-width: 480px) { .reg-grid { grid-template-columns: 1fr; } }
+
+/* Live password checklist — mirrors PASSWORD_RULES from @marutham/lib. */
+.pw-rules { list-style: none; margin: -4px 0 14px; padding: 0; display: grid; gap: 3px; }
+.pw-rule { font-size: 11px; color: var(--gray); }
+.pw-rule.met { color: var(--success, #1a7a4a); font-weight: 600; }
+
+/* Fee quote (sellers) — informational; the server prices the actual payment. */
+.reg-fees {
+  background: var(--forest); color: var(--white);
+  border-radius: var(--radiussm); padding: 12px 16px; margin-bottom: 16px; font-size: 13px;
+}
+.reg-fee-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.reg-fee-row.concession { color: #86efac; }
+.reg-fee-row.total {
+  font-weight: 800; font-size: 15px;
+  border-top: 1px solid rgba(255, 255, 255, .2); padding-top: 8px; margin-top: 8px;
+}
+.reg-fee-note { font-size: 10px; opacity: .65; margin-top: 6px; }
+
+/* Application-received panel (sellers — no session, they can't sign in yet). */
+.reg-done-icon { font-size: 40px; text-align: center; margin-bottom: 8px; }
+.reg-done-body { font-size: 13px; color: var(--gray); line-height: 1.6; margin-bottom: 14px; }
+.reg-loginid {
+  display: flex; flex-direction: column; gap: 2px; align-items: center;
+  background: var(--greenbg, #e6f7ed); border-radius: var(--radiussm);
+  padding: 12px; margin-bottom: 14px;
+}
+.reg-loginid span { font-size: 11px; font-weight: 700; color: var(--gray); }
+.reg-loginid b {
+  font-family: ui-monospace, Menlo, monospace; font-size: 16px;
+  color: var(--forest); letter-spacing: .06em;
+}
 
 .centered { min-height: 60vh; display: flex; align-items: center; justify-content: center; color: var(--gray); }
 

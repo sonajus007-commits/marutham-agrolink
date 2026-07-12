@@ -12,3 +12,5 @@ export * from './calendar';
 export * from './upload';
 export * from './notifications';
 export * from './nav';
+export * from './subscription';
+export * from './register';

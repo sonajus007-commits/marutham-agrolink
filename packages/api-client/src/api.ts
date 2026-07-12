@@ -13,7 +13,7 @@ import type {
   AdminReturnsResponse, AdminReturn,
   AdminPayoutsResponse, RunSettlementResponse,
   EmployeesResponse, Employee, EmployeeAuditResponse, EmployeePayload,
-  OtpSendResponse,
+  OtpSendResponse, RegisterPayload, RegisterResponse,
 } from './types';
 import type { Order, OrderDetail, Product, Offer, Payout, FarmerListing } from '@marutham/lib';
 import { rupeesToPaise } from '@marutham/lib';
@@ -54,6 +54,10 @@ export const api = {
   },
   me(): Promise<MeResponse> {
     return apiFetch<MeResponse>('GET', '/auth/me');
+  },
+  /** Create an account. No session yet — consumers sign in after, sellers wait for approval. */
+  register(payload: RegisterPayload): Promise<RegisterResponse> {
+    return apiFetch<RegisterResponse>('POST', '/auth/register', payload, false);
   },
   /** Send a one-time code to a registered phone (for OTP login or reset). */
   sendOtp(phone: string): Promise<OtpSendResponse> {

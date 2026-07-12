@@ -14,6 +14,7 @@ const AgentPage = lazy(() => import('./pages/agent/AgentPage').then((m) => ({ de
 const ConsumerPage = lazy(() => import('./pages/consumer/ConsumerPage').then((m) => ({ default: m.ConsumerPage })));
 const FarmerPage = lazy(() => import('./pages/farmer/FarmerPage').then((m) => ({ default: m.FarmerPage })));
 const AdminPage = lazy(() => import('./pages/admin/AdminPage').then((m) => ({ default: m.AdminPage })));
+const Register = lazy(() => import('./pages/Register').then((m) => ({ default: m.Register })));
 
 function AppBar() {
   const { t, i18n } = useTranslation();
@@ -60,6 +61,8 @@ export function App() {
         <Suspense fallback={<div className="centered">Loading…</div>}>
         <Routes>
           <Route path="/login" element={<Login />} />
+          {/* Sign-up is public and code-split — it never loads for a signed-in user. */}
+          <Route path="/register" element={<Register />} />
           <Route path="/" element={<RoleHome />} />
 
           {/* Agent role (Delivery Agent + VCO) — owns its own mobile chrome */}

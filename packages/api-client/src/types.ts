@@ -56,6 +56,52 @@ export interface MeResponse {
   user: User;
 }
 
+/* POST /auth/register (no auth). Consumers are created active and can sign in
+ * straight away; farmers/retailers land in `pending_review` and surface in the
+ * admin Registrations queue — they cannot log in until Head Office approves. */
+export interface RegisterPayload {
+  phone: string;
+  password: string;
+  role: 'consumer' | 'farmer';
+  fname: string;
+  lname?: string;
+  email?: string;
+  alt_phone?: string;
+  gender?: string;
+  country_code?: string;
+  house_no?: string;
+  street1?: string;
+  street2?: string;
+  landmark?: string;
+  village_town?: string;
+  city?: string;
+  taluk?: string;
+  district?: string;
+  /** Mandatory, 6 digits — it drives delivery routing. */
+  pincode: string;
+  state?: string;
+  country?: string;
+  // Seller — required when role is 'farmer'
+  seller_type?: 'Farmer' | 'Retailer';
+  // Seller — Farmer
+  aadhar?: string;
+  bank_name?: string;
+  bank_account?: string;
+  ifsc?: string;
+  // Seller — Retailer (business_name required for this type)
+  business_name?: string;
+  gst_number?: string;
+  business_type?: string;
+  /** Plan name from the catalogue; the seller pays for it after approval. */
+  subscription_plan?: string;
+}
+
+export interface RegisterResponse {
+  message: string;
+  login_id: string;
+  user: User;
+}
+
 /* ── Agent / orders ──────────────────────────────────────────────────────── */
 export interface ScanResponse {
   message?: string;

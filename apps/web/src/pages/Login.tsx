@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@marutham/ui';
 import { api } from '@marutham/api-client';
@@ -150,6 +150,13 @@ export function Login() {
               </div>
             </form>
           )
+        ) : null}
+
+        {/* Sign-up — hidden mid-reset, where the only sane next step is back to sign-in. */}
+        {mode !== 'forgot' ? (
+          <p className="auth-footer">
+            {t('login.noAccount')} <Link className="auth-link" to="/register">{t('login.createAccount')}</Link>
+          </p>
         ) : null}
       </div>
     </div>
