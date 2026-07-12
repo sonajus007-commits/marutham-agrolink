@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@marutham/ui';
@@ -68,16 +68,51 @@ export function Login() {
 
   const title = mode === 'forgot' ? t('login.forgotTitle') : mode === 'otp' ? t('login.otpTitle') : t('login.title');
 
+  /* The tab strip is a real ARIA tablist, so it owes the pattern its keyboard
+   * contract: Left/Right (and Home/End) move between tabs. Tab-key focus alone
+   * is not enough once the buttons claim role="tab". */
+  function onTabKey(e: KeyboardEvent<HTMLDivElement>) {
+    const order: Mode[] = ['password', 'otp'];
+    const i = order.indexOf(mode);
+    if (e.key === 'ArrowRight') switchMode(order[(i + 1) % order.length]);
+    else if (e.key === 'ArrowLeft') switchMode(order[(i - 1 + order.length) % order.length]);
+    else if (e.key === 'Home') switchMode(order[0]);
+    else if (e.key === 'End') switchMode(order[order.length - 1]);
+    else return;
+    e.preventDefault();
+  }
+
+  /* Each tab must point at the panel it controls, and that panel must exist —
+   * the strip used to announce "tab 1 of 2" over nothing at all. Only the
+   * active form is rendered, so one panel id is enough for both tabs. */
+  const panelId = 'auth-panel';
+  const tabProps = (m: Mode) => ({
+    type: 'button' as const,
+    role: 'tab',
+    id: `auth-tab-${m}`,
+    'aria-selected': mode === m,
+    'aria-controls': panelId,
+    /* Roving tabindex: only the selected tab is in the Tab order. */
+    tabIndex: mode === m ? 0 : -1,
+    className: `auth-tab ${mode === m ? 'active' : ''}`,
+    onClick: () => switchMode(m),
+  });
+  const panelProps = mode === 'forgot' ? {} : {
+    id: panelId,
+    role: 'tabpanel',
+    'aria-labelledby': `auth-tab-${mode}`,
+  };
+
   return (
-    <div className="login-wrap">
+    <main className="login-wrap">
       <div className="login-card">
         <h1>{title}</h1>
         <p className="sub">{t('brand')}</p>
 
         {mode !== 'forgot' ? (
-          <div className="auth-tabs" role="tablist">
-            <button type="button" role="tab" aria-selected={mode === 'password'} className={`auth-tab ${mode === 'password' ? 'active' : ''}`} onClick={() => switchMode('password')}>{t('login.passwordTab')}</button>
-            <button type="button" role="tab" aria-selected={mode === 'otp'} className={`auth-tab ${mode === 'otp' ? 'active' : ''}`} onClick={() => switchMode('otp')}>{t('login.otpTab')}</button>
+          <div className="auth-tabs" role="tablist" aria-label={t('login.title')} onKeyDown={onTabKey}>
+            <button {...tabProps('password')}>{t('login.passwordTab')}</button>
+            <button {...tabProps('otp')}>{t('login.otpTab')}</button>
           </div>
         ) : null}
 
@@ -87,6 +122,7 @@ export function Login() {
 
         {/* ── Password login ── */}
         {mode === 'password' ? (
+          <div {...panelProps}>
           <form onSubmit={onPasswordLogin}>
             <Phone value={phone} onChange={setPhone} label={t('login.phone')} />
             <div className="field">
@@ -98,17 +134,21 @@ export function Login() {
               <button type="button" className="auth-link" onClick={() => switchMode('forgot')}>{t('login.forgot')}</button>
             </div>
           </form>
+          </div>
         ) : null}
 
         {/* ── OTP login ── */}
         {mode === 'otp' ? (
           !sent ? (
+            <div {...panelProps}>
             <form onSubmit={onSendOtp}>
               <p className="auth-sub-step">{t('login.otpIntro')}</p>
               <Phone value={phone} onChange={setPhone} label={t('login.phone')} />
               <Button type="submit" block disabled={busy}>{busy ? t('login.sending') : t('login.sendOtp')}</Button>
             </form>
+            </div>
           ) : (
+            <div {...panelProps}>
             <form onSubmit={onVerifyOtp}>
               <p className="auth-sub-step">{t('login.otpSent', { phone })}</p>
               <Code value={otp} onChange={setOtp} label={t('login.otpLabel')} />
@@ -117,6 +157,7 @@ export function Login() {
                 <button type="button" className="auth-link muted" onClick={() => { setSent(false); setOtp(''); setDevOtp(null); }}>{t('login.resend')}</button>
               </div>
             </form>
+            </div>
           )
         ) : null}
 
@@ -159,7 +200,7 @@ export function Login() {
           </p>
         ) : null}
       </div>
-    </div>
+    </main>
   );
 }
 

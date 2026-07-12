@@ -152,7 +152,7 @@ export function Register() {
   };
 
   return (
-    <div className="login-wrap">
+    <main className="login-wrap">
       <div className="login-card login-card--wide">
         <h1>{t('reg.title')}</h1>
         <p className="sub">{t('brand')}</p>
@@ -166,12 +166,15 @@ export function Register() {
         </div>
 
         <form onSubmit={onSubmit} noValidate>
+          {/* A radiogroup, not a tablist: picking Farmer vs Retailer chooses what
+              you ARE, it does not switch between two views of the same thing —
+              and a tab that controls no tabpanel is a lie to a screen reader. */}
           {isSeller ? (
-            <div className="auth-tabs" role="tablist" aria-label={t('reg.sellerTypeLegend')}>
-              <button type="button" role="tab" aria-selected={isFarmer}
+            <div className="auth-tabs" role="radiogroup" aria-label={t('reg.sellerTypeLegend')}>
+              <button type="button" role="radio" aria-checked={isFarmer}
                 className={`auth-tab ${isFarmer ? 'active' : ''}`}
                 onClick={() => switchSellerType('Farmer')}>👨‍🌾 {t('reg.farmer')}</button>
-              <button type="button" role="tab" aria-selected={isRetailer}
+              <button type="button" role="radio" aria-checked={isRetailer}
                 className={`auth-tab ${isRetailer ? 'active' : ''}`}
                 onClick={() => switchSellerType('Retailer')}>🏪 {t('reg.retailer')}</button>
             </div>
@@ -346,7 +349,7 @@ export function Register() {
           </div>
         </form>
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -367,7 +370,7 @@ function RoleButton({ on, icon, label, onClick }: {
 function PendingPanel({ loginId }: { loginId: string }) {
   const { t } = useTranslation();
   return (
-    <div className="login-wrap">
+    <main className="login-wrap">
       <div className="login-card">
         <div className="reg-done-icon" aria-hidden="true">🎉</div>
         <h1>{t('reg.pendingTitle')}</h1>
@@ -381,6 +384,6 @@ function PendingPanel({ loginId }: { loginId: string }) {
           <Button block>{t('reg.goToLogin')}</Button>
         </Link>
       </div>
-    </div>
+    </main>
   );
 }
