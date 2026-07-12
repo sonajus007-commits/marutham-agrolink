@@ -15,3 +15,4 @@ export * from './nav';
 export * from './subscription';
 export * from './register';
 export * from './audit';
+export * from './hub';

@@ -5,6 +5,8 @@
  * `to` is the router path (no basename); the sidebar href is APP_BASE + to so a
  * real anchor / middle-click still resolves under the /app mount. */
 
+import { HUB_STAFF_ROLES } from '@marutham/lib';
+
 export const APP_BASE = '/app';
 
 /** admin_role values that use THIS console. Delivery Agent + VCO have /agent. */
@@ -44,6 +46,9 @@ export const ADMIN_NAV: AdminNavSection[] = [
     items: [
       { id: 'overview', labelKey: 'admin.nav.overview', icon: '📊', to: '/admin' },
       { id: 'orders', labelKey: 'admin.nav.orders', icon: '📦', to: '/admin/orders' },
+      // Hub floor work. Board of Director is management, not operations — and the
+      // /scan endpoint would refuse them, so they do not get the item.
+      { id: 'hub', labelKey: 'admin.nav.hub', icon: '🏭', to: '/admin/hub', roles: [...HUB_STAFF_ROLES] },
       { id: 'returns', labelKey: 'admin.nav.returns', icon: '↩️', to: '/admin/returns' },
       { id: 'payouts', labelKey: 'admin.nav.payouts', icon: '💸', to: '/admin/payouts' },
       { id: 'users', labelKey: 'admin.nav.users', icon: '👥', to: '/admin/users' },

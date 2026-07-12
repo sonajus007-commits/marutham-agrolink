@@ -119,6 +119,9 @@ export interface EligibleAgent {
 export interface EligibleAgentsResponse {
   matched: EligibleAgent[];
   all: EligibleAgent[];
+  /** The consumer's delivery village — what `matched` was matched ON. */
+  village?: string | null;
+  leg?: string;
 }
 
 /** GET /orders/:id/track — live agent + ETA for the tracking card. */

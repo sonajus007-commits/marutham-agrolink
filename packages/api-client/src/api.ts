@@ -118,6 +118,13 @@ export const api = {
   verifyOrder(id: string, data: { route?: string; agent_id?: string }): Promise<ScanResponse> {
     return apiFetch<ScanResponse>('POST', '/orders/' + id + '/scan', data || {});
   },
+  /* Hub dispatch: At Hub → Out for Delivery, assigning the last-mile agent.
+   * Same /scan endpoint as every other advance — the stage decides what it means
+   * (backend/routes/delivery.js). `agent_id` is optional: "Assign later" is a
+   * real choice the server accepts. */
+  dispatchFromHub(id: string, agentId?: string): Promise<ScanResponse> {
+    return apiFetch<ScanResponse>('POST', '/orders/' + id + '/scan', agentId ? { agent_id: agentId } : {});
+  },
   getEligibleAgents(id: string, leg?: string): Promise<EligibleAgentsResponse> {
     const qs = leg ? '?leg=' + encodeURIComponent(leg) : '';
     return apiFetch<EligibleAgentsResponse>('GET', '/orders/' + id + '/eligible-agents' + qs);

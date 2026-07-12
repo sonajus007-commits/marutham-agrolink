@@ -31,6 +31,8 @@ export function roleHome(user: User): string {
   }
   if (user.role === 'consumer') return '/consumer';
   if (user.role === 'farmer') return '/farmer';
+  // The Hub Incharge's whole job is the hub queue; legacy opened them there.
+  if (user.role === 'admin' && user.admin_role === 'Hub Incharge') return '/admin/hub';
   if (user.role === 'admin') return '/admin';
   return '/dashboard';
 }
