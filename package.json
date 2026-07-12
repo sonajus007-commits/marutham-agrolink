@@ -8,7 +8,7 @@
     "dev": "pnpm --filter @marutham/web dev",
     "build": "pnpm --filter @marutham/web build",
     "preview": "pnpm --filter @marutham/web preview",
-    "typecheck": "pnpm --filter @marutham/web typecheck",
+    "typecheck": "pnpm --filter @marutham/web typecheck && pnpm --filter @marutham/shop typecheck",
     "test": "pnpm --filter @marutham/lib test",
     "test:backend": "npm --prefix backend test",
     "tokens:build": "pnpm --filter @marutham/tokens tokens:build",
@@ -16,6 +16,8 @@
     "tokens:contrast": "pnpm --filter @marutham/tokens tokens:contrast",
     "tokens:literals": "pnpm --filter @marutham/tokens tokens:literals",
     "tokens:audit": "pnpm --filter @marutham/tokens tokens:audit",
-    "ui:classes": "pnpm --filter @marutham/ui check:classes"
+    "ui:classes": "pnpm --filter @marutham/ui check:classes",
+    "build:shop": "pnpm --filter @marutham/shop build",
+    "dev:shop": "pnpm --filter @marutham/shop dev"
   }
 }

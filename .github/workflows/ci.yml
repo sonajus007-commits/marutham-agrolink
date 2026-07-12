@@ -93,6 +93,13 @@ jobs:
       - name: Verify /app bundle was produced
         run: test -f apps/web/dist/index.html
 
+      # The public marketplace (Next.js). It builds with NO backend reachable —
+      # every server-side read degrades to an empty value rather than throwing, so
+      # a slow database can never fail the build (or, in production, blank the
+      # marketing page). CI has no API, which makes this a real test of that.
+      - name: Build the shop (Next.js)
+        run: pnpm build:shop
+
       # Tailwind does not error on a class it cannot resolve — it emits nothing.
       # `duration-base` reads exactly like `duration-200` and compiles to no CSS,
       # because --duration-* is not a theme namespace. A passing build, typecheck

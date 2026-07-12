@@ -74,6 +74,68 @@ const appDist = path.join(__dirname, '../apps/web/dist');
 app.use('/app', express.static(appDist));
 app.get('/app/*', (_req, res) => res.sendFile(path.join(appDist, 'index.html')));
 
+// ── Public marketplace (apps/shop, Next.js) — proxied at the site root ────────
+//
+// Express stays the SINGLE FRONT DOOR. The browser only ever talks to this
+// origin; the shop's server-rendered routes are forwarded to Next (:3001).
+//
+// That is a requirement, not a preference: the cart (`ma_cart`) and the session
+// (`ma_token`) live in origin-scoped localStorage, so a visitor who taps a
+// product on the shop and signs in at /app must arrive still holding it. Serve
+// the shop from another host and that hand-off silently breaks at the exact
+// moment of highest intent.
+//
+// Additive and reversible, exactly like the /app mount above: with SHOP_URL
+// unset — or with the Next server simply not running — every one of these routes
+// falls through to the legacy static site below, which still answers on
+// home.html. The shop can never take the existing site down with it.
+// THE URL SPACE IS ALREADY TAKEN. The API owns the ROOT namespace — /products,
+// /orders, /users, /returns … are all routers mounted above. So the shop cannot
+// claim /products/[id] for a public product page: the API answers there first,
+// with JSON. Its future pages need their own prefix, or the API moves under /api
+// (the cleaner end-state, and a breaking change for every existing client).
+// Until that is decided the shop owns only the root document and its assets.
+const SHOP_URL = process.env.SHOP_URL; // e.g. http://localhost:3001
+
+/** The paths the shop owns. */
+function isShopPath(pathname) {
+  return pathname === '/' || pathname.startsWith('/_next/');
+}
+
+if (SHOP_URL) {
+  const { createProxyMiddleware } = require('http-proxy-middleware');
+  // Mounted app-wide with a filter, NOT as app.use('/_next', proxy): a prefix
+  // mount STRIPS the prefix from req.url, so Next would be asked for /static/…
+  // instead of /_next/static/…, every asset would 404, and the page would render
+  // unstyled and never hydrate — its buttons silently doing nothing.
+  app.use(
+    createProxyMiddleware({
+      target: SHOP_URL,
+      changeOrigin: false, // the same-origin illusion is the whole point
+      xfwd: true,
+      pathFilter: (pathname) => isShopPath(pathname),
+      // A dead shop must not take the site down.
+      //
+      // http-proxy-middleware v3 hands the error callback (err, req, res, target)
+      // — there is NO `next`, so this cannot fall through to the static handler
+      // below. It serves the legacy homepage itself instead: the root keeps
+      // answering with a real page even when Next is down. Assets get a plain 502
+      // (an HTML page is not a substitute for a stylesheet).
+      on: {
+        error: (err, req, res) => {
+          console.error('[shop proxy]', err.message);
+          if (!res || res.headersSent) return;
+          if (req.path === '/') {
+            return res.sendFile(path.join(__dirname, '../frontend/home.html'));
+          }
+          res.status(502).end();
+        },
+      },
+    }),
+  );
+  console.log(`[shop] proxying / and /_next/* → ${SHOP_URL}`);
+}
+
 // ── Frontend (served from same origin — works in dev and production) ──────────
 app.use(express.static(path.join(__dirname, '../frontend'), { index: 'home.html' }));
 

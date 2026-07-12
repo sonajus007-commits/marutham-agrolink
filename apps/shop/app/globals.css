@@ -1,0 +1,39 @@
+/* Tailwind v4 for the public marketplace, themed from @marutham/tokens.
+ *
+ * PREFLIGHT IS ON HERE — unlike apps/web. The portal cannot enable it while its
+ * legacy stylesheets still style bare elements (see apps/web/src/tailwind.css);
+ * the shop is greenfield, has no legacy CSS, and so gets the reset the design
+ * system was built to assume. This is the "preflight rides along with each new
+ * screen" plan, arriving with the first screen that can take it. */
+@import 'tailwindcss';
+@import '@marutham/tokens/tokens.css';
+
+@theme {
+  --color-forest: var(--forest);
+  --color-forest-deep: var(--forest-deep);
+  --color-leaf: var(--leaf);
+  /* The action pair the design system's WCAG audit signs off: forest + white.
+     --leaf carries only 3.31:1 against white — decoration, never a text surface. */
+  --color-primary: var(--primary);
+  --color-primary-on: var(--primary-on);
+  --color-primary-hover: var(--primary-hover);
+  --color-gold: var(--gold);
+  --color-surface: var(--white);
+  --color-muted: var(--muted);
+  --color-fg: var(--text);
+  --color-fg-muted: var(--gray);
+  --color-border: var(--border);
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Outfit', system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-fg);
+  background: var(--color-surface);
+}
+
+/* Tamil needs its own face — the Latin stack has no Tamil glyphs. */
+:lang(ta) {
+  font-family: 'Noto Serif Tamil', var(--font-sans);
+}
