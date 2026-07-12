@@ -8,7 +8,8 @@ import type {
   TrackResponse, ReturnRequestPayload, ReturnResponse, RateItemResponse,
   SubscriptionPlansResponse, SubscriptionPayResponse,
   ProfileChangeRequestResponse, MyChangeRequestsResponse,
-  DashboardResponse, AccountStatus, UserStatusHistoryEntry,
+  DashboardResponse, ExecutiveDashboardResponse, ExecutiveTrendMode,
+  AccountStatus, UserStatusHistoryEntry,
   Registration, ProfileChangeRequest, ProductPayload, ProductPriceInput,
   AdminReturnsResponse, AdminReturn,
   AdminPayoutsResponse, RunSettlementResponse,
@@ -197,6 +198,11 @@ export const api = {
   },
   getFieldDashboard(): Promise<FieldDashboardResponse> {
     return apiFetch<FieldDashboardResponse>('GET', '/dashboard/field');
+  },
+  /** Company-wide business overview. 403s for anyone outside EXECUTIVE_ROLES.
+   *  Every money value comes back in RUPEES already — see ExecutiveDashboardResponse. */
+  getExecutiveDashboard(trend: ExecutiveTrendMode = 'monthly'): Promise<ExecutiveDashboardResponse> {
+    return apiFetch<ExecutiveDashboardResponse>('GET', `/dashboard/executive?trend=${trend}`);
   },
 
   // ── Admin: users ──

@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { User, UserRole } from '@marutham/api-client';
 import { useAuth } from './AuthContext';
+import { homesOnExecutive } from '../pages/admin/adminNav';
 
 /* Route guard mirroring backend/middleware/auth.js: requires a session and,
  * optionally, a specific top-level role and/or set of admin_roles. */
@@ -33,6 +34,12 @@ export function roleHome(user: User): string {
   if (user.role === 'farmer') return '/farmer';
   // The Hub Incharge's whole job is the hub queue; legacy opened them there.
   if (user.role === 'admin' && user.admin_role === 'Hub Incharge') return '/admin/hub';
+  // The board's job IS the business overview. Until this line existed, a Board of
+  // Director signing in landed on the operational Overview — a dashboard that
+  // does not carry the district map, the category split or the financial roll-up
+  // they are the audience for. The executive dashboard lived only in legacy
+  // admin.html, so migrating the console quietly took it away from them.
+  if (user.role === 'admin' && homesOnExecutive(user.admin_role)) return '/admin/executive';
   if (user.role === 'admin') return '/admin';
   return '/dashboard';
 }

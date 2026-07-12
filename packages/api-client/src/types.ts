@@ -568,3 +568,91 @@ export interface UserStatusHistoryEntry {
   created_at: string;
   changer?: { fname?: string; lname?: string; login_id?: string } | null;
 }
+
+/* ── Executive dashboard (GET /dashboard/executive) ─────────────────────────
+ *
+ * Board of Director / CEO / Managing Director / CFO / CTO, plus Head Office for
+ * preview (backend EXECUTIVE_ROLES).
+ *
+ * MONEY: every amount here is ALREADY IN RUPEES. The route converts paise itself
+ * (`rup()`) and deliberately names the fields OUTSIDE the money middleware's
+ * MONEY_FIELDS set, so nothing double-converts them. Do NOT divide by 100 — that
+ * is the opposite of the `daily_trend[].revenue` trap on GET /dashboard, which
+ * IS paise. The two dashboards disagree; this one is already rupees.
+ */
+export interface ExecutiveSummary {
+  revenue_today: number;
+  revenue_mtd: number;
+  revenue_ytd: number;
+  gmv: number;
+  total_orders: number;
+  /** Percent change vs the previous period. May be negative. */
+  order_growth_pct: number;
+  customer_growth_pct: number;
+  farmer_growth_pct: number;
+  active_districts: number;
+}
+
+export interface ExecutiveDistrict {
+  district: string;
+  revenue: number;
+  orders: number;
+  /** Banded by revenue share against the peak district. */
+  status: 'green' | 'amber' | 'red' | (string & {});
+}
+
+export interface ExecutiveCategory {
+  name: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface ExecutiveTopFarmer {
+  farmer_id: string;
+  name: string;
+  revenue: number;
+}
+
+export interface ExecutiveTrendPoint {
+  label: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface ExecutiveAlert {
+  type: string;
+  severity: 'high' | 'medium' | 'low' | (string & {});
+  message: string;
+}
+
+export type ExecutiveTrendMode = 'monthly' | 'quarterly' | 'yearly';
+
+export interface ExecutiveDashboardResponse {
+  scope: string;
+  generated_at: string;
+  summary: ExecutiveSummary;
+  orders: { today: number; delivered: number; cancelled: number; pending: number; refunded: number };
+  customers: { new: number; repeat: number; retention_pct: number; avg_basket: number };
+  farmers: {
+    registered: number;
+    active: number;
+    inactive: number;
+    top: ExecutiveTopFarmer[];
+    avg_rating: number | null;
+  };
+  categories: ExecutiveCategory[];
+  logistics: { avg_delivery_mins: number | null; late_deliveries: number; sla_pct: number | null };
+  financial: {
+    platform_commission: number;
+    delivery_income: number;
+    subscription_income: number;
+    payouts_pending: number;
+    payouts_paid: number;
+  };
+  districts: ExecutiveDistrict[];
+  trend: { mode: ExecutiveTrendMode; points: ExecutiveTrendPoint[] };
+  alerts: ExecutiveAlert[];
+  /** Metrics with no data source yet. The UI greys these out rather than
+   *  inventing a number — see EXEC_PLACEHOLDERS in backend/routes/dashboard.js. */
+  placeholders: string[];
+}

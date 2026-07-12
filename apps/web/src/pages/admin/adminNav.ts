@@ -25,6 +25,34 @@ export function canSeeAudit(adminRole?: string | null): boolean {
   return AUDIT_ADMIN_ROLES.includes(adminRole as (typeof AUDIT_ADMIN_ROLES)[number]);
 }
 
+/* Who may open the executive dashboard. MIRRORS the backend's EXECUTIVE_ROLES
+ * (routes/dashboard.js) exactly — anyone else gets a 403, so showing them the
+ * nav item would only offer a door that cannot open.
+ *
+ * Head Office is on the list for PREVIEW: they are not the audience, but they
+ * run the company and legacy let them look. The pure executive roles below are
+ * the ones the dashboard is FOR, and the ones roleHome() lands there. */
+export const EXECUTIVE_ADMIN_ROLES = [
+  'Board of Director', 'CEO', 'Managing Director', 'CFO', 'CTO', 'Head Office',
+] as const;
+
+export function canSeeExecutive(adminRole?: string | null): boolean {
+  return EXECUTIVE_ADMIN_ROLES.includes(adminRole as (typeof EXECUTIVE_ADMIN_ROLES)[number]);
+}
+
+/* Roles whose HOME is the executive dashboard — EXECUTIVE_ADMIN_ROLES minus Head
+ * Office. The board's job IS the business overview, so signing in should land
+ * them on it, exactly as legacy admin.html did. Head Office runs every section
+ * and keeps the operational Overview as their home; they reach this one from the
+ * sidebar. */
+export const EXECUTIVE_HOME_ROLES = [
+  'Board of Director', 'CEO', 'Managing Director', 'CFO', 'CTO',
+] as const;
+
+export function homesOnExecutive(adminRole?: string | null): boolean {
+  return EXECUTIVE_HOME_ROLES.includes(adminRole as (typeof EXECUTIVE_HOME_ROLES)[number]);
+}
+
 export interface AdminNavItem {
   id: string;
   labelKey: string;
@@ -45,6 +73,12 @@ export const ADMIN_NAV: AdminNavSection[] = [
     id: 'operations',
     items: [
       { id: 'overview', labelKey: 'admin.nav.overview', icon: '📊', to: '/admin' },
+      // The board's dashboard. Existed only in legacy admin.html until now, so
+      // every admin_role — the Board included — was landing on Overview instead.
+      {
+        id: 'executive', labelKey: 'admin.nav.executive', icon: '🏛️',
+        to: '/admin/executive', roles: [...EXECUTIVE_ADMIN_ROLES],
+      },
       { id: 'orders', labelKey: 'admin.nav.orders', icon: '📦', to: '/admin/orders' },
       // Hub floor work. Board of Director is management, not operations — and the
       // /scan endpoint would refuse them, so they do not get the item.

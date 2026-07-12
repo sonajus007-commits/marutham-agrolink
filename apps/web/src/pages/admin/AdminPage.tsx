@@ -11,6 +11,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider } from '../../components/Toast';
 import { ADMIN_NAV, APP_BASE } from './adminNav';
 import { OverviewPage } from './OverviewPage';
+import { ExecutivePage } from './ExecutivePage';
 import { OrdersPage } from './OrdersPage';
 import { ReturnsPage } from './ReturnsPage';
 import { PayoutsPage } from './PayoutsPage';
@@ -104,6 +105,7 @@ export function AdminPage() {
       <div className="mx-auto w-full max-w-[1100px] p-4 sm:p-6">
         <Routes>
           <Route index element={<OverviewPage />} />
+          <Route path="executive" element={<ExecutivePage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="returns" element={<ReturnsPage />} />
           <Route path="payouts" element={<PayoutsPage />} />

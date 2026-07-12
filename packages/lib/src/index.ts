@@ -17,3 +17,4 @@ export * from './register';
 export * from './audit';
 export * from './hub';
 export * from './shop';
+export * from './executive';

@@ -14,6 +14,31 @@ export function fmtMoneyInt(val: unknown): string {
   return '₹' + Number(val || 0).toLocaleString('en-IN');
 }
 
+/**
+ * Money with Indian digit grouping AND paise: "₹12,34,567.89".
+ *
+ * `fmtMoney` above does not group, which is survivable for an order total
+ * (₹157.11) and unreadable for a revenue roll-up — ₹12345678.90 is a wall of
+ * digits, and a board dashboard is exactly where a misread order of magnitude
+ * costs something. Legacy's executive dashboard grouped for this reason.
+ *
+ * This is deliberately a SECOND formatter rather than a fix to `fmtMoney`:
+ * grouping is strictly better everywhere, but `fmtMoney` has 71 call sites
+ * across the consumer, farmer and admin screens, and changing all of them is a
+ * display change that deserves its own commit and its own look-at-it pass — not
+ * a silent rider on a dashboard.
+ *
+ * Note en-IN grouping is 2-2-3 (lakh/crore), not 3-3-3: ₹12,34,567.89.
+ */
+export function fmtMoneyFull(val: unknown): string {
+  const n = Number(val);
+  if (!Number.isFinite(n)) return '—';
+  return (
+    '₹' +
+    n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  );
+}
+
 export function fmtNum(val: unknown): string {
   return Number(val || 0).toLocaleString('en-IN');
 }
