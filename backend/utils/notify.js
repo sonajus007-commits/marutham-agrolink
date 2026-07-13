@@ -347,6 +347,38 @@ async function notifyProductApproved(farmer, product) {
   );
 }
 
+// The mirror of notifyProductApproved. A rejection used to be SILENT: the seller
+// was told no by a badge on a card, with no reason and no way to ask. The reason is
+// the payload here — it is the only thing that turns a refusal into something the
+// seller can act on.
+async function notifyProductRejected(farmer, product, reason) {
+  const name        = `${farmer.fname}${farmer.lname ? ' ' + farmer.lname : ''}`;
+  const productName = product.name;
+  // Admins end a reason with a full stop about half the time, and the SMS puts a
+  // sentence after it — so strip a trailing one rather than emit "fresh stock..".
+  const reasonText  = String(reason).replace(/\s*\.\s*$/, '');
+
+  await sendEmail(farmer.email, `Product Request Declined — ${productName}`, `
+    <p>Dear ${name},</p>
+    <p>Your request to sell <strong>${productName}</strong> on Marutham Agrolink has
+    been <span style="color:#dc2626;font-weight:700">DECLINED</span> by the admin team.</p>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px;margin:12px 0">
+      <strong>Reason:</strong><br>${reasonText}
+    </div>
+    <p>You may correct the issue and request this product again from
+    <strong>My Products</strong>, or reply to this email if you believe this is a
+    mistake.</p>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;margin:12px 0">
+      <strong>Login ID:</strong> ${farmer.login_id}
+    </div>
+    <p>Regards,<br><strong>Marutham Agrolink Team</strong></p>
+  `);
+
+  await sendSMS(farmer.phone,
+    `${farmer.fname}, your request to sell ${productName} on Marutham Agrolink was DECLINED. Reason: ${reasonText}. You can fix and request again from My Products. -Marutham Agrolink`
+  );
+}
+
 module.exports = {
   notifyRegistrationReceived,
   notifyApprovalWithPayment,
@@ -360,4 +392,5 @@ module.exports = {
   notifySubscriptionRenewalPaymentPending,
   notifySubscriptionRenewalOutcome,
   notifyProductApproved,
+  notifyProductRejected,
 };

@@ -40,6 +40,7 @@ export function ListingReviewSheet({
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState<ListingAction | null>(null);
+  const [reason, setReason] = useState('');
 
   if (!listing) {
     return <Sheet open={open} title={t('admin.lst.title')} onClose={onClose}><div /></Sheet>;
@@ -57,11 +58,18 @@ export function ListingReviewSheet({
   const actions = listingActions(status);
   const sellerName = `${f?.fname || ''} ${f?.lname || ''}`.trim() || '—';
 
+  const trimmedReason = reason.trim();
+
   async function act(action: ListingAction) {
     setBusy(true);
     try {
-      const res = await api.setListingStatus(listing!.id, listingActionStatus(action));
+      const res = await api.setListingStatus(
+        listing!.id,
+        listingActionStatus(action),
+        trimmedReason,
+      );
       toast(res.message || t('admin.lst.done'), 'ok');
+      setReason('');
       onChanged();
       onClose();
     } catch (e) {
@@ -72,8 +80,13 @@ export function ListingReviewSheet({
     }
   }
 
+  function close() {
+    setReason('');
+    onClose();
+  }
+
   return (
-    <Sheet open={open} title={p?.name || t('admin.lst.title')} onClose={onClose}>
+    <Sheet open={open} title={p?.name || t('admin.lst.title')} onClose={close}>
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <span
@@ -163,6 +176,20 @@ export function ListingReviewSheet({
           </p>
         ) : null}
 
+        {/* What the seller was actually told. An admin looking at a rejected listing
+            needs to see the reason on record — not least because they may be about
+            to undo it. Rows rejected before the reason was stored have none, and say
+            so rather than showing an empty box. */}
+        {status === 'rejected' ? (
+          <Section title={`🚫 ${t('admin.lst.rejectedReason')}`}>
+            <p className="text-sm text-fg">
+              {listing.rejection_reason || (
+                <span className="text-fg-muted">{t('admin.lst.noReasonOnRecord')}</span>
+              )}
+            </p>
+          </Section>
+        ) : null}
+
         <section className="flex flex-col gap-2 rounded-base border border-border-subtle bg-surface-muted p-3">
           <p className="text-2xs text-fg-muted">{t('admin.lst.hint.' + status, { defaultValue: '' })}</p>
           <div className="flex flex-wrap gap-2">
@@ -180,9 +207,10 @@ export function ListingReviewSheet({
         </section>
       </div>
 
-      {/* Every action is confirmed, because none of them is cheap: approving EMAILS
-          the seller (notifyProductApproved) and puts produce in front of customers;
-          rejecting and deactivating take it away again. */}
+      {/* Every action is confirmed, because none of them is cheap: each one moves
+          produce on or off the storefront, and approve/reject also EMAIL and TEXT the
+          seller. Deactivate does not notify — it returns the listing to the queue
+          rather than passing judgement, so there is nothing yet to tell them. */}
       <Modal
         open={confirming !== null}
         title={confirming ? t('admin.lst.action.' + confirming) : ''}
@@ -196,7 +224,9 @@ export function ListingReviewSheet({
             <Button
               variant={confirming === 'reject' ? 'danger' : 'primary'}
               onClick={() => confirming && act(confirming)}
-              disabled={busy}
+              // A rejection with no reason is the thing this whole flow exists to
+              // stop. The server refuses it too — this only saves a round trip.
+              disabled={busy || (confirming === 'reject' && !trimmedReason)}
             >
               {busy ? '…' : confirming ? t('admin.lst.action.' + confirming) : ''}
             </Button>
@@ -206,6 +236,28 @@ export function ListingReviewSheet({
         <p className="text-sm text-fg">
           {confirming ? t('admin.lst.confirm.' + confirming, { seller: sellerName, product: p?.name || '' }) : ''}
         </p>
+
+        {/* The reason. Required, and it is not paperwork: this text is emailed and
+            texted to the seller verbatim, and it is the only part of a refusal they
+            can act on. Collected AT the decision, not before it. */}
+        {confirming === 'reject' ? (
+          <div className="mt-3 flex flex-col gap-1">
+            <label htmlFor="lst-reason" className="text-2xs font-bold uppercase tracking-wide text-fg-muted">
+              {t('admin.lst.reasonLabel')}
+            </label>
+            <textarea
+              id="lst-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              maxLength={500}
+              autoFocus
+              placeholder={t('admin.lst.reasonPlaceholder')}
+              className="w-full rounded-base border border-border-subtle bg-surface p-2 text-sm text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
+            />
+            <p className="text-2xs text-fg-muted">{t('admin.lst.reasonHint')}</p>
+          </div>
+        ) : null}
       </Modal>
     </Sheet>
   );

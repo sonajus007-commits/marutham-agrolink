@@ -268,7 +268,7 @@ router.get('/admin/pending', async (req, res) => {
   const { data, error } = await supabase
     .from('farmer_listings')
     .select(`
-      id, farmer_price, qty_available, listing_status, created_at, images,
+      id, farmer_price, qty_available, listing_status, created_at, images, rejection_reason,
       farmer:users ( id, fname, lname, login_id, district, seller_type, subscription_plan, subscription_expires_at ),
       product:products ( id, code, name, unit )
     `)
@@ -287,7 +287,29 @@ router.patch('/:id/status', async (req, res) => {
   if (!['active', 'rejected', 'pending'].includes(status)) {
     return res.status(400).json({ error: 'status must be active, rejected, or pending.' });
   }
-  const update = { listing_status: status, updated_at: new Date().toISOString() };
+
+  // A rejection MUST say why.
+  //
+  // The legacy admin page prompted for a reason labelled "(shown to farmer)", sent
+  // it, and this route threw it away — there was no column. The reason is the whole
+  // point of a rejection: without one the seller learns only that the answer is no,
+  // with nothing to fix and nothing to appeal. Enforced server-side, not just in
+  // the console, because the console is not the only thing that can call this.
+  const reason = typeof req.body.rejection_reason === 'string'
+    ? req.body.rejection_reason.trim()
+    : '';
+  if (status === 'rejected' && !reason) {
+    return res.status(400).json({ error: 'A rejection reason is required — the seller is shown it.' });
+  }
+
+  const update = {
+    listing_status: status,
+    updated_at: new Date().toISOString(),
+    // Set on rejection; CLEARED otherwise. A stale "produce looked spoiled" left
+    // hanging off a listing that is now live and selling would be worse than no
+    // reason at all — approving is what withdraws the objection.
+    rejection_reason: status === 'rejected' ? reason : null,
+  };
   const { data, error } = await supabase
     .from('farmer_listings')
     .update(update)
@@ -296,8 +318,9 @@ router.patch('/:id/status', async (req, res) => {
     .single();
   if (error) return res.status(500).json({ error: error.message });
 
-  // Notify farmer when their product request is approved
-  if (status === 'active') {
+  // Tell the farmer the outcome. Approval already did this; a rejection was silent,
+  // which is precisely how a seller ends up staring at "Contact support for details."
+  if (status === 'active' || status === 'rejected') {
     try {
       const { data: full } = await supabase
         .from('farmer_listings')
@@ -308,10 +331,12 @@ router.patch('/:id/status', async (req, res) => {
         .eq('id', req.params.id)
         .single();
       if (full?.farmer && full?.product) {
-        await notify.notifyProductApproved(full.farmer, full.product);
+        if (status === 'active') await notify.notifyProductApproved(full.farmer, full.product);
+        else await notify.notifyProductRejected(full.farmer, full.product, reason);
       }
     } catch (e) {
-      console.error('[LISTING APPROVE] Notify error:', e.message);
+      // A notification failure must not fail the decision — it is already written.
+      console.error(`[LISTING ${status.toUpperCase()}] Notify error:`, e.message);
     }
   }
 

@@ -193,13 +193,22 @@ export const api = {
     );
   },
   /** Approve (`active`), refuse (`rejected`), or pull back for review (`pending`).
-   *  Approving emails the seller (notifyProductApproved), so it is not a silent
-   *  write — do not call it speculatively.
    *
-   *  No rejection reason is sent: the column does not exist. Legacy passed one and
-   *  the server discarded it. */
-  setListingStatus(id: string, status: ListingReviewStatus): Promise<{ message: string; listing: AdminListing }> {
-    return apiFetch('PATCH', '/listings/' + id + '/status', { status });
+   *  NOT a silent write: the seller is emailed and texted either way
+   *  (notifyProductApproved / notifyProductRejected). Do not call speculatively.
+   *
+   *  `reason` is REQUIRED when rejecting and the server 400s without it — the seller
+   *  is shown it, and a refusal with no reason gives them nothing to fix. It is
+   *  ignored for the other statuses, which CLEAR any stored reason. */
+  setListingStatus(
+    id: string,
+    status: ListingReviewStatus,
+    reason?: string,
+  ): Promise<{ message: string; listing: AdminListing }> {
+    return apiFetch('PATCH', '/listings/' + id + '/status', {
+      status,
+      ...(status === 'rejected' ? { rejection_reason: reason ?? '' } : {}),
+    });
   },
 
   // ── Seller: earnings + subscription ──

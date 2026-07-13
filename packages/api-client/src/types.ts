@@ -735,10 +735,6 @@ export interface OperationsDashboardResponse {
  * MONEY: `farmer_price` IS a MONEY_FIELDS key, so it arrives as an already-
  * converted RUPEE STRING. fmtMoney it directly; never divide by 100.
  *
- * NOTE there is NO `rejection_reason`. The legacy admin page prompted for one
- * "(shown to farmer)" and POSTed it, and the backend dropped it — the column does
- * not exist, so the reason was never stored and no farmer ever saw it. This type
- * does not pretend otherwise.
  */
 export interface AdminListing {
   id: string;
@@ -748,6 +744,12 @@ export interface AdminListing {
   listing_status?: 'pending' | 'active' | 'rejected' | (string & {});
   created_at: string;
   images?: string[] | null;
+  /** Why the request was declined — REQUIRED to reject, and shown to the seller.
+   *  Null unless `listing_status === 'rejected'`: approving or deactivating clears
+   *  it, so a live listing can never carry a stale objection.
+   *  (025_listing_rejection_reason.sql. For years the legacy console collected this
+   *  and the backend discarded it, so no seller was ever told why.) */
+  rejection_reason?: string | null;
   farmer?: {
     id: string;
     fname?: string | null;

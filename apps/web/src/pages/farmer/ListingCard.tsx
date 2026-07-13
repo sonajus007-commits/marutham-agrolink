@@ -90,7 +90,9 @@ function Actions({
   state, reason, busy, onEdit, onConfirm, onUnconfirm, onDelete,
 }: {
   state: ListingState;
-  /** Never populated today: farmer_listings has no rejection_reason column. */
+  /** The admin's reason for declining, shown to the seller verbatim. Populated for
+   *  every rejection made since 025_listing_rejection_reason.sql; rejections made
+   *  BEFORE it have none, because the old backend discarded what the admin typed. */
   reason?: string | null;
   busy: boolean;
   onEdit: () => void;
@@ -116,8 +118,10 @@ function Actions({
     case 'rejected':
       return (
         <>
-          {/* The column does not exist yet, so `reason` is always undefined.
-              Say something useful rather than render an empty string. */}
+          {/* The reason IS the rejection, as far as the seller is concerned: it is
+              the only part they can act on. The fallback survives for rows rejected
+              before the reason was stored — a new rejection cannot reach it, because
+              the server refuses one without a reason. */}
           <span className="listing__note">{reason || 'Contact support for details.'}</span>
           {remove}
         </>

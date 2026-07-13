@@ -304,7 +304,9 @@ export interface FarmerListing {
   listed?: boolean;
   confirmed?: boolean;
   listing_status?: 'pending' | 'active' | 'rejected' | (string & {});
-  /** Column does not exist yet — always undefined. See listings README. */
+  /** Why an admin declined this product request — the seller is shown it verbatim.
+   *  Only set while `listing_status === 'rejected'`; approving or deactivating
+   *  clears it, so a live listing never carries a stale objection. */
   rejection_reason?: string | null;
   product?: {
     id: string;
