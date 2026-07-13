@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChartContainer, StatTile } from '@marutham/ui';
 import { api, type DashboardResponse } from '@marutham/api-client';
+import { fmtMoney, fmtMoneyInt } from '@marutham/lib';
 import { chartPalette, colors } from '@marutham/tokens';
 import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
@@ -41,7 +42,9 @@ export function OverviewPage() {
     const trend = data?.daily_trend ?? [];
     return {
       color: chartPalette as unknown as string[],
-      tooltip: { trigger: 'axis', valueFormatter: (v) => '₹' + Number(v).toFixed(0) },
+      // The series is already rounded to whole rupees below, so fmtMoneyInt — a
+      // forced ".00" here would be precision the number does not have.
+      tooltip: { trigger: 'axis', valueFormatter: (v) => fmtMoneyInt(v) },
       grid: { left: 48, right: 16, top: 20, bottom: 28 },
       xAxis: {
         type: 'category',
@@ -102,7 +105,7 @@ export function OverviewPage() {
       color: [chartPalette[0]],
       tooltip: {
         trigger: 'item',
-        valueFormatter: (v) => '₹' + Number(v).toLocaleString('en-IN'),
+        valueFormatter: (v) => fmtMoneyInt(v),
       },
       grid: { left: 8, right: 64, top: 8, bottom: 8, containLabel: true },
       xAxis: {
@@ -128,7 +131,7 @@ export function OverviewPage() {
           label: {
             show: true,
             position: 'right',
-            formatter: (p) => '₹' + Number(p.value).toLocaleString('en-IN'),
+            formatter: (p) => fmtMoneyInt(p.value),
             fontSize: 11,
             // Text wears text ink, never the series colour.
             color: colors.gray,
@@ -151,7 +154,7 @@ export function OverviewPage() {
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatTile label={t('admin.overview.kpi.orders')} value={k?.total_orders ?? '—'} hint={t('admin.overview.kpi.ordersHint')} />
-        <StatTile label={t('admin.overview.kpi.gmv')} value={k ? '₹' + k.gmv_rupees : '—'} accent="var(--success)" />
+        <StatTile label={t('admin.overview.kpi.gmv')} value={k ? fmtMoney(k.gmv_rupees) : '—'} accent="var(--success)" />
         <StatTile label={t('admin.overview.kpi.active')} value={k?.active_orders ?? '—'} accent="var(--info)" />
         <StatTile label={t('admin.overview.kpi.farmers')} value={k?.total_farmers ?? '—'} />
         <StatTile label={t('admin.overview.kpi.consumers')} value={k?.total_consumers ?? '—'} />

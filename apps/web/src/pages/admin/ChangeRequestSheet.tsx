@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, INPUT_CLASS, Sheet } from '@marutham/ui';
 import { api, type ProfileChangeRequest } from '@marutham/api-client';
-import { fmtDateShort } from '@marutham/lib';
+import { fmtDateShort, fmtMoney } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
 
 export const CR_STATUS_TONE: Record<string, string> = {
@@ -114,7 +114,10 @@ export function ChangeRequestSheet({
           <section className="rounded-base border border-border-subtle bg-surface-muted p-3">
             <p className="text-2xs text-fg-muted">{t('admin.cr.confirmHint')}</p>
             <Row label={t('admin.cr.paymentRef')} value={String(request.payment_reference)} mono />
-            {request.renewal_amount ? <Row label={t('admin.cr.amount')} value={`₹${Math.round(request.renewal_amount / 100)}`} mono /> : null}
+            {/* renewal_amount is PAISE — the /100 stays. It is the amount the
+                seller says they paid, so it now shows the paise too rather than
+                rounding the figure we are asked to reconcile against. */}
+            {request.renewal_amount ? <Row label={t('admin.cr.amount')} value={fmtMoney(request.renewal_amount / 100)} mono /> : null}
           </section>
         ) : null}
 

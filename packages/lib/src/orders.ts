@@ -1,6 +1,7 @@
 /* Order domain types + queue grouping — the logic that agent.html did inline
  * in loadOrders(). Pure, so the Agent web screen and a future RN screen group
  * identically. */
+import { fmtMoney } from './format';
 import type { AddressObject } from './format';
 
 export interface OrderItem {
@@ -110,7 +111,7 @@ export function deriveAgentStats(q: OrderQueues, isVCO: boolean): AgentStats {
     (s, o) => s + (o.pay_method === 'Cash on Delivery' ? parseFloat(String(o.total || 0)) : 0),
     0,
   );
-  return { queue, completed: q.delivered.length, codOrPipeline: '₹' + cod.toFixed(0) };
+  return { queue, completed: q.delivered.length, codOrPipeline: fmtMoney(cod) };
 }
 
 /* ── Order policy ──────────────────────────────────────────────────────────

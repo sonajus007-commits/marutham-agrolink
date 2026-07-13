@@ -5,7 +5,7 @@ import { Button, Field, Input, Select } from '@marutham/ui';
 import { api, type RegisterPayload, type RegisterResponse } from '@marutham/api-client';
 import {
   emptyRegisterForm, validateRegistration, hasErrors, passwordRuleResults,
-  quoteRegistration, SUBSCRIPTION_PLANS, GENDERS, BUSINESS_TYPES,
+  quoteRegistration, SUBSCRIPTION_PLANS, GENDERS, BUSINESS_TYPES, fmtMoney,
   type RegisterForm, type RegisterErrors, type RegisterRole, type RegisterSellerType,
 } from '@marutham/lib';
 import { useAuth } from '../auth/AuthContext';
@@ -310,7 +310,7 @@ export function Register() {
                     <option value="">{t('reg.selectPlan')}</option>
                     {SUBSCRIPTION_PLANS.map((pl) => (
                       <option key={pl.name} value={pl.name}>
-                        {pl.name} — ₹{pl.amountRs} / {pl.days} {t('reg.days')}
+                        {pl.name} — {fmtMoney(pl.amountRs)} / {pl.days} {t('reg.days')}
                       </option>
                     ))}
                   </Select>
@@ -320,19 +320,19 @@ export function Register() {
               {quote ? (
                 <div className="reg-fees">
                   <div className="reg-fee-row">
-                    <span>{t('reg.regCharge')}</span><span>₹{quote.registrationChargeRs}</span>
+                    <span>{t('reg.regCharge')}</span><span>{fmtMoney(quote.registrationChargeRs)}</span>
                   </div>
                   <div className="reg-fee-row">
-                    <span>{quote.plan.name} {t('reg.subscription')}</span><span>₹{quote.planFeeRs}</span>
+                    <span>{quote.plan.name} {t('reg.subscription')}</span><span>{fmtMoney(quote.planFeeRs)}</span>
                   </div>
                   {quote.discountRs > 0 ? (
                     <div className="reg-fee-row concession">
                       <span>🌸 {t('reg.concession', { pct: quote.concessionPct })}</span>
-                      <span>− ₹{quote.discountRs}</span>
+                      <span>− {fmtMoney(quote.discountRs)}</span>
                     </div>
                   ) : null}
                   <div className="reg-fee-row total">
-                    <span>{t('reg.totalPayable')}</span><span>₹{quote.totalRs}</span>
+                    <span>{t('reg.totalPayable')}</span><span>{fmtMoney(quote.totalRs)}</span>
                   </div>
                   <p className="reg-fee-note">{t('reg.payAfterApproval')}</p>
                 </div>

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { StatTile } from '@marutham/ui';
-import type { AgentStats } from '@marutham/lib';
+import { fmtMoney, type AgentStats } from '@marutham/lib';
 
 export function StatsRow({ stats, isVCO }: { stats: AgentStats | null; isVCO: boolean }) {
   const { t } = useTranslation();
@@ -14,7 +14,7 @@ export function StatsRow({ stats, isVCO }: { stats: AgentStats | null; isVCO: bo
       />
       <StatTile
         label={isVCO ? t('agent.stat.inPipeline') : t('agent.stat.cod')}
-        value={stats ? stats.codOrPipeline : isVCO ? dash : '₹0'}
+        value={stats ? stats.codOrPipeline : isVCO ? dash : fmtMoney(0)}
       />
     </div>
   );
