@@ -33,19 +33,19 @@ marutham-agrolink/
 │   ├── middleware/ # Auth middleware
 │   ├── db/         # Supabase client
 │   └── .env        # Secrets — never commit this file
-├── frontend/       # Static HTML/CSS/JS (served by the backend)
-│   ├── index.html  # Login / landing page
-│   ├── admin.html
-│   ├── farmer.html
-│   ├── consumer.html
-│   ├── agent.html
-│   ├── css/app.css # Design tokens + shared styles
-│   └── js/
-│       ├── config.js     # API_BASE setting (see Deployment note below)
-│       ├── api.js        # All API calls go through here
-│       ├── shared.js     # Auth/session helpers
-│       ├── dashboard/    # Role-based dashboard renderers (common, executive, adminhead, operations, field)
-│       └── vendor/       # Self-hosted libraries (ECharts, Tamil Nadu map GeoJSON)
+├── apps/
+│   ├── web/        # The app — React + Vite + TS. Every signed-in screen, at /app
+│   └── shop/       # Public marketplace — Next.js, proxied at /
+├── packages/       # Shared workspace packages
+│   ├── lib/        # Pure domain logic (framework-free, unit-tested)
+│   ├── ui/         # Design-system components
+│   ├── tokens/     # Colour / spacing / type tokens
+│   ├── api-client/ # Typed API client — every call goes through here
+│   └── i18n/       # en + ta translations
+├── frontend/       # All that survives of the pre-React site (see below)
+│   ├── home.html   # Public landing page; also the shop's outage fallback
+│   ├── img/        # Shared logos — the React app loads /img/logo-sm.jpg
+│   └── js/config.js # API_BASE = '/api', used by home.html
 └── marutham_schema.sql  # Full database schema
 ```
 
@@ -127,9 +127,22 @@ pm2 startup    # auto-start on server reboot
 
 ## Roles & Pages
 
-| Role         | Page             | Access                          |
-|--------------|------------------|---------------------------------|
-| Admin        | /admin.html      | Full platform management        |
-| Farmer       | /farmer.html     | Listings, earnings, orders      |
-| Consumer     | /consumer.html   | Browse, order, track            |
-| Agent (VCO)  | /agent.html      | Delivery scan and queue         |
+Every screen below lives in the React app under `/app`. Signing in at `/app/login`
+lands each role on its own home automatically (`roleHome()` in
+`apps/web/src/auth/ProtectedRoute.tsx`) — there is no per-role URL to hand out.
+
+| Role                        | Page              | Access                             |
+|-----------------------------|-------------------|------------------------------------|
+| Admin / management          | /app/admin        | Full platform management           |
+| Farmer / Retailer           | /app/farmer       | Listings, earnings, orders         |
+| Consumer                    | /app/consumer     | Browse, order, track               |
+| Agent (VCO, Delivery Agent) | /app/agent        | Delivery scan and queue            |
+
+Management roles also get a dashboard chosen by `admin_role`: `/app/admin/executive`
+(Board/CEO/MD/CFO/CTO), `/app/admin/operations` (District/Regional/State/Zonal),
+`/app/admin/adminhead` (Head Office, Technical Admin, HR), and the field dashboard
+inside `/app/agent` (VCO, Delivery Agent).
+
+The public landing page (`/`) and the marketplace are separate: `frontend/home.html`
+answers at the root, unless the Next.js shop (`apps/shop`) is running, in which case
+it is proxied there.

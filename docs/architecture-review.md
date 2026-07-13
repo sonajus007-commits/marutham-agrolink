@@ -23,21 +23,26 @@ greenfield decision.
 | Database | Supabase Postgres, 24 ordered migrations, `schema.json` snapshot + `db:check` verifier |
 | Auth | Express-issued JWT, bcrypt, session in `localStorage` |
 | Charts | ECharts via `apps/web/src/components/EChart.tsx` |
-| Maps | ECharts + GeoJSON, only in legacy `frontend/js/dashboard/` |
+| Maps | ECharts + GeoJSON, bundled by `apps/web` (`src/assets/tn-districts.geo.json`) |
 | Tests | Vitest (`packages/lib`), `node:test` (backend), CI on push + PR |
 
-**Migration progress by role**
+**Migration progress by role — COMPLETE.**
 
-| Role | Legacy | React | Remaining |
-|---|---|---|---|
-| Agent | `agent.html` (896 ln) | done | — |
-| Consumer | `consumer.html` (2,047 ln) | Shop, Cart, Checkout, Home, Orders | "2C" |
-| Farmer | `farmer.html` (1,593 ln) | seller shell, subscription gate, earnings, listings CRUD | "3C" |
-| Admin | `admin.html` (4,852 ln) | not started | **all of it** |
+The strangler-fig finished: every signed-in screen is React, under `/app`. The
+legacy pages below were deleted (~12.6k lines) once the last dashboard was ported.
 
-`admin.html` is the single largest remaining artifact — bigger than the other three
-legacy pages combined. Any plan that reorganizes folders before Admin lands will
-reorganize them again afterwards.
+| Role | Was | Now |
+|---|---|---|
+| Agent | `agent.html` (896 ln) | `/app/agent` — incl. the field dashboard |
+| Consumer | `consumer.html` (2,047 ln) | `/app/consumer` |
+| Farmer | `farmer.html` (1,593 ln) | `/app/farmer` |
+| Admin | `admin.html` (4,855 ln) | `/app/admin` — incl. executive / operations / adminhead |
+| Login + sign-up | `index.html` (1,043 ln) | `/app/login`, `/app/register` |
+
+What survives under `frontend/` is NOT legacy debt — each file is load-bearing:
+`home.html` (public landing page and the shop's outage fallback), `img/` (the React
+app loads `/img/logo-sm.jpg` on four pages) and `js/config.js` (`API_BASE = '/api'`,
+which `home.html` needs). See the static-mount comment in `backend/server.js`.
 
 **Code quality.** The backend is in good shape: routes are thin, money handling has
 been through a dedicated paise/rupee correction, and the schema is reproducible and

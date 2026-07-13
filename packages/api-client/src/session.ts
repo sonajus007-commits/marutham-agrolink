@@ -1,6 +1,13 @@
-/* Session storage — reuses the SAME localStorage keys as the legacy
- * frontend/js/shared.js so a user can move between the legacy HTML pages and
- * the new React app without logging in twice during the migration. */
+/* Session storage.
+ *
+ * These key NAMES are a contract, not an implementation detail. The legacy HTML
+ * pages that originally shared them are gone, but frontend/home.html — the public
+ * landing page, and the shop's outage fallback — still reads `ma_token` and
+ * `ma_user` directly out of localStorage to decide whether its header says "Login"
+ * or sends you to your dashboard.
+ *
+ * So renaming these breaks the landing page silently: it would simply decide every
+ * visitor is signed out. If you change them, change home.html in the same commit. */
 import type { User } from './types';
 
 const TOKEN_KEY = 'ma_token';

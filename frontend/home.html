@@ -344,8 +344,8 @@ footer{background:#16321f;color:#cdeed8;padding:46px 20px 24px;}
       <a href="#shop" data-en="Shop Fresh" data-ta="கடை">Shop Fresh</a>
       <a href="#about" data-en="About Us" data-ta="எங்களை பற்றி">About Us</a>
       <a href="#stories" data-en="Farmer Stories" data-ta="விவசாயி கதைகள்">Farmer Stories</a>
-      <a href="index.html" data-en="Login" data-ta="உள்நுழைய">Login</a>
-      <a href="index.html" data-en="Register as Seller" data-ta="விற்பனையாளராக">Register as Seller</a>
+      <a href="/app/login" data-en="Login" data-ta="உள்நுழைய">Login</a>
+      <a href="/app/register" data-en="Register as Seller" data-ta="விற்பனையாளராக">Register as Seller</a>
     </div>
     <div class="foot-col" id="career">
       <h4 data-en="Company" data-ta="நிறுவனம்">Company</h4>
@@ -364,8 +364,12 @@ footer{background:#16321f;color:#cdeed8;padding:46px 20px 24px;}
   <div class="foot-bottom">© 2026 Marutham AgroLink Private Limited · Serving Pudukkottai, Tamil Nadu</div>
 </footer>
 
+<!-- config.js only. This page defines its own setLang() below, so it never needed
+     anything else from the old shared.js — which is gone along with the rest of the
+     legacy frontend. config.js STAYS: it supplies CONFIG.API_BASE = '/api', and the
+     fetch fallback below would otherwise ask for /products, which is the SHOP's
+     route, not the API's. -->
 <script src="js/config.js"></script>
-<script src="js/shared.js"></script>
 <script>
 /* ── IST Clock ──────────────────────────────────────────────────── */
 function tick() {
@@ -406,28 +410,28 @@ function isLoggedIn() {
 }
 
 function goLogin() {
-  window.location.href = 'index.html';
+  window.location.href = '/app/login';
 }
 
 function goRegisterSeller() {
-  window.location.href = 'index.html#register-seller';
+  window.location.href = '/app/register';
 }
 
+/* Send a signed-in visitor to "/app/" and let the REACT app route them.
+ *
+ * This used to pick the destination itself — farmer.html / admin.html /
+ * consumer.html — and it got it wrong: a VCO or Delivery Agent has role 'admin',
+ * so the old ternary dropped them on the consumer storefront instead of their
+ * queue. /app/ resolves the landing page with roleHome(), which knows about the
+ * agent console, the hub queue and the per-role dashboards. One rule, in one
+ * place, rather than a copy here that drifts. */
 function handleHeaderLogin() {
-  if (isLoggedIn()) {
-    var user = JSON.parse(localStorage.getItem('ma_user') || 'null');
-    var dest = user && user.role === 'farmer' ? 'farmer.html'
-             : user && user.role === 'admin'  ? 'admin.html'
-             : 'consumer.html';
-    window.location.href = dest;
-  } else {
-    goLogin();
-  }
+  window.location.href = isLoggedIn() ? '/app/' : '/app/login';
 }
 
 function handleShopAll() {
   if (isLoggedIn()) {
-    window.location.href = 'consumer.html';
+    window.location.href = '/app/consumer';
   } else {
     goLogin();
   }
@@ -557,9 +561,9 @@ function handleOrder(productId) {
     localStorage.setItem('ma_pending_order', String(productId));
   }
   if (isLoggedIn()) {
-    window.location.href = 'consumer.html';
+    window.location.href = '/app/consumer';
   } else {
-    window.location.href = 'index.html';
+    window.location.href = '/app/login';
   }
 }
 

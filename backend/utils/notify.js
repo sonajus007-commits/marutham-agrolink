@@ -97,7 +97,7 @@ async function notifyRegistrationReceived(applicant) {
         <tr><td style="padding:6px 8px;color:#6b7280;font-size:13px">GST</td><td>${applicant.gst_number || '—'}</td></tr>
         `}
       </table>
-      <p><a href="${process.env.APP_URL || 'http://localhost:3000'}/admin.html" style="background:#16a34a;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:12px">Review in Admin Portal</a></p>
+      <p><a href="${process.env.APP_URL || 'http://localhost:3000'}/app/admin/registrations" style="background:#16a34a;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:12px">Review in Admin Portal</a></p>
     `);
   }
 }
@@ -202,7 +202,7 @@ async function notifyProfileChangeRequest(user, changes) {
       </table>
       <h3 style="color:#1a3d2b;margin:0 0 8px">Requested Changes</h3>
       <table style="border-collapse:collapse;width:100%;max-width:480px;background:#f0fdf4;border-radius:8px">${rows}</table>
-      <p><a href="${process.env.APP_URL || 'http://localhost:3000'}/admin.html"
+      <p><a href="${process.env.APP_URL || 'http://localhost:3000'}/app/admin/change-requests"
         style="background:#16a34a;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:12px">
         Review in Admin Portal</a></p>
     `);

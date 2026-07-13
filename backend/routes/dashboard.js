@@ -627,7 +627,7 @@ function buildTrend(active, mode) {
 // VCO            → scoped to their village (vco_city || village_town)
 // Delivery Agent → scoped to orders assigned to them (agent_id = self)
 // Live aggregation in JS; money already-in-rupees. Returns { role, ... } so the
-// mobile agent.html can render the right layout.
+// agent console (apps/web → /app/agent) can render the right layout.
 // ═══════════════════════════════════════════════════════════════════════════════
 const FIELD_PLACEHOLDERS = {
   VCO: ['todays_schedule', 'gps_route', 'daily_earnings'],

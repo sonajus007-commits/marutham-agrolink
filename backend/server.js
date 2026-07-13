@@ -102,9 +102,12 @@ app.use(`/:segment(${API_SEGMENTS.join('|')})`, (req, res, next) => {
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-// ── New React app (Phase 0) — served under /app, alongside the legacy site ────
-// Purely additive: if apps/web/dist doesn't exist yet, /app simply 404s and the
-// legacy frontend below is unaffected.
+// ── The React app — every signed-in screen, served under /app ────────────────
+// The strangler-fig is COMPLETE: admin.html, farmer.html, consumer.html,
+// agent.html and index.html (the old login) are gone, and this is the only place
+// a user signs in or does any work. What remains under frontend/ is the public
+// landing page and the two assets it and this app share — see the static mount
+// at the bottom of this file.
 const appDist = path.join(__dirname, '../apps/web/dist');
 app.use('/app', express.static(appDist));
 app.get('/app/*', (_req, res) => res.sendFile(path.join(appDist, 'index.html')));
@@ -122,20 +125,21 @@ app.get('/app/*', (_req, res) => res.sendFile(path.join(appDist, 'index.html')))
 //
 // Additive and reversible, exactly like the /app mount above: with SHOP_URL
 // unset — or with the Next server simply not running — every one of these routes
-// falls through to the legacy static site below, which still answers on
-// home.html. The shop can never take the existing site down with it.
+// falls through to the static handler below, which still answers on home.html.
+// The shop can never take the site down with it.
 const SHOP_URL = process.env.SHOP_URL; // e.g. http://localhost:3001
 
 /** The paths the shop owns.
  *
- * An ALLOW-LIST, deliberately. The API has moved to /api, so the root namespace
- * is free — but "free" is not the same as "the shop's". The legacy static site
- * still answers here (home.html, /css, /js, every *.html page the strangler-fig
- * has not replaced yet), so a deny-list — "anything that isn't /api or /app" —
- * would hand the shop URLs it has no page for and 404 the legacy site.
+ * An ALLOW-LIST, deliberately. The API has moved to /api and the legacy pages are
+ * gone, so the root namespace is nearly empty — but "empty" is not the same as
+ * "the shop's". home.html still answers at /, and /img + /js/config.js are served
+ * from the static mount below (the React app loads /img/logo-sm.jpg). A deny-list
+ * — "anything that isn't /api or /app" — would hand those to the shop, which has
+ * no page for them.
  *
  * Each slice adds the routes it actually implements. That keeps the shop
- * reversible: delete a line and the old page answers again.
+ * reversible: delete a line and the static handler answers again.
  */
 function isShopPath(pathname) {
   return (
@@ -186,7 +190,25 @@ if (SHOP_URL) {
   console.log(`[shop] proxying / and /_next/* → ${SHOP_URL}`);
 }
 
-// ── Frontend (served from same origin — works in dev and production) ──────────
+// ── Static site (same origin — works in dev and production) ──────────────────
+//
+// All that is left of the pre-React frontend, and each file earns its place:
+//
+//   home.html      the public landing page. It answers at / when the Next shop is
+//                  not running, and the shop proxy's error handler serves it by
+//                  name (above) — so it is the site's outage floor. Deleting it
+//                  means a dead root the moment Next hiccups.
+//   img/           /img/logo-sm.jpg is loaded by FOUR React pages (admin, agent,
+//                  consumer, farmer). This is not a legacy leftover; the app
+//                  depends on it.
+//   js/config.js   home.html's only script dependency. It sets API_BASE = '/api';
+//                  without it home.html's fetch falls back to '' and asks for
+//                  /products — which is the SHOP's route, not the API's, so the
+//                  product grid would silently break.
+//
+// Everything else (index/admin/farmer/consumer/agent.html, shared.js, api.js,
+// css/app.css, js/dashboard/*, js/vendor/*) was deleted when the React console
+// took over. Do not add pages here — new screens belong in apps/web.
 app.use(express.static(path.join(__dirname, '../frontend'), { index: 'home.html' }));
 
 // ── 404 fallback ──────────────────────────────────────────────────────────────
