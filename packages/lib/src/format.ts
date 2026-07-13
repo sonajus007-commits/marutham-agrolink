@@ -2,41 +2,27 @@
  * Pure functions, safe to reuse from React web and React Native. */
 import { statusPalette, statusFallback } from '@marutham/tokens';
 
-/** Backend returns money as strings like "52.50" (already rupees). */
+/**
+ * Money, everywhere: "₹52.50", "₹12,34,567.89".
+ *
+ * Backend returns money as strings like "52.50" (already rupees), hence the
+ * parseFloat — `Number('')` is 0, which would print a confident ₹0.00 for a
+ * missing value, where parseFloat gives NaN and we print an honest em-dash.
+ *
+ * Grouping is en-IN, so 2-2-3 (lakh/crore) rather than 3-3-3: ₹12,34,567.89.
+ * Paise are always shown. A money column where some rows carry paise and others
+ * do not does not align, and ₹63.5 sitting under ₹63.50 for the same figure
+ * reads as two different numbers.
+ */
 export function fmtMoney(val: unknown): string {
   const n = parseFloat(String(val));
   if (isNaN(n)) return '—';
-  return '₹' + n.toFixed(2).replace(/\.00$/, '');
+  return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-/** Compact integer money for tiles: "₹1,240". */
+/** Money rounded to whole rupees, for tiles where the paise are noise: "₹1,240". */
 export function fmtMoneyInt(val: unknown): string {
   return '₹' + Number(val || 0).toLocaleString('en-IN');
-}
-
-/**
- * Money with Indian digit grouping AND paise: "₹12,34,567.89".
- *
- * `fmtMoney` above does not group, which is survivable for an order total
- * (₹157.11) and unreadable for a revenue roll-up — ₹12345678.90 is a wall of
- * digits, and a board dashboard is exactly where a misread order of magnitude
- * costs something. Legacy's executive dashboard grouped for this reason.
- *
- * This is deliberately a SECOND formatter rather than a fix to `fmtMoney`:
- * grouping is strictly better everywhere, but `fmtMoney` has 71 call sites
- * across the consumer, farmer and admin screens, and changing all of them is a
- * display change that deserves its own commit and its own look-at-it pass — not
- * a silent rider on a dashboard.
- *
- * Note en-IN grouping is 2-2-3 (lakh/crore), not 3-3-3: ₹12,34,567.89.
- */
-export function fmtMoneyFull(val: unknown): string {
-  const n = Number(val);
-  if (!Number.isFinite(n)) return '—';
-  return (
-    '₹' +
-    n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  );
 }
 
 export function fmtNum(val: unknown): string {

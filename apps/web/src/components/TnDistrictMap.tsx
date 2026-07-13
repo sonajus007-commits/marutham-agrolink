@@ -3,7 +3,7 @@ import * as echarts from 'echarts';
 import type { EChartsOption } from 'echarts';
 import ReactECharts from 'echarts-for-react';
 import { semantic, colors } from '@marutham/tokens';
-import { geoDistrictName, districtTone, fmtMoneyFull, type DistrictPerf } from '@marutham/lib';
+import { geoDistrictName, districtTone, fmtMoney, type DistrictPerf } from '@marutham/lib';
 
 /* The Tamil Nadu district choropleth.
  *
@@ -96,7 +96,7 @@ export function TnDistrictMap({
         if (!q.data) return `${q.name}<br/>No sales`;
         // Same formatter as the ranking list — the map and its table view must
         // never disagree about a number.
-        return `<strong>${q.name}</strong><br/>Revenue: ${fmtMoneyFull(q.data.value ?? 0)}<br/>Orders: ${q.data.orders ?? 0}`;
+        return `<strong>${q.name}</strong><br/>Revenue: ${fmtMoney(q.data.value ?? 0)}<br/>Orders: ${q.data.orders ?? 0}`;
       },
     },
     series: [

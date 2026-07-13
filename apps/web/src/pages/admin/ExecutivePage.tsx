@@ -5,7 +5,7 @@ import { api, type ExecutiveDashboardResponse, type ExecutiveTrendMode } from '@
 import { semantic, colors } from '@marutham/tokens';
 import {
   TREND_MODES, rankedDistricts, findDistrict, districtTone, alertTone,
-  formatGrowth, growthDirection, fmtMoneyFull, placeholderGroups, humanizeMetricKey,
+  formatGrowth, growthDirection, fmtMoney, placeholderGroups, humanizeMetricKey,
   type DistrictPerf, type PlaceholderGroup,
 } from '@marutham/lib';
 import type { EChartsOption } from 'echarts';
@@ -70,7 +70,7 @@ export function ExecutivePage() {
       grid: { left: 56, right: 16, top: 16, bottom: points.length > 8 ? 56 : 32 },
       tooltip: {
         trigger: 'axis',
-        valueFormatter: (v) => fmtMoneyFull(Number(v)),
+        valueFormatter: (v) => fmtMoney(Number(v)),
       },
       xAxis: {
         type: 'category',
@@ -137,7 +137,7 @@ export function ExecutivePage() {
     const cats = [...(data?.categories ?? [])].sort((a, b) => b.revenue - a.revenue);
     return {
       grid: { left: 8, right: 72, top: 8, bottom: 8, containLabel: true },
-      tooltip: { trigger: 'item', valueFormatter: (v) => fmtMoneyFull(Number(v)) },
+      tooltip: { trigger: 'item', valueFormatter: (v) => fmtMoney(Number(v)) },
       xAxis: { type: 'value', splitLine: { lineStyle: { color: colors.muted } }, axisLabel: { show: false } },
       yAxis: {
         type: 'category',
@@ -156,7 +156,7 @@ export function ExecutivePage() {
             show: true,
             position: 'right',
             color: colors.gray,
-            formatter: (p) => fmtMoneyFull(Number(p.value)),
+            formatter: (p) => fmtMoney(Number(p.value)),
           },
           data: cats.map((c) => c.revenue).reverse(),
         },
@@ -193,10 +193,10 @@ export function ExecutivePage() {
 
       {/* ── Headline ─────────────────────────────────────────────────────── */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <StatTile icon="💰" label={t('admin.exec.kpi.revenueToday')} value={fmtMoneyFull(s?.revenue_today ?? 0)} />
-        <StatTile icon="📅" label={t('admin.exec.kpi.revenueMtd')} value={fmtMoneyFull(s?.revenue_mtd ?? 0)} />
-        <StatTile icon="📈" label={t('admin.exec.kpi.revenueYtd')} value={fmtMoneyFull(s?.revenue_ytd ?? 0)} />
-        <StatTile icon="🛒" label={t('admin.exec.kpi.gmv')} value={fmtMoneyFull(s?.gmv ?? 0)} />
+        <StatTile icon="💰" label={t('admin.exec.kpi.revenueToday')} value={fmtMoney(s?.revenue_today ?? 0)} />
+        <StatTile icon="📅" label={t('admin.exec.kpi.revenueMtd')} value={fmtMoney(s?.revenue_mtd ?? 0)} />
+        <StatTile icon="📈" label={t('admin.exec.kpi.revenueYtd')} value={fmtMoney(s?.revenue_ytd ?? 0)} />
+        <StatTile icon="🛒" label={t('admin.exec.kpi.gmv')} value={fmtMoney(s?.gmv ?? 0)} />
         <StatTile icon="📦" label={t('admin.exec.kpi.totalOrders')} value={s?.total_orders ?? 0} />
         <StatTile icon="🗺️" label={t('admin.exec.kpi.activeDistricts')} value={s?.active_districts ?? 0} />
         <GrowthTile label={t('admin.exec.kpi.orderGrowth')} pct={s?.order_growth_pct} />
@@ -230,7 +230,7 @@ export function ExecutivePage() {
             {drill ? (
               <p className="mt-3 rounded-lg bg-surface-muted p-3 text-sm">
                 <strong className="text-primary">{drill.district}</strong> ·{' '}
-                {fmtMoneyFull(drill.revenue)} · {drill.orders} {t('admin.exec.orders.title').toLowerCase()}
+                {fmtMoney(drill.revenue)} · {drill.orders} {t('admin.exec.orders.title').toLowerCase()}
               </p>
             ) : null}
           </div>
@@ -251,7 +251,7 @@ export function ExecutivePage() {
                     <span className="w-5 text-xs font-bold text-fg-muted tabular-nums">{i + 1}</span>
                     <ToneDot tone={districtTone(d.status)} />
                     <span className="flex-1 truncate text-fg">{d.district}</span>
-                    <span className="tabular-nums text-fg-muted">{fmtMoneyFull(d.revenue)}</span>
+                    <span className="tabular-nums text-fg-muted">{fmtMoney(d.revenue)}</span>
                   </button>
                 </li>
               ))}
@@ -311,7 +311,7 @@ export function ExecutivePage() {
             <StatTile icon="🆕" label={t('admin.exec.customers.new')} value={data?.customers.new ?? 0} />
             <StatTile icon="🔁" label={t('admin.exec.customers.repeat')} value={data?.customers.repeat ?? 0} />
             <StatTile icon="💚" label={t('admin.exec.customers.retention')} value={`${data?.customers.retention_pct ?? 0}%`} />
-            <StatTile icon="🧺" label={t('admin.exec.customers.avgBasket')} value={fmtMoneyFull(data?.customers.avg_basket ?? 0)} />
+            <StatTile icon="🧺" label={t('admin.exec.customers.avgBasket')} value={fmtMoney(data?.customers.avg_basket ?? 0)} />
           </div>
         </ChartContainer>
       </div>
@@ -333,7 +333,7 @@ export function ExecutivePage() {
                   <li key={f.farmer_id} className="flex items-center gap-3 text-sm">
                     <span className="w-5 text-xs font-bold text-fg-muted tabular-nums">{i + 1}</span>
                     <span className="flex-1 truncate text-fg">{f.name}</span>
-                    <span className="tabular-nums text-fg-muted">{fmtMoneyFull(f.revenue)}</span>
+                    <span className="tabular-nums text-fg-muted">{fmtMoney(f.revenue)}</span>
                   </li>
                 ))}
               </ol>
@@ -369,11 +369,11 @@ export function ExecutivePage() {
 
         <ChartContainer title={t('admin.exec.financial.title')} loading={loading && !data} height="auto">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <StatTile label={t('admin.exec.financial.commission')} value={fmtMoneyFull(data?.financial.platform_commission ?? 0)} />
-            <StatTile label={t('admin.exec.financial.deliveryIncome')} value={fmtMoneyFull(data?.financial.delivery_income ?? 0)} />
-            <StatTile label={t('admin.exec.financial.subscriptionIncome')} value={fmtMoneyFull(data?.financial.subscription_income ?? 0)} />
-            <StatTile label={t('admin.exec.financial.payoutsPending')} value={fmtMoneyFull(data?.financial.payouts_pending ?? 0)} />
-            <StatTile label={t('admin.exec.financial.payoutsPaid')} value={fmtMoneyFull(data?.financial.payouts_paid ?? 0)} />
+            <StatTile label={t('admin.exec.financial.commission')} value={fmtMoney(data?.financial.platform_commission ?? 0)} />
+            <StatTile label={t('admin.exec.financial.deliveryIncome')} value={fmtMoney(data?.financial.delivery_income ?? 0)} />
+            <StatTile label={t('admin.exec.financial.subscriptionIncome')} value={fmtMoney(data?.financial.subscription_income ?? 0)} />
+            <StatTile label={t('admin.exec.financial.payoutsPending')} value={fmtMoney(data?.financial.payouts_pending ?? 0)} />
+            <StatTile label={t('admin.exec.financial.payoutsPaid')} value={fmtMoney(data?.financial.payouts_paid ?? 0)} />
           </div>
         </ChartContainer>
       </div>

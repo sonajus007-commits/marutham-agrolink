@@ -80,9 +80,9 @@ describe('formatters', () => {
     expect(statusColor('Nonsense')).toBe('#5a6472');
   });
 
-  it('formats money, trimming a trailing .00', () => {
+  it('formats money with grouping and paise, always', () => {
     expect(fmtMoney('88.20')).toBe('₹88.20');
-    expect(fmtMoney(30)).toBe('₹30');
+    expect(fmtMoney(30)).toBe('₹30.00');
     expect(fmtMoney('nonsense')).toBe('—');
   });
 });
