@@ -656,3 +656,65 @@ export interface ExecutiveDashboardResponse {
    *  inventing a number — see EXEC_PLACEHOLDERS in backend/routes/dashboard.js. */
   placeholders: string[];
 }
+
+/* ── GET /dashboard/operations ──────────────────────────────────────────────
+ *
+ * The operational managers' dashboard. MONEY: like /dashboard/executive, every
+ * amount here is ALREADY IN RUPEES — the route converts paise itself and names
+ * the fields outside the money middleware's MONEY_FIELDS set. Do not divide.
+ *
+ * SCOPE IS SERVER-SIDE. The route derives it from the signed-in user (District
+ * Manager/Hub Incharge → their district; Regional/State/Zonal → their state;
+ * Head Office → everything) and reports what it chose in `scope`. The client
+ * sends no scope and cannot widen it.
+ */
+export type OperationsScopeLevel = 'district' | 'region' | 'all';
+
+export interface OperationsScope {
+  level: OperationsScopeLevel;
+  /** The district name, the state name, or "All Regions". */
+  name: string;
+}
+
+export interface OperationsAgent {
+  name: string;
+  phone: string | null;
+  vehicle: string | null;
+  district: string | null;
+}
+
+export interface OperationsDistrict {
+  district: string;
+  orders: number;
+  revenue: number;
+  pending: number;
+}
+
+export interface OperationsDashboardResponse {
+  scope: OperationsScope;
+  generated_at: string;
+  summary: {
+    orders_today: number;
+    revenue_today: number;
+    revenue_week: number;
+    active_orders: number;
+    delivered_today: number;
+    pending_deliveries: number;
+  };
+  delivery_status: {
+    /** Order status → count of active orders sitting at it. Keys are whatever
+     *  statuses actually occur, so the UI must not assume a fixed set. */
+    status_breakdown: Record<string, number>;
+    agents_total: number;
+  };
+  collections: { confirmed_listings: number; listed_active: number; updated_today: number };
+  quality: { pending_returns: number; rejected_returns: number; to_collect: number };
+  payments: { pending_count: number; pending_amount: number; stale_count: number };
+  farmers: { registered: number; active: number; pending_approval: number };
+  /** Active delivery agents in scope — the route caps this at 20. */
+  agents: OperationsAgent[];
+  districts: OperationsDistrict[];
+  alerts: ExecutiveAlert[];
+  /** See OPS_PLACEHOLDERS in backend/routes/dashboard.js. */
+  placeholders: string[];
+}

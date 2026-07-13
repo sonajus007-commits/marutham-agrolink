@@ -9,6 +9,7 @@ import type {
   SubscriptionPlansResponse, SubscriptionPayResponse,
   ProfileChangeRequestResponse, MyChangeRequestsResponse,
   DashboardResponse, ExecutiveDashboardResponse, ExecutiveTrendMode,
+  OperationsDashboardResponse,
   AccountStatus, UserStatusHistoryEntry,
   Registration, ProfileChangeRequest, ProductPayload, ProductPriceInput,
   AdminReturnsResponse, AdminReturn,
@@ -203,6 +204,12 @@ export const api = {
    *  Every money value comes back in RUPEES already — see ExecutiveDashboardResponse. */
   getExecutiveDashboard(trend: ExecutiveTrendMode = 'monthly'): Promise<ExecutiveDashboardResponse> {
     return apiFetch<ExecutiveDashboardResponse>('GET', `/dashboard/executive?trend=${trend}`);
+  },
+  /** District/region-scoped operations dashboard. 403s outside the OPS_* roles.
+   *  The SERVER picks the scope from the caller — there is no scope parameter to
+   *  pass, and none to tamper with. Money comes back in RUPEES already. */
+  getOperationsDashboard(): Promise<OperationsDashboardResponse> {
+    return apiFetch<OperationsDashboardResponse>('GET', '/dashboard/operations');
   },
 
   // ── Admin: users ──

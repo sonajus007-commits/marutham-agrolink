@@ -5,12 +5,13 @@ import { api, type ExecutiveDashboardResponse, type ExecutiveTrendMode } from '@
 import { semantic, colors } from '@marutham/tokens';
 import {
   TREND_MODES, rankedDistricts, findDistrict, districtTone, alertTone,
-  formatGrowth, growthDirection, fmtMoney, placeholderGroups, humanizeMetricKey,
-  type DistrictPerf, type PlaceholderGroup,
+  formatGrowth, growthDirection, fmtMoney,
+  type DistrictPerf,
 } from '@marutham/lib';
 import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
 import { TnDistrictMap, type MapState } from '../../components/TnDistrictMap';
+import { PlaceholderSection } from '../../components/PlaceholderSection';
 
 /**
  * The executive dashboard — Board of Director / CEO / Managing Director / CFO /
@@ -52,10 +53,6 @@ export function ExecutivePage() {
   }, [load, trend]);
 
   const districts = useMemo(() => rankedDistricts(data?.districts ?? []), [data]);
-
-  /* The roadmap the board asked for. Driven entirely by the API's `placeholders`
-   * array — this screen has no opinion about which metrics are missing. */
-  const missing = useMemo(() => placeholderGroups(data?.placeholders), [data]);
 
   const onSelectDistrict = useCallback(
     (name: string) => setDrill(findDistrict(data?.districts ?? [], name)),
@@ -400,50 +397,13 @@ export function ExecutivePage() {
           the BOTTOM, below every live figure, because that is what they are
           worth today — but they are shown, not hidden, so the board can see
           what is coming and what it is still waiting on. */}
-      {missing.length > 0 ? (
-        <ChartContainer
-          title={t('admin.exec.ph.title')}
-          subtitle={t('admin.exec.ph.sub')}
-          loading={loading && !data}
-          height="auto"
-        >
-          <div className="space-y-5">
-            {missing.map((g) => (
-              <PlaceholderGroupBlock key={g.id} group={g} t={t} />
-            ))}
-          </div>
-        </ChartContainer>
-      ) : null}
+      <PlaceholderSection
+        placeholders={data?.placeholders}
+        title={t('admin.exec.ph.title')}
+        subtitle={t('admin.exec.ph.sub')}
+        loading={loading && !data}
+      />
     </div>
-  );
-}
-
-/* One theme's worth of not-yet-integrated metrics. */
-function PlaceholderGroupBlock({
-  group,
-  t,
-}: {
-  group: PlaceholderGroup;
-  t: (k: string, o?: Record<string, unknown>) => string;
-}) {
-  return (
-    <section aria-labelledby={`ph-${group.id}`}>
-      <h3 id={`ph-${group.id}`} className="mb-2 text-xs font-bold uppercase tracking-wide text-fg-muted">
-        {t(`admin.exec.ph.group.${group.id}`)}
-      </h3>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {group.metrics.map((m) => (
-          <PlaceholderTile
-            key={m.key}
-            icon={m.icon}
-            /* A key the catalogue has not been taught yet still gets a readable
-               English label rather than rendering the raw i18n key. */
-            label={t(`admin.exec.ph.${m.key}`, { defaultValue: humanizeMetricKey(m.key) })}
-            note={t('admin.exec.needsIntegration')}
-          />
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -455,25 +415,6 @@ function GrowthTile({ label, pct }: { label: string; pct?: number }) {
   const accent =
     dir === 'up' ? semantic.light.success : dir === 'down' ? semantic.light.danger : colors.gray;
   return <StatTile icon={arrow} label={label} value={formatGrowth(pct)} accent={accent} />;
-}
-
-/* A metric the backend has no source for. It is labelled "Needs integration"
- * rather than shown as ₹0 — a fabricated zero on a board dashboard is worse than
- * an honest gap.
- *
- * NO `opacity-*` here. Dimming muted text to signal "inactive" is what axe caught:
- * it drags fg-muted below AA and makes the label genuinely hard to read. The
- * dashed border, the em-dash and the note already say "no data" — the opacity was
- * only ever saying it a second time, illegibly. */
-function PlaceholderTile({ icon, label, note }: { icon: string; label: string; note: string }) {
-  return (
-    <div className="rounded-xl border border-dashed border-subtle bg-surface-muted p-3">
-      <div className="text-sm" aria-hidden="true">{icon}</div>
-      <div className="mt-1 text-sm font-bold text-fg-muted">—</div>
-      <div className="text-xs text-fg-muted">{label}</div>
-      <div className="text-[10px] italic text-fg-muted">{note}</div>
-    </div>
-  );
 }
 
 function ToneDot({ tone }: { tone: 'success' | 'warning' | 'danger' | 'neutral' }) {

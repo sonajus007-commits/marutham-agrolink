@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { User, UserRole } from '@marutham/api-client';
 import { useAuth } from './AuthContext';
-import { homesOnExecutive } from '../pages/admin/adminNav';
+import { homesOnExecutive, homesOnOperations } from '../pages/admin/adminNav';
 
 /* Route guard mirroring backend/middleware/auth.js: requires a session and,
  * optionally, a specific top-level role and/or set of admin_roles. */
@@ -40,6 +40,9 @@ export function roleHome(user: User): string {
   // they are the audience for. The executive dashboard lived only in legacy
   // admin.html, so migrating the console quietly took it away from them.
   if (user.role === 'admin' && homesOnExecutive(user.admin_role)) return '/admin/executive';
+  // Same reasoning one tier down: legacy dispatched a District/Regional/State/Zonal
+  // manager's Overview to the operations screen, so that is where they land again.
+  if (user.role === 'admin' && homesOnOperations(user.admin_role)) return '/admin/operations';
   if (user.role === 'admin') return '/admin';
   return '/dashboard';
 }

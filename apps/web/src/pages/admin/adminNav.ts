@@ -9,10 +9,22 @@ import { HUB_STAFF_ROLES } from '@marutham/lib';
 
 export const APP_BASE = '/app';
 
-/** admin_role values that use THIS console. Delivery Agent + VCO have /agent. */
+/** admin_role values that use THIS console. Delivery Agent + VCO have /agent.
+ *
+ * This list is the DOOR to /admin/*, so anything missing from it is not merely
+ * hidden — it is locked out. CEO/MD/CFO/CTO were missing while `roleHome()` sent
+ * them to /admin/executive and the backend's EXECUTIVE_ROLES let them read it:
+ * they would have been bounced straight back to /login with nowhere to land.
+ * Zonal Manager was missing while the backend's OPS_REGION_ROLES let them read
+ * the operations dashboard. No such user exists in the DB yet, which is the only
+ * reason nobody has hit this.
+ *
+ * Rule: if a backend dashboard guard admits an admin_role, that role belongs
+ * here. */
 export const MANAGEMENT_ADMIN_ROLES = [
   'Head Office', 'State Head', 'Regional Manager', 'District Manager',
-  'Hub Incharge', 'Board of Director',
+  'Hub Incharge', 'Board of Director', 'Zonal Manager',
+  'CEO', 'Managing Director', 'CFO', 'CTO',
 ] as const;
 
 /* Who may read a record's audit trail and login history. Mirrors the backend's
@@ -53,6 +65,37 @@ export function homesOnExecutive(adminRole?: string | null): boolean {
   return EXECUTIVE_HOME_ROLES.includes(adminRole as (typeof EXECUTIVE_HOME_ROLES)[number]);
 }
 
+/* Who may open the operations dashboard. MIRRORS the backend's OPS_DISTRICT_ROLES
+ * ∪ OPS_REGION_ROLES ∪ OPS_ALL_ROLES (routes/dashboard.js). The SERVER decides the
+ * scope from the signed-in user — a District Manager sees their district, a
+ * Regional/State/Zonal their state, Head Office everything — so the client never
+ * passes a scope and cannot widen its own. */
+export const OPERATIONS_ADMIN_ROLES = [
+  'District Manager', 'Hub Incharge',
+  'Regional Manager', 'State Head', 'Zonal Manager',
+  'Head Office',
+] as const;
+
+export function canSeeOperations(adminRole?: string | null): boolean {
+  return OPERATIONS_ADMIN_ROLES.includes(adminRole as (typeof OPERATIONS_ADMIN_ROLES)[number]);
+}
+
+/* Roles whose HOME is the operations dashboard. Legacy admin.html dispatched
+ * these roles' Overview to the operations screen, so this restores where they
+ * used to land.
+ *
+ * Two deliberate omissions: HUB INCHARGE keeps /admin/hub (their job is the hub
+ * queue, and that landing predates this dashboard), and HEAD OFFICE keeps the
+ * generic Overview — they run every section and reach this from the sidebar,
+ * exactly as with the executive dashboard. */
+export const OPERATIONS_HOME_ROLES = [
+  'District Manager', 'Regional Manager', 'State Head', 'Zonal Manager',
+] as const;
+
+export function homesOnOperations(adminRole?: string | null): boolean {
+  return OPERATIONS_HOME_ROLES.includes(adminRole as (typeof OPERATIONS_HOME_ROLES)[number]);
+}
+
 export interface AdminNavItem {
   id: string;
   labelKey: string;
@@ -78,6 +121,11 @@ export const ADMIN_NAV: AdminNavSection[] = [
       {
         id: 'executive', labelKey: 'admin.nav.executive', icon: '🏛️',
         to: '/admin/executive', roles: [...EXECUTIVE_ADMIN_ROLES],
+      },
+      // The operational managers' dashboard — district/region scoped by the server.
+      {
+        id: 'operations', labelKey: 'admin.nav.operations', icon: '🚚',
+        to: '/admin/operations', roles: [...OPERATIONS_ADMIN_ROLES],
       },
       { id: 'orders', labelKey: 'admin.nav.orders', icon: '📦', to: '/admin/orders' },
       // Hub floor work. Board of Director is management, not operations — and the
