@@ -54,9 +54,9 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--forest)' }}>{item.product_name}</div>
                 {item.farmer_name ? <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 2 }}>from {item.farmer_name}</div> : null}
-                <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>₹{unitPrice.toFixed(0)} / {item.unit}</div>
+                <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>{fmtMoney(unitPrice)} / {item.unit}</div>
                 {mkt > 0 && unitPrice < mkt ? (
-                  <div style={{ fontSize: 9, color: 'var(--success)', fontWeight: 700, marginTop: 2 }}>Save ₹{Math.round((mkt - unitPrice) * item.qty)} vs market</div>
+                  <div style={{ fontSize: 9, color: 'var(--success)', fontWeight: 700, marginTop: 2 }}>Save {fmtMoney((mkt - unitPrice) * item.qty)} vs market</div>
                 ) : null}
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -83,7 +83,7 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
         {bill.marketFee > 0 ? <div className="irow"><span className="ilbl">Market fee (multiple farmers)</span><span className="ival">{fmtMoney(bill.marketFee)}</span></div> : null}
         <div className="irow"><span className="ilbl">Delivery</span><span className="ival">{bill.delivery === 0 ? <span style={{ color: 'var(--success)', fontWeight: 700 }}>FREE</span> : fmtMoney(bill.delivery)}</span></div>
         {bill.itemSubtotal > 0 && bill.itemSubtotal < 150 ? (
-          <div style={{ fontSize: 10, color: 'var(--warning-fg)', marginTop: 2 }}>Add ₹{(150 - bill.itemSubtotal).toFixed(0)} more for FREE delivery</div>
+          <div style={{ fontSize: 10, color: 'var(--warning-fg)', marginTop: 2 }}>Add {fmtMoney(150 - bill.itemSubtotal)} more for FREE delivery</div>
         ) : null}
         {bill.savings > 0 ? (
           <div className="irow" style={{ color: 'var(--success)', fontWeight: 700 }}><span className="ilbl">🎉 You Save</span><span className="ival">{fmtMoney(bill.savings)} vs Govt Rate</span></div>

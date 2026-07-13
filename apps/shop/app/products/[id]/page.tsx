@@ -8,6 +8,7 @@ import {
   sortedOffers,
   districtPriceRows,
   productJsonLd,
+  fmtMoney,
   HOME_DISTRICT,
   type PublicListing,
 } from '@marutham/lib';
@@ -51,7 +52,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   const { product } = detail;
   const price = homepagePrice(product);
-  const priceText = price ? `₹${price.amount.toFixed(0)}/${price.unit}` : '';
+  const priceText = price ? `${fmtMoney(price.amount)}/${price.unit}` : '';
   const title = `${product.name}${product.regional_name ? ` (${product.regional_name})` : ''} — Marutham AgroLink`;
   const description = t.product.metaDesc(product.name, priceText);
 
@@ -130,7 +131,7 @@ export default async function ProductPage({ params }: Params) {
               {price ? (
                 <>
                   <span className="font-display text-4xl font-extrabold text-forest">
-                    ₹{price.amount.toFixed(0)}
+                    {fmtMoney(price.amount)}
                   </span>
                   <span className="ml-1 text-sm font-semibold text-fg-muted">
                     {t.product.perUnit} {price.unit} · {HOME_DISTRICT}
@@ -226,7 +227,7 @@ function Offers({ t, offers, unit }: { t: Dict; offers: PublicListing[]; unit: s
               </div>
               <div className="shrink-0 text-right">
                 <span className="text-xl font-extrabold text-forest">
-                  ₹{Number(o.farmer_price).toFixed(0)}
+                  {fmtMoney(o.farmer_price)}
                 </span>
                 {unit ? <span className="block text-[11px] text-fg-muted">/{unit}</span> : null}
               </div>
@@ -267,7 +268,7 @@ function DistrictPrices({
               <tr key={r.district} className="border-b border-border">
                 <td className="py-2 pr-4 text-fg-muted">{r.district}</td>
                 <td className="py-2 text-right font-bold text-forest">
-                  ₹{r.amount.toFixed(0)}
+                  {fmtMoney(r.amount)}
                   {unit ? <span className="font-normal text-fg-muted">/{unit}</span> : null}
                 </td>
               </tr>

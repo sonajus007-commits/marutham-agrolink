@@ -1,7 +1,8 @@
 import { QtyStepper } from '@marutham/ui';
 import {
   bestOffer, offerConsumerPrice, getProductEmoji, unitStep, unitAllowsDecimal,
-  orderingWindowStatus, type Product, type Offer, type Rating, type SellerFilter,
+  orderingWindowStatus, fmtMoney,
+  type Product, type Offer, type Rating, type SellerFilter,
 } from '@marutham/lib';
 import { Stars } from './Stars';
 
@@ -60,13 +61,13 @@ export function ProductCard({
         <div className="prod-price-box">
           {custPrice != null ? (
             <>
-              <div className="prod-price">₹{custPrice.toFixed(0)}</div>
-              <div style={{ fontSize: 9, color: 'var(--gray)' }}>seller ₹{farmerPrice!.toFixed(0)}</div>
-              {handling > 0 ? <div style={{ fontSize: 9, color: 'var(--gray)' }}>+₹{handling.toFixed(0)} hdl</div> : null}
+              <div className="prod-price">{fmtMoney(custPrice)}</div>
+              <div style={{ fontSize: 9, color: 'var(--gray)' }}>seller {fmtMoney(farmerPrice!)}</div>
+              {handling > 0 ? <div style={{ fontSize: 9, color: 'var(--gray)' }}>+{fmtMoney(handling)} hdl</div> : null}
             </>
           ) : dp ? (
             <>
-              <div className="prod-price" style={{ fontSize: 12, color: 'var(--gray)' }}>Mkt ₹{parseFloat(String(dp.market_price)).toFixed(0)}</div>
+              <div className="prod-price" style={{ fontSize: 12, color: 'var(--gray)' }}>Mkt {fmtMoney(dp.market_price)}</div>
               <div style={{ fontSize: 9, color: 'var(--red)' }}>No offers</div>
             </>
           ) : (

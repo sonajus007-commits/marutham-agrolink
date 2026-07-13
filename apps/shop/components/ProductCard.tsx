@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { homepagePrice, productEmoji, type Product } from '@marutham/lib';
+import { homepagePrice, productEmoji, fmtMoney, type Product } from '@marutham/lib';
 import { OrderButton } from '@/components/OrderButton';
 import type { Dict } from '@/lib/dict';
 
@@ -29,7 +29,7 @@ export function ProductCard({ t, product }: { t: Dict; product: Product }) {
       <p className="mt-1 text-lg font-extrabold text-forest">
         {price ? (
           <>
-            ₹{price.amount.toFixed(0)}
+            {fmtMoney(price.amount)}
             <span className="text-xs font-semibold text-fg-muted">/{price.unit}</span>
           </>
         ) : (

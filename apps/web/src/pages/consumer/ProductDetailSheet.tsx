@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Sheet, QtyStepper } from '@marutham/ui';
 import {
-  offerConsumerPrice, getProductEmoji, unitStep, unitAllowsDecimal,
+  offerConsumerPrice, getProductEmoji, unitStep, unitAllowsDecimal, fmtMoney,
   type Product, type Offer, type Rating, type CartItem,
 } from '@marutham/lib';
 import { Stars } from './Stars';
@@ -49,7 +49,7 @@ export function ProductDetailSheet({
           <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>
             {product.product_group || ''}{product.category ? ` · ${product.category}` : ''}
           </div>
-          {mktPrice > 0 ? <div style={{ fontSize: 11, color: 'var(--gray)' }}>Govt price: ₹{mktPrice.toFixed(0)} / {product.unit}</div> : null}
+          {mktPrice > 0 ? <div style={{ fontSize: 11, color: 'var(--gray)' }}>Govt price: {fmtMoney(mktPrice)} / {product.unit}</div> : null}
         </div>
       </div>
 
@@ -125,8 +125,8 @@ function OfferRow({
       listing_id: offer.id || null,
       farmer_price_rs: parseFloat(String(offer.farmer_price)),
     });
-    const savAmt = mktPrice > 0 ? Math.round((mktPrice - custPrice) * qty) : 0;
-    toast(savAmt > 0 ? `Added — save ₹${savAmt} vs market` : 'Added to cart', 'ok');
+    const savAmt = mktPrice > 0 ? (mktPrice - custPrice) * qty : 0;
+    toast(savAmt > 0 ? `Added — save ${fmtMoney(savAmt)} vs market` : 'Added to cart', 'ok');
     onAdded();
   }
 
@@ -146,8 +146,8 @@ function OfferRow({
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          {mktPrice > 0 && custPrice < mktPrice ? <div style={{ fontSize: 10, color: 'var(--gray)', textDecoration: 'line-through' }}>₹{mktPrice.toFixed(0)}</div> : null}
-          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--leaf)' }}>₹{custPrice.toFixed(0)}</div>
+          {mktPrice > 0 && custPrice < mktPrice ? <div style={{ fontSize: 10, color: 'var(--gray)', textDecoration: 'line-through' }}>{fmtMoney(mktPrice)}</div> : null}
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--leaf)' }}>{fmtMoney(custPrice)}</div>
           <div style={{ fontSize: 9, color: 'var(--gray)' }}>per {unit}</div>
         </div>
       </div>
@@ -155,7 +155,7 @@ function OfferRow({
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
         {!soldOut ? <span style={{ fontSize: 9, color: 'var(--gray)', background: 'var(--surface-muted)', borderRadius: 4, padding: '2px 6px' }}>{offer.qty_available} {unit} available</span> : null}
         {qtyRule ? <span style={{ fontSize: 9, color: 'var(--warning-fg)', background: 'var(--warning-bg)', borderRadius: 4, padding: '2px 6px' }}>{qtyRule}</span> : null}
-        {perSave > 0 ? <span style={{ fontSize: 9, color: 'var(--success)', fontWeight: 700, background: 'var(--success-bg)', borderRadius: 4, padding: '2px 6px' }}>Save ₹{perSave.toFixed(0)}/{unit}</span> : null}
+        {perSave > 0 ? <span style={{ fontSize: 9, color: 'var(--success)', fontWeight: 700, background: 'var(--success-bg)', borderRadius: 4, padding: '2px 6px' }}>Save {fmtMoney(perSave)}/{unit}</span> : null}
       </div>
 
       {soldOut ? (

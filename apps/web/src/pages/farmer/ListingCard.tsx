@@ -1,6 +1,7 @@
 import { Button } from '@marutham/ui';
 import {
-  getProductEmoji, listingPriceRs, listingState, type FarmerListing, type ListingState,
+  getProductEmoji, listingPriceRs, listingState, fmtMoney,
+  type FarmerListing, type ListingState,
 } from '@marutham/lib';
 
 const STATE_BADGE: Record<ListingState, { text: string; cls: string }> = {
@@ -47,7 +48,7 @@ export function ListingCard({
         </div>
         {priced ? (
           <div className="listing__pricebox">
-            <div className="listing__price">₹{price.toFixed(0)}</div>
+            <div className="listing__price">{fmtMoney(price)}</div>
             <div className="listing__unit">/ {unit}</div>
           </div>
         ) : null}
