@@ -19,6 +19,7 @@ import { ReturnsPage } from './ReturnsPage';
 import { PayoutsPage } from './PayoutsPage';
 import { UsersPage } from './UsersPage';
 import { RegistrationsPage } from './RegistrationsPage';
+import { ListingsPage } from './ListingsPage';
 import { ChangeRequestsPage } from './ChangeRequestsPage';
 import { ProductsPage } from './ProductsPage';
 import { EmployeesPage } from './EmployeesPage';
@@ -115,6 +116,7 @@ export function AdminPage() {
           <Route path="payouts" element={<PayoutsPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="registrations" element={<RegistrationsPage />} />
+          <Route path="listings" element={<ListingsPage />} />
           <Route path="change-requests" element={<ChangeRequestsPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="employees" element={<EmployeesPage />} />

@@ -182,6 +182,10 @@ export const ADMIN_NAV: AdminNavSection[] = [
     labelKey: 'admin.nav.approvals',
     items: [
       { id: 'registrations', labelKey: 'admin.nav.registrations', icon: '📋', to: '/admin/registrations' },
+      // Seller product requests. No `roles` — the backend guards these endpoints on
+      // role === 'admin' alone (no admin_role check), so every management role that
+      // can reach this console can already review a listing.
+      { id: 'listings', labelKey: 'admin.nav.listings', icon: '🌾', to: '/admin/listings' },
       // Approving a change request writes bank/GST fields, so it is Head Office only
       // — matching backend isHeadOffice on POST /users/change-requests/:id/approve.
       { id: 'change-requests', labelKey: 'admin.nav.changeRequests', icon: '📝', to: '/admin/change-requests', roles: ['Head Office'] },

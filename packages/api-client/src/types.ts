@@ -726,6 +726,46 @@ export interface OperationsDashboardResponse {
   placeholders: string[];
 }
 
+/* ── Listing approvals (GET /listings/admin/pending, PATCH /listings/:id/status) ──
+ *
+ * A seller's request to sell a product, as an admin reviews it. Joined with the
+ * seller (incl. their subscription, which decides whether they may sell at all)
+ * and the product.
+ *
+ * MONEY: `farmer_price` IS a MONEY_FIELDS key, so it arrives as an already-
+ * converted RUPEE STRING. fmtMoney it directly; never divide by 100.
+ *
+ * NOTE there is NO `rejection_reason`. The legacy admin page prompted for one
+ * "(shown to farmer)" and POSTed it, and the backend dropped it — the column does
+ * not exist, so the reason was never stored and no farmer ever saw it. This type
+ * does not pretend otherwise.
+ */
+export interface AdminListing {
+  id: string;
+  /** RUPEES, already converted by the money middleware. */
+  farmer_price: string | number;
+  qty_available?: number | null;
+  listing_status?: 'pending' | 'active' | 'rejected' | (string & {});
+  created_at: string;
+  images?: string[] | null;
+  farmer?: {
+    id: string;
+    fname?: string | null;
+    lname?: string | null;
+    login_id?: string | null;
+    district?: string | null;
+    seller_type?: string | null;
+    subscription_plan?: string | null;
+    subscription_expires_at?: string | null;
+  } | null;
+  product?: {
+    id: string;
+    code?: string | null;
+    name?: string | null;
+    unit?: string | null;
+  } | null;
+}
+
 /* ── GET /dashboard/adminhead ───────────────────────────────────────────────
  *
  * The Head Office control panel — employees, org-wide approvals, staff by role,

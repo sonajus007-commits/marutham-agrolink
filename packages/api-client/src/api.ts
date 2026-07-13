@@ -12,13 +12,15 @@ import type {
   OperationsDashboardResponse, AdminHeadDashboardResponse,
   AccountStatus, UserStatusHistoryEntry,
   Registration, ProfileChangeRequest, ProductPayload, ProductPriceInput,
-  AdminReturnsResponse, AdminReturn,
+  AdminReturnsResponse, AdminReturn, AdminListing,
   AdminPayoutsResponse, RunSettlementResponse,
   EmployeesResponse, Employee, EmployeeAuditResponse, EmployeePayload,
   OtpSendResponse, RegisterPayload, RegisterResponse,
   UserAuditResponse, LoginHistoryResponse,
 } from './types';
-import type { Order, OrderDetail, Product, Offer, Payout, FarmerListing } from '@marutham/lib';
+import type {
+  Order, OrderDetail, Product, Offer, Payout, FarmerListing, ListingReviewStatus,
+} from '@marutham/lib';
 import { rupeesToPaise } from '@marutham/lib';
 
 /**
@@ -177,6 +179,27 @@ export const api = {
   },
   deleteListing(id: string): Promise<{ message: string }> {
     return apiFetch('DELETE', '/listings/' + id);
+  },
+
+  // ── Admin: listing approvals ──
+  /** Seller product requests in ONE state. The endpoint has no "all" mode — it is
+   *  a hard `.eq('listing_status', …)` — so a caller wanting every listing must
+   *  ask for each status and merge (see ListingsPage), exactly as the change-
+   *  requests screen does. */
+  getAdminListings(status: ListingReviewStatus): Promise<{ listings: AdminListing[] }> {
+    return apiFetch<{ listings: AdminListing[] }>(
+      'GET',
+      '/listings/admin/pending?status=' + encodeURIComponent(status),
+    );
+  },
+  /** Approve (`active`), refuse (`rejected`), or pull back for review (`pending`).
+   *  Approving emails the seller (notifyProductApproved), so it is not a silent
+   *  write — do not call it speculatively.
+   *
+   *  No rejection reason is sent: the column does not exist. Legacy passed one and
+   *  the server discarded it. */
+  setListingStatus(id: string, status: ListingReviewStatus): Promise<{ message: string; listing: AdminListing }> {
+    return apiFetch('PATCH', '/listings/' + id + '/status', { status });
   },
 
   // ── Seller: earnings + subscription ──

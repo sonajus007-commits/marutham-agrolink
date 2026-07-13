@@ -71,12 +71,15 @@ export interface ApprovalQueueItem {
   key: 'employees' | 'farmers' | 'listings';
   count: number;
   /**
-   * The screen that works this queue, or NULL when none exists yet.
+   * The screen that works this queue.
    *
-   * Produce listings are the null: the backend counts them, but the React console
-   * has no listing-approval screen (legacy had a tab; it was never ported). So the
-   * count is shown and the door is not — a link to a route that does not exist is
-   * a worse lie than an admitted gap.
+   * Nullable by design, and it earned that: produce listings were counted here with
+   * NO door for a while, because the React console had no listing-approval screen
+   * (legacy had a tab; it was never ported). Showing the count and withholding the
+   * link was the honest option — a link to a route that does not exist is a worse
+   * lie than an admitted gap. `/admin/listings` now exists, so every queue has a
+   * door again. The type stays nullable so the next counted-but-unbuilt queue has
+   * somewhere honest to land.
    */
   to: string | null;
 }
@@ -94,7 +97,7 @@ export function approvalQueue(approvals: AdminHeadApprovals | null | undefined):
   const items: ApprovalQueueItem[] = [
     { key: 'employees', count: Number(a.employees_pending || 0), to: '/admin/employees' },
     { key: 'farmers', count: Number(a.farmers_pending || 0), to: '/admin/registrations' },
-    { key: 'listings', count: Number(a.listings_pending || 0), to: null },
+    { key: 'listings', count: Number(a.listings_pending || 0), to: '/admin/listings' },
   ];
   return items.sort((x, y) => y.count - x.count);
 }

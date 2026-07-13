@@ -87,18 +87,14 @@ describe('approvalQueue', () => {
     expect(q.every((i) => i.count === 0)).toBe(true);
   });
 
-  it('gives listings NO door, because the React console has no listing-approval screen', () => {
-    const q = approvalQueue({ listings_pending: 3 });
-    const listings = q.find((i) => i.key === 'listings')!;
-    expect(listings.count).toBe(3);
-    // A link to a route that does not exist is a worse lie than an admitted gap.
-    expect(listings.to).toBeNull();
-  });
-
-  it('routes the two queues that DO have a screen', () => {
-    const q = approvalQueue({ employees_pending: 2, farmers_pending: 5 });
+  it('routes every queue to the screen that works it', () => {
+    const q = approvalQueue({ employees_pending: 2, farmers_pending: 5, listings_pending: 3 });
     expect(q.find((i) => i.key === 'employees')!.to).toBe('/admin/employees');
     expect(q.find((i) => i.key === 'farmers')!.to).toBe('/admin/registrations');
+    // Listings had NO door until /admin/listings was built — the count was shown
+    // and the link withheld, because a link to a route that does not exist is a
+    // worse lie than an admitted gap. The screen exists now.
+    expect(q.find((i) => i.key === 'listings')!.to).toBe('/admin/listings');
   });
 
   it('treats a missing approvals block as an empty queue, not NaN counts', () => {
