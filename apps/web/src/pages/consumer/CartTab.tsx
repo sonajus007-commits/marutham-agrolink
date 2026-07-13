@@ -1,6 +1,6 @@
 import { QtyStepper, EmptyState } from '@marutham/ui';
 import {
-  cartBill, bestOffer, getProductEmoji, unitStep, unitAllowsDecimal,
+  cartBill, bestOffer, getProductEmoji, unitStep, unitAllowsDecimal, fmtMoney,
   type Offer,
 } from '@marutham/lib';
 import { useConsumerData } from './ConsumerDataContext';
@@ -61,7 +61,7 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <QtyStepper value={item.qty} min={0} step={unitStep(item.unit)} integer={!unitAllowsDecimal(item.unit)} onChange={(q) => setQty(idx, q)} />
-                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--forest)', marginTop: 4 }}>₹{lineTotal.toFixed(0)}</div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--forest)', marginTop: 4 }}>{fmtMoney(lineTotal)}</div>
                 <button onClick={() => cart.removeAt(idx)} style={{ fontSize: 10, color: 'var(--red)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', marginTop: 3 }}>
                   Remove
                 </button>
@@ -74,18 +74,22 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
       {/* Bill summary */}
       <div className="sum-card">
         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--forest)', marginBottom: 10 }}>Bill Summary</div>
-        <div className="irow"><span className="ilbl">Item Total</span><span className="ival">₹{bill.itemSubtotal.toFixed(0)}</span></div>
-        {bill.handling > 0 ? <div className="irow"><span className="ilbl">Handling charges</span><span className="ival">₹{bill.handling.toFixed(0)}</span></div> : null}
-        {bill.marketFee > 0 ? <div className="irow"><span className="ilbl">Market fee (multiple farmers)</span><span className="ival">₹{bill.marketFee.toFixed(0)}</span></div> : null}
-        <div className="irow"><span className="ilbl">Delivery</span><span className="ival">{bill.delivery === 0 ? <span style={{ color: 'var(--success)', fontWeight: 700 }}>FREE</span> : `₹${bill.delivery.toFixed(0)}`}</span></div>
+        {/* The bill is a money COLUMN — every row goes through fmtMoney so the
+            figures align and add up on screen exactly as they add up. The unit
+            price and the "save" nudges above stay compact on purpose: they are
+            prose, not a column. */}
+        <div className="irow"><span className="ilbl">Item Total</span><span className="ival">{fmtMoney(bill.itemSubtotal)}</span></div>
+        {bill.handling > 0 ? <div className="irow"><span className="ilbl">Handling charges</span><span className="ival">{fmtMoney(bill.handling)}</span></div> : null}
+        {bill.marketFee > 0 ? <div className="irow"><span className="ilbl">Market fee (multiple farmers)</span><span className="ival">{fmtMoney(bill.marketFee)}</span></div> : null}
+        <div className="irow"><span className="ilbl">Delivery</span><span className="ival">{bill.delivery === 0 ? <span style={{ color: 'var(--success)', fontWeight: 700 }}>FREE</span> : fmtMoney(bill.delivery)}</span></div>
         {bill.itemSubtotal > 0 && bill.itemSubtotal < 150 ? (
           <div style={{ fontSize: 10, color: 'var(--warning-fg)', marginTop: 2 }}>Add ₹{(150 - bill.itemSubtotal).toFixed(0)} more for FREE delivery</div>
         ) : null}
         {bill.savings > 0 ? (
-          <div className="irow" style={{ color: 'var(--success)', fontWeight: 700 }}><span className="ilbl">🎉 You Save</span><span className="ival">₹{bill.savings.toFixed(0)} vs Govt Rate</span></div>
+          <div className="irow" style={{ color: 'var(--success)', fontWeight: 700 }}><span className="ilbl">🎉 You Save</span><span className="ival">{fmtMoney(bill.savings)} vs Govt Rate</span></div>
         ) : null}
         <div style={{ borderTop: '2px solid var(--forest-soft)', margin: '10px 0' }} />
-        <div className="irow"><span className="ilbl" style={{ fontSize: 14, fontWeight: 700, color: 'var(--forest)' }}>Grand Total</span><span className="ival" style={{ fontSize: 16, color: 'var(--forest)' }}>₹{bill.total.toFixed(0)}</span></div>
+        <div className="irow"><span className="ilbl" style={{ fontSize: 14, fontWeight: 700, color: 'var(--forest)' }}>Grand Total</span><span className="ival" style={{ fontSize: 16, color: 'var(--forest)' }}>{fmtMoney(bill.total)}</span></div>
       </div>
 
       <Checkout bill={bill} onOrderPlaced={onOrderPlaced} />

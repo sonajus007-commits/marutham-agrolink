@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { FilterChips, Spinner, EmptyState, type ChipOption } from '@marutham/ui';
 import {
-  filterProducts, bestOffer, offersForSeller, type Product, type SellerFilter,
+  filterProducts, bestOffer, offersForSeller, fmtMoney, type Product, type SellerFilter,
 } from '@marutham/lib';
 import { useConsumerData } from './ConsumerDataContext';
 import { useCart } from './CartContext';
@@ -83,7 +83,7 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
       {cart.count > 0 ? (
         <div className="cart-bar" role="button" tabIndex={0} onClick={onGoToCart} onKeyDown={(e) => { if (e.key === 'Enter') onGoToCart(); }}>
           <div><span style={{ fontSize: 18 }}>🛒</span> <span className="cart-bar__count">{cart.count} item{cart.count === 1 ? '' : 's'} in cart</span></div>
-          <div className="cart-bar__total">₹{cartTotal.toFixed(2)}</div>
+          <div className="cart-bar__total">{fmtMoney(cartTotal)}</div>
         </div>
       ) : null}
 
