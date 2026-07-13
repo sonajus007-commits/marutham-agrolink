@@ -41,7 +41,9 @@ export function OverviewPage() {
   const trendOption = useMemo<EChartsOption>(() => {
     const trend = data?.daily_trend ?? [];
     return {
-      color: chartPalette as unknown as string[],
+      // ONE series → slot 0, like top-products below. Handing a single-series chart
+      // the whole palette was decoration: ECharts only ever reads color[0].
+      color: [chartPalette.light[0]],
       // The series is already rounded to whole rupees below, so fmtMoneyInt — a
       // forced ".00" here would be precision the number does not have.
       tooltip: { trigger: 'axis', valueFormatter: (v) => fmtMoneyInt(v) },
@@ -67,7 +69,10 @@ export function OverviewPage() {
   const statusOption = useMemo<EChartsOption>(() => {
     const entries = Object.entries(data?.status_breakdown ?? {});
     return {
-      color: chartPalette as unknown as string[],
+      // Order STATUS is one series of counts, not five identities — the bar length
+      // is the message. Colouring each status separately would spend the identity
+      // channel re-encoding what the axis label already says.
+      color: [chartPalette.light[0]],
       tooltip: { trigger: 'item' },
       grid: { left: 48, right: 16, top: 20, bottom: 28 },
       xAxis: {
@@ -102,7 +107,7 @@ export function OverviewPage() {
   const topProductsOption = useMemo<EChartsOption>(() => {
     const top = [...(data?.top_products ?? [])].sort((a, b) => a.revenue - b.revenue);
     return {
-      color: [chartPalette[0]],
+      color: [chartPalette.light[0]],
       tooltip: {
         trigger: 'item',
         valueFormatter: (v) => fmtMoneyInt(v),

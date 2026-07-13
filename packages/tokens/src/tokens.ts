@@ -323,15 +323,43 @@ export const breakpoint = {
   xl: '1280px',
 } as const;
 
-/** Ordered categorical palette for charts (leaf → gold → bloom → forest …). */
-export const chartPalette = [
-  colors.leaf,
-  colors.gold,
-  colors.bloom,
-  colors.forest,
-  colors.sun,
-  colors.sage,
-] as const;
+/* Ordered categorical palette for charts — series IDENTITY, assigned in slot order.
+ *
+ * THREE SLOTS, AND THREE IS THE CEILING. It used to claim six (leaf → gold → bloom →
+ * forest → sun → sage), which was three hue FAMILIES wearing six names: the greens
+ * (forest/leaf/sage/mint) are one hue, the yellows (gold/gold2/sun) another. A
+ * categorical palette encodes identity in HUE, so those extra slots bought nothing
+ * and actively lied — `forest` sat below the chroma floor (C 0.052: it reads gray,
+ * not a colour), `sun` sat outside the lightness band, and sage↔sun collapsed to
+ * ΔE 9.5 under protanopia. Nothing rendered wrong only because no chart had ever
+ * reached past slot 4.
+ *
+ * A fourth safe slot is NOT available from this brand — `red` is reserved for status
+ * and must never impersonate a series, and the greys cannot carry identity. For a
+ * chart with more than three categories do NOT cycle these hues (a hue must mean one
+ * thing): use a single-hue ranked bar (see the Admin Head dashboard), fold the tail
+ * into "Other", or use small multiples.
+ *
+ * Leaf and bloom are the brand primitives untouched. Only GOLD moves, and it had to:
+ * #d4a843 collided with leaf under protanopia (ΔE 11.0) AND sat at 2.16:1 on the
+ * light surface. Both slots below are the nearest step to the brand hue — hue angle
+ * held, lightness/chroma moved — that clears every check. This is a chart-only
+ * token: `colors.gold` elsewhere in the app is unchanged.
+ *
+ * Dark is SELECTED, not flipped — its own steps against its own surface (#17211c).
+ * Flipping the light array would not do: brand leaf against the dark gold lands at
+ * ΔE 9.6, inside the unsafe floor band.
+ *
+ * Both arrays pass the dataviz categorical validator ALL-PAIRS (lightness band,
+ * chroma floor, CVD ΔE ≥ 12 under protan/deutan, ≥ 3:1 on surface) with no WARN.
+ * All-pairs, not adjacent-only, because a pie or scatter can sit any two slots side
+ * by side. The binding pair in both modes is gold↔leaf under protanopia, and it
+ * clears by a hair (12.3 light / 12.1 dark) — do NOT hand-edit a hex without
+ * re-running scripts/validate_palette.js. */
+export const chartPalette = {
+  light: ['#4E9F3D', '#CB4E86', '#9c7300'], // leaf, bloom, gold (darkened)
+  dark: ['#519e41', '#cc4d86', '#b88e26'],
+} as const;
 
 /* Single-hue green sequential ramp for magnitude — choropleth maps, heatmaps.
  * Stops run low→high value. Each theme's near-zero step recedes toward its own

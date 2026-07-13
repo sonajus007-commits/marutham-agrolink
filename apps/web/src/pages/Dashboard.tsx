@@ -15,7 +15,10 @@ export function Dashboard() {
   const fullName = [user?.fname, user?.lname].filter(Boolean).join(' ') || user?.login_id || '—';
 
   const option: EChartsOption = {
-    color: chartPalette as unknown as string[],
+    // ONE series → slot 0. `.light` is named, not inferred: there is no theme
+    // switcher yet, so every chart renders on the light surface. When dark is bound,
+    // this is the line that chooses — the dark array is its own steps, not a flip.
+    color: [chartPalette.light[0]],
     tooltip: { trigger: 'axis' },
     grid: { left: 40, right: 16, top: 24, bottom: 28 },
     xAxis: {
