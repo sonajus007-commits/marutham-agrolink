@@ -5,12 +5,13 @@ import { Button, ChartContainer, StatTile } from '@marutham/ui';
 import { api, type OperationsDashboardResponse } from '@marutham/api-client';
 import { semantic, colors } from '@marutham/tokens';
 import {
-  deliveryStages, totalInPipeline, rankedOpsDistricts, sortAlerts, opsAlertTone,
+  deliveryStages, totalInPipeline, rankedOpsDistricts, sortAlerts, alertTone,
   fmtMoney, fmtNum,
 } from '@marutham/lib';
 import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
 import { PlaceholderSection } from '../../components/PlaceholderSection';
+import { ToneDot } from '../../components/ToneDot';
 
 /**
  * The operations dashboard — District Manager & Hub Incharge (their district),
@@ -367,7 +368,7 @@ export function OperationsPage() {
             {alerts.map((a, i) => (
               <li key={`${a.type}-${i}`} className="flex items-start gap-2 rounded-lg bg-surface-muted p-3 text-sm">
                 {/* Severity carries an icon + the message, never colour alone. */}
-                <ToneDot tone={opsAlertTone(a.severity)} />
+                <ToneDot tone={alertTone(a.severity)} />
                 <span className="text-fg">{a.message}</span>
               </li>
             ))}
@@ -414,20 +415,5 @@ function ActionLink({
         </span>
       ) : null}
     </Link>
-  );
-}
-
-function ToneDot({ tone }: { tone: 'success' | 'warning' | 'danger' | 'neutral' }) {
-  const fill =
-    tone === 'success' ? semantic.light.success
-    : tone === 'warning' ? semantic.light.warning
-    : tone === 'danger' ? semantic.light.danger
-    : colors.gray;
-  return (
-    <span
-      aria-hidden="true"
-      className="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-      style={{ background: fill }}
-    />
   );
 }

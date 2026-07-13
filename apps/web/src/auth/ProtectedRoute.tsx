@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { User, UserRole } from '@marutham/api-client';
 import { useAuth } from './AuthContext';
-import { homesOnExecutive, homesOnOperations } from '../pages/admin/adminNav';
+import { homesOnExecutive, homesOnOperations, homesOnAdminHead } from '../pages/admin/adminNav';
 
 /* Route guard mirroring backend/middleware/auth.js: requires a session and,
  * optionally, a specific top-level role and/or set of admin_roles. */
@@ -43,6 +43,11 @@ export function roleHome(user: User): string {
   // Same reasoning one tier down: legacy dispatched a District/Regional/State/Zonal
   // manager's Overview to the operations screen, so that is where they land again.
   if (user.role === 'admin' && homesOnOperations(user.admin_role)) return '/admin/operations';
+  // Technical Admin / HR Admin / HR Manager: the Head Office control panel is the
+  // ONLY dashboard the backend will serve them, so it is their home rather than a
+  // preference. Until they were added to MANAGEMENT_ADMIN_ROLES they had no home
+  // at all — signing in bounced them back to /login.
+  if (user.role === 'admin' && homesOnAdminHead(user.admin_role)) return '/admin/adminhead';
   if (user.role === 'admin') return '/admin';
   return '/dashboard';
 }

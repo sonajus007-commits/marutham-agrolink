@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   TREND_MODES, DISTRICT_ALIAS, geoDistrictName, dbDistrictName, findDistrict,
-  districtTone, alertTone, growthDirection, formatGrowth, rankedDistricts,
+  districtTone, growthDirection, formatGrowth, rankedDistricts,
   type DistrictPerf,
 } from './executive';
 
@@ -48,7 +48,9 @@ describe('findDistrict', () => {
   });
 });
 
-describe('districtTone / alertTone', () => {
+/* alertTone moved to ./alerts (it is shared by three dashboards) and is covered
+ * in alerts.test.ts. */
+describe('districtTone', () => {
   it('maps the backend bands onto the design system status roles', () => {
     expect(districtTone('green')).toBe('success');
     expect(districtTone('amber')).toBe('warning');
@@ -58,12 +60,6 @@ describe('districtTone / alertTone', () => {
   it('falls back to neutral for an unknown or missing band — never a fake status', () => {
     expect(districtTone(undefined)).toBe('neutral');
     expect(districtTone('purple')).toBe('neutral');
-  });
-
-  it('maps alert severity the same way', () => {
-    expect(alertTone('high')).toBe('danger');
-    expect(alertTone('medium')).toBe('warning');
-    expect(alertTone('low')).toBe('neutral');
   });
 });
 

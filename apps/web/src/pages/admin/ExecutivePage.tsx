@@ -12,6 +12,7 @@ import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
 import { TnDistrictMap, type MapState } from '../../components/TnDistrictMap';
 import { PlaceholderSection } from '../../components/PlaceholderSection';
+import { ToneDot } from '../../components/ToneDot';
 
 /**
  * The executive dashboard — Board of Director / CEO / Managing Director / CFO /
@@ -415,21 +416,6 @@ function GrowthTile({ label, pct }: { label: string; pct?: number }) {
   const accent =
     dir === 'up' ? semantic.light.success : dir === 'down' ? semantic.light.danger : colors.gray;
   return <StatTile icon={arrow} label={label} value={formatGrowth(pct)} accent={accent} />;
-}
-
-function ToneDot({ tone }: { tone: 'success' | 'warning' | 'danger' | 'neutral' }) {
-  const fill =
-    tone === 'success' ? semantic.light.success
-    : tone === 'warning' ? semantic.light.warning
-    : tone === 'danger' ? semantic.light.danger
-    : colors.gray;
-  return (
-    <span
-      aria-hidden="true"
-      className="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-      style={{ background: fill }}
-    />
-  );
 }
 
 function Legend({ t }: { t: (k: string) => string }) {

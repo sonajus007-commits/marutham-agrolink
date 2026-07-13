@@ -25,6 +25,13 @@ export const MANAGEMENT_ADMIN_ROLES = [
   'Head Office', 'State Head', 'Regional Manager', 'District Manager',
   'Hub Incharge', 'Board of Director', 'Zonal Manager',
   'CEO', 'Managing Director', 'CFO', 'CTO',
+  // Technical Admin, HR Admin and HR Manager were the next casualties of the same
+  // bug: the backend's ADMINHEAD_ROLES has always served them a dashboard, but
+  // they were absent here — so they could sign in and were bounced straight back
+  // to /login, locked out of the console entirely. They are not a hypothetical
+  // like Zonal Manager was: HR Admin/Manager are the roles the whole employee
+  // onboarding workflow is built around.
+  'Technical Admin', 'HR Admin', 'HR Manager',
 ] as const;
 
 /* Who may read a record's audit trail and login history. Mirrors the backend's
@@ -96,6 +103,35 @@ export function homesOnOperations(adminRole?: string | null): boolean {
   return OPERATIONS_HOME_ROLES.includes(adminRole as (typeof OPERATIONS_HOME_ROLES)[number]);
 }
 
+/* Who may open the Admin Head dashboard. MIRRORS the backend's ADMINHEAD_ROLES
+ * (routes/dashboard.js) exactly. The Head Office control panel: employees,
+ * org-wide approvals, staff by role, audit + login activity. */
+export const ADMINHEAD_ADMIN_ROLES = [
+  'Head Office', 'Technical Admin', 'HR Admin', 'HR Manager',
+] as const;
+
+export function canSeeAdminHead(adminRole?: string | null): boolean {
+  return ADMINHEAD_ADMIN_ROLES.includes(adminRole as (typeof ADMINHEAD_ADMIN_ROLES)[number]);
+}
+
+/* Roles whose HOME is the Admin Head dashboard — ADMINHEAD_ADMIN_ROLES minus Head
+ * Office, for the same reason Head Office is excluded from the executive and
+ * operations home lists: they run every section, so they keep the generic Overview
+ * (business KPIs) as their landing page and reach the specialist dashboards from
+ * the sidebar. That is a deliberate departure from legacy admin.html, which
+ * dispatched Head Office's Overview to this dashboard.
+ *
+ * For the other three it is not a preference but the only dashboard they can read
+ * — an HR Admin has no business on the executive or operations screens, and the
+ * backend would 403 them there. */
+export const ADMINHEAD_HOME_ROLES = [
+  'Technical Admin', 'HR Admin', 'HR Manager',
+] as const;
+
+export function homesOnAdminHead(adminRole?: string | null): boolean {
+  return ADMINHEAD_HOME_ROLES.includes(adminRole as (typeof ADMINHEAD_HOME_ROLES)[number]);
+}
+
 export interface AdminNavItem {
   id: string;
   labelKey: string;
@@ -126,6 +162,11 @@ export const ADMIN_NAV: AdminNavSection[] = [
       {
         id: 'operations', labelKey: 'admin.nav.operations', icon: '🚚',
         to: '/admin/operations', roles: [...OPERATIONS_ADMIN_ROLES],
+      },
+      // The Head Office control panel — the last dashboard to leave legacy.
+      {
+        id: 'adminhead', labelKey: 'admin.nav.adminhead', icon: '🏢',
+        to: '/admin/adminhead', roles: [...ADMINHEAD_ADMIN_ROLES],
       },
       { id: 'orders', labelKey: 'admin.nav.orders', icon: '📦', to: '/admin/orders' },
       // Hub floor work. Board of Director is management, not operations — and the

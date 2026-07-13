@@ -53,6 +53,19 @@ const PLACEHOLDER_CATALOGUE: Readonly<Record<string, { group: PlaceholderGroupId
   agents_online: { group: 'logistics', icon: '🛰️' },
   vco_attendance: { group: 'field', icon: '🗓️' },
   farmer_visits: { group: 'field', icon: '🚶' },
+
+  // ── Admin Head (ADMINHEAD_PLACEHOLDERS) ──
+  support_tickets: { group: 'satisfaction', icon: '🎫' },
+  escalations: { group: 'satisfaction', icon: '🚨' },
+  warehouse_utilization: { group: 'inventory', icon: '🏭' },
+  inventory_stock: { group: 'inventory', icon: '📦' },
+
+  // ── Field: VCO & Delivery Agent (FIELD_PLACEHOLDERS) ──
+  todays_schedule: { group: 'field', icon: '🗓️' },
+  gps_route: { group: 'field', icon: '🗺️' },
+  daily_earnings: { group: 'finance', icon: '💰' },
+  distance_travelled: { group: 'logistics', icon: '📍' },
+  fuel_allowance: { group: 'logistics', icon: '⛽' },
 };
 
 export interface PlaceholderMetric {

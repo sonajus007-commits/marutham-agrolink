@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  deliveryStages, totalInPipeline, rankedOpsDistricts, sortAlerts, opsAlertTone,
-  type OpsAlert, type OpsDistrict,
+  deliveryStages, totalInPipeline, rankedOpsDistricts,
+  type OpsDistrict,
 } from './operations';
 
 describe('deliveryStages', () => {
@@ -63,44 +63,5 @@ describe('rankedOpsDistricts', () => {
 
   it('survives no districts', () => {
     expect(rankedOpsDistricts(null)).toEqual([]);
-  });
-});
-
-describe('sortAlerts', () => {
-  const a = (severity: string, type: string): OpsAlert => ({
-    severity, type, message: `${type} (${severity})`,
-  });
-
-  it('puts the most urgent action item first — the manager works this top-down', () => {
-    const alerts = [a('low', 'assign'), a('medium', 'returns'), a('high', 'delayed_payment')];
-    expect(sortAlerts(alerts).map((x) => x.severity)).toEqual(['high', 'medium', 'low']);
-  });
-
-  it('keeps the server order within a severity, so like alerts stay together', () => {
-    const alerts = [a('medium', 'returns'), a('medium', 'farmer_approval'), a('high', 'pay')];
-    expect(sortAlerts(alerts).map((x) => x.type)).toEqual([
-      'pay', 'returns', 'farmer_approval',
-    ]);
-  });
-
-  it('sinks an unknown severity below the known ones rather than dropping it', () => {
-    const alerts = [a('cosmic', 'weird'), a('low', 'assign')];
-    expect(sortAlerts(alerts).map((x) => x.type)).toEqual(['assign', 'weird']);
-  });
-
-  it('does not mutate the input, and survives none', () => {
-    const alerts = [a('low', 'x'), a('high', 'y')];
-    sortAlerts(alerts);
-    expect(alerts.map((x) => x.type)).toEqual(['x', 'y']);
-    expect(sortAlerts(undefined)).toEqual([]);
-  });
-});
-
-describe('opsAlertTone', () => {
-  it('means the same thing here as on the executive dashboard', () => {
-    expect(opsAlertTone('high')).toBe('danger');
-    expect(opsAlertTone('medium')).toBe('warning');
-    expect(opsAlertTone('low')).toBe('neutral');
-    expect(opsAlertTone(undefined)).toBe('neutral');
   });
 });

@@ -85,12 +85,9 @@ export function districtTone(status: string | null | undefined): StatusTone {
   return 'neutral';
 }
 
-/** Alert severity → the same status vocabulary. */
-export function alertTone(severity: string | null | undefined): StatusTone {
-  if (severity === 'high') return 'danger';
-  if (severity === 'medium') return 'warning';
-  return 'neutral';
-}
+/* `alertTone` moved to ./alerts — three dashboards map alert severity to a tone,
+ * so the mapping is shared rather than copied per screen. Still exported from the
+ * package barrel, so importers do not change. */
 
 /** Which way a growth percentage points. 0 is flat, not "up". */
 export type Direction = 'up' | 'down' | 'flat';

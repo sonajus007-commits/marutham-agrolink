@@ -12,7 +12,6 @@
  * widen one.
  */
 import { PIPELINE_STAGES } from './pipeline';
-import type { StatusTone } from './executive';
 
 export type OpsScopeLevel = 'district' | 'region' | 'all';
 
@@ -74,32 +73,6 @@ export function rankedOpsDistricts(rows: OpsDistrict[] | null | undefined): OpsD
   return [...(rows || [])].sort((a, b) => Number(b.orders || 0) - Number(a.orders || 0));
 }
 
-const SEVERITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
-
-export interface OpsAlert {
-  type: string;
-  severity: string;
-  message: string;
-}
-
-/**
- * Action items, most urgent first.
- *
- * This list is a TO-DO, not a log: the manager works it top-down, so a stale
- * payout (high) must not sit below an unassigned order (low) merely because the
- * server appended it later. Ties keep the server's order, which is deliberate —
- * it groups alerts of the same kind together.
- */
-export function sortAlerts(alerts: OpsAlert[] | null | undefined): OpsAlert[] {
-  return [...(alerts || [])].sort(
-    (a, b) => (SEVERITY_RANK[a.severity] ?? 3) - (SEVERITY_RANK[b.severity] ?? 3),
-  );
-}
-
-/** Alert severity → the design system's status vocabulary. Same mapping the
- *  executive dashboard uses, so an alert means the same thing on both screens. */
-export function opsAlertTone(severity: string | null | undefined): StatusTone {
-  if (severity === 'high') return 'danger';
-  if (severity === 'medium') return 'warning';
-  return 'neutral';
-}
+/* Alerts moved to ./alerts — `sortAlerts` and the severity→tone mapping are shared
+ * with the executive and admin-head dashboards, which return the same alert shape.
+ * `OpsAlert` is now `DashboardAlert`; `opsAlertTone` is now `alertTone`. */

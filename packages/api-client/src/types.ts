@@ -270,11 +270,18 @@ export interface SubscriptionPayResponse {
   user: User;
 }
 
+/* GET /dashboard/field — the VCO / Delivery Agent dashboard in the /agent console.
+ * MONEY: already in rupees (`cod_amount`, `farmer_payments_amount`). */
 export interface FieldDashboardResponse {
   role: string;
   stats: Record<string, number | string | null>;
   scope?: { name?: string };
   generated_at: string;
+  /** FIELD_PLACEHOLDERS in backend/routes/dashboard.js — the metrics this screen's
+   *  audience asked for that nothing feeds yet (GPS route, daily earnings, fuel
+   *  allowance…). The backend has always sent these; the type omitted them, so the
+   *  React field dashboard silently rendered none of them while the legacy one did. */
+  placeholders?: string[];
 }
 
 export type EmployeeApprovalStatus = 'pending' | 'approved' | 'rejected' | (string & {});
@@ -716,5 +723,58 @@ export interface OperationsDashboardResponse {
   districts: OperationsDistrict[];
   alerts: ExecutiveAlert[];
   /** See OPS_PLACEHOLDERS in backend/routes/dashboard.js. */
+  placeholders: string[];
+}
+
+/* ── GET /dashboard/adminhead ───────────────────────────────────────────────
+ *
+ * The Head Office control panel — employees, org-wide approvals, staff by role,
+ * audit/login activity. Company-wide: unlike operations, this endpoint has NO geo
+ * scope, and `scope` is always { level: 'all', name: 'Head Office' }.
+ *
+ * MONEY: this endpoint returns none. Nothing here is a rupee or a paisa.
+ *
+ * Served to Head Office, Technical Admin, HR Admin and HR Manager (ADMINHEAD_ROLES
+ * in backend/routes/dashboard.js) — anyone else gets a 403.
+ */
+export interface AdminHeadStaffRole {
+  role: string;
+  count: number;
+}
+
+export interface AdminHeadDept {
+  dept: string;
+  count: number;
+}
+
+export interface AdminHeadDashboardResponse {
+  scope: { level: 'all'; name: string };
+  generated_at: string;
+  summary: {
+    employees_active: number;
+    staff_logins: number;
+    districts_active: number;
+    states_covered: number;
+    products_catalogue: number;
+  };
+  approvals: {
+    employees_pending: number;
+    farmers_pending: number;
+    listings_pending: number;
+    /** `total_pending`, NOT `total` — a key named `total` is picked up by the money
+     *  middleware's MONEY_FIELDS and comes back as the string "0.00". This bit the
+     *  legacy build of this very endpoint. */
+    total_pending: number;
+  };
+  staff_by_role: AdminHeadStaffRole[];
+  employees_by_dept: AdminHeadDept[];
+  audit: {
+    user_changes_7d: number;
+    employee_changes_7d: number;
+    logins_today: number;
+    failed_logins_today: number;
+  };
+  alerts: ExecutiveAlert[];
+  /** See ADMINHEAD_PLACEHOLDERS in backend/routes/dashboard.js. */
   placeholders: string[];
 }

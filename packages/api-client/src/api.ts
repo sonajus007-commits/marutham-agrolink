@@ -9,7 +9,7 @@ import type {
   SubscriptionPlansResponse, SubscriptionPayResponse,
   ProfileChangeRequestResponse, MyChangeRequestsResponse,
   DashboardResponse, ExecutiveDashboardResponse, ExecutiveTrendMode,
-  OperationsDashboardResponse,
+  OperationsDashboardResponse, AdminHeadDashboardResponse,
   AccountStatus, UserStatusHistoryEntry,
   Registration, ProfileChangeRequest, ProductPayload, ProductPriceInput,
   AdminReturnsResponse, AdminReturn,
@@ -210,6 +210,12 @@ export const api = {
    *  pass, and none to tamper with. Money comes back in RUPEES already. */
   getOperationsDashboard(): Promise<OperationsDashboardResponse> {
     return apiFetch<OperationsDashboardResponse>('GET', '/dashboard/operations');
+  },
+  /** The Head Office control panel — employees, approvals, staff, audit activity.
+   *  403s outside ADMINHEAD_ROLES (Head Office / Technical Admin / HR Admin / HR
+   *  Manager). Company-wide, so there is no scope to pass. Returns no money. */
+  getAdminHeadDashboard(): Promise<AdminHeadDashboardResponse> {
+    return apiFetch<AdminHeadDashboardResponse>('GET', '/dashboard/adminhead');
   },
 
   // ── Admin: users ──

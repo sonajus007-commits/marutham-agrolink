@@ -19,4 +19,6 @@ export * from './hub';
 export * from './shop';
 export * from './executive';
 export * from './placeholders';
+export * from './alerts';
 export * from './operations';
+export * from './adminhead';
