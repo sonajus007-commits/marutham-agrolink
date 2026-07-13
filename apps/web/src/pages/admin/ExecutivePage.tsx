@@ -5,7 +5,8 @@ import { api, type ExecutiveDashboardResponse, type ExecutiveTrendMode } from '@
 import { semantic, colors } from '@marutham/tokens';
 import {
   TREND_MODES, rankedDistricts, findDistrict, districtTone, alertTone,
-  formatGrowth, growthDirection, fmtMoneyFull, type DistrictPerf,
+  formatGrowth, growthDirection, fmtMoneyFull, placeholderGroups, humanizeMetricKey,
+  type DistrictPerf, type PlaceholderGroup,
 } from '@marutham/lib';
 import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
@@ -51,6 +52,10 @@ export function ExecutivePage() {
   }, [load, trend]);
 
   const districts = useMemo(() => rankedDistricts(data?.districts ?? []), [data]);
+
+  /* The roadmap the board asked for. Driven entirely by the API's `placeholders`
+   * array — this screen has no opinion about which metrics are missing. */
+  const missing = useMemo(() => placeholderGroups(data?.placeholders), [data]);
 
   const onSelectDistrict = useCallback(
     (name: string) => setDrill(findDistrict(data?.districts ?? [], name)),
@@ -197,9 +202,6 @@ export function ExecutivePage() {
         <GrowthTile label={t('admin.exec.kpi.orderGrowth')} pct={s?.order_growth_pct} />
         <GrowthTile label={t('admin.exec.kpi.customerGrowth')} pct={s?.customer_growth_pct} />
         <GrowthTile label={t('admin.exec.kpi.farmerGrowth')} pct={s?.farmer_growth_pct} />
-        <PlaceholderTile icon="💵" label={t('admin.exec.kpi.netProfit')} note={t('admin.exec.needsIntegration')} />
-        <PlaceholderTile icon="🏦" label={t('admin.exec.kpi.cashFlow')} note={t('admin.exec.needsIntegration')} />
-        <PlaceholderTile icon="📊" label={t('admin.exec.kpi.ebitda')} note={t('admin.exec.needsIntegration')} />
       </section>
 
       {/* ── Districts: map + its table view ──────────────────────────────── */}
@@ -392,7 +394,56 @@ export function ExecutivePage() {
           </ul>
         )}
       </ChartContainer>
+
+      {/* ── Not yet wired up ─────────────────────────────────────────────────
+          The metrics the board asked for that no system feeds yet. They sit at
+          the BOTTOM, below every live figure, because that is what they are
+          worth today — but they are shown, not hidden, so the board can see
+          what is coming and what it is still waiting on. */}
+      {missing.length > 0 ? (
+        <ChartContainer
+          title={t('admin.exec.ph.title')}
+          subtitle={t('admin.exec.ph.sub')}
+          loading={loading && !data}
+          height="auto"
+        >
+          <div className="space-y-5">
+            {missing.map((g) => (
+              <PlaceholderGroupBlock key={g.id} group={g} t={t} />
+            ))}
+          </div>
+        </ChartContainer>
+      ) : null}
     </div>
+  );
+}
+
+/* One theme's worth of not-yet-integrated metrics. */
+function PlaceholderGroupBlock({
+  group,
+  t,
+}: {
+  group: PlaceholderGroup;
+  t: (k: string, o?: Record<string, unknown>) => string;
+}) {
+  return (
+    <section aria-labelledby={`ph-${group.id}`}>
+      <h3 id={`ph-${group.id}`} className="mb-2 text-xs font-bold uppercase tracking-wide text-fg-muted">
+        {t(`admin.exec.ph.group.${group.id}`)}
+      </h3>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {group.metrics.map((m) => (
+          <PlaceholderTile
+            key={m.key}
+            icon={m.icon}
+            /* A key the catalogue has not been taught yet still gets a readable
+               English label rather than rendering the raw i18n key. */
+            label={t(`admin.exec.ph.${m.key}`, { defaultValue: humanizeMetricKey(m.key) })}
+            note={t('admin.exec.needsIntegration')}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 

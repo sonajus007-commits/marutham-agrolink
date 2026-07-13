@@ -206,6 +206,17 @@ const EXEC_PLACEHOLDERS = [
 // paise (int) → rupees (number, 2 dp). Named fields avoid the money middleware.
 const rup = (paise) => Math.round((Number(paise || 0)) / 100 * 100) / 100;
 
+// Rupees → a display string, for the alert messages this route AUTHORS (the UI
+// cannot format these — they arrive as prose). Matches the client's money format:
+// Indian grouping, always 2 dp. Without it an alert read "₹63.5" directly under a
+// ranking that said "₹63.50" for the same district.
+const inr = (rupees) => '₹' + Number(rupees || 0).toLocaleString('en-IN', {
+  minimumFractionDigits: 2, maximumFractionDigits: 2,
+});
+
+// "1 order" / "2 orders" — pluralise a count with its noun.
+const plural = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`;
+
 // IST helpers (DB stores UTC; users are in IST = UTC+5:30).
 const IST_MS = 5.5 * 3600000;
 function istParts(d) {
@@ -376,10 +387,10 @@ router.get('/executive', async (req, res) => {
   }
   const stalePayouts = payouts.filter(p => p.status === 'pending' && (Date.now() - new Date(p.created_at)) > 7 * 86400000).length;
   if (stalePayouts > 0) {
-    alerts.push({ type: 'delayed_payment', severity: 'medium', message: `${stalePayouts} farmer payout${stalePayouts > 1 ? 's' : ''} pending over 7 days.` });
+    alerts.push({ type: 'delayed_payment', severity: 'medium', message: `${plural(stalePayouts, 'farmer payout')} pending over 7 days.` });
   }
   districts.filter(d => d.status === 'red' && d.orders > 0).slice(0, 3).forEach(d => {
-    alerts.push({ type: 'district_low', severity: 'low', message: `${d.district} underperforming (₹${d.revenue}, ${d.orders} orders).` });
+    alerts.push({ type: 'district_low', severity: 'low', message: `${d.district} underperforming (${inr(d.revenue)}, ${plural(d.orders, 'order')}).` });
   });
 
   res.json({

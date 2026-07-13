@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   TREND_MODES, DISTRICT_ALIAS, geoDistrictName, dbDistrictName, findDistrict,
-  districtTone, alertTone, growthDirection, formatGrowth, rankedDistricts, isPlaceholder,
+  districtTone, alertTone, growthDirection, formatGrowth, rankedDistricts,
+  placeholderGroups, humanizeMetricKey,
   type DistrictPerf,
 } from './executive';
 
@@ -99,12 +100,41 @@ describe('rankedDistricts', () => {
   });
 });
 
-describe('isPlaceholder', () => {
-  it('identifies the metrics the backend admits it cannot source', () => {
-    const p = ['net_profit', 'ebitda'];
-    expect(isPlaceholder('net_profit', p)).toBe(true);
-    expect(isPlaceholder('gmv', p)).toBe(false);
-    expect(isPlaceholder('net_profit', undefined)).toBe(false);
+describe('placeholderGroups', () => {
+  it('groups the reported metrics by theme, in display order', () => {
+    const groups = placeholderGroups([
+      'fuel_cost', 'net_profit', 'hub_issues', 'salary_cost', 'ebitda',
+    ]);
+    // Finance before cost before logistics before satisfaction — regardless of
+    // the order the API happened to list them in.
+    expect(groups.map((g) => g.id)).toEqual(['finance', 'cost', 'logistics', 'satisfaction']);
+    expect(groups[0].metrics.map((m) => m.key)).toEqual(['net_profit', 'ebitda']);
+    expect(groups[0].metrics[0].icon).toBe('💵');
+  });
+
+  it('renders every metric the API reports and no metric it does not', () => {
+    // The API array is the source of truth: a key it omits must not appear
+    // (that drift is exactly what the hardcoded-3-tiles version got wrong).
+    const groups = placeholderGroups(['net_profit']);
+    expect(groups.flatMap((g) => g.metrics).map((m) => m.key)).toEqual(['net_profit']);
+  });
+
+  it('keeps an uncatalogued key instead of silently dropping it', () => {
+    const groups = placeholderGroups(['net_profit', 'churn_risk']);
+    const other = groups.find((g) => g.id === 'other');
+    expect(other?.metrics).toEqual([{ key: 'churn_risk', icon: '🔌' }]);
+  });
+
+  it('is empty when the backend reports nothing missing', () => {
+    expect(placeholderGroups([])).toEqual([]);
+    expect(placeholderGroups(undefined)).toEqual([]);
+  });
+});
+
+describe('humanizeMetricKey', () => {
+  it('is the label of last resort for an untranslated key', () => {
+    expect(humanizeMetricKey('vehicle_utilization')).toBe('Vehicle Utilization');
+    expect(humanizeMetricKey('gst')).toBe('Gst');
   });
 });
 
