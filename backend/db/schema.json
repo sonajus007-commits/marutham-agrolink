@@ -316,6 +316,10 @@
           "type": "numeric",
           "notNull": false
         },
+        "rejection_reason": {
+          "type": "text",
+          "notNull": false
+        },
         "time_available": {
           "type": "text",
           "notNull": false
