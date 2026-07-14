@@ -14,6 +14,7 @@
     "db:check-embeds": "node db/check-embeds.js",
     "db:check-reads": "node db/check-reads.js",
     "db:migrate": "node db/migrate.js",
+    "db:seed": "node db/seed.js",
     "db:status": "node db/migrate.js --status",
     "db:adopt": "node db/migrate.js --adopt",
     "db:verify-rebuild": "node db/migrate.js --verify-rebuild"
