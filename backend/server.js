@@ -214,6 +214,34 @@ app.use(express.static(path.join(__dirname, '../frontend'), { index: 'home.html'
 // ── 404 fallback ──────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Endpoint not found.' }));
 
+// ── Error-handling middleware ───────────────────────────────────────────────────
+// The 4-argument signature is what marks this as Express's error handler. It catches
+// anything a route passes to next(err), and any SYNCHRONOUS throw inside a handler, and
+// turns it into one JSON 500 instead of a default HTML stack trace. It does NOT catch a
+// throw from an ASYNC handler — Express 4 cannot — which is why the async routes that
+// await a thrower keep their own try/catch. This is the floor, not the whole story.
+// eslint-disable-next-line no-unused-vars  (Express detects the handler by its arity)
+app.use((err, _req, res, _next) => {
+  console.error('[unhandled route error]', err && err.stack ? err.stack : err);
+  if (res.headersSent) return;
+  res.status(500).json({ error: 'Something went wrong. Please try again.' });
+});
+
+// ── Process-level safety net ────────────────────────────────────────────────────
+// The backstop for the async-throw class specifically. An unhandled rejection is
+// Node's default trigger to KILL the process — one bad request has taken this whole API
+// down before. We log it loudly and STAY UP: a single failed request must never be able
+// to sign every other user out. This does not excuse missing try/catch (the client on
+// that one request still gets no answer and times out) — it only stops the blast radius
+// from being the entire server.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection] a promise rejected with no catch — staying up:',
+    reason && reason.stack ? reason.stack : reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException] staying up:', err && err.stack ? err.stack : err);
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Marutham API listening on port ${PORT}`);

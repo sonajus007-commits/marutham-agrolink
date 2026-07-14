@@ -175,6 +175,39 @@ test('a removed employee keeps their Employee ID reserved — the next hire does
     'the removed MATN00006 must still be counted — its ID is retired, not recycled');
 });
 
+// ── the async-throw class: a failed nextEmpId must 500, NOT kill the process ──
+// nextEmpId throws when its lookup errors. Before the try/catch, the throw was an
+// unhandled rejection in an Express 4 async handler — which Node answers by killing the
+// whole API. The test can only assert the RESPONSE (a clean 500); the process-staying-up
+// half is the server.js net, exercised by the driving script, not here. What this pins
+// down is that the handler now RESPONDS instead of leaving the request to hang.
+test('POST /employees — a failed Employee-ID lookup returns 500, it does not throw uncaught', async () => {
+  const db = fakeSupabase({
+    'employees:select': { error: { message: 'lookup exploded' } },   // nextEmpId throws
+  });
+  const app = await mount(db);
+  const res = await app.post('/', {
+    fname: 'New', state: 'Tamil Nadu', employment_type: 'Permanent', is_board_director: true,
+  });
+  assert.equal(res.status, 500);
+  assert.equal(db.callsTo('employees', 'insert').length, 0, 'nothing is inserted when the ID could not be minted');
+});
+
+test('PATCH /employees/:id/approve — a failed Employee-ID lookup returns 500, it does not throw uncaught', async () => {
+  // Two employees:select calls happen: the first loads the record (must succeed), the
+  // second is nextEmpId's lookup (must fail). A stateful handler distinguishes them.
+  let call = 0;
+  const db = fakeSupabase({
+    'employees:select': () => (++call === 1
+      ? { data: [{ id: 'e1', emp_id: null, state: 'Tamil Nadu', approval_status: 'pending', deleted_at: null }] }
+      : { error: { message: 'lookup exploded' } }),
+  });
+  const app = await mount(db);
+  const res = await app.patch('/e1/approve', {});
+  assert.equal(res.status, 500);
+  assert.equal(db.callsTo('employees', 'update').length, 0, 'no approval is written when the ID could not be minted');
+});
+
 test('GET /employees — removed employees are not in the list', async () => {
   const db = fakeSupabase({
     'employees:select': { data: [

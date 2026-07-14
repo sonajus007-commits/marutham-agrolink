@@ -214,42 +214,51 @@ router.post('/', requireRole('admin'), async (req, res) => {
   if (!canAccessTracker(req.user)) {
     return res.status(403).json({ error: 'Head Office / HR Admin access required to manage the employee tracker.' });
   }
-  const rec = pickFields(req.body);
-  if (!rec.fname) return res.status(400).json({ error: 'Employee first name is required.' });
+  // nextEmpId THROWS if its lookup fails (an Employee ID can't be minted from an unread
+  // sequence). Express 4 does not catch throws from an async handler — the rejection
+  // is unhandled and Node's default kills the process. A try/catch keeps one bad
+  // request from taking the whole API down; the process-level net in server.js is the
+  // backstop, but the handler is where the client actually gets an answer.
+  try {
+    const rec = pickFields(req.body);
+    if (!rec.fname) return res.status(400).json({ error: 'Employee first name is required.' });
 
-  // Trust-role flags — only Head Office or a Board of Director may set them.
-  const wantsBoD     = truthy(req.body.is_board_director);
-  const wantsHrAdmin = truthy(req.body.is_hr_admin);
-  if ((wantsBoD || wantsHrAdmin) && !canMintTrustRoles(req.user)) {
-    return res.status(403).json({ error: 'Only Head Office or a Board of Director can mark someone as Board of Director / HR Admin.' });
+    // Trust-role flags — only Head Office or a Board of Director may set them.
+    const wantsBoD     = truthy(req.body.is_board_director);
+    const wantsHrAdmin = truthy(req.body.is_hr_admin);
+    if ((wantsBoD || wantsHrAdmin) && !canMintTrustRoles(req.user)) {
+      return res.status(403).json({ error: 'Only Head Office or a Board of Director can mark someone as Board of Director / HR Admin.' });
+    }
+    rec.is_board_director = wantsBoD;
+    rec.is_hr_admin       = wantsHrAdmin;
+    rec.requested_by      = req.user.id;
+    rec.status            = rec.status || 'active';
+
+    // Board of Director + HR Admin skip approval and get an ID right away.
+    const autoApprove = wantsBoD || wantsHrAdmin;
+    if (autoApprove) {
+      const st = rec.state || rec.work_state;
+      if (!st) return res.status(400).json({ error: 'Select a State so the Employee ID can be generated.' });
+      rec.emp_id          = await nextEmpId(st, rec.employment_type);
+      rec.approval_status = 'approved';
+      rec.approved_by     = req.user.id;
+      rec.approved_at     = new Date().toISOString();
+    } else {
+      rec.emp_id          = null;             // issued on approval
+      rec.approval_status = 'pending';
+    }
+
+    const { data, error } = await supabase.from('employees').insert(rec).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(201).json({
+      message: autoApprove
+        ? `Employee added and auto-approved. Employee ID: ${data.emp_id}.`
+        : 'Employee request submitted for HR Admin approval. An Employee ID will be issued once approved.',
+      employee: data,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Could not create the employee.' });
   }
-  rec.is_board_director = wantsBoD;
-  rec.is_hr_admin       = wantsHrAdmin;
-  rec.requested_by      = req.user.id;
-  rec.status            = rec.status || 'active';
-
-  // Board of Director + HR Admin skip approval and get an ID right away.
-  const autoApprove = wantsBoD || wantsHrAdmin;
-  if (autoApprove) {
-    const st = rec.state || rec.work_state;
-    if (!st) return res.status(400).json({ error: 'Select a State so the Employee ID can be generated.' });
-    rec.emp_id          = await nextEmpId(st, rec.employment_type);
-    rec.approval_status = 'approved';
-    rec.approved_by     = req.user.id;
-    rec.approved_at     = new Date().toISOString();
-  } else {
-    rec.emp_id          = null;             // issued on approval
-    rec.approval_status = 'pending';
-  }
-
-  const { data, error } = await supabase.from('employees').insert(rec).select().single();
-  if (error) return res.status(500).json({ error: error.message });
-  res.status(201).json({
-    message: autoApprove
-      ? `Employee added and auto-approved. Employee ID: ${data.emp_id}.`
-      : 'Employee request submitted for HR Admin approval. An Employee ID will be issued once approved.',
-    employee: data,
-  });
 });
 
 // ── PATCH /employees/:id ──────────────────────────────────────────────────────
@@ -292,29 +301,35 @@ router.patch('/:id/approve', requireRole('admin'), async (req, res) => {
   if (!canApprove(req.user)) {
     return res.status(403).json({ error: 'HR Admin (or Board of Director / Head Office) approval authority required.' });
   }
-  const { data: emp, error: e1 } = await supabase
-    .from('employees').select('*').eq('id', req.params.id).is('deleted_at', null).maybeSingle();
-  if (e1 || !emp) return res.status(404).json({ error: 'Employee not found, or has been removed.' });
-  if (emp.approval_status === 'approved') return res.status(400).json({ error: 'This employee is already approved.' });
+  // Same class as POST / above: the await on nextEmpId can throw, and an uncaught throw
+  // in an Express 4 async handler is an unhandled rejection that kills the process.
+  try {
+    const { data: emp, error: e1 } = await supabase
+      .from('employees').select('*').eq('id', req.params.id).is('deleted_at', null).maybeSingle();
+    if (e1 || !emp) return res.status(404).json({ error: 'Employee not found, or has been removed.' });
+    if (emp.approval_status === 'approved') return res.status(400).json({ error: 'This employee is already approved.' });
 
-  const st = emp.state || emp.work_state;
-  if (!st) return res.status(400).json({ error: 'This record has no State set — cannot generate an Employee ID. Edit the record and set a State first.' });
+    const st = emp.state || emp.work_state;
+    if (!st) return res.status(400).json({ error: 'This record has no State set — cannot generate an Employee ID. Edit the record and set a State first.' });
 
-  const empId = emp.emp_id || await nextEmpId(st, emp.employment_type);
-  const { data, error } = await supabase
-    .from('employees')
-    .update({
-      approval_status: 'approved',
-      status: 'active',
-      emp_id: empId,
-      approved_by: req.user.id,
-      approved_at: new Date().toISOString(),
-      rejected_reason: null,
-    })
-    .eq('id', req.params.id)
-    .select().single();
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ message: `Employee approved. Employee ID: ${data.emp_id}.`, employee: data });
+    const empId = emp.emp_id || await nextEmpId(st, emp.employment_type);
+    const { data, error } = await supabase
+      .from('employees')
+      .update({
+        approval_status: 'approved',
+        status: 'active',
+        emp_id: empId,
+        approved_by: req.user.id,
+        approved_at: new Date().toISOString(),
+        rejected_reason: null,
+      })
+      .eq('id', req.params.id)
+      .select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ message: `Employee approved. Employee ID: ${data.emp_id}.`, employee: data });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Could not approve the employee.' });
+  }
 });
 
 // ── PATCH /employees/:id/reject ───────────────────────────────────────────────
