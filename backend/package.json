@@ -11,7 +11,11 @@
     "db:coverage": "node db/check-schema.js --coverage",
     "db:offline": "node db/check-schema.js --offline",
     "db:snapshot": "node db/check-schema.js --write",
-    "db:check-embeds": "node db/check-embeds.js"
+    "db:check-embeds": "node db/check-embeds.js",
+    "db:migrate": "node db/migrate.js",
+    "db:status": "node db/migrate.js --status",
+    "db:adopt": "node db/migrate.js --adopt",
+    "db:verify-rebuild": "node db/migrate.js --verify-rebuild"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
