@@ -16,7 +16,7 @@
 // only a double can show: you cannot ask a real Postgres to fail its first write and
 // then check the second one never happened.
 
-const { test } = require('node:test');
+const { test, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const { fakeSupabase } = require('../helpers/fakeSupabase');
 const { mountRoute } = require('../helpers/app');
@@ -27,8 +27,16 @@ const VCO = { id: 'vco-1', role: 'admin', admin_role: 'VCO', emp_id: 'MATN00099'
 /** An employee with a login, as the tracker holds them. */
 const LIVE_EMP = { id: 'e1', emp_id: 'MATN00006', fname: 'Asha', lname: 'R', deleted_at: null };
 
+// The server is closed in afterEach, NOT at the end of each test body. A failing
+// assertion throws past any close() call written inline, the Express listener stays
+// open, and `node --test` then never exits — the run does not fail, it HANGS, which in
+// CI is a stuck job instead of a red one. afterEach runs even when the test threw.
+let app = null;
+afterEach(async () => { if (app) { await app.close(); app = null; } });
+
 async function mount(supabase, user = HR) {
-  return mountRoute('employees', { supabase, user });
+  app = await mountRoute('employees', { supabase, user });
+  return app;
 }
 
 // ── authority ────────────────────────────────────────────────────────────────
@@ -40,7 +48,6 @@ test('DELETE /employees/:id — a VCO cannot remove an employee', async () => {
   assert.equal(res.status, 403);
   assert.equal(db.callsTo('employees', 'update').length, 0, 'nothing may be written');
   assert.equal(db.callsTo('users', 'update').length, 0, 'no login may be revoked');
-  await app.close();
 });
 
 test('POST /employees/:id/restore — a VCO cannot restore an employee', async () => {
@@ -48,7 +55,6 @@ test('POST /employees/:id/restore — a VCO cannot restore an employee', async (
   const app = await mount(db, VCO);
   const res = await app.post('/e1/restore');
   assert.equal(res.status, 403);
-  await app.close();
 });
 
 // ── the guards ───────────────────────────────────────────────────────────────
@@ -59,7 +65,6 @@ test('DELETE /employees/:id — unknown employee is a 404, not a write', async (
   const res = await app.request('DELETE', '/nope');
   assert.equal(res.status, 404);
   assert.equal(db.callsTo('employees', 'update').length, 0);
-  await app.close();
 });
 
 test('DELETE /employees/:id — removing an already-removed employee is refused', async () => {
@@ -71,7 +76,6 @@ test('DELETE /employees/:id — removing an already-removed employee is refused'
   assert.equal(res.status, 400);
   assert.match(res.body.error, /already been removed/i);
   assert.equal(db.callsTo('users', 'update').length, 0, 'must not re-stamp deleted_by on a second removal');
-  await app.close();
 });
 
 test('DELETE /employees/:id — an HR Admin cannot remove themselves', async () => {
@@ -86,7 +90,6 @@ test('DELETE /employees/:id — an HR Admin cannot remove themselves', async () 
   assert.equal(res.status, 400);
   assert.match(res.body.error, /cannot remove your own/i);
   assert.equal(db.callsTo('users', 'update').length, 0);
-  await app.close();
 });
 
 // ── the removal itself ───────────────────────────────────────────────────────
@@ -118,7 +121,6 @@ test('DELETE /employees/:id — revokes the login BEFORE hiding the tracker reco
 
   // The login is found by emp_id — linked_user_id is a dead column and always has been.
   assert.ok(userWrite.filters.some(([op, col, val]) => op === 'eq' && col === 'emp_id' && val === 'MATN00006'));
-  await app.close();
 });
 
 test('DELETE /employees/:id — if the login cannot be revoked, the employee is NOT hidden', async () => {
@@ -136,7 +138,6 @@ test('DELETE /employees/:id — if the login cannot be revoked, the employee is 
   assert.match(res.body.error, /nothing was removed/i);
   assert.equal(db.callsTo('employees', 'update').length, 0,
     'the tracker row must be untouched when the login could not be revoked');
-  await app.close();
 });
 
 test('DELETE /employees/:id — an employee who never had a login is removed cleanly', async () => {
@@ -151,7 +152,6 @@ test('DELETE /employees/:id — an employee who never had a login is removed cle
   assert.equal(res.body.login_revoked, false);
   assert.equal(db.callsTo('users', 'update').length, 0, 'no login to revoke, so no users write');
   assert.equal(db.callsTo('employees', 'update').length, 1);
-  await app.close();
 });
 
 // ── what a removal must NOT destroy ──────────────────────────────────────────
@@ -173,7 +173,6 @@ test('a removed employee keeps their Employee ID reserved — the next hire does
   assert.equal(res.status, 201);
   assert.equal(res.body.employee.emp_id, 'MATN00007',
     'the removed MATN00006 must still be counted — its ID is retired, not recycled');
-  await app.close();
 });
 
 test('GET /employees — removed employees are not in the list', async () => {
@@ -188,7 +187,6 @@ test('GET /employees — removed employees are not in the list', async () => {
 
   assert.equal(res.status, 200);
   assert.deepEqual(res.body.employees.map((e) => e.fname), ['Asha']);
-  await app.close();
 });
 
 test('GET /employees?deleted=1 — lists ONLY the removed, so they can be restored', async () => {
@@ -204,7 +202,6 @@ test('GET /employees?deleted=1 — lists ONLY the removed, so they can be restor
 
   assert.equal(res.status, 200);
   assert.deepEqual(res.body.employees.map((e) => e.fname), ['Gone']);
-  await app.close();
 });
 
 test('GET /employees/:id — a removed employee can still be opened, and their history read', async () => {
@@ -219,7 +216,6 @@ test('GET /employees/:id — a removed employee can still be opened, and their h
   assert.equal(res.status, 200);
   assert.equal(res.body.employee.id, 'e1');
   assert.ok(res.body.employee.deleted_at, 'the record still resolves, and says it is removed');
-  await app.close();
 });
 
 // ── edits are refused while removed ──────────────────────────────────────────
@@ -233,7 +229,6 @@ test('PATCH /employees/:id — a removed employee cannot be edited', async () =>
   assert.match(res.body.error, /removed/i);
   // Not a 500: .single() would have reported "no rows" as an error and turned an
   // ordinary "they're gone" into a server fault.
-  await app.close();
 });
 
 test('PATCH /employees/:id/approve — a removed employee cannot be approved', async () => {
@@ -242,7 +237,6 @@ test('PATCH /employees/:id/approve — a removed employee cannot be approved', a
   const res = await app.patch('/e1/approve');
   assert.equal(res.status, 404);
   assert.equal(db.callsTo('employees', 'update').length, 0, 'no Employee ID may be issued to a removed employee');
-  await app.close();
 });
 
 // ── restore ──────────────────────────────────────────────────────────────────
@@ -268,7 +262,6 @@ test('POST /employees/:id/restore — brings back the record and the login', asy
     assert.equal(w.payload.deleted_at, null, 'the mark is cleared, not overwritten with a new time');
     assert.equal(w.payload.deleted_by, null);
   }
-  await app.close();
 });
 
 test('POST /employees/:id/restore — restoring someone who was never removed is refused', async () => {
@@ -279,5 +272,4 @@ test('POST /employees/:id/restore — restoring someone who was never removed is
   assert.equal(res.status, 400);
   assert.match(res.body.error, /has not been removed/i);
   assert.equal(db.callsTo('employees', 'update').length, 0);
-  await app.close();
 });
