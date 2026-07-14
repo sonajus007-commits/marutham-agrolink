@@ -11,18 +11,18 @@
  */
 :root {
   /* ── Brand primitives ── */
-  --forest: #1a3d2b;
-  --forest-soft: #2d6a4f;
-  --forest-dark: #16351f;
-  --leaf: #4E9F3D;
+  --forest: #2E7D32;
+  --forest-soft: #43A047;
+  --forest-dark: #1B5E20;
+  --leaf: #66BB6A;
   --sage: #74C25C;
   --mint: #A8D5A2;
-  --bloom: #CB4E86;
-  --bloom-light: #FDEDF5;
-  --forest-deep: #0f2d1c;
-  --forest-night: #0a1f12;
-  --cream: #f7f3ee;
-  --gold: #d4a843;
+  --bloom: #EC407A;
+  --bloom-light: #FCE4EC;
+  --forest-deep: #14501a;
+  --forest-night: #0a2b10;
+  --cream: #FFF8E1;
+  --gold: #FFC107;
   --gold2: #e9c46a;
   --sun: #f4a261;
   --red: #c0392b;
@@ -30,12 +30,12 @@
   --redbg: #fde8e8;
   --green: #1a7a4a;
   --greenbg: #e8f7e8;
-  --gray: #5a6472;
-  --border: #BFE0B5;
+  --gray: #757575;
+  --border: #E0E0E0;
   --white: #fff;
   --light: #f3f8f1;
   --muted: #f0f4ee;
-  --text: #1c2820;
+  --text: #212121;
 
   /* ── Tint ramp (pale greens) ── */
   --tint-25: #fafdfa;
@@ -56,36 +56,36 @@
   --status-order-placed: #f4a261;
   --status-packaged: #e9c46a;
   --status-vco-verified: #52b788;
-  --status-picked-up: #2d6a4f;
+  --status-picked-up: #43A047;
   --status-out-for-delivery: #1a7a4a;
   --status-delivered: #155e38;
   --status-in-transit: #3a86ff;
   --status-at-hub: #8338ec;
   --status-cancelled: #c0392b;
-  --status-fallback: #5a6472;
+  --status-fallback: #757575;
 
   /* ── Semantic roles (light) ── */
-  --bg: #f3faf4;
+  --bg: #FAFAFA;
   --surface: #fff;
   --surface-raised: #fff;
-  --surface-muted: #eef4ee;
-  --border-subtle: #BFE0B5;
-  --border-strong: #6f8a74;
-  --fg: #1c2820;
-  --fg-muted: #5a6472;
-  --primary: #1a3d2b;
+  --surface-muted: #F5F5F5;
+  --border-subtle: #E0E0E0;
+  --border-strong: #6B7280;
+  --fg: #212121;
+  --fg-muted: #6E6E6E;
+  --primary: #2E7D32;
   --primary-on: #fff;
-  --primary-hover: #16351f;
-  --accent: #b8437a;
+  --primary-hover: #1B5E20;
+  --accent: #EC407A;
   --accent-on: #fff;
-  --accent-bg: #FDEDF5;
-  --accent-fg: #a83a6d;
+  --accent-bg: #FCE4EC;
+  --accent-fg: #AD1457;
   --success: #1a7a4a;
   --success-on: #fff;
   --success-bg: #e8f7e8;
   --success-fg: #1a7a4a;
-  --warning: #d4a843;
-  --warning-on: #1c2820;
+  --warning: #FFC107;
+  --warning-on: #212121;
   --warning-strong: #d97706;
   --warning-bg: #fff8e6;
   --warning-fg: #92400e;
@@ -109,6 +109,7 @@
 
   /* ── Typography ── */
   --font-sans: 'Outfit', system-ui, sans-serif;
+  --font-body: 'Noto Sans', system-ui, sans-serif;
   --font-serif: 'Cormorant Garamond', serif;
   --font-tamil: 'Noto Serif Tamil', serif;
   --fs-2xs: 9px;

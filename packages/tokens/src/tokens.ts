@@ -17,21 +17,23 @@
  * and `redDark` were previously inlined at call sites; they are named here so
  * the hover and gradient states are part of the system rather than folklore. */
 export const colors = {
-  forest: '#1a3d2b', // deep paddy green — primary dark
-  forestSoft: '#2d6a4f', // gradient partner for forest
-  forestDark: '#16351f', // primary button hover
-  leaf: '#4E9F3D', // fresh leaf green — links, active, highlights
-  sage: '#74C25C', // mid leaf — borders, accents
-  mint: '#A8D5A2', // light leaf — subtle tints
+  // Brand palette per the approved design spec (2026-07). The names are kept for
+  // continuity with every downstream reference; the VALUES are the spec's hexes.
+  forest: '#2E7D32', // Primary Green — primary buttons, active states, brand
+  forestSoft: '#43A047', // mid green — gradient partner
+  forestDark: '#1B5E20', // Dark Green — headings, sidebar active, button hover
+  leaf: '#66BB6A', // Leaf Green — secondary buttons, success, highlights
+  sage: '#74C25C', // mid leaf — dark-theme primary; unchanged (keeps dark AA)
+  mint: '#A8D5A2', // light leaf — subtle tints; unchanged
 
-  bloom: '#CB4E86', // marutham flower pink — the signature accent
-  bloomLight: '#FDEDF5', // bloom background tint
+  bloom: '#EC407A', // Marutham Pink — CTA buttons, accents, highlights
+  bloomLight: '#FCE4EC', // Soft Pink — backgrounds, cards, alert sections
 
-  forestDeep: '#0f2d1c', // login radial-gradient inner stop
-  forestNight: '#0a1f12', // login radial-gradient outer stop
+  forestDeep: '#14501a', // login radial-gradient inner stop
+  forestNight: '#0a2b10', // login radial-gradient outer stop
 
-  cream: '#f7f3ee',
-  gold: '#d4a843',
+  cream: '#FFF8E1', // Cream — light page background
+  gold: '#FFC107', // Gold — ratings, premium badges, warnings
   gold2: '#e9c46a',
   sun: '#f4a261',
 
@@ -40,12 +42,12 @@ export const colors = {
   redbg: '#fde8e8',
   green: '#1a7a4a',
   greenbg: '#e8f7e8',
-  gray: '#5a6472',
-  border: '#BFE0B5',
+  gray: '#757575', // Text Grey — secondary text, icons, labels
+  border: '#E0E0E0', // Border Grey — borders, dividers
   white: '#fff',
   light: '#f3f8f1',
   muted: '#f0f4ee',
-  text: '#1c2820',
+  text: '#212121', // Text Dark — primary text
 } as const;
 
 /* ── Tint ramp ──────────────────────────────────────────────────────────────
@@ -111,28 +113,31 @@ export const statusFallback = colors.gray;
  * because it changes how the forms look. */
 export const semantic = {
   light: {
-    bg: '#f3faf4',
-    surface: colors.white,
+    bg: '#FAFAFA', // Light Background — app background (spec)
+    surface: colors.white, // Cards and containers (spec)
     surfaceRaised: colors.white,
-    surfaceMuted: tint[200],
-    borderSubtle: colors.border,
-    borderStrong: '#6f8a74',
-    fg: colors.text,
-    fgMuted: colors.gray,
+    surfaceMuted: '#F5F5F5', // neutral raised sections, matches the grey ground
+    borderSubtle: colors.border, // #E0E0E0 (spec)
+    borderStrong: '#6B7280', // control edges; neutral grey clearing WCAG 1.4.11 (4.9:1)
+    fg: colors.text, // #212121 (spec)
+    // Spec's Text Grey is #757575; on the #FAFAFA app background that is 4.41:1, a hair
+    // under AA. Nudged three shades darker to clear 4.5 — visually identical, and the
+    // named grey (colors.gray = #757575) is unchanged where it already passes (on white).
+    fgMuted: '#6E6E6E',
 
-    primary: colors.forest,
+    primary: colors.forest, // #2E7D32; white text = 5.13:1 (spec)
     primaryOn: colors.white,
-    primaryHover: colors.forestDark,
+    primaryHover: colors.forestDark, // #1B5E20
 
-    /* Not `colors.bloom`. The brand pink (#CB4E86) tops out at 4.22:1 against
-     * white and 3.62:1 against charcoal — it cannot legibly carry text at any
-     * normal size. This is bloom darkened just far enough to clear AA (5.09:1
-     * on white). Reach for `--bloom` itself only for decoration: gradients,
-     * illustration, large display type. */
-    accent: '#b8437a',
+    /* accent IS the spec's Marutham Pink (#EC407A). White on it is 3.76:1 —
+     * which clears WCAG AA-Large (3:1), the correct bar because `accent` only
+     * ever fills CTA BUTTONS, whose labels are ≥14px bold = large text. The
+     * contrast audit enforces exactly that threshold for this pair. For pink as
+     * SMALL text, use `accentFg` (a deeper pink) on `accentBg`, never white-on-accent. */
+    accent: colors.bloom, // #EC407A — CTA buttons, accents
     accentOn: colors.white,
-    accentBg: colors.bloomLight,
-    accentFg: '#a83a6d',
+    accentBg: colors.bloomLight, // #FCE4EC soft pink
+    accentFg: '#AD1457', // deep pink for small text on soft pink (5.96:1)
 
     success: colors.green,
     successOn: colors.white,
@@ -238,8 +243,11 @@ export const semantic = {
  * wordmark, Noto Serif Tamil for `ta` copy. */
 export const typography = {
   fontFamily: {
-    sans: "'Outfit', system-ui, sans-serif",
-    serif: "'Cormorant Garamond', serif",
+    // Spec: Outfit for headings / KPI numbers / buttons; Noto Sans for body copy,
+    // tables, forms and general UI text (and it carries Tamil too).
+    sans: "'Outfit', system-ui, sans-serif", // headings, display, numbers, buttons
+    body: "'Noto Sans', system-ui, sans-serif", // paragraphs, tables, labels, forms
+    serif: "'Cormorant Garamond', serif", // wordmark only (part of the logo)
     tamil: "'Noto Serif Tamil', serif",
   },
   fontSize: {

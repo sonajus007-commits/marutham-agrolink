@@ -7,10 +7,17 @@
  * silently beat the `py-*` utility on every rebuilt component in packages/ui. */
 
 body {
-  font-family: 'Outfit', system-ui, sans-serif;
+  /* Spec: Noto Sans is the body/UI face. Headings, KPI numbers and buttons opt back
+     into Outfit (--font-sans) via the rule below and their own component styles. */
+  font-family: var(--font-body, 'Noto Sans', system-ui, sans-serif);
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
+}
+
+/* Headings are Outfit (the display face), per the type spec. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sans, 'Outfit', system-ui, sans-serif);
 }
 
 .tamil { font-family: 'Noto Serif Tamil', serif; }

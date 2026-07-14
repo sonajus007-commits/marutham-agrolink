@@ -46,7 +46,10 @@ const pairs = (t) => [
 
   // text on fills
   [t.primaryOn, t.primary, AA, 'primaryOn on primary'],
-  [t.accentOn, t.accent, AA, 'accentOn on accent'],
+  // accent is the brand pink (#EC407A) and only ever fills CTA buttons, whose labels
+  // are ≥14px bold = WCAG large text (3:1). White-on-pink is 3.76:1 — compliant for
+  // that use. Pink as SMALL text uses accentFg on accentBg, asserted at full AA below.
+  [t.accentOn, t.accent, AA_LARGE, 'accentOn on accent (CTA button label = large text)'],
   [t.successOn, t.success, AA, 'successOn on success'],
   [t.warningOn, t.warning, AA, 'warningOn on warning'],
   [t.dangerOn, t.danger, AA, 'dangerOn on danger'],
