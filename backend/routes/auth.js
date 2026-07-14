@@ -118,6 +118,7 @@ async function logLogin(req, { user_id = null, login_id = null, method, outcome 
   try {
     const xff = (req.headers['x-forwarded-for'] || '').split(',')[0].trim();
     const ip  = xff || (req.socket && req.socket.remoteAddress) || null;
+    // reads-ok: best-effort audit row; a failed log must never fail the login it records
     await supabase.from('user_login_history').insert({
       user_id, login_id, method,
       success: outcome === 'success',
@@ -142,9 +143,21 @@ function safeUser(u) {
 async function maybeSuspendOnExpiry(user) {
   if (user.role === 'farmer' && user.status === 'active' && user.subscription_expires_at
       && new Date(user.subscription_expires_at) < new Date()) {
-    await supabase.from('users')
+    const { error } = await supabase.from('users')
       .update({ status: 'suspended', updated_at: new Date().toISOString() })
       .eq('id', user.id);
+
+    // The suspension has to LAND. Discarding this error meant a failed write still
+    // set user.status below and returned true — the request believed it had
+    // suspended a lapsed seller while the row still said 'active', so the
+    // suspension silently never happened and the expired subscription kept full
+    // access on the next request. Say we did nothing, because we did nothing.
+    if (error) {
+      console.error(`Failed to suspend lapsed seller ${user.id}:`, error.message);
+      return false;
+    }
+
+    // reads-ok: best-effort history row; it must not fail a login that already suspended
     await supabase.from('user_status_history').insert({
       user_id: user.id, old_status: 'active', new_status: 'suspended',
       reason: 'Subscription expired', changed_by: null,
@@ -215,12 +228,19 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'A valid 6-digit pincode is required.' });
   }
 
-  const { data: existing } = await supabase
+  // A guard whose query fails must FAIL, not wave the request through. Swallowing
+  // this error meant a transient fault let a second account onto a phone number
+  // that already had one — and login matches on `phone`, so `.maybeSingle()` then
+  // threw PGRST116 for BOTH accounts and answered "invalid password" forever.
+  const { data: existing, error: existingErr } = await supabase
     .from('users')
     .select('id')
     .eq('phone', phone)
     .maybeSingle();
 
+  if (existingErr) {
+    return res.status(500).json({ error: 'Could not verify whether this phone number is already registered. Please try again.' });
+  }
   if (existing) {
     return res.status(409).json({ error: 'An account with this phone number already exists.' });
   }
@@ -331,12 +351,15 @@ router.post('/send-otp', async (req, res) => {
   const { phone } = req.body;
   if (!phone) return res.status(400).json({ error: 'phone is required.' });
 
-  const { data: user } = await supabase
+  const { data: user, error: lookupErr } = await supabase
     .from('users')
     .select('id, status')
     .eq('phone', phone)
     .maybeSingle();
 
+  // Distinct from "no account": a failed lookup must not be reported as one, or a
+  // blocked account could be handed an OTP the moment the query blips.
+  if (lookupErr) return res.status(500).json({ error: 'Could not look up that phone number. Please try again.' });
   if (!user) return res.status(404).json({ error: 'No account found with this phone number.' });
   if (user.status === 'blocked') return res.status(403).json({ error: 'Account is blocked.' });
 
@@ -370,11 +393,16 @@ router.post('/verify-otp', async (req, res) => {
 
   otpStore.delete(phone);
 
-  const { data: user } = await supabase
+  // maybeSingle, not single: `.single()` raises PGRST116 when it matches no rows,
+  // so "account not found" and "the database is broken" arrive as the same error.
+  // maybeSingle gives null for the first and reserves `error` for the second.
+  const { data: user, error: userErr } = await supabase
     .from('users')
     .select('*')
     .eq('phone', phone)
-    .single();
+    .maybeSingle();
+
+  if (userErr) return res.status(500).json({ error: 'Could not complete sign-in. Please try again.' });
 
   if (!user) {
     await logLogin(req, { login_id: phone, method: 'otp', outcome: 'invalid_credentials' });
@@ -412,11 +440,17 @@ router.post('/change-password', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'New password must be at least 6 characters.' });
   }
 
-  const { data: fullUser } = await supabase
+  const { data: fullUser, error: fullUserErr } = await supabase
     .from('users')
     .select('password_hash')
     .eq('id', req.user.id)
-    .single();
+    .maybeSingle();
+
+  // Unguarded, a failed read reached `fullUser.password_hash` and crashed the
+  // route on a TypeError — a 500 with a stack trace instead of an answer.
+  if (fullUserErr || !fullUser) {
+    return res.status(500).json({ error: 'Could not verify your current password. Please try again.' });
+  }
 
   const ok = await bcrypt.compare(current_password, fullUser.password_hash);
   if (!ok) return res.status(401).json({ error: 'Current password is incorrect.' });
@@ -533,20 +567,26 @@ router.post('/create-staff', requireAuth, async (req, res) => {
 
   // One login per employee: an Employee ID may back only a single staff account.
   // (Uses limit(1) rather than maybeSingle so a pre-existing duplicate can't throw.)
-  const { data: dupEmp } = await supabase
+  const { data: dupEmp, error: dupEmpErr } = await supabase
     .from('users')
     .select('login_id')
     .eq('emp_id', empId)
     .limit(1);
+  if (dupEmpErr) {
+    return res.status(500).json({ error: 'Could not verify whether this Employee ID already has a login. Please try again.' });
+  }
   if (dupEmp && dupEmp.length) {
     return res.status(409).json({ error: `Employee "${empId}" already has a login (${dupEmp[0].login_id}). One employee can hold only one login account.` });
   }
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingErr } = await supabase
     .from('users')
     .select('id')
     .eq('phone', phone)
     .maybeSingle();
+  if (existingErr) {
+    return res.status(500).json({ error: 'Could not verify whether this phone number is already registered. Please try again.' });
+  }
   if (existing) return res.status(409).json({ error: 'A user with this phone number already exists.' });
 
   const password_hash = await bcrypt.hash(password, 12);
@@ -660,13 +700,19 @@ router.post('/profile-change-request', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'No sensitive fields provided.' });
   }
 
-  const { data: existing } = await supabase
+  // limit(1), not maybeSingle: a user who ALREADY has two pending rows — which this
+  // guard failing is exactly how they'd get them — would make maybeSingle raise
+  // PGRST116 on every future attempt, locking them out of the feature permanently.
+  const { data: existing, error: existingErr } = await supabase
     .from('profile_change_requests')
     .select('id')
     .eq('user_id', req.user.id)
     .eq('status', 'pending')
-    .maybeSingle();
-  if (existing) {
+    .limit(1);
+  if (existingErr) {
+    return res.status(500).json({ error: 'Could not check for an existing change request. Please try again.' });
+  }
+  if (existing && existing.length) {
     return res.status(409).json({ error: 'You already have a pending change request. Please wait for it to be reviewed before submitting another.' });
   }
 
@@ -694,13 +740,17 @@ router.post('/subscription-renewal', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'A valid plan is required: Monthly, Quarterly, Half Yearly, or Yearly.' });
   }
 
-  const { data: existing } = await supabase
+  const { data: pending, error: pendingErr } = await supabase
     .from('profile_change_requests')
     .select('id, requested_changes')
     .eq('user_id', req.user.id)
     .eq('status', 'pending')
-    .maybeSingle();
-  if (existing) {
+    .limit(1);
+  if (pendingErr) {
+    return res.status(500).json({ error: 'Could not check for an existing request. Please try again.' });
+  }
+  if (pending && pending.length) {
+    const existing = pending[0];
     const isRenewal = existing.requested_changes && existing.requested_changes.subscription_renewal;
     return res.status(409).json({
       error: isRenewal

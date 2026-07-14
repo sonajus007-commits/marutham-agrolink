@@ -52,14 +52,21 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Each item needs product_id, farmer_id, and qty > 0.' });
     }
 
-    // Fetch farmer listing (price + availability)
-    const { data: listing } = await supabase
+    // Fetch farmer listing (price + availability).
+    // maybeSingle, not single: `.single()` errors when it matches nothing, so a
+    // genuine database fault and "no such listing" were indistinguishable — and
+    // every fault was reported to the customer as a missing product.
+    const { data: listing, error: listingErr } = await supabase
       .from('farmer_listings')
       .select('farmer_price, qty_available, listed, confirmed, bulk_qty, bulk_disc_pct')
       .eq('farmer_id', farmer_id)
       .eq('product_id', product_id)
-      .single();
+      .maybeSingle();
 
+    if (listingErr) {
+      console.error('POST /orders listing lookup failed:', listingErr.message);
+      return res.status(500).json({ error: 'Could not price your order. Please try again.' });
+    }
     if (!listing) {
       return res.status(404).json({ error: `No active listing found for product ${product_id} from farmer ${farmer_id}.` });
     }
@@ -74,23 +81,31 @@ router.post('/', async (req, res) => {
     }
 
     // Fetch product details
-    const { data: product } = await supabase
+    const { data: product, error: productErr } = await supabase
       .from('products')
       .select('id, code, name, unit, platform_fee_pct, available, exotic')
       .eq('id', product_id)
-      .single();
+      .maybeSingle();
 
+    if (productErr) {
+      console.error('POST /orders product lookup failed:', productErr.message);
+      return res.status(500).json({ error: 'Could not price your order. Please try again.' });
+    }
     if (!product || !product.available) {
       return res.status(400).json({ error: `Product ${product_id} is not available.` });
     }
 
     // Fetch seller info (name + village for fulfilment + seller_type for fee)
-    const { data: farmer } = await supabase
+    const { data: farmer, error: farmerErr } = await supabase
       .from('users')
       .select('id, fname, lname, village_town, district, seller_type')
       .eq('id', farmer_id)
-      .single();
+      .maybeSingle();
 
+    if (farmerErr) {
+      console.error('POST /orders seller lookup failed:', farmerErr.message);
+      return res.status(500).json({ error: 'Could not price your order. Please try again.' });
+    }
     if (!farmer) return res.status(404).json({ error: `Farmer ${farmer_id} not found.` });
 
     // Use first item's farmer village as fulfilment village
@@ -100,12 +115,22 @@ router.post('/', async (req, res) => {
     }
 
     // Fetch district market price for savings calculation
-    const { data: distPrice } = await supabase
+    // A MISSING row is legitimate — not every district carries a price, and the
+    // `?? 0` fallbacks below are correct for that. A FAILED read is not: it takes
+    // the same path, silently dropping `handling` (a real charge) to zero and the
+    // savings figure to nothing. Undercharging is not an acceptable failure mode
+    // for a query that didn't run.
+    const { data: distPrice, error: distPriceErr } = await supabase
       .from('product_district_prices')
       .select('market_price, handling')
       .eq('product_id', product_id)
       .eq('district', farmer.district)
       .maybeSingle();
+
+    if (distPriceErr) {
+      console.error('POST /orders district price lookup failed:', distPriceErr.message);
+      return res.status(500).json({ error: 'Could not price your order. Please try again.' });
+    }
 
     // ── Price calculation (all in paise) ─────────────────────────────────
     let farmerPrice = listing.farmer_price;
@@ -220,38 +245,73 @@ router.post('/', async (req, res) => {
   const { error: itemsErr } = await supabase.from('order_items').insert(itemRows);
   if (itemsErr) {
     console.error('POST /orders items insert error:', itemsErr);
-    // Roll back the order
-    await supabase.from('orders').delete().eq('id', order.id);
+    // Roll back the order. If the ROLLBACK itself fails we have an order row with
+    // no items — an orphan that still counts in payouts and on every dashboard.
+    // There is no second compensating action available, so at minimum it must be
+    // loud: unread, this was a silent corruption.
+    const { error: rollbackErr } = await supabase.from('orders').delete().eq('id', order.id);
+    if (rollbackErr) {
+      console.error(`ORPHANED ORDER ${code} (${order.id}) — items failed AND the rollback failed. ` +
+                    `It has no order_items and must be removed by hand: ${rollbackErr.message}`);
+    }
     return res.status(500).json({ error: 'Could not save order items.' });
   }
 
   // ── 6. Write first history entry ──────────────────────────────────────────
-  await supabase.from('order_history').insert({
+  // The order is already committed, so a failure here must NOT fail the request —
+  // that would tell the customer their order failed when it did not. Log it; the
+  // timeline is missing an entry, the order is fine.
+  const { error: historyErr } = await supabase.from('order_history').insert({
     order_id: order.id,
     label:    'Order Placed',
     note:     `Order ${code} placed by ${order.consumer_name}.`,
   });
+  if (historyErr) console.error(`Order ${code}: first history entry failed:`, historyErr.message);
 
   // ── 7. Reduce farmer listing quantities ──────────────────────────────────
+  // Unread, BOTH queries below failed open into an oversell: a failed read left
+  // `listing` null and the `if (listing)` guard skipped the decrement outright,
+  // while a failed update simply did nothing — and either way the route still
+  // answered "201 Order placed". Stock never dropped, the item was never
+  // auto-unlisted at zero, and the next customer bought the same goods.
+  //
+  // The order is committed by this point and cannot be unwound, so a failure here
+  // cannot fail the request. What it CAN do is stop being invisible.
+  const stockFailures = [];
+
   for (const item of resolvedItems) {
-    const { data: listing } = await supabase
+    const { data: listing, error: readErr } = await supabase
       .from('farmer_listings')
       .select('qty_available')
       .eq('farmer_id', item.farmer_id)
       .eq('product_id', item.product_id)
       .single();
 
-    if (listing) {
-      const newQty = Math.max(0, listing.qty_available - item.qty);
-      const stockUpdate = { qty_available: newQty };
-      // Auto-unlist when stock reaches zero so consumers can't order more
-      if (newQty <= 0) stockUpdate.listed = false;
-      await supabase
-        .from('farmer_listings')
-        .update(stockUpdate)
-        .eq('farmer_id', item.farmer_id)
-        .eq('product_id', item.product_id);
+    if (readErr || !listing) {
+      stockFailures.push(`${item.product_id}/${item.farmer_id} (read: ${readErr ? readErr.message : 'no listing'})`);
+      continue;
     }
+
+    const newQty = Math.max(0, listing.qty_available - item.qty);
+    const stockUpdate = { qty_available: newQty };
+    // Auto-unlist when stock reaches zero so consumers can't order more
+    if (newQty <= 0) stockUpdate.listed = false;
+
+    const { error: writeErr } = await supabase
+      .from('farmer_listings')
+      .update(stockUpdate)
+      .eq('farmer_id', item.farmer_id)
+      .eq('product_id', item.product_id);
+
+    if (writeErr) {
+      stockFailures.push(`${item.product_id}/${item.farmer_id} (write: ${writeErr.message})`);
+    }
+  }
+
+  if (stockFailures.length) {
+    console.error(`OVERSELL RISK — order ${code} is placed but stock was NOT reduced for ` +
+                  `${stockFailures.length} item(s); they remain on sale at the old quantity: ` +
+                  stockFailures.join('; '));
   }
 
   res.status(201).json({ message: 'Order placed successfully.', order });
@@ -278,10 +338,19 @@ router.get('/', async (req, res) => {
     // she is owed on each one — the farmer earnings screen used to read
     // `o.farmer_payout`, a column that has never existed, so every figure
     // derived from it was silently zero.
-    const { data: myItems } = await supabase
+    const { data: myItems, error: myItemsErr } = await supabase
       .from('order_items')
       .select('order_id, farmer_price, qty')
       .eq('farmer_id', u.id);
+
+    // Unread, this failed into `{ orders: [] }` — indistinguishable from "you have
+    // no orders". A seller would open the app, see an empty list, and have no
+    // reason to think anything was wrong. Exactly the bug the comment above warns
+    // about, one line below the warning.
+    if (myItemsErr) {
+      console.error('GET /orders farmer item lookup failed:', myItemsErr.message);
+      return res.status(500).json({ error: 'Could not load your orders. Please try again.' });
+    }
 
     const ids = [...new Set((myItems || []).map(r => r.order_id))];
     if (ids.length === 0) return res.json({ orders: [] });
@@ -353,11 +422,18 @@ router.get('/:id', async (req, res) => {
   // Consumer contact + address (for delivery display and for falling back when
   // the order didn't capture a delivery_address, e.g. pre-migration orders).
   if (order.consumer_id) {
-    const { data: consumer } = await supabase
+    // A failed read here silently produced an order with NO delivery address and
+    // no phone number — handed to a delivery agent who then has nowhere to take it.
+    const { data: consumer, error: consumerErr } = await supabase
       .from('users')
       .select('phone, country_code, house_no, street1, street2, landmark, village_town, city, district, pincode, state')
       .eq('id', order.consumer_id)
-      .single();
+      .maybeSingle();
+
+    if (consumerErr) {
+      console.error('GET /orders/:id consumer lookup failed:', consumerErr.message);
+      return res.status(500).json({ error: 'Could not load the order. Please try again.' });
+    }
     if (consumer) {
       order.consumer_phone = `${consumer.country_code || '+91'} ${consumer.phone}`;
       if (!order.delivery_address) {
@@ -378,28 +454,49 @@ router.get('/:id', async (req, res) => {
     }
   }
 
-  // Fetch items
-  const { data: items } = await supabase
+  // Fetch items. An order that renders with no items is not a detail page, it is a
+  // lie — fail instead of drawing an empty basket for an order that has contents.
+  const { data: items, error: itemsErr } = await supabase
     .from('order_items')
     .select('*')
     .eq('order_id', order.id);
 
+  if (itemsErr) {
+    console.error('GET /orders/:id items lookup failed:', itemsErr.message);
+    return res.status(500).json({ error: 'Could not load the order. Please try again.' });
+  }
+
   // Fetch status timeline
-  const { data: history } = await supabase
+  const { data: history, error: historyErr } = await supabase
     .from('order_history')
     .select('label, note, ts')
     .eq('order_id', order.id)
     .order('ts', { ascending: true });
 
+  if (historyErr) {
+    console.error('GET /orders/:id history lookup failed:', historyErr.message);
+    return res.status(500).json({ error: 'Could not load the order. Please try again.' });
+  }
+
   // Existing return, if any. Derived from the returns table rather than stored
   // on the order: there is no orders.return_id column, and a denormalised copy
   // would be one more thing to keep in sync. Clients use this to hide the
   // "Request Return" button once a return has been raised.
-  const { data: ret } = await supabase
+  // limit(1), not maybeSingle: an order that somehow carries two returns would make
+  // maybeSingle raise PGRST116, and unread that surfaced as "no return exists" —
+  // re-showing the "Request Return" button on an order that already had one.
+  const { data: returns, error: retErr } = await supabase
     .from('returns')
     .select('id, code, decision, collected')
     .eq('order_id', order.id)
-    .maybeSingle();
+    .limit(1);
+
+  if (retErr) {
+    console.error('GET /orders/:id return lookup failed:', retErr.message);
+    return res.status(500).json({ error: 'Could not load the order. Please try again.' });
+  }
+
+  const ret = returns && returns.length ? returns[0] : null;
 
   order.return_id     = ret ? ret.id : null;
   order.return_code   = ret ? ret.code : null;
@@ -481,34 +578,70 @@ router.post('/:id/cancel', async (req, res) => {
     return res.status(500).json({ error: 'Could not cancel order.' });
   }
 
-  // History entry
-  await supabase.from('order_history').insert({
+  // History entry. The cancellation is already committed — a failed timeline row
+  // must not report the cancellation as failed. Log it and move on.
+  const { error: historyErr } = await supabase.from('order_history').insert({
     order_id: order.id,
     label:    'Cancelled',
     note:     cancel_reason || 'Cancelled by ' + (u.role === 'consumer' ? 'consumer' : `admin (${u.admin_role})`),
   });
+  if (historyErr) console.error(`Order ${order.id}: cancellation history entry failed:`, historyErr.message);
 
-  // Restore farmer listing quantities
-  const { data: orderItems } = await supabase
+  // ── Restore farmer listing quantities ─────────────────────────────────────
+  // The mirror of the decrement on placement, and it failed the same silent way:
+  // an unread error left `orderItems` null, `for (… of orderItems || [])` iterated
+  // nothing, and the farmer never got their stock back. The order showed as
+  // cancelled and the inventory was simply gone.
+  const restoreFailures = [];
+
+  const { data: orderItems, error: orderItemsErr } = await supabase
     .from('order_items')
     .select('farmer_id, product_id, qty')
     .eq('order_id', order.id);
 
+  if (orderItemsErr) {
+    restoreFailures.push(`could not read order items: ${orderItemsErr.message}`);
+  }
+
   for (const item of orderItems || []) {
-    const { data: listing } = await supabase
+    const { data: listing, error: readErr } = await supabase
       .from('farmer_listings')
-      .select('qty_available')
+      .select('qty_available, listed')
       .eq('farmer_id', item.farmer_id)
       .eq('product_id', item.product_id)
-      .single();
+      .maybeSingle();
 
-    if (listing) {
-      await supabase
-        .from('farmer_listings')
-        .update({ qty_available: listing.qty_available + item.qty })
-        .eq('farmer_id', item.farmer_id)
-        .eq('product_id', item.product_id);
+    if (readErr || !listing) {
+      restoreFailures.push(`${item.product_id}/${item.farmer_id} (read: ${readErr ? readErr.message : 'no listing'})`);
+      continue;
     }
+
+    // Re-stock, and undo the auto-unlist — but ONLY that. Placement sets
+    // `listed = false` when stock hits zero, and nothing ever set it back, so
+    // cancelling an order that took a farmer's last unit returned the quantity and
+    // left the listing hidden: stock on the books, invisible in the shop, until the
+    // farmer noticed and toggled it by hand.
+    //
+    // Gated on qty_available === 0 because that is the ONLY state the auto-unlist
+    // produces. A listing the farmer unlisted deliberately still has stock, and
+    // re-listing it here would override a decision they made on purpose.
+    const restock = { qty_available: listing.qty_available + item.qty };
+    if (listing.qty_available === 0 && !listing.listed) restock.listed = true;
+
+    const { error: writeErr } = await supabase
+      .from('farmer_listings')
+      .update(restock)
+      .eq('farmer_id', item.farmer_id)
+      .eq('product_id', item.product_id);
+
+    if (writeErr) {
+      restoreFailures.push(`${item.product_id}/${item.farmer_id} (write: ${writeErr.message})`);
+    }
+  }
+
+  if (restoreFailures.length) {
+    console.error(`STOCK NOT RESTORED — order ${order.id} is cancelled but ${restoreFailures.length} ` +
+                  `listing(s) did not get their quantity back: ${restoreFailures.join('; ')}`);
   }
 
   res.json({

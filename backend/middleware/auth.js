@@ -52,11 +52,20 @@ async function requireAuth(req, res, next) {
   user.is_hr_admin = false;
   user.is_board_director = false;
   if (user.role === 'admin' && user.emp_id) {
-    const { data: emp } = await supabase
+    const { data: emp, error } = await supabase
       .from('employees')
       .select('is_hr_admin, is_board_director, approval_status')
       .eq('emp_id', user.emp_id)
       .maybeSingle();
+
+    // Refuse rather than silently de-privilege. Swallowing this error left both
+    // flags false, so an HR Admin or Board Director quietly lost their approval
+    // authority — the button simply stopped working, with nothing logged and no
+    // way to trace it. If we cannot establish authority, we say so.
+    if (error) {
+      console.error(`Trust-flag lookup failed for emp_id ${user.emp_id}:`, error.message);
+      return res.status(500).json({ error: 'Could not verify your approval authority. Please try again.' });
+    }
     if (emp && emp.approval_status === 'approved') {
       user.is_hr_admin = emp.is_hr_admin === true;
       user.is_board_director = emp.is_board_director === true;
@@ -82,6 +91,8 @@ async function optionalAuth(req, res, next) {
 
   try {
     const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+    // reads-ok: this route must NEVER reject — any failure, including a deleted user
+    // (which .single() reports as an error), degrades to anonymous by design
     const { data: user } = await supabase
       .from('users')
       .select('id, login_id, role, admin_role, status, fname, lname, district')
