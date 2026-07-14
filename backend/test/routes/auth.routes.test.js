@@ -267,3 +267,38 @@ describe('a removed employee cannot sign in', () => {
     }
   });
 });
+
+// ── LOGIN IDENTIFIER MUST NOT CARRY POSTGREST FILTER SYNTAX ───────────────────
+// The login identifier is interpolated into a .or() filter STRING. A value containing
+// a comma / dot / parenthesis is PostgREST filter syntax, and must be refused BEFORE
+// the query — as bad credentials, so it reveals nothing — never passed through.
+describe('login rejects identifiers that could inject the PostgREST filter', () => {
+  let app, mute;
+  beforeEach(() => { mute = muteConsoleError(); });
+  afterEach(async () => { mute.restore(); if (app) await app.close(); });
+
+  for (const bad of ['a,role.eq.admin', 'x.eq.y', 'a)or(b', 'a(b']) {
+    test(`refuses ${JSON.stringify(bad)} without ever touching the users table`, async () => {
+      const supa = fakeSupabase({ 'user_login_history:insert': { data: [] } });
+      app = await mountRoute('auth', { supabase: supa, user: null });
+
+      const res = await app.post('/login', { phone: bad, password: 'secret123' });
+
+      assert.equal(res.status, 401);
+      assert.match(res.body.error, /invalid phone number or password/i);
+      // The guard sits BEFORE the lookup — a rejected identifier never reaches the DB.
+      assert.equal(supa.callsTo('users', 'select').length, 0, 'no users query for a malformed identifier');
+    });
+  }
+
+  test('a normal login_id (letters, digits, underscore) still passes the guard', async () => {
+    // Proves the allowlist did not become so tight it rejects real identifiers.
+    const supa = fakeSupabase({ 'users:select': { data: [] }, 'user_login_history:insert': { data: [] } });
+    app = await mountRoute('auth', { supabase: supa, user: null });
+
+    const res = await app.post('/login', { phone: 'SHTN_SENA01', password: 'secret123' });
+
+    assert.equal(res.status, 401);                       // no such user, but…
+    assert.equal(supa.callsTo('users', 'select').length, 1, 'a valid identifier DID reach the lookup');
+  });
+});

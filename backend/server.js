@@ -2,6 +2,7 @@ require('dotenv').config();
 const path    = require('path');
 const express = require('express');
 const cors    = require('cors');
+const helmet  = require('helmet');
 const { convertTimestamps } = require('./utils/time');
 const { convertMoney } = require('./utils/money');
 const supabase  = require('./db/supabase');
@@ -9,7 +10,27 @@ const notify    = require('./utils/notify');
 const { syncPrices } = require('./utils/priceSync');
 
 const app = express();
-app.use(cors());
+
+// Behind a reverse proxy (the shop proxy, and whatever fronts the deploy), req.ip and
+// the rate limiter's key come from X-Forwarded-For. Trust a FIXED number of hops, not
+// `true`: trusting every hop lets a client forge X-Forwarded-For and sail past the
+// limiter. Default 1 (one proxy); override TRUST_PROXY_HOPS per deployment.
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1));
+
+// Security headers. CSP and COEP are deliberately OFF: this same server serves the
+// static frontend (home.html + /img) AND proxies the Next.js shop, and a strict CSP
+// would block their inline scripts and cross-origin chunks — a v1.0 stability risk not
+// worth taking blind. What stays on is the high-value, low-risk set: X-Frame-Options
+// (clickjacking), X-Content-Type-Options: nosniff (MIME sniffing), HSTS, and a sane
+// referrer policy. A tuned CSP is a documented post-UAT hardening item.
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+
+// CORS. Pinned to an allowlist from CORS_ORIGINS (comma-separated) when set; falls back
+// to open only when it is not, so a same-origin dev box still works. Set CORS_ORIGINS in
+// any deployment that serves the API on a different origin than the frontend.
+const corsOrigins = (process.env.CORS_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
+app.use(cors(corsOrigins.length ? { origin: corsOrigins, credentials: true } : {}));
+
 app.use(express.json());
 
 // Format all API responses:

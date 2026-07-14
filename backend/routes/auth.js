@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { loginLimiter, otpLimiter, resetLimiter } = require('../middleware/rateLimit');
 const { distCode, stateCode } = require('../utils/codeGen');
 const notify = require('../utils/notify');
 
@@ -110,6 +111,14 @@ async function generateLoginId(role, adminRole, state, district, fname, sellerTy
 
 function signToken(userId) {
   return jwt.sign({ sub: userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
+}
+
+// A login identifier is a phone or a login_id: letters, digits, underscore, and the
+// +/- and space a phone may carry. Nothing here is a PostgREST filter separator, so a
+// value that passes cannot break out of the .or() filter it is interpolated into.
+// Capped at 64 chars — no real identifier is longer, and it bounds the log line.
+function isValidIdentifier(v) {
+  return typeof v === 'string' && /^[A-Za-z0-9_+\- ]{1,64}$/.test(v);
 }
 
 // Record a login attempt (success or failure) for audit/quality tracing.
@@ -327,11 +336,22 @@ router.post('/register', async (req, res) => {
 });
 
 // ── POST /auth/login ──────────────────────────────────────────────────────────
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const { phone, password } = req.body;
 
   if (!phone || !password) {
     return res.status(400).json({ error: 'Phone/Login ID and password are required.' });
+  }
+
+  // The identifier goes straight into a PostgREST .or() filter STRING below, so it must
+  // not be allowed to carry filter syntax. A real identifier is a phone (digits) or a
+  // login_id (letters/digits/underscore, e.g. HO001, SHTN_SENA01) — never a comma, dot,
+  // parenthesis or space, which are exactly PostgREST's filter separators. Allowlisting
+  // the legitimate charset closes the injection without changing the query shape. Reject
+  // rather than sanitise: a login id with a comma in it was never going to authenticate.
+  if (!isValidIdentifier(phone)) {
+    await logLogin(req, { login_id: String(phone).slice(0, 64), method: 'password', outcome: 'invalid_credentials' });
+    return res.status(401).json({ error: 'Invalid phone number or password.' });
   }
 
   // Accept either phone number or login_id in the phone field
@@ -378,7 +398,7 @@ router.post('/login', async (req, res) => {
 // Sandbox: OTP is logged to console and returned in response (not in production).
 const otpStore = new Map(); // phone → { otp, expiresAt }
 
-router.post('/send-otp', async (req, res) => {
+router.post('/send-otp', otpLimiter, async (req, res) => {
   const { phone } = req.body;
   if (!phone) return res.status(400).json({ error: 'phone is required.' });
 
@@ -503,7 +523,7 @@ router.post('/change-password', requireAuth, async (req, res) => {
 // ── POST /auth/reset-password ────────────────────────────────────────────────
 // Body: { phone, otp, new_password }
 // Uses the same OTP previously sent via /send-otp
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', resetLimiter, async (req, res) => {
   const { phone, otp, new_password } = req.body;
   if (!phone || !otp || !new_password) {
     return res.status(400).json({ error: 'phone, otp, and new_password are required.' });
