@@ -98,6 +98,15 @@
           "type": "date",
           "notNull": false
         },
+        "deleted_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "deleted_by": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
         "department": {
           "type": "text",
           "notNull": false
@@ -1181,6 +1190,15 @@
           "type": "timestamp with time zone",
           "notNull": true,
           "default": "now()"
+        },
+        "deleted_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "deleted_by": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
         },
         "delivery_addresses": {
           "type": "jsonb",

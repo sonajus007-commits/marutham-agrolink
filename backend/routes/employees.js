@@ -24,6 +24,8 @@ function canApprove(user) {
   return isHeadOffice(user) || user.is_hr_admin === true || user.is_board_director === true;
 }
 
+const truthy = (v) => v === true || v === 'true' || v === '1';
+
 // Columns a tracker manager may write to an employee-tracker record.
 const EMPLOYEE_FIELDS = [
   'fname', 'lname', 'gender', 'dob', 'phone', 'email', 'aadhar',
@@ -46,6 +48,11 @@ async function nextEmpId(state, employmentType) {
   // left `data` null, `max` stayed 0, and the generator handed back an Employee ID
   // that already belongs to somebody. auth.js's login-ID generator guards exactly
   // this; this one did not.
+  //
+  // Deliberately NOT filtered by deleted_at: a removed employee keeps their Employee
+  // ID reserved forever. Skipping them here would re-issue a departed employee's ID
+  // to a new hire, and the Employee ID is the only thing tying the audit trail to a
+  // person — every historical row for MATN00006 would become ambiguous.
   const { data, error } = await supabase
     .from('employees')
     .select('emp_id')
@@ -77,7 +84,7 @@ router.get('/me', requireRole('admin'), async (req, res) => {
   const empId = req.user.emp_id;
   if (!empId) return res.json({ employee: null });
   const { data, error } = await supabase
-    .from('employees').select('*').eq('emp_id', empId).maybeSingle();
+    .from('employees').select('*').eq('emp_id', empId).is('deleted_at', null).maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
   res.json({ employee: data || null });
 });
@@ -85,12 +92,19 @@ router.get('/me', requireRole('admin'), async (req, res) => {
 // ── GET /employees ────────────────────────────────────────────────────────────
 // List employee-tracker records — Head Office / State Head only (HR ownership).
 // Optional ?q= search and ?status= filter.
+//
+// Removed employees are hidden by default. `?deleted=1` lists ONLY the removed ones —
+// which is what makes the restore endpoint usable: you cannot restore somebody you
+// have no way to see.
 router.get('/', requireRole('admin'), async (req, res) => {
   if (!canAccessTracker(req.user)) {
     return res.status(403).json({ error: 'Head Office / HR Admin access required to view the employee tracker.' });
   }
   try {
     let q = supabase.from('employees').select('*').order('created_at', { ascending: false });
+    q = truthy(req.query.deleted)
+      ? q.not('deleted_at', 'is', null)
+      : q.is('deleted_at', null);
     if (req.query.status) q = q.eq('status', req.query.status);
     if (req.query.approval_status) q = q.eq('approval_status', req.query.approval_status);
     const { data, error } = await q;
@@ -120,11 +134,16 @@ router.get('/lookup/:empId', requireRole('admin'), async (req, res) => {
             'work_state, work_district, work_location, ' +
             'reporting_manager, reporting_manager_emp_id, status')
     .eq('emp_id', req.params.empId)
+    .is('deleted_at', null)
     .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: 'Employee ID not found in the tracker.' });
   // One login per employee — flag if this Employee ID already backs a staff account
   // so the form can warn before submit.
+  //
+  // NOT filtered by deleted_at, unlike the employee lookup above: a removed employee's
+  // login row survives and still holds this emp_id, so it must still count as taken.
+  // Reporting it as free would invite a second login for the same person.
   const { data: loginRows, error: loginRowsErr } = await supabase
     .from('users').select('login_id').eq('emp_id', req.params.empId).limit(1);
   // Advisory only — the real binding guard is enforced on create. But a failed read
@@ -155,6 +174,7 @@ router.get('/managers', requireRole('admin'), async (req, res) => {
     .eq('approval_status', 'approved')
     .eq('department', department)
     .eq('work_district', district)
+    .is('deleted_at', null)          // nobody reports to a removed manager
     .order('fname', { ascending: true });
   if (error) return res.status(500).json({ error: error.message });
   // Exclude the employee themselves (can't report to self).
@@ -185,8 +205,6 @@ router.get('/:id/history', requireRole('admin'), async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json({ audit: data || [] });
 });
-
-const truthy = (v) => v === true || v === 'true';
 
 // ── POST /employees ───────────────────────────────────────────────────────────
 // Creates an employee. Board of Director / HR Admin records are AUTO-APPROVED
@@ -255,9 +273,15 @@ router.patch('/:id', requireRole('admin'), async (req, res) => {
 
   if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No updatable fields provided.' });
 
+  // maybeSingle, not single: with the deleted_at filter the update can legitimately
+  // match no row (removed employee, or bad id), and .single() reports "no rows" as an
+  // error — which would turn "this employee was removed" into a 500.
   const { data, error } = await supabase
-    .from('employees').update(updates).eq('id', req.params.id).select().single();
+    .from('employees').update(updates).eq('id', req.params.id)
+    .is('deleted_at', null)
+    .select().maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: 'Employee not found, or has been removed. Restore them first to make changes.' });
   res.json({ message: 'Employee updated.', employee: data });
 });
 
@@ -269,8 +293,8 @@ router.patch('/:id/approve', requireRole('admin'), async (req, res) => {
     return res.status(403).json({ error: 'HR Admin (or Board of Director / Head Office) approval authority required.' });
   }
   const { data: emp, error: e1 } = await supabase
-    .from('employees').select('*').eq('id', req.params.id).single();
-  if (e1 || !emp) return res.status(404).json({ error: 'Employee not found.' });
+    .from('employees').select('*').eq('id', req.params.id).is('deleted_at', null).maybeSingle();
+  if (e1 || !emp) return res.status(404).json({ error: 'Employee not found, or has been removed.' });
   if (emp.approval_status === 'approved') return res.status(400).json({ error: 'This employee is already approved.' });
 
   const st = emp.state || emp.work_state;
@@ -307,9 +331,127 @@ router.patch('/:id/reject', requireRole('admin'), async (req, res) => {
       rejected_reason: (req.body.reason || '').trim() || null,
     })
     .eq('id', req.params.id)
-    .select().single();
+    .is('deleted_at', null)
+    .select().maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: 'Employee not found, or has been removed.' });
   res.json({ message: 'Employee request rejected.', employee: data });
+});
+
+// ── DELETE /employees/:id ─────────────────────────────────────────────────────
+// Remove an employee. This is a SOFT delete — see 027_soft_delete_employees_users.sql
+// for why the row must survive (the audit trail and login history point at it).
+//
+// An employee is two rows: the `employees` tracker record, and — if a login was ever
+// created for them — a `users` row carrying the same emp_id. Both must be marked, or
+// we get the worst possible half-state: gone from the tracker, still able to sign in.
+//
+// ORDER MATTERS. The login is revoked FIRST. If the second write then fails, the
+// employee is locked out but still visible — a state HR can see and retry. Doing it
+// the other way round, a failure would leave them hidden from the tracker with their
+// login still live: an account nobody can see and nobody will think to revoke.
+router.delete('/:id', requireRole('admin'), async (req, res) => {
+  if (!canApprove(req.user)) {
+    return res.status(403).json({ error: 'HR Admin (or Board of Director / Head Office) authority required to remove an employee.' });
+  }
+
+  const { data: emp, error: findErr } = await supabase
+    .from('employees').select('id, emp_id, fname, lname, deleted_at').eq('id', req.params.id).maybeSingle();
+  if (findErr) return res.status(500).json({ error: 'Could not look up that employee. Please try again.' });
+  if (!emp)    return res.status(404).json({ error: 'Employee not found.' });
+  if (emp.deleted_at) return res.status(400).json({ error: 'This employee has already been removed.' });
+
+  // You cannot remove yourself. Without this, an HR Admin can revoke their own login
+  // mid-request and lock themselves out of the console that would let them undo it.
+  if (emp.emp_id && emp.emp_id === req.user.emp_id) {
+    return res.status(400).json({ error: 'You cannot remove your own employee record. Ask another HR Admin or Head Office to do it.' });
+  }
+
+  const stamp = { deleted_at: new Date().toISOString(), deleted_by: req.user.id };
+
+  // 1. Revoke the login, if one exists. requireAuth re-reads the user row on every
+  //    request, so this takes effect on their very next call — their existing token
+  //    does not have to expire first.
+  let login_revoked = false;
+  if (emp.emp_id) {
+    const { data: revoked, error: userErr } = await supabase
+      .from('users')
+      .update({ ...stamp, updated_at: new Date().toISOString() })
+      .eq('emp_id', emp.emp_id)
+      .is('deleted_at', null)
+      .select('id');
+    if (userErr) {
+      return res.status(500).json({ error: 'Could not revoke this employee\'s login, so nothing was removed. Please try again.' });
+    }
+    login_revoked = (revoked || []).length > 0;
+  }
+
+  // 2. Hide the tracker record.
+  const { data, error } = await supabase
+    .from('employees').update(stamp).eq('id', req.params.id)
+    .select().maybeSingle();
+  if (error) {
+    return res.status(500).json({
+      error: 'The login was revoked, but the employee record could not be removed. They cannot sign in. Please retry the removal.',
+    });
+  }
+
+  res.json({
+    message: login_revoked
+      ? `${emp.fname || 'Employee'} removed. Their login has been revoked and they can no longer sign in.`
+      : `${emp.fname || 'Employee'} removed.`,
+    login_revoked,
+    employee: data,
+  });
+});
+
+// ── POST /employees/:id/restore ───────────────────────────────────────────────
+// Undo a removal — for the re-hire, and for the misclick. Restores the tracker record
+// and the login together.
+//
+// Reverse order to the delete, for the same reason: bring the record BACK into view
+// first, then re-enable the login. A half-failure then leaves them visible but still
+// locked out, which is safe and obvious — never signed-in but invisible.
+router.post('/:id/restore', requireRole('admin'), async (req, res) => {
+  if (!canApprove(req.user)) {
+    return res.status(403).json({ error: 'HR Admin (or Board of Director / Head Office) authority required to restore an employee.' });
+  }
+
+  const { data: emp, error: findErr } = await supabase
+    .from('employees').select('id, emp_id, fname, deleted_at').eq('id', req.params.id).maybeSingle();
+  if (findErr) return res.status(500).json({ error: 'Could not look up that employee. Please try again.' });
+  if (!emp)    return res.status(404).json({ error: 'Employee not found.' });
+  if (!emp.deleted_at) return res.status(400).json({ error: 'This employee has not been removed.' });
+
+  const clear = { deleted_at: null, deleted_by: null };
+
+  const { data, error } = await supabase
+    .from('employees').update(clear).eq('id', req.params.id).select().maybeSingle();
+  if (error) return res.status(500).json({ error: 'Could not restore the employee record. Please try again.' });
+
+  let login_restored = false;
+  if (emp.emp_id) {
+    const { data: back, error: userErr } = await supabase
+      .from('users')
+      .update({ ...clear, updated_at: new Date().toISOString() })
+      .eq('emp_id', emp.emp_id)
+      .not('deleted_at', 'is', null)
+      .select('id');
+    if (userErr) {
+      return res.status(500).json({
+        error: 'The employee record was restored, but their login could not be re-enabled. They still cannot sign in. Please retry the restore.',
+      });
+    }
+    login_restored = (back || []).length > 0;
+  }
+
+  res.json({
+    message: login_restored
+      ? `${emp.fname || 'Employee'} restored. Their login works again.`
+      : `${emp.fname || 'Employee'} restored.`,
+    login_restored,
+    employee: data,
+  });
 });
 
 module.exports = router;

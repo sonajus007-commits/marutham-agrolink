@@ -17,11 +17,20 @@ async function requireAuth(req, res, next) {
 
   const { data: user, error } = await supabase
     .from('users')
-    .select('id, login_id, phone, role, admin_role, status, block_reason, approval_status, payment_reference, payment_confirmed_at, seller_type, gender, subscription_plan, subscription_amount, subscription_expires_at, registration_charge, fname, lname, email, district, state, village_town, vco_city, district_assign, agent_vehicle, emp_id, employment_type')
+    .select('id, login_id, phone, role, admin_role, status, block_reason, approval_status, payment_reference, payment_confirmed_at, seller_type, gender, subscription_plan, subscription_amount, subscription_expires_at, registration_charge, fname, lname, email, district, state, village_town, vco_city, district_assign, agent_vehicle, emp_id, employment_type, deleted_at')
     .eq('id', payload.sub)
     .single();
 
   if (error || !user) return res.status(401).json({ error: 'User not found.' });
+
+  // A removed employee is done, immediately. This is the chokepoint that gives the
+  // soft delete teeth: every authenticated request re-reads the user row, so a removal
+  // takes effect on the victim's very next call rather than whenever their JWT happens
+  // to expire. 401, not 403 — the account is gone, so the client should log out, not
+  // sit on a dead token showing an error banner.
+  if (user.deleted_at) {
+    return res.status(401).json({ error: 'This account has been removed. Please contact your administrator.' });
+  }
 
   // Blocked accounts cannot access anything.
   if (user.status === 'blocked') {
@@ -95,12 +104,12 @@ async function optionalAuth(req, res, next) {
     // (which .single() reports as an error), degrades to anonymous by design
     const { data: user } = await supabase
       .from('users')
-      .select('id, login_id, role, admin_role, status, fname, lname, district')
+      .select('id, login_id, role, admin_role, status, fname, lname, district, deleted_at')
       .eq('id', payload.sub)
       .single();
-    // A blocked account is treated as anonymous here rather than 403'd: this is a
-    // public page, and it must not become an account-status oracle.
-    if (user && user.status !== 'blocked') req.user = user;
+    // A blocked or removed account is treated as anonymous here rather than 403'd:
+    // this is a public page, and it must not become an account-status oracle.
+    if (user && user.status !== 'blocked' && !user.deleted_at) req.user = user;
   } catch {
     /* expired / forged / unknown → anonymous */
   }

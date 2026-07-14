@@ -162,3 +162,108 @@ describe('the PGRST116 semantics these guards depend on', () => {
     // "not found" into a 500. Guards must use .maybeSingle().
   });
 });
+
+// ── A REMOVED EMPLOYEE CANNOT GET BACK IN ────────────────────────────────────
+// The soft delete keeps the users row alive on purpose — the audit trail and the
+// login history point at it. That makes the row a live credential unless every door
+// is closed. There are four, and only two of them go through evaluateAccess:
+//
+//   /login        → evaluateAccess    ✓
+//   /verify-otp   → evaluateAccess    ✓
+//   /send-otp     → its own gate      ← would otherwise hand a removed employee an OTP
+//   /reset-password → no lookup at all, trusts only the OTP
+//
+// A row that is kept must be a row that is checked.
+describe('a removed employee cannot sign in', () => {
+  let app, mute;
+  const bcrypt = require('bcryptjs');
+  beforeEach(() => { mute = muteConsoleError(); });
+  afterEach(async () => { mute.restore(); if (app) await app.close(); });
+
+  const REMOVED = (hash) => ({
+    id: 'u-gone', login_id: 'MATN00006', phone: '9100000006', role: 'admin',
+    admin_role: 'VCO', status: 'active', approval_status: 'approved',
+    password_hash: hash, deleted_at: '2026-07-14T00:00:00Z',
+  });
+
+  test('POST /auth/login — the right password on a removed account is still refused', async () => {
+    const hash = await bcrypt.hash('secret123', 4);
+    const supa = fakeSupabase({
+      'users:select': { data: [REMOVED(hash)] },
+      'user_login_history:insert': { data: [] },
+    });
+    app = await mountRoute('auth', { supabase: supa, user: null });
+
+    const res = await app.post('/login', { phone: '9100000006', password: 'secret123' });
+
+    assert.equal(res.status, 401);
+    // Reported as bad credentials, deliberately. "That account was removed" confirms to
+    // an outsider that the number belonged to a real ex-employee; the person it actually
+    // concerns has already been told by HR.
+    assert.match(res.body.error, /invalid phone number or password/i);
+    assert.equal(res.body.token, undefined, 'no token may be issued');
+  });
+
+  test('POST /auth/login — the attempt is recorded as "removed", not as "approved"', async () => {
+    // The login history is the one place that can answer "did they try to get back in
+    // after we removed them". It derived its outcome from approval_status, so a removed
+    // employee being turned away was logged under the status they still carried:
+    // approved. The record of the refusal said the opposite of what happened.
+    const hash = await bcrypt.hash('secret123', 4);
+    const supa = fakeSupabase({
+      'users:select': { data: [REMOVED(hash)] },
+      'user_login_history:insert': { data: [] },
+    });
+    app = await mountRoute('auth', { supabase: supa, user: null });
+
+    await app.post('/login', { phone: '9100000006', password: 'secret123' });
+
+    const logged = supa.callsTo('user_login_history', 'insert');
+    assert.equal(logged.length, 1);
+    assert.equal(logged[0].payload.outcome, 'removed');
+  });
+
+  test('POST /auth/send-otp — a removed account looks like no account at all', async () => {
+    // This path never touches evaluateAccess. Left open, it would hand a removed
+    // employee a fresh OTP — and reset-password below trusts nothing but that OTP.
+    const supa = fakeSupabase({
+      'users:select': { data: [{ id: 'u-gone', status: 'active', deleted_at: '2026-07-14T00:00:00Z' }] },
+    });
+    app = await mountRoute('auth', { supabase: supa, user: null });
+
+    const res = await app.post('/send-otp', { phone: '9100000006' });
+
+    assert.equal(res.status, 404);
+    assert.match(res.body.error, /no account found/i);
+  });
+
+  test('POST /auth/reset-password — an OTP issued before the removal cannot set a new password', async () => {
+    // The gap the send-otp gate cannot close: an OTP minted in the ten minutes BEFORE
+    // the removal is still valid after it. So the deleted_at filter has to sit on the
+    // UPDATE, and the route has to notice that it matched nothing.
+    const realRandom = Math.random;
+    Math.random = () => 0;                       // → a known OTP: 100000
+    try {
+      const supa = fakeSupabase({
+        // Live at the moment the OTP is requested…
+        'users:select': { data: [{ id: 'u-gone', status: 'active', deleted_at: null }] },
+        // …but by the time the password is set, the row is removed, so the filtered
+        // UPDATE matches nothing.
+        'users:update': { data: [] },
+      });
+      app = await mountRoute('auth', { supabase: supa, user: null });
+
+      const sent = await app.post('/send-otp', { phone: '9100000006' });
+      assert.equal(sent.status, 200, 'the OTP was issued while they were still live');
+
+      const res = await app.post('/reset-password', {
+        phone: '9100000006', otp: '100000', new_password: 'brandnew1',
+      });
+
+      assert.equal(res.status, 404, 'a write that matched no row is not a success');
+      assert.match(res.body.error, /no account found/i);
+    } finally {
+      Math.random = realRandom;
+    }
+  });
+});

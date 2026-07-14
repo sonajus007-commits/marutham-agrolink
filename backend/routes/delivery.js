@@ -181,6 +181,7 @@ router.post('/:id/scan', async (req, res) => {
         .from('users')
         .select('id, fname, lname, phone, agent_vehicle, role, admin_role')
         .eq('id', agent_id)
+        .is('deleted_at', null)          // a removed agent cannot take a delivery
         .maybeSingle();
       if (agentErr) {
         console.error('Delivery agent lookup failed:', agentErr.message);
@@ -241,6 +242,7 @@ router.post('/:id/scan', async (req, res) => {
         .from('users')
         .select('id, fname, lname, phone, agent_vehicle, role, admin_role')
         .eq('id', agent_id)
+        .is('deleted_at', null)          // a removed agent cannot take a delivery
         .maybeSingle();
       if (agentErr) {
         console.error('Delivery agent lookup failed:', agentErr.message);
@@ -360,6 +362,7 @@ router.post('/:id/assign', async (req, res) => {
     .from('users')
     .select('id, fname, lname, phone, agent_vehicle, role, admin_role')
     .eq('id', agent_id)
+    .is('deleted_at', null)          // a removed agent cannot take a delivery
     .single();
 
   if (ae || !agent) return res.status(404).json({ error: 'Agent not found.' });
@@ -425,6 +428,7 @@ router.get('/:id/eligible-agents', async (req, res) => {
     .select('id, fname, lname, phone, agent_vehicle, village_town, service_villages, district')
     .eq('role', 'admin')
     .eq('admin_role', 'Delivery Agent')
+    .is('deleted_at', null)          // removed agents are not offered for assignment
     .eq('district', order.district)
     .eq('status', 'active');
   if (ae) return res.status(500).json({ error: ae.message });

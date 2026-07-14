@@ -40,22 +40,36 @@ function pgrst116(n) {
 }
 
 /**
- * Apply the `eq` and `in` filters the route asked for.
+ * Apply the SCOPING filters the route asked for: `eq`, `in`, and IS [NOT] NULL.
  *
- * Deliberately only these two. A fake that reimplements PostgREST's filter language
+ * Deliberately only these. A fake that reimplements PostgREST's filter language
  * becomes a second, worse database that has to be kept in sync with the first — but
- * eq and in are what SCOPE a query, and a fake that ignores them answers questions
- * the route never asked. `payouts/run` reads order_items `.in('order_id',
+ * these are what SCOPE a query, and a fake that ignores them answers questions the
+ * route never asked. `payouts/run` reads order_items `.in('order_id',
  * unpaidOrderIds)`; a fake that returned every item regardless would show the
  * settlement paying an order it had correctly excluded, which is a lie about the
  * code under test. Everything else (order, limit, ilike, …) is still recorded and
  * ignored — assert on `calls` if a test cares.
+ *
+ * IS NULL joined the list when the soft delete landed. `.is('deleted_at', null)` is
+ * now the filter that hides removed staff from every list, and a fake that recorded
+ * it but did not apply it would hand back the removed employee and let a test that
+ * asserts "they are gone from the list" pass while the route was still returning
+ * them. The one filter this feature depends on cannot be the one the fake pretends
+ * to honour.
+ *
+ * Absent columns still pass, as before: a fixture row that never mentions deleted_at
+ * is a live row, so tests written before this existed keep their meaning.
  */
 function applyFilters(rows, ctx) {
   if (!Array.isArray(rows)) return rows;
-  return rows.filter((row) => ctx.filters.every(([op, col, val]) => {
+  return rows.filter((row) => ctx.filters.every(([op, col, val, val2]) => {
     if (op === 'eq') return row[col] === undefined || row[col] === val;
     if (op === 'in') return row[col] === undefined || (Array.isArray(val) && val.includes(row[col]));
+    // .is(col, null) → IS NULL. Absent and explicit-null both count as null.
+    if (op === 'is' && val === null) return row[col] === undefined || row[col] === null;
+    // .not(col, 'is', null) → IS NOT NULL.
+    if (op === 'not' && val === 'is' && val2 === null) return row[col] !== undefined && row[col] !== null;
     return true;
   }));
 }
@@ -83,7 +97,11 @@ function fakeSupabase(handlers = {}) {
 
   function settle(ctx) {
     const raw = lookup(ctx) || {};
-    calls.push({ table: ctx.table, op: ctx.op, payload: ctx.payload, filters: ctx.filters, single: ctx.single });
+    // `cols` is recorded so a test can prove a route ASKED for a column. A route whose
+    // select lists its columns explicitly does not see a newly added one — the column
+    // exists, the row comes back without it, and the check that reads it silently sees
+    // undefined. requireAuth's deleted_at check is exactly that shape.
+    calls.push({ table: ctx.table, op: ctx.op, payload: ctx.payload, filters: ctx.filters, single: ctx.single, cols: ctx.cols });
 
     if (raw.error) return { data: null, error: raw.error, count: null };
 
@@ -116,12 +134,13 @@ function fakeSupabase(handlers = {}) {
 
   /** The chainable query builder. Every filter is recorded; nothing is evaluated. */
   function builder(table, op, payload) {
-    const ctx = { table, op, payload, filters: [], single: null, head: false };
+    const ctx = { table, op, payload, filters: [], single: null, head: false, cols: null };
 
     const chain = {
       // Filters and modifiers — recorded, then ignored. These tests assert on the
       // route's DECISIONS, not on query semantics the database already owns.
-      select(_cols, opts) {
+      select(cols, opts) {
+        if (cols !== undefined) ctx.cols = cols;
         if (opts && opts.head) ctx.head = true;
         // `.insert(x).select()` turns a write into a read-back; keep the write op.
         return chain;
@@ -144,10 +163,7 @@ function fakeSupabase(handlers = {}) {
   return {
     from(table) {
       return {
-        select: (_cols, opts) => {
-          const b = builder(table, 'select');
-          return opts && opts.head ? b.select(_cols, opts) : b;
-        },
+        select: (cols, opts) => builder(table, 'select').select(cols, opts),
         insert: (payload) => builder(table, 'insert', payload),
         update: (payload) => builder(table, 'update', payload),
         upsert: (payload) => builder(table, 'upsert', payload),

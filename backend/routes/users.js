@@ -31,6 +31,7 @@ router.get('/', requireRole('admin'), async (req, res) => {
     let q = supabase
       .from('users')
       .select('id,login_id,fname,lname,phone,role,admin_role,gender,district,state,status,agent_vehicle,subscription_expires_at,subscription_plan,created_at')
+      .is('deleted_at', null)          // removed staff are not in the user list
       .order('created_at', { ascending: false });
 
     q = scopeQuery(q, req.user);
@@ -58,8 +59,10 @@ async function changeUserStatus(adminId, targetId, newStatus, reason) {
     return { code: 400, body: { error: 'A reason is required to block a user.' } };
   }
 
+  // A removed account has no status to change — blocking or unblocking one is
+  // meaningless, and would put a misleading row in their status history.
   const { data: target, error: fErr } = await supabase
-    .from('users').select('id, fname, status').eq('id', targetId).single();
+    .from('users').select('id, fname, status').eq('id', targetId).is('deleted_at', null).maybeSingle();
   if (fErr || !target) return { code: 404, body: { error: 'User not found.' } };
   if (target.status === newStatus) {
     return { code: 409, body: { error: `User is already ${newStatus}.` } };
@@ -435,9 +438,11 @@ router.patch('/:id', requireRole('admin'), async (req, res) => {
     .from('users')
     .update(updates)
     .eq('id', req.params.id)
+    .is('deleted_at', null)
     .select()
-    .single();
+    .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: 'User not found, or the account has been removed.' });
   res.json({ message: 'User profile updated.', user: data });
 });
 

@@ -242,7 +242,7 @@ router.get('/executive', async (req, res) => {
     supabase.from('orders').select('id, total, item_total, market_fee, delivery, status, cancelled, district, created_at, delivered_at, picked_up_at, eta_ts, consumer_id, refund_amt'),
     supabase.from('order_items').select('order_id, product_id, qty, price, farmer_id, farmer_name, rated, rating_value'),
     supabase.from('products').select('id, category, product_group'),
-    supabase.from('users').select('id, role, created_at, district, status, subscription_amount, subscription_expires_at'),
+    supabase.from('users').select('id, role, created_at, district, status, subscription_amount, subscription_expires_at').is('deleted_at', null),
     supabase.from('farmer_listings').select('farmer_id, listed'),
     supabase.from('payouts').select('amount, status, created_at, paid_at'),
     supabase.from('returns').select('id, decision, refund_amt'),
@@ -480,7 +480,7 @@ router.get('/operations', async (req, res) => {
   // ── Pull datasets ───────────────────────────────────────────────────────────
   const [ordersR, usersR, listingsR, payoutsR, returnsR] = await Promise.all([
     supabase.from('orders').select('id, total, status, cancelled, district, village, created_at, delivered_at, agent_id, agent_name'),
-    supabase.from('users').select('id, role, admin_role, fname, lname, phone, agent_vehicle, district, status, approval_status'),
+    supabase.from('users').select('id, role, admin_role, fname, lname, phone, agent_vehicle, district, status, approval_status').is('deleted_at', null),
     supabase.from('farmer_listings').select('farmer_id, listed, confirmed, updated_at'),
     supabase.from('payouts').select('farmer_id, amount, status, created_at'),
     supabase.from('returns').select('id, order_id, decision, collected'),
@@ -760,9 +760,12 @@ router.get('/adminhead', async (req, res) => {
   const todayStartUtc = new Date(Date.UTC(nowIst.y, nowIst.m, nowIst.day) - IST_MS).toISOString();
   const weekAgoUtc = new Date(Date.now() - 7 * 86400000).toISOString();
 
+  // Removed staff are not headcount. Both of these feed the org-strength tiles, and a
+  // departed employee still counted there is simply a wrong number on a dashboard whose
+  // whole job is headcount.
   const [employeesR, staffR] = await Promise.all([
-    supabase.from('employees').select('status, approval_status, department'),
-    supabase.from('users').select('admin_role, district, state').eq('role', 'admin'),
+    supabase.from('employees').select('status, approval_status, department').is('deleted_at', null),
+    supabase.from('users').select('admin_role, district, state').eq('role', 'admin').is('deleted_at', null),
   ]);
   if (employeesR.error || staffR.error) return res.status(500).json({ error: 'Could not load admin dashboard.' });
 

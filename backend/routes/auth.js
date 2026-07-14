@@ -173,6 +173,14 @@ async function maybeSuspendOnExpiry(user) {
 //   { ok: false, code, body }   — reject with this status/body
 // Applies to BOTH password and OTP login so the rules stay in one place.
 function evaluateAccess(user) {
+  // A removed employee cannot sign in, by any method. Checked first and reported as
+  // plain bad credentials: "that account was removed" tells an outsider that the
+  // number belongs to a real ex-employee, and the person it actually concerns has
+  // already been told by HR. Both login paths (password and OTP) come through here,
+  // which is the entire reason this function exists.
+  if (user.deleted_at) {
+    return { ok: false, code: 401, body: { error: 'Invalid phone number or password.' } };
+  }
   if (user.role === 'farmer') {
     if (user.approval_status === 'pending_review') {
       return { ok: false, code: 403, body: { error: 'Your registration is under review by our team. You will be notified once approved.', approval_status: 'pending_review' } };
@@ -189,6 +197,17 @@ function evaluateAccess(user) {
   }
   // 'suspended' sellers may log in, but must pay before the home page unlocks.
   return { ok: true, needsPayment: user.role === 'farmer' && user.status === 'suspended' };
+}
+
+// Why a rejected login attempt was rejected, for the login history. Both login paths
+// derived this inline and identically; a removed employee would have been recorded
+// under their approval_status — i.e. logged as 'approved' while being turned away.
+// The one place where "who tried to get in after we removed them" is answerable is
+// the last place that should be guessing.
+function loginOutcome(user) {
+  if (user.deleted_at) return 'removed';
+  if (user.status === 'blocked') return 'blocked';
+  return user.approval_status || 'rejected';
 }
 
 // ── POST /auth/register ───────────────────────────────────────────────────────
@@ -339,7 +358,7 @@ router.post('/login', async (req, res) => {
 
   const access = evaluateAccess(user);
   if (!access.ok) {
-    const outcome = user.status === 'blocked' ? 'blocked' : (user.approval_status || 'rejected');
+    const outcome = loginOutcome(user);
     await logLogin(req, { user_id: user.id, login_id: user.login_id, method: 'password', outcome });
     return res.status(access.code).json(access.body);
   }
@@ -365,7 +384,7 @@ router.post('/send-otp', async (req, res) => {
 
   const { data: user, error: lookupErr } = await supabase
     .from('users')
-    .select('id, status')
+    .select('id, status, deleted_at')
     .eq('phone', phone)
     .maybeSingle();
 
@@ -373,6 +392,10 @@ router.post('/send-otp', async (req, res) => {
   // blocked account could be handed an OTP the moment the query blips.
   if (lookupErr) return res.status(500).json({ error: 'Could not look up that phone number. Please try again.' });
   if (!user) return res.status(404).json({ error: 'No account found with this phone number.' });
+  // A removed employee looks exactly like no account at all. This path does not go
+  // through evaluateAccess, so without this line a removed employee could still pull
+  // an OTP out of the system — and reset-password below trusts nothing but that OTP.
+  if (user.deleted_at) return res.status(404).json({ error: 'No account found with this phone number.' });
   if (user.status === 'blocked') return res.status(403).json({ error: 'Account is blocked.' });
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -425,7 +448,7 @@ router.post('/verify-otp', async (req, res) => {
   await maybeSuspendOnExpiry(user);
   const access = evaluateAccess(user);
   if (!access.ok) {
-    const outcome = user.status === 'blocked' ? 'blocked' : (user.approval_status || 'rejected');
+    const outcome = loginOutcome(user);
     await logLogin(req, { user_id: user.id, login_id: user.login_id, method: 'otp', outcome });
     return res.status(access.code).json(access.body);
   }
@@ -500,12 +523,23 @@ router.post('/reset-password', async (req, res) => {
   otpStore.delete(phone);
 
   const password_hash = await bcrypt.hash(new_password, 12);
-  const { error } = await supabase
+  // The deleted_at filter belongs on the WRITE, not on a lookup above it. An OTP issued
+  // in the ten minutes before the removal is still valid after it, and this route trusts
+  // nothing but the OTP — so the only reliable place to refuse a removed account is the
+  // statement that would otherwise set their new password.
+  const { data: updated, error } = await supabase
     .from('users')
     .update({ password_hash, updated_at: new Date().toISOString() })
-    .eq('phone', phone);
+    .eq('phone', phone)
+    .is('deleted_at', null)
+    .select('id');
 
   if (error) return res.status(500).json({ error: 'Could not reset password.' });
+  // Matched nothing: the account is gone. Same wording as a wrong number — a password
+  // reset form should not confirm who used to work here.
+  if (!updated || updated.length === 0) {
+    return res.status(404).json({ error: 'No account found with this phone number.' });
+  }
 
   res.json({ message: 'Password reset successfully. You can now login.' });
 });
@@ -545,6 +579,7 @@ router.post('/create-staff', requireAuth, async (req, res) => {
     .from('employees')
     .select('emp_id, designation, employment_type, status, approval_status')
     .eq('emp_id', empId)
+    .is('deleted_at', null)          // a removed employee cannot be given a fresh login
     .maybeSingle();
   if (empErr)  return res.status(500).json({ error: 'Could not verify Employee ID against the employee tracker.' });
   if (!emp)    return res.status(404).json({ error: `Employee ID "${empId}" is not in the employee tracker.` });
