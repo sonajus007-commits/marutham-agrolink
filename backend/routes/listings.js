@@ -53,12 +53,20 @@ router.get('/', async (req, res) => {
   const { district } = req.query;
   if (district) {
     // Step 1: find only active (non-blocked) farmer IDs in this district
-    const { data: farmerRows } = await supabase
+    const { data: farmerRows, error: farmerRowsErr } = await supabase
       .from('users')
       .select('id')
       .eq('role', 'farmer')
       .eq('status', 'active')
       .ilike('district', district);
+
+    // Unread, a failure here produced an EMPTY farmer list, which produced an empty
+    // listing list, which is a shop with nothing in it — for an entire district, with
+    // a 200 and no indication anything had gone wrong.
+    if (farmerRowsErr) {
+      console.error('GET /listings district farmer lookup failed:', farmerRowsErr.message);
+      return res.status(500).json({ error: 'Could not load listings for that district. Please try again.' });
+    }
 
     const farmerIds = (farmerRows || []).map(f => f.id);
     if (farmerIds.length === 0) {
@@ -146,12 +154,16 @@ router.post('/', async (req, res) => {
   if (imgErr) return res.status(400).json({ error: imgErr });
 
   // Verify the product exists and is active
-  const { data: product } = await supabase
+  const { data: product, error: productErr } = await supabase
     .from('products')
     .select('id, available')
     .eq('id', product_id)
-    .single();
+    .maybeSingle();
 
+  if (productErr) {
+    console.error('Listing product lookup failed:', productErr.message);
+    return res.status(500).json({ error: 'Could not verify that product. Please try again.' });
+  }
   if (!product) return res.status(404).json({ error: 'Product not found.' });
   if (!product.available) return res.status(400).json({ error: 'This product is not currently active.' });
 
@@ -187,12 +199,18 @@ router.patch('/:id', async (req, res) => {
   }
 
   // Confirm the listing belongs to this farmer
-  const { data: existing } = await supabase
+  // An ownership guard must not answer "not found" because the database hiccuped —
+  // it tells the farmer their own listing has vanished.
+  const { data: existing, error: existingErr } = await supabase
     .from('farmer_listings')
     .select('id, farmer_id')
     .eq('id', req.params.id)
-    .single();
+    .maybeSingle();
 
+  if (existingErr) {
+    console.error('Listing ownership lookup failed:', existingErr.message);
+    return res.status(500).json({ error: 'Could not load that listing. Please try again.' });
+  }
   if (!existing) return res.status(404).json({ error: 'Listing not found.' });
   if (existing.farmer_id !== req.user.id) {
     return res.status(403).json({ error: 'You can only edit your own listings.' });
@@ -238,12 +256,18 @@ router.delete('/:id', async (req, res) => {
     return res.status(403).json({ error: 'Only farmers can delete listings.' });
   }
 
-  const { data: existing } = await supabase
+  // An ownership guard must not answer "not found" because the database hiccuped —
+  // it tells the farmer their own listing has vanished.
+  const { data: existing, error: existingErr } = await supabase
     .from('farmer_listings')
     .select('id, farmer_id')
     .eq('id', req.params.id)
-    .single();
+    .maybeSingle();
 
+  if (existingErr) {
+    console.error('Listing ownership lookup failed:', existingErr.message);
+    return res.status(500).json({ error: 'Could not load that listing. Please try again.' });
+  }
   if (!existing) return res.status(404).json({ error: 'Listing not found.' });
   if (existing.farmer_id !== req.user.id) {
     return res.status(403).json({ error: 'You can only delete your own listings.' });
@@ -322,6 +346,8 @@ router.patch('/:id/status', async (req, res) => {
   // which is precisely how a seller ends up staring at "Contact support for details."
   if (status === 'active' || status === 'rejected') {
     try {
+      // reads-ok: notification lookup only; the status change is already committed and
+      // must not be failed by an email that could not be addressed
       const { data: full } = await supabase
         .from('farmer_listings')
         .select(`

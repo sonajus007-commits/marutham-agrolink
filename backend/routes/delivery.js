@@ -71,11 +71,14 @@ async function advanceStage(order, actorLabel, extraUpdates = {}) {
 
   if (error) return { error: 'Could not advance order stage.' };
 
-  await supabase.from('order_history').insert({
+  // The stage change above is committed. A failed timeline row must not report it
+  // as a failure — but it must not vanish either.
+  const { error: histErr } = await supabase.from('order_history').insert({
     order_id: order.id,
     label: newStatus,
     note: `${newStatus} — by ${actorLabel}.`,
   });
+  if (histErr) console.error(`Order ${order.id}: '${newStatus}' history entry failed:`, histErr.message);
 
   return { updated, newStatus };
 }
@@ -107,12 +110,19 @@ router.post('/:id/pack', async (req, res) => {
   }
 
   // Confirm this farmer has items in the order
-  const { data: items } = await supabase
+  // Unread, a failed read left `items` null and the farmer was told they have no
+  // items in an order that is theirs — locked out of advancing their own order,
+  // and told it was a permissions problem.
+  const { data: items, error: itemsErr } = await supabase
     .from('order_items')
     .select('id')
     .eq('order_id', order.id)
     .eq('farmer_id', req.user.id);
 
+  if (itemsErr) {
+    console.error('Farmer item check failed:', itemsErr.message);
+    return res.status(500).json({ error: 'Could not verify your items in this order. Please try again.' });
+  }
   if (!items || items.length === 0) {
     return res.status(403).json({ error: 'You have no items in this order.' });
   }
@@ -164,11 +174,18 @@ router.post('/:id/scan', async (req, res) => {
 
     let assignedName = null;
     if (agent_id) {
-      const { data: agent } = await supabase
+      // maybeSingle + a read error check: unread, a database fault made `agent` null
+      // and the caller was told the person they picked "is not a Delivery Agent" —
+      // a wrong answer about someone who is one.
+      const { data: agent, error: agentErr } = await supabase
         .from('users')
         .select('id, fname, lname, phone, agent_vehicle, role, admin_role')
         .eq('id', agent_id)
-        .single();
+        .maybeSingle();
+      if (agentErr) {
+        console.error('Delivery agent lookup failed:', agentErr.message);
+        return res.status(500).json({ error: 'Could not look up that agent. Please try again.' });
+      }
       if (!agent || agent.role !== 'admin' || agent.admin_role !== 'Delivery Agent') {
         return res.status(400).json({ error: 'Selected user is not a Delivery Agent.' });
       }
@@ -182,11 +199,12 @@ router.post('/:id/scan', async (req, res) => {
     result = await advanceStage(order, `VCO ${req.user.fname}`, extra);
 
     if (!result.error && assignedName) {
-      await supabase.from('order_history').insert({
+      const { error: histErr } = await supabase.from('order_history').insert({
         order_id: order.id,
         label:    'Agent Assigned',
         note:     `${assignedName} assigned by VCO ${req.user.fname}.`,
       });
+      if (histErr) console.error(`Order ${order.id}: agent-assigned history entry failed:`, histErr.message);
     }
 
   // Delivery Agent (or admin) scans VCO Verified → Picked Up.
@@ -216,11 +234,18 @@ router.post('/:id/scan', async (req, res) => {
     const extra = {};
     let assignedName = null;
     if (agent_id) {
-      const { data: agent } = await supabase
+      // maybeSingle + a read error check: unread, a database fault made `agent` null
+      // and the caller was told the person they picked "is not a Delivery Agent" —
+      // a wrong answer about someone who is one.
+      const { data: agent, error: agentErr } = await supabase
         .from('users')
         .select('id, fname, lname, phone, agent_vehicle, role, admin_role')
         .eq('id', agent_id)
-        .single();
+        .maybeSingle();
+      if (agentErr) {
+        console.error('Delivery agent lookup failed:', agentErr.message);
+        return res.status(500).json({ error: 'Could not look up that agent. Please try again.' });
+      }
       if (!agent || agent.role !== 'admin' || agent.admin_role !== 'Delivery Agent') {
         return res.status(400).json({ error: 'Selected user is not a Delivery Agent.' });
       }
@@ -234,11 +259,12 @@ router.post('/:id/scan', async (req, res) => {
     result = await advanceStage(order, `Hub ${req.user.fname}`, extra);
 
     if (!result.error && assignedName) {
-      await supabase.from('order_history').insert({
+      const { error: histErr } = await supabase.from('order_history').insert({
         order_id: order.id,
         label:    'Delivery Agent Assigned',
         note:     `${assignedName} assigned for last-mile by ${req.user.fname} (${req.user.admin_role}).`,
       });
+      if (histErr) console.error(`Order ${order.id}: last-mile history entry failed:`, histErr.message);
     }
 
   // Delivery Agent (or admin) advances an in-progress order
@@ -293,11 +319,12 @@ router.patch('/:id/route', async (req, res) => {
 
   if (error) return res.status(500).json({ error: 'Could not update route.' });
 
-  await supabase.from('order_history').insert({
+  const { error: histErr } = await supabase.from('order_history').insert({
     order_id: order.id,
     label: 'Route Updated',
     note: `Route changed to "${route}" by ${req.user.fname}. ETA recalculated to +${etaHours}h.`,
   });
+  if (histErr) console.error(`Order ${order.id}: route-update history entry failed:`, histErr.message);
 
   res.json({ ok: true, message: `Route set to "${route}". ETA updated.`, order: updated });
 });
@@ -357,12 +384,13 @@ router.post('/:id/assign', async (req, res) => {
   if (ue) return res.status(500).json({ error: ue.message });
 
   // Log assignment in order history
-  await supabase.from('order_history').insert({
+  const { error: histErr } = await supabase.from('order_history').insert({
     order_id: req.params.id,
     label:    'Agent Assigned',
     note:     `${agentName} assigned by ${req.user.fname} (${req.user.admin_role})`,
     ts:       new Date().toISOString(),
   });
+  if (histErr) console.error(`Order ${req.params.id}: agent-assigned history entry failed:`, histErr.message);
 
   res.json({ message: `Agent ${agentName} assigned.`, order: updated });
 });
@@ -436,11 +464,16 @@ router.get('/:id/track', async (req, res) => {
     return res.status(403).json({ error: 'You can only track your own orders.' });
   }
 
-  const { data: history } = await supabase
+  const { data: history, error: historyErr } = await supabase
     .from('order_history')
     .select('label, note, ts')
     .eq('order_id', order.id)
     .order('ts', { ascending: true });
+
+  if (historyErr) {
+    console.error('Order tracking history lookup failed:', historyErr.message);
+    return res.status(500).json({ error: 'Could not load tracking for this order. Please try again.' });
+  }
 
   const route  = resolveRoute(order);
   const stages = STAGE_MAP[route];

@@ -74,6 +74,7 @@ async function changeUserStatus(adminId, targetId, newStatus, reason) {
     .select('id, fname, status, block_reason').single();
   if (error) return { code: 500, body: { error: error.message } };
 
+  // reads-ok: best-effort history row; the status change above is already committed
   await supabase.from('user_status_history').insert({
     user_id: targetId, old_status: target.status, new_status: newStatus,
     reason: reason && reason.trim() ? reason.trim() : null, changed_by: adminId,
@@ -199,7 +200,8 @@ router.post('/change-requests/:id/approve', requireRole('admin'), async (req, re
     if (upErr) return res.status(500).json({ error: upErr.message });
 
     try {
-      const { data: u } = await supabase.from('users').select('fname,lname,email,login_id').eq('id', cr.user_id).single();
+      const { data: u, error: uErr } = await supabase.from('users').select('fname,lname,email,login_id').eq('id', cr.user_id).maybeSingle();
+      if (uErr) console.error(`Could not load user ${cr.user_id} to notify them; no message was sent:`, uErr.message);
       if (u) await notify.notifySubscriptionRenewalPaymentPending(u, plan, amountPaise, paymentRef);
     } catch(e) { console.error('Notify error:', e.message); }
 
@@ -213,18 +215,26 @@ router.post('/change-requests/:id/approve', requireRole('admin'), async (req, re
     .eq('id', cr.user_id);
   if (upErr) return res.status(500).json({ error: upErr.message });
 
-  // Mark request approved
-  await supabase.from('profile_change_requests').update({
+  // Mark request approved. The bank/GST change above is ALREADY applied to the
+  // user, so a failure here cannot be reported as an approval failure — it would
+  // be a lie in the other direction. But it must not be silent either: unread, the
+  // request stayed 'pending' forever while the change it asked for was live.
+  const { error: markErr } = await supabase.from('profile_change_requests').update({
     status: 'approved',
     reviewed_at: new Date().toISOString(),
     reviewed_by: req.user.id,
     reviewer_name: req.user.fname,
     notes: req.body.notes || null,
   }).eq('id', req.params.id);
+  if (markErr) {
+    console.error(`Change request ${req.params.id}: changes APPLIED to user ${cr.user_id} but the ` +
+                  `request could not be marked approved — it will still show as pending: ${markErr.message}`);
+  }
 
   // Notify user
   try {
-    const { data: u } = await supabase.from('users').select('fname,lname,email,login_id').eq('id', cr.user_id).single();
+    const { data: u, error: uErr } = await supabase.from('users').select('fname,lname,email,login_id').eq('id', cr.user_id).maybeSingle();
+    if (uErr) console.error(`Could not load user ${cr.user_id} to notify them; no message was sent:`, uErr.message);
     if (u) await notify.notifyProfileChangeOutcome(u, 'approved', req.body.notes, req.user.fname);
   } catch(e) { console.error('Notify error:', e.message); }
 
@@ -236,20 +246,27 @@ router.post('/change-requests/:id/reject', requireRole('admin'), async (req, res
   if (!isHeadOffice(req.user)) {
     return res.status(403).json({ error: 'Head Office access required.' });
   }
-  const { data: cr } = await supabase.from('profile_change_requests').select('*').eq('id', req.params.id).single();
+  const { data: cr, error: crErr } = await supabase
+    .from('profile_change_requests').select('*').eq('id', req.params.id).maybeSingle();
+  if (crErr) return res.status(500).json({ error: 'Could not load the change request. Please try again.' });
   if (!cr) return res.status(404).json({ error: 'Change request not found.' });
   if (cr.status !== 'pending') return res.status(409).json({ error: 'Request already reviewed.' });
 
-  await supabase.from('profile_change_requests').update({
+  // The rejection has to LAND. Unread, a failed update still told the admin
+  // "rejected" and still emailed the seller their rejection — while the request sat
+  // in the queue as pending, ready to be rejected all over again.
+  const { error: rejectErr } = await supabase.from('profile_change_requests').update({
     status: 'rejected',
     reviewed_at: new Date().toISOString(),
     reviewed_by: req.user.id,
     reviewer_name: req.user.fname,
     notes: req.body.notes || null,
   }).eq('id', req.params.id);
+  if (rejectErr) return res.status(500).json({ error: 'Could not record the rejection. Please try again.' });
 
   try {
-    const { data: u } = await supabase.from('users').select('fname,lname,email,login_id').eq('id', cr.user_id).single();
+    const { data: u, error: uErr } = await supabase.from('users').select('fname,lname,email,login_id').eq('id', cr.user_id).maybeSingle();
+    if (uErr) console.error(`Could not load user ${cr.user_id} to notify them; no message was sent:`, uErr.message);
     if (u) {
       if (cr.requested_changes && cr.requested_changes.subscription_renewal) {
         await notify.notifySubscriptionRenewalOutcome(u, false, null, cr.requested_changes.new_plan);
@@ -267,11 +284,12 @@ router.post('/change-requests/:id/confirm-renewal-payment', requireRole('admin')
   if (!isHeadOffice(req.user)) {
     return res.status(403).json({ error: 'Head Office access required.' });
   }
-  const { data: cr } = await supabase
+  const { data: cr, error: crErr } = await supabase
     .from('profile_change_requests')
     .select('*')
     .eq('id', req.params.id)
-    .single();
+    .maybeSingle();
+  if (crErr) return res.status(500).json({ error: 'Could not load the change request. Please try again.' });
   if (!cr) return res.status(404).json({ error: 'Change request not found.' });
   if (!cr.requested_changes || !cr.requested_changes.subscription_renewal) {
     return res.status(400).json({ error: 'This is not a renewal request.' });
@@ -285,7 +303,15 @@ router.post('/change-requests/:id/confirm-renewal-payment', requireRole('admin')
   const planDays = PLAN_DAYS[plan] || 365;
   const now      = new Date();
 
-  const { data: currentUser } = await supabase.from('users').select('subscription_expires_at').eq('id', cr.user_id).single();
+  // This read decides whether the renewal EXTENDS the seller's remaining time or
+  // restarts from today. Unread, a failure took the `?? null` path below, silently
+  // rebasing the expiry to now — a seller who renewed early simply lost whatever
+  // days they had left, and paid for the privilege.
+  const { data: currentUser, error: currentUserErr } = await supabase
+    .from('users').select('subscription_expires_at').eq('id', cr.user_id).maybeSingle();
+  if (currentUserErr) {
+    return res.status(500).json({ error: 'Could not read the current subscription. Please try again.' });
+  }
   const currentExp = currentUser?.subscription_expires_at ? new Date(currentUser.subscription_expires_at) : null;
   const baseDate   = (currentExp && currentExp > now) ? currentExp : now;
   const newExpiry  = new Date(baseDate);
@@ -300,13 +326,21 @@ router.post('/change-requests/:id/confirm-renewal-payment', requireRole('admin')
   }).eq('id', cr.user_id);
   if (upErr) return res.status(500).json({ error: upErr.message });
 
-  await supabase.from('profile_change_requests').update({
+  // As above: the subscription is already extended and the seller reactivated, so
+  // this cannot fail the request. It can only refuse to be invisible — otherwise
+  // the renewal stays 'payment_pending' and looks unpaid to the next admin.
+  const { error: markErr } = await supabase.from('profile_change_requests').update({
     status:               'approved',
     payment_confirmed_at: now.toISOString(),
   }).eq('id', req.params.id);
+  if (markErr) {
+    console.error(`Renewal ${req.params.id}: subscription EXTENDED for user ${cr.user_id} but the ` +
+                  `request could not be marked approved — it will still show as payment_pending: ${markErr.message}`);
+  }
 
   try {
-    const { data: u } = await supabase.from('users').select('fname,lname,email,login_id').eq('id', cr.user_id).single();
+    const { data: u, error: uErr } = await supabase.from('users').select('fname,lname,email,login_id').eq('id', cr.user_id).maybeSingle();
+    if (uErr) console.error(`Could not load user ${cr.user_id} to notify them; no message was sent:`, uErr.message);
     if (u) await notify.notifySubscriptionRenewalOutcome(u, true, newExpiry.toISOString(), plan);
   } catch(e) { console.error('Notify error:', e.message); }
 
@@ -364,8 +398,14 @@ router.patch('/:id', requireRole('admin'), async (req, res) => {
 
   // Employee tracker rule: Permanent staff must reference an active tracker record.
   if (updates.employment_type !== undefined || updates.emp_id !== undefined) {
-    const { data: cur } = await supabase
-      .from('users').select('role, emp_id, employment_type').eq('id', req.params.id).single();
+    // Unread, a failed read left `cur` null and the `if (cur && …)` below went
+    // false — skipping the employment validation AND the one-login-per-employee
+    // check entirely. The guard did not reject; it evaporated.
+    const { data: cur, error: curErr } = await supabase
+      .from('users').select('role, emp_id, employment_type').eq('id', req.params.id).maybeSingle();
+    if (curErr) {
+      return res.status(500).json({ error: 'Could not verify this account before updating it. Please try again.' });
+    }
     if (cur && cur.role === 'admin') {
       const check = await validateStaffEmployment({
         employment_type: updates.employment_type !== undefined ? updates.employment_type : cur.employment_type,
@@ -377,8 +417,11 @@ router.patch('/:id', requireRole('admin'), async (req, res) => {
       // if another account already holds it.
       const newEmpId = (updates.emp_id !== undefined ? updates.emp_id : cur.emp_id);
       if (newEmpId && newEmpId !== cur.emp_id) {
-        const { data: dupEmp } = await supabase
+        const { data: dupEmp, error: dupEmpErr } = await supabase
           .from('users').select('login_id').eq('emp_id', newEmpId).neq('id', req.params.id).limit(1);
+        if (dupEmpErr) {
+          return res.status(500).json({ error: 'Could not verify whether this Employee ID already has a login. Please try again.' });
+        }
         if (dupEmp && dupEmp.length) {
           return res.status(409).json({ error: `Employee "${newEmpId}" already has a login (${dupEmp[0].login_id}). One employee can hold only one login account.` });
         }

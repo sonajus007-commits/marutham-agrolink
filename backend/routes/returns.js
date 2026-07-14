@@ -27,12 +27,16 @@ router.post('/:id/return', async (req, res) => {
     return res.status(403).json({ error: 'Only consumers can request returns.' });
   }
 
-  const { data: order } = await supabase
+  const { data: order, error: orderErr } = await supabase
     .from('orders')
     .select('*')
     .eq('id', req.params.id)
-    .single();
+    .maybeSingle();
 
+  if (orderErr) {
+    console.error('POST /returns order lookup failed:', orderErr.message);
+    return res.status(500).json({ error: 'Could not load that order. Please try again.' });
+  }
   if (!order) return res.status(404).json({ error: 'Order not found.' });
   if (order.consumer_id !== req.user.id) {
     return res.status(403).json({ error: 'You can only return your own orders.' });
@@ -49,14 +53,28 @@ router.post('/:id/return', async (req, res) => {
     return res.status(400).json({ error: `Return window has closed. Returns must be requested within ${RETURN_WINDOW_HOURS} hours of delivery.` });
   }
 
-  // Check if a return already exists for this order
-  const { data: existing } = await supabase
+  // Check if a return already exists for this order.
+  //
+  // Unread, this guard FAILED OPEN: a read error left `existing` undefined and a
+  // SECOND return was accepted against an order that already had one — which then
+  // made this very query raise PGRST116 on two rows, so every subsequent check
+  // also passed. One fault, and the order collects returns without limit.
+  //
+  // limit(1) rather than maybeSingle so an order that already carries duplicates
+  // can still be read rather than erroring forever.
+  const { data: existing, error: existingErr } = await supabase
     .from('returns')
     .select('id')
     .eq('order_id', order.id)
-    .maybeSingle();
+    .limit(1);
 
-  if (existing) return res.status(409).json({ error: 'A return has already been requested for this order.' });
+  if (existingErr) {
+    console.error('POST /returns duplicate check failed:', existingErr.message);
+    return res.status(500).json({ error: 'Could not check for an existing return. Please try again.' });
+  }
+  if (existing && existing.length) {
+    return res.status(409).json({ error: 'A return has already been requested for this order.' });
+  }
 
   const { full_return: wantsFull = false, lines = [], photos = [] } = req.body;
 
@@ -64,10 +82,17 @@ router.post('/:id/return', async (req, res) => {
     return res.status(400).json({ error: 'Provide either full_return: true or at least one item in lines.' });
   }
 
-  const { data: items } = await supabase
+  // These items ARE the return. Unread, a failed read handed `undefined` to
+  // resolveReturnLines and the refund was computed from nothing.
+  const { data: items, error: itemsErr } = await supabase
     .from('order_items')
     .select('id, product_code, name, farmer_name, qty, unit, price')
     .eq('order_id', order.id);
+
+  if (itemsErr) {
+    console.error('POST /returns order items lookup failed:', itemsErr.message);
+    return res.status(500).json({ error: 'Could not read the items on that order. Please try again.' });
+  }
 
   // Build the authoritative line set. `full_return: true` with no lines means
   // "everything"; otherwise each requested line is matched to a real order item.
@@ -108,8 +133,14 @@ router.post('/:id/return', async (req, res) => {
   const { error: lineErr } = await supabase.from('return_lines').insert(buildReturnLineRows(ret.id, resolved));
   if (lineErr) {
     console.error('POST /return lines error:', lineErr);
-    // Don't leave an itemless return behind.
-    await supabase.from('returns').delete().eq('id', ret.id);
+    // Don't leave an itemless return behind. If the ROLLBACK itself fails, one is
+    // left anyway — and it will block every future return on this order via the
+    // duplicate guard above. Unread, that happened in total silence.
+    const { error: rollbackErr } = await supabase.from('returns').delete().eq('id', ret.id);
+    if (rollbackErr) {
+      console.error(`ORPHANED RETURN ${code} (${ret.id}) — lines failed AND the rollback failed. It has ` +
+                    `no return_items and will block further returns on this order: ${rollbackErr.message}`);
+    }
     return res.status(500).json({ error: 'Could not record the returned items.' });
   }
 
@@ -172,12 +203,16 @@ router.patch('/:id/decide', async (req, res) => {
     return res.status(400).json({ error: 'decision must be "accepted" or "rejected".' });
   }
 
-  const { data: ret } = await supabase
+  const { data: ret, error: retErr } = await supabase
     .from('returns')
     .select('id, decision')
     .eq('id', req.params.id)
-    .single();
+    .maybeSingle();
 
+  if (retErr) {
+    console.error('POST /returns/:id/decision lookup failed:', retErr.message);
+    return res.status(500).json({ error: 'Could not load that return. Please try again.' });
+  }
   if (!ret) return res.status(404).json({ error: 'Return not found.' });
   if (ret.decision) return res.status(400).json({ error: `Return has already been ${ret.decision}.` });
 
@@ -199,12 +234,19 @@ router.patch('/:id/collect', async (req, res) => {
   const u = req.user;
   if (u.role !== 'admin') return res.status(403).json({ error: 'Only admins can mark returns as collected.' });
 
-  const { data: ret } = await supabase
+  // The refund is issued off the back of this read. A failed lookup reported the
+  // return as simply "not found", which is a strange thing to tell an admin about
+  // a return they are looking at.
+  const { data: ret, error: retErr } = await supabase
     .from('returns')
     .select('*, order:orders(id, consumer_id, pay_method)')
     .eq('id', req.params.id)
-    .single();
+    .maybeSingle();
 
+  if (retErr) {
+    console.error('POST /returns/:id/collected lookup failed:', retErr.message);
+    return res.status(500).json({ error: 'Could not load that return. Please try again.' });
+  }
   if (!ret) return res.status(404).json({ error: 'Return not found.' });
   if (ret.decision !== 'accepted') {
     return res.status(400).json({ error: 'Return must be accepted before marking as collected.' });

@@ -24,7 +24,11 @@ async function run() {
     process.stdout.write(`  ${inserted}/${rows.length}\r`);
   }
 
-  const { count } = await supabase.from('locations').select('id', { count: 'exact', head: true });
+  const { count, error } = await supabase.from('locations').select('id', { count: 'exact', head: true });
+  if (error) {
+    console.error(`\nLoaded, but the row count could not be read: ${error.message}`);
+    return;
+  }
   console.log(`\nDone. locations table now has ${count} rows.`);
 }
 run().catch(e => { console.error(e); process.exit(1); });

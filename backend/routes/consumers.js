@@ -28,10 +28,17 @@ router.get('/', requireRole('admin'), async (req, res) => {
     const consumerIds = consumers.map(c => c.id);
 
     // Order stats per consumer
-    const { data: orders } = await supabase
+    // Every per-consumer stat below is derived from this. Unread, a failure showed
+    // every customer as having placed zero orders and spent nothing.
+    const { data: orders, error: ordersErr } = await supabase
       .from('orders')
       .select('id, consumer_id, total, status, cancelled')
       .in('consumer_id', consumerIds);
+
+    if (ordersErr) {
+      console.error('GET /consumers order stats failed:', ordersErr.message);
+      return res.status(500).json({ error: 'Could not load consumer statistics. Please try again.' });
+    }
 
     const orderMap = {};
     const orderToConsumer = {};   // order_id → consumer_id, for return attribution
@@ -49,10 +56,11 @@ router.get('/', requireRole('admin'), async (req, res) => {
     // Returns per consumer (one return row per order → count = returned orders)
     const orderIds = (orders || []).map(o => o.id);
     if (orderIds.length) {
-      const { data: returns } = await supabase
+      const { data: returns, error: returnsErr } = await supabase
         .from('returns')
         .select('order_id')
         .in('order_id', orderIds);
+      if (returnsErr) console.error('GET /consumers return stats failed:', returnsErr.message);
       (returns || []).forEach(r => {
         const cid = orderToConsumer[r.order_id];
         if (cid && orderMap[cid]) orderMap[cid].returned++;
@@ -157,11 +165,15 @@ router.get('/:id/activity', requireRole('admin'), async (req, res) => {
 
     let returns = [];
     if (orderIds.length) {
-      const { data: rets } = await supabase
+      const { data: rets, error: retsErr } = await supabase
         .from('returns')
         .select('code, order_id, requested_at, decision, refund_amt')
         .in('order_id', orderIds)
         .order('requested_at', { ascending: false });
+      if (retsErr) {
+        console.error('GET /consumers/:id returns lookup failed:', retsErr.message);
+        return res.status(500).json({ error: 'Could not load this consumer. Please try again.' });
+      }
       returns = (rets || []).map(r => ({
         code: r.code,
         order_code: codeById[r.order_id] || '—',

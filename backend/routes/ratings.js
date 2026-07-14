@@ -17,12 +17,16 @@ router.post('/:id/items/:itemId/rate', async (req, res) => {
   }
 
   // Fetch the order — must be delivered and owned by this consumer
-  const { data: order } = await supabase
+  const { data: order, error: orderErr } = await supabase
     .from('orders')
     .select('id, consumer_id, status, delivered_at')
     .eq('id', req.params.id)
-    .single();
+    .maybeSingle();
 
+  if (orderErr) {
+    console.error('POST /ratings order lookup failed:', orderErr.message);
+    return res.status(500).json({ error: 'Could not load that order. Please try again.' });
+  }
   if (!order) return res.status(404).json({ error: 'Order not found.' });
   if (order.consumer_id !== req.user.id) {
     return res.status(403).json({ error: 'You can only rate your own orders.' });
@@ -32,13 +36,17 @@ router.post('/:id/items/:itemId/rate', async (req, res) => {
   }
 
   // Fetch the item — must belong to this order
-  const { data: item } = await supabase
+  const { data: item, error: itemErr2 } = await supabase
     .from('order_items')
     .select('id, farmer_id, product_id, rated')
     .eq('id', req.params.itemId)
     .eq('order_id', order.id)
-    .single();
+    .maybeSingle();
 
+  if (itemErr2) {
+    console.error('POST /ratings item lookup failed:', itemErr2.message);
+    return res.status(500).json({ error: 'Could not load that item. Please try again.' });
+  }
   if (!item) return res.status(404).json({ error: 'Item not found in this order.' });
   if (item.rated) return res.status(409).json({ error: 'You have already rated this item.' });
 
@@ -50,26 +58,51 @@ router.post('/:id/items/:itemId/rate', async (req, res) => {
 
   if (itemErr) return res.status(500).json({ error: 'Could not save rating.' });
 
-  // Upsert into product_ratings (farmer + product aggregate)
-  const { data: existing } = await supabase
+  // Upsert into product_ratings (farmer + product aggregate).
+  //
+  // Three separate silent failures lived here. The READ, unread, left `existing`
+  // null and sent us down the INSERT branch — writing a SECOND aggregate row for a
+  // farmer+product that already had one, which then made this very maybeSingle
+  // raise PGRST116 on two rows, so every later rating inserted yet another. The
+  // aggregate quietly stopped being an aggregate.
+  //
+  // And both WRITES dropped their result, so a failed rating still answered
+  // "Rating saved. Thank you!" — while order_items.rated was already true from the
+  // update above, which means the customer could never rate it again. The rating
+  // was not saved, could not be retried, and they were thanked for it.
+  const { data: existing, error: existingErr } = await supabase
     .from('product_ratings')
     .select('id, sum_stars, num_ratings')
     .eq('farmer_id', item.farmer_id)
     .eq('product_id', item.product_id)
     .maybeSingle();
 
+  if (existingErr) {
+    console.error('POST /ratings aggregate lookup failed:', existingErr.message);
+    return res.status(500).json({ error: 'Could not save your rating. Please try again.' });
+  }
+
+  let aggErr;
   if (existing) {
-    await supabase
+    const { error } = await supabase
       .from('product_ratings')
       .update({
         sum_stars:   existing.sum_stars + rating_value,
         num_ratings: existing.num_ratings + 1,
       })
       .eq('id', existing.id);
+    aggErr = error;
   } else {
-    await supabase
+    const { error } = await supabase
       .from('product_ratings')
       .insert({ farmer_id: item.farmer_id, product_id: item.product_id, sum_stars: rating_value, num_ratings: 1 });
+    aggErr = error;
+  }
+
+  if (aggErr) {
+    console.error(`Rating for item ${item.id} was recorded on the order but NOT added to the ` +
+                  `product_ratings aggregate:`, aggErr.message);
+    return res.status(500).json({ error: 'Could not save your rating. Please try again.' });
   }
 
   res.json({ message: 'Rating saved. Thank you!', rating_value });

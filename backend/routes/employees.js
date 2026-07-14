@@ -42,10 +42,16 @@ const EMPLOYEE_FIELDS = [
 async function nextEmpId(state, employmentType) {
   const base   = (employmentType === 'Contract') ? 'CE' : 'MA';
   const prefix = base + stateCode(state);          // e.g. MATN / CETN
-  const { data } = await supabase
+  // max + 1 is only safe if we actually SAW the existing IDs. Unread, a failed read
+  // left `data` null, `max` stayed 0, and the generator handed back an Employee ID
+  // that already belongs to somebody. auth.js's login-ID generator guards exactly
+  // this; this one did not.
+  const { data, error } = await supabase
     .from('employees')
     .select('emp_id')
     .ilike('emp_id', prefix + '%');
+
+  if (error) throw new Error(`Employee ID lookup failed: ${error.message}`);
   const re = new RegExp('^' + prefix + '(\\d{5})$');
   let max = 0;
   (data || []).forEach((r) => {
@@ -119,8 +125,11 @@ router.get('/lookup/:empId', requireRole('admin'), async (req, res) => {
   if (!data) return res.status(404).json({ error: 'Employee ID not found in the tracker.' });
   // One login per employee — flag if this Employee ID already backs a staff account
   // so the form can warn before submit.
-  const { data: loginRows } = await supabase
+  const { data: loginRows, error: loginRowsErr } = await supabase
     .from('users').select('login_id').eq('emp_id', req.params.empId).limit(1);
+  // Advisory only — the real binding guard is enforced on create. But a failed read
+  // here silently drops the warning the form relies on.
+  if (loginRowsErr) console.error('Existing-login lookup failed:', loginRowsErr.message);
   const existing_login_id = (loginRows && loginRows.length) ? loginRows[0].login_id : null;
   res.json({ employee: data, existing_login_id });
 });

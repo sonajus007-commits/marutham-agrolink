@@ -79,11 +79,18 @@ async function seed() {
 
   for (const u of USERS) {
     // Skip if phone already exists
-    const { data: existing } = await supabase
+    // Same guard-fails-open shape as the real registration route: unread, a failed
+    // read means "no such user" and the seeder inserts a duplicate phone.
+    const { data: existing, error: existingErr } = await supabase
       .from('users')
       .select('id, login_id')
       .eq('phone', u.phone)
       .maybeSingle();
+
+    if (existingErr) {
+      console.error(`ABORT ${u.phone} — could not check whether this user exists: ${existingErr.message}`);
+      continue;
+    }
 
     if (existing) {
       console.log(`SKIP  ${u.phone} — already exists as ${existing.login_id}`);

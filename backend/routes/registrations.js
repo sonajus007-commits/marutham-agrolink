@@ -93,6 +93,7 @@ router.post('/:id/approve', async (req, res) => {
     return res.status(500).json({ error: 'Could not approve registration.' });
   }
 
+  // reads-ok: best-effort audit row; the approval above is already committed
   await supabase.from('user_status_history').insert({
     user_id: req.params.id, old_status: applicant.status, new_status: 'suspended',
     reason: 'Registration approved — awaiting subscription payment', changed_by: req.user.id,

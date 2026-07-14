@@ -232,13 +232,20 @@ function scheduleSubscriptionChecks() {
       const now = new Date();
 
       // Find all active farmers/retailers
-      const { data: users } = await supabase
+      const { data: users, error: usersErr } = await supabase
         .from('users')
         .select('id, fname, lname, email, login_id, role, status, subscription_expires_at')
         .eq('role', 'farmer')
         .in('status', ['active'])
         .not('subscription_expires_at', 'is', null);
 
+      // Unread, a failed read looked exactly like "no seller has a subscription", and
+      // the whole nightly sweep quietly did nothing — night after night, with a clean
+      // log and nobody expiring.
+      if (usersErr) {
+        console.error('[SUBSCRIPTION] Expiry sweep ABORTED — could not read sellers:', usersErr.message);
+        return;
+      }
       if (!users || users.length === 0) return;
 
       for (const user of users) {
@@ -247,10 +254,16 @@ function scheduleSubscriptionChecks() {
         const diffDays = Math.ceil(diffMs / MS_PER_DAY);
 
         if (diffDays <= 0) {
-          // Expired — block and notify
-          await supabase.from('users').update({ status: 'blocked' }).eq('id', user.id);
-          try { await notify.notifySubscriptionExpired(user); } catch(e) { console.error('Notify expired error:', e.message); }
-          console.log(`[SUBSCRIPTION] Blocked expired user ${user.login_id}`);
+          // Expired — block and notify. Unread, a failed update still printed
+          // "Blocked expired user" and still emailed them to say so, while the account
+          // stayed active. The log line was the only evidence anyone had, and it lied.
+          const { error: blockErr } = await supabase.from('users').update({ status: 'blocked' }).eq('id', user.id);
+          if (blockErr) {
+            console.error(`[SUBSCRIPTION] FAILED to block expired user ${user.login_id} — they remain ACTIVE:`, blockErr.message);
+          } else {
+            try { await notify.notifySubscriptionExpired(user); } catch(e) { console.error('Notify expired error:', e.message); }
+            console.log(`[SUBSCRIPTION] Blocked expired user ${user.login_id}`);
+          }
         } else if (REMINDER_DAYS.includes(diffDays)) {
           // Reminder day — send reminder
           try { await notify.notifySubscriptionExpiring(user, diffDays); } catch(e) { console.error('Notify reminder error:', e.message); }

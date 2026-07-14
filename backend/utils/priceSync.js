@@ -52,10 +52,18 @@ async function syncPrices() {
   try {
     console.log(`[PRICE SYNC] Fetching government prices for ${state}…`);
 
-    const { data: products } = await supabase
+    const { data: products, error: productsErr } = await supabase
       .from('products')
       .select('id, name, regional_name, code')
       .eq('available', true);
+
+    // Unread, a failed read was reported as status 'ok' with "No active products in
+    // catalogue" — a broken sync describing itself as a healthy no-op.
+    if (productsErr) {
+      console.error('[PRICE SYNC] Could not read the product catalogue:', productsErr.message);
+      _lastSync = { ran_at, updated: 0, errors: [productsErr.message], status: 'error', message: 'Could not read the product catalogue' };
+      return _lastSync;
+    }
 
     if (!products || products.length === 0) {
       _lastSync = { ran_at, updated: 0, errors: [], status: 'ok', message: 'No active products in catalogue' };
@@ -116,9 +124,10 @@ async function syncPrices() {
       updated = rows.length;
       // Stamp price_date on updated products
       const today = new Date().toISOString().slice(0, 10);
-      await supabase.from('products')
+      const { error: stampErr } = await supabase.from('products')
         .update({ price_date: today, updated_at: new Date().toISOString() })
         .in('id', [...updatedProductIds]);
+      if (stampErr) console.error('[PRICE SYNC] Prices updated but price_date could not be stamped:', stampErr.message);
     }
 
     _lastSync = {

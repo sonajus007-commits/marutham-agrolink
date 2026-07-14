@@ -96,27 +96,36 @@ router.post('/pay', async (req, res) => {
     return res.status(500).json({ error: 'Payment could not be processed. Please try again.' });
   }
 
-  // Record the payment + the status change (best-effort, non-blocking on failure)
-  try {
-    await supabase.from('subscription_payments').insert({
-      user_id:             req.user.id,
-      plan:                planName,
-      plan_amount:         planFee,
-      registration_charge: regCharge,
-      total_amount:        total,
-      payment_reference:   paymentRef,
-      is_renewal:          !firstTime,
-    });
-    await supabase.from('user_status_history').insert({
-      user_id:    req.user.id,
-      old_status: req.user.status,
-      new_status: 'active',
-      reason:     `Subscription ${firstTime ? 'activated' : 'renewed'} (${planName}) — payment ${paymentRef}`,
-      changed_by: req.user.id,
-    });
-  } catch (e) {
-    console.error('Subscription payment audit error:', e.message);
+  // Record the payment + the status change. The activation above is committed, so
+  // neither of these can fail the request — telling a seller their payment failed
+  // when they are already active would be worse than the missing row.
+  //
+  // But "best-effort" was being used to mean "silent". subscription_payments is the
+  // PAYMENT LEDGER: a dropped row here is an accounting discrepancy that nothing
+  // else would ever surface, because the user record still carries the reference
+  // and looks perfectly paid. It gets a loud log, not a shrug.
+  const { error: payRowErr } = await supabase.from('subscription_payments').insert({
+    user_id:             req.user.id,
+    plan:                planName,
+    plan_amount:         planFee,
+    registration_charge: regCharge,
+    total_amount:        total,
+    payment_reference:   paymentRef,
+    is_renewal:          !firstTime,
+  });
+  if (payRowErr) {
+    console.error(`PAYMENT LEDGER GAP — user ${req.user.id} was activated on payment ${paymentRef} ` +
+                  `(₹${total / 100}) but no subscription_payments row was written:`, payRowErr.message);
   }
+
+  // reads-ok: best-effort status history; the activation is committed either way
+  await supabase.from('user_status_history').insert({
+    user_id:    req.user.id,
+    old_status: req.user.status,
+    new_status: 'active',
+    reason:     `Subscription ${firstTime ? 'activated' : 'renewed'} (${planName}) — payment ${paymentRef}`,
+    changed_by: req.user.id,
+  }).then(() => {}, () => {});
 
   notify.notifyAccountActivated(updated).catch(e => console.error('Notification error (activate):', e.message));
 

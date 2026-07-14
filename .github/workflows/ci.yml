@@ -84,6 +84,15 @@ jobs:
       - name: Schema — migrations reproduce schema.json
         run: node backend/db/check-schema.js --offline
 
+      # supabase-js never throws — it resolves to { data, error }. A query that
+      # fails returns data: null with an error nobody reads, and the route carries
+      # on with nothing and answers as though all were well. That is how
+      # /products/:id served an empty list for months, how a duplicate slipped onto
+      # a registered phone, and how the payout run was one failed read away from
+      # paying every farmer twice. Static analysis, no database, so it gates here.
+      - name: Reads — every supabase call reads its error
+        run: node backend/db/check-reads.js
+
       - name: Build the React app
         run: pnpm build
 

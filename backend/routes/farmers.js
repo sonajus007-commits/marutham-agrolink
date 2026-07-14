@@ -56,11 +56,17 @@ router.get('/', requireRole('admin'), async (req, res) => {
     if (orderItemsRes.data && orderItemsRes.data.length > 0) {
       const allOrderIds = [...new Set(orderItemsRes.data.map(i => i.order_id))];
       if (allOrderIds.length > 0) {
-        const { data: deliveredOrders } = await supabase
+        const { data: deliveredOrders, error: deliveredErr } = await supabase
           .from('orders')
           .select('id')
           .in('id', allOrderIds)
           .eq('status', 'Delivered');
+        // Revenue counts delivered lines only. An empty set here is not "nothing was
+        // delivered" — it silently reports every seller as having earned nothing.
+        if (deliveredErr) {
+          console.error('GET /farmers delivered-order lookup failed:', deliveredErr.message);
+          return res.status(500).json({ error: 'Could not load seller statistics. Please try again.' });
+        }
         deliveredOrderIds = new Set((deliveredOrders || []).map(o => o.id));
       }
     }
@@ -127,10 +133,14 @@ router.get('/:id/activity', requireRole('admin'), async (req, res) => {
     const orderIds = [...new Set((items || []).map(i => i.order_id))];
     const ordersById = {};
     if (orderIds.length) {
-      const { data: ords } = await supabase
+      const { data: ords, error: ordsErr } = await supabase
         .from('orders')
         .select('id, code, created_at, status')
         .in('id', orderIds);
+      if (ordsErr) {
+        console.error('GET /farmers/:id order lookup failed:', ordsErr.message);
+        return res.status(500).json({ error: 'Could not load this seller. Please try again.' });
+      }
       (ords || []).forEach(o => { ordersById[o.id] = o; });
     }
 

@@ -147,10 +147,12 @@ router.get('/', async (req, res) => {
   const orderIds = orders.map(o => o.id);
   let returnCount = 0;
   if (orderIds.length > 0) {
-    const { count } = await supabase
+    const { count, error: returnCountErr } = await supabase
       .from('returns')
       .select('id', { count: 'exact', head: true })
       .in('order_id', orderIds);
+    // `count || 0` turned a failed count into a confident zero on the dashboard.
+    if (returnCountErr) console.error('Dashboard return count failed:', returnCountErr.message);
     returnCount = count || 0;
   }
 
@@ -464,7 +466,13 @@ router.get('/operations', async (req, res) => {
     districtSet = new Set([d]);
   } else if (OPS_REGION_ROLES.has(u.admin_role)) {
     scope = { level: 'region', name: u.state || 'Unassigned' };
-    const { data: locs } = await supabase.from('locations').select('district').eq('state', u.state);
+    const { data: locs, error: locsErr } = await supabase.from('locations').select('district').eq('state', u.state);
+    // An empty districtSet is not "no districts" — it silently scopes the whole
+    // regional dashboard to nothing.
+    if (locsErr) {
+      console.error('Dashboard region district lookup failed:', locsErr.message);
+      return res.status(500).json({ error: 'Could not scope the dashboard to your region. Please try again.' });
+    }
     districtSet = new Set((locs || []).map(l => l.district));
   }
   const inScopeDistrict = (d) => districtSet == null || districtSet.has(d);
@@ -659,10 +667,12 @@ router.get('/field', async (req, res) => {
     // Customer rating: avg of rated items on this agent's delivered orders
     let ratingSum = 0, ratingCount = 0;
     if (delivered.length) {
-      const { data: items } = await supabase
+      const { data: items, error: itemsErr } = await supabase
         .from('order_items')
         .select('rating_value, rated')
         .in('order_id', delivered.map(o => o.id));
+      // Unread, a failure showed the agent a rating of zero rather than no rating.
+      if (itemsErr) console.error('Dashboard agent rating lookup failed:', itemsErr.message);
       (items || []).forEach(it => { if (it.rated && it.rating_value) { ratingSum += it.rating_value; ratingCount++; } });
     }
 

@@ -12,6 +12,7 @@
     "db:offline": "node db/check-schema.js --offline",
     "db:snapshot": "node db/check-schema.js --write",
     "db:check-embeds": "node db/check-embeds.js",
+    "db:check-reads": "node db/check-reads.js",
     "db:migrate": "node db/migrate.js",
     "db:status": "node db/migrate.js --status",
     "db:adopt": "node db/migrate.js --adopt",
