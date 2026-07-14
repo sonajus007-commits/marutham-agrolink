@@ -1,0 +1,51 @@
+# Render Blueprint — one web service that builds the React console and serves it
+# alongside the API. Deploy: Render Dashboard → New → Blueprint → connect this repo.
+# Render reads this file, creates the service, and prompts for the secrets below.
+#
+# WHY ONE SERVICE. backend/server.js serves /api AND the built React app at /app AND
+# the static landing page. There is nothing separate to host for v1.0. (The optional
+# Next.js shop is a second service; not needed for UAT.)
+services:
+  - type: web
+    name: marutham-agrolink
+    runtime: node
+    plan: free                     # fine for UAT; free instances sleep when idle and wake on the next request
+    region: singapore              # closest Render region to a Tamil Nadu / India audience
+    branch: main
+    # Build the React console (→ apps/web/dist, which the server serves) and install
+    # backend deps. corepack provides the pinned pnpm without a global install.
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build && npm --prefix backend ci
+    # server.js resolves its static paths from __dirname, so starting from the repo
+    # root is fine. Env vars come from Render (below), not a .env file.
+    startCommand: node backend/server.js
+    healthCheckPath: /api/config/stats
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY_HOPS
+        value: "1"                 # Render puts one proxy in front of the service
+      # ── Secrets — set these in the Render dashboard (sync:false = not in git) ──
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      # ── Recommended for a public URL ──
+      - key: CORS_ORIGINS
+        sync: false                # set to the Render URL once known, e.g. https://marutham-agrolink.onrender.com
+      # ── Optional (features degrade gracefully if unset) ──
+      - key: APP_URL
+        sync: false                # the public URL, used in email links
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false

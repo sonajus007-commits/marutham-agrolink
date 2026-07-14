@@ -101,11 +101,42 @@ curl -sD - -o /dev/null http://localhost:3000/api/config/stats | grep -i x-frame
 Then open `http://localhost:3000/app` and log in with any account from
 [TEST_ACCOUNTS.md](./TEST_ACCOUNTS.md).
 
-## Deploying to a host (PaaS / VM)
+## Deploying a public UAT URL on Render (recommended)
+
+The repo ships a `render.yaml` blueprint that builds the console and serves everything as
+one web service. The build/start commands in it are verified. What only you can do is the
+account + secrets — Render can't be given the Supabase service key by anyone but you.
+
+1. **Create a Render account** at render.com (free tier is fine for UAT; free instances
+   sleep when idle and wake on the next request — the first hit after a nap is slow).
+2. **New → Blueprint**, connect the GitHub repo `sonajus007-commits/marutham-agrolink`.
+   Render reads `render.yaml` and proposes the `marutham-agrolink` service.
+3. **Fill the secrets** it prompts for (all marked `sync:false`, so they live only in
+   Render, never in git). At minimum:
+   - `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `JWT_SECRET` — copy from `backend/.env`.
+   - Leave `CORS_ORIGINS` blank for now; after the first deploy Render gives you a URL
+     (e.g. `https://marutham-agrolink.onrender.com`) — set `CORS_ORIGINS` and `APP_URL`
+     to it and redeploy.
+4. **Deploy.** When it's live, the app is at `https://<your-service>.onrender.com/app`.
+   The nine seed accounts already exist in the database, so testers can log in
+   immediately — no seeding step needed (the DB is the same Supabase project).
+5. **Health check:** `https://<your-service>.onrender.com/api/config/stats` → 200.
+
+> **Read this before sharing the URL.** A public deploy points at the SAME Supabase
+> project you develop against — it is the real/only database. The seed accounts use the
+> weak shared password `Seed@1234`, and `HOTN_LAKA01` is full Head Office admin. On a
+> public URL, anyone who finds it and tries the obvious seed login gets admin over real
+> data. For a time-boxed UAT on test data this is usually an acceptable, deliberate risk
+> — but **change the Head Office password off the default before sharing the link widely**,
+> and take the service down when UAT ends. See KNOWN_LIMITATIONS.md.
+
+### Generic host (VM / other PaaS)
 
 - Set every required env var in the host's config, **not** in a committed file.
 - Set `NODE_ENV=production`, `CORS_ORIGINS` to the real frontend origin, and
   `TRUST_PROXY_HOPS` to match the host's proxy layer (most PaaS = 1).
+- Build: `corepack enable && pnpm install --frozen-lockfile && pnpm build && npm --prefix backend ci`
+- Start: `node backend/server.js` (from the repo root — paths resolve from `__dirname`).
 - Run `npm run db:migrate` once per deploy that introduces a migration.
-- The process is stateless apart from the DB; it is safe to restart. It also self-heals: an
+- The process is stateless apart from the DB; it is safe to restart. It self-heals: an
   unhandled error is logged and the process stays up rather than crashing.
