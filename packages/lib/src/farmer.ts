@@ -232,6 +232,60 @@ export function farmerEarnings(orders: Order[], payouts: Payout[]): FarmerEarnin
   return { paid, pending, awaiting, inFlight, lifetime: paid + pending + awaiting };
 }
 
+/** One bar of the weekly-earnings trend. `amount` is in rupees (the API already
+ *  converted from paise), so it formats with fmtMoney exactly like the tiles. */
+export interface WeekEarning {
+  /** ISO date of that week's Monday — a stable key. */
+  weekStart: string;
+  /** Short axis label, e.g. "7 Jul". */
+  label: string;
+  amount: number;
+}
+
+/** Monday 00:00 of the week containing `d` (weeks run Mon–Sun, as the market does). */
+function startOfWeek(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); // getDay 0=Sun → shift so Mon=0
+  return x;
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * A farmer's DELIVERED earnings bucketed into the last `weeks` calendar weeks
+ * (oldest → newest), for the earnings trend chart. Counts `farmer_payout` on
+ * delivered, non-cancelled orders — the same figure the tiles sum — placed by
+ * `delivered_at` (falling back to `created_at` for older rows that predate that
+ * column). Weeks with no deliveries are kept as zero so the axis is continuous.
+ */
+export function farmerWeeklyEarnings(orders: Order[], weeks = 8, now: Date = new Date()): WeekEarning[] {
+  const current = startOfWeek(now);
+  const buckets = Array.from({ length: weeks }, (_, i) => {
+    const start = new Date(current);
+    start.setDate(start.getDate() - (weeks - 1 - i) * 7);
+    return { start, amount: 0 };
+  });
+  const firstMs = buckets[0].start.getTime();
+
+  for (const o of orders) {
+    if (o.status !== 'Delivered' || isOrderCancelled(o)) continue;
+    const when = o.delivered_at || o.created_at;
+    if (!when) continue;
+    const t = new Date(when).getTime();
+    if (Number.isNaN(t) || t < firstMs) continue;
+    const wsMs = startOfWeek(new Date(t)).getTime();
+    const bucket = buckets.find((b) => b.start.getTime() === wsMs);
+    if (bucket) bucket.amount += rs(o.farmer_payout);
+  }
+
+  return buckets.map((b) => ({
+    weekStart: b.start.toISOString(),
+    label: `${b.start.getDate()} ${MONTHS[b.start.getMonth()]}`,
+    amount: b.amount,
+  }));
+}
+
 /* ── Subscription ─────────────────────────────────────────────────────────── */
 
 export type SubscriptionLevel = 'none' | 'active' | 'expiring' | 'expired';

@@ -77,7 +77,7 @@ describe('formatters', () => {
 
   it('gives cancelled orders their own colour and falls back for unknowns', () => {
     expect(statusColor('Cancelled')).toBe('#c0392b');
-    expect(statusColor('Nonsense')).toBe('#5a6472');
+    expect(statusColor('Nonsense')).toBe('#757575'); // statusFallback = colors.gray (brand Text Grey)
   });
 
   it('formats money with grouping and paise, always', () => {

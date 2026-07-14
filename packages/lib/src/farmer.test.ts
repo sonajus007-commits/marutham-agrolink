@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   projectConsumerPrice, projectBulkPrice, cutoffTimestamp, validateListing,
-  farmerEarnings, subscriptionStatus, needsSubscriptionPayment,
+  farmerEarnings, farmerWeeklyEarnings, subscriptionStatus, needsSubscriptionPayment,
   listingState, canConfirmListing, listingPriceRs, requestableProducts, rupeesToPaise,
   parseCutoffHour, cutoffLabel, DEFAULT_CUTOFF,
   CUTOFF_OPTIONS, MAX_BULK_DISC_PCT, SUBSCRIPTION_WARN_DAYS,
@@ -443,5 +443,40 @@ describe('projectConsumerPrice rounds in paise, like the server', () => {
   it('the fee is whatever the rounding actually produced', () => {
     const p = projectConsumerPrice(33.5, 'Farmer');
     expect(p.farmerPrice + p.fee).toBeCloseTo(p.consumerPrice, 5);
+  });
+});
+
+describe('farmerWeeklyEarnings — the earnings trend', () => {
+  const NOW = new Date('2026-07-15T10:00:00Z'); // a Wednesday
+  const mk = (payout: number, deliveredISO: string, status = 'Delivered'): Order =>
+    ({ id: Math.random().toString(36), status, delivered_at: deliveredISO, farmer_payout: payout } as unknown as Order);
+
+  it('returns one bar per week, oldest first, zero-filled', () => {
+    const rows = farmerWeeklyEarnings([], 8, NOW);
+    expect(rows).toHaveLength(8);
+    expect(rows.every((r) => r.amount === 0)).toBe(true);
+    // strictly increasing week starts
+    for (let i = 1; i < rows.length; i++) {
+      expect(new Date(rows[i].weekStart).getTime()).toBeGreaterThan(new Date(rows[i - 1].weekStart).getTime());
+    }
+  });
+
+  it('sums a delivered order into the week it was delivered', () => {
+    const rows = farmerWeeklyEarnings([mk(500, '2026-07-15T09:00:00Z')], 8, NOW);
+    expect(rows[rows.length - 1].amount).toBe(500); // current week is the last bar
+  });
+
+  it('ignores cancelled and non-delivered orders, and money older than the window', () => {
+    const rows = farmerWeeklyEarnings([
+      mk(500, '2026-07-15T09:00:00Z', 'Out for Delivery'), // not delivered
+      { id: 'x', status: 'Delivered', cancelled: true, delivered_at: '2026-07-15T09:00:00Z', farmer_payout: 999 } as unknown as Order,
+      mk(700, '2026-01-01T09:00:00Z'), // before the 8-week window
+    ], 8, NOW);
+    expect(rows.reduce((s, r) => s + r.amount, 0)).toBe(0);
+  });
+
+  it('handles farmer_payout arriving as a string (the numeric-as-string trap)', () => {
+    const rows = farmerWeeklyEarnings([mk('250' as unknown as number, '2026-07-15T09:00:00Z')], 8, NOW);
+    expect(rows[rows.length - 1].amount).toBe(250);
   });
 });

@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, EmptyState, Spinner, StatTile } from '@marutham/ui';
+import { Button, ChartContainer, EmptyState, Spinner, StatTile } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import {
-  farmerEarnings, subscriptionStatus, fmtMoney, fmtDateShort,
+  farmerEarnings, farmerWeeklyEarnings, subscriptionStatus, fmtMoney, fmtMoneyInt, fmtDateShort,
   type Order, type Payout, type SubscriptionStatus,
 } from '@marutham/lib';
+import { chartPalette, colors } from '@marutham/tokens';
+import type { EChartsOption } from 'echarts';
+import { EChart } from '../../components/EChart';
 import { useAuth } from '../../auth/AuthContext';
 
 export function EarningsTab({ onRenew }: { onRenew: () => void }) {
@@ -37,6 +40,31 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
   const earnings = useMemo(() => farmerEarnings(orders, payouts), [orders, payouts]);
   const sub = useMemo(() => subscriptionStatus(user || {}), [user]);
 
+  const weekly = useMemo(() => farmerWeeklyEarnings(orders, 8), [orders]);
+  const trendEmpty = useMemo(() => weekly.every((w) => w.amount === 0), [weekly]);
+  const trendOption = useMemo<EChartsOption>(() => ({
+    // One series → one colour, like the admin trend. ECharts reads only color[0].
+    color: [chartPalette.light[0]],
+    tooltip: { trigger: 'axis', valueFormatter: (v) => fmtMoney(v) },
+    grid: { left: 56, right: 16, top: 20, bottom: 28 },
+    xAxis: {
+      type: 'category',
+      data: weekly.map((w) => w.label),
+      axisLine: { lineStyle: { color: colors.border } },
+    },
+    yAxis: {
+      type: 'value',
+      splitLine: { lineStyle: { color: colors.muted } },
+      axisLabel: { formatter: (v: number) => fmtMoneyInt(v) },
+    },
+    series: [{
+      name: t('farmer.earn.trend', 'Weekly earnings'),
+      type: 'bar',
+      data: weekly.map((w) => Math.round(w.amount)),
+      itemStyle: { borderRadius: [6, 6, 0, 0] },
+    }],
+  }), [weekly, t]);
+
   if (loading && orders.length === 0 && payouts.length === 0) return <Spinner />;
   if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
 
@@ -50,6 +78,17 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
         <StatTile label={t('farmer.earn.awaiting')} value={fmtMoney(earnings.awaiting)} hint={t('farmer.earn.awaitingHint')} />
         <StatTile label={t('farmer.earn.inFlight')} value={fmtMoney(earnings.inFlight)} hint={t('farmer.earn.inFlightHint')} accent="var(--info)" />
       </div>
+
+      <ChartContainer
+        title={`📈 ${t('farmer.earn.trend', 'Weekly Earnings')}`}
+        subtitle={t('farmer.earn.trendHint', 'Delivered earnings over the last 8 weeks')}
+        height={260}
+        empty={!loading && trendEmpty ? t('farmer.earn.trendEmpty', 'No delivered earnings yet — your weekly total will appear here.') : false}
+        summary={t('farmer.earn.trend', 'Weekly earnings')}
+        className="fm-chart"
+      >
+        <EChart option={trendOption} height={260} />
+      </ChartContainer>
 
       <section className="fm-card">
         <h3>💰 {t('farmer.earn.lifetime')}</h3>
