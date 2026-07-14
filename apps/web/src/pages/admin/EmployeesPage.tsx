@@ -14,6 +14,9 @@ export function EmployeesPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
+  // Removed staff are a SEPARATE set, not a filter on the list above — the server keeps
+  // them out of every ordinary employee query, so they arrive on their own call.
+  const [removed, setRemoved] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [approval, setApproval] = useState('pending');
@@ -31,8 +34,15 @@ export function EmployeesPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.getEmployees();
-      setEmployees(res.employees || []);
+      const [live, gone] = await Promise.all([
+        api.getEmployees(),
+        // Only HR-authorised callers can read the tracker at all, and this is the same
+        // endpoint — but a failure here must not take the whole page down with it. The
+        // removed list is secondary; the staff list is the page.
+        api.getRemovedEmployees().catch(() => ({ employees: [] })),
+      ]);
+      setEmployees(live.employees || []);
+      setRemoved(gone.employees || []);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load employees');
     } finally {
@@ -61,14 +71,22 @@ export function EmployeesPage() {
       { value: 'pending', label: `${t('admin.emp.approval.pending')} (${counts.pending || 0})` },
       { value: 'approved', label: `${t('admin.emp.approval.approved')} (${counts.approved || 0})` },
       { value: 'rejected', label: `${t('admin.emp.approval.rejected')} (${counts.rejected || 0})` },
+      // 'all' means all STAFF. Removed people are not staff, so they are not in it —
+      // they get their own chip, which is the only route to a restore. It is shown even
+      // at zero: hiding it would strand you on an empty selection the moment you restore
+      // the last person, and it answers "where did they go?" for anyone looking.
       { value: 'all', label: `${t('admin.emp.all')} (${employees.length})` },
+      { value: 'removed', label: `${t('admin.emp.removed')} (${removed.length})` },
     ];
-  }, [employees, t]);
+  }, [employees, removed, t]);
 
-  const rows = useMemo(
-    () => (approval === 'all' ? employees : employees.filter((e) => approvalOf(e) === approval)),
-    [employees, approval],
-  );
+  const viewingRemoved = approval === 'removed';
+
+  const rows = useMemo(() => {
+    if (viewingRemoved) return removed;
+    if (approval === 'all') return employees;
+    return employees.filter((e) => approvalOf(e) === approval);
+  }, [employees, removed, approval, viewingRemoved]);
 
   const columns = useMemo<TableColumn<Employee>[]>(() => [
     {
@@ -110,12 +128,19 @@ export function EmployeesPage() {
         );
       },
     },
-    {
-      key: 'created',
-      header: t('admin.emp.addedOn'),
-      value: (e) => e.created_at || '',
-      render: (e) => fmtDateShort(e.created_at),
-    },
+    viewingRemoved
+      ? {
+          key: 'removedOn',
+          header: t('admin.emp.removedOn'),
+          value: (e) => e.deleted_at || '',
+          render: (e) => fmtDateShort(e.deleted_at),
+        }
+      : {
+          key: 'created',
+          header: t('admin.emp.addedOn'),
+          value: (e) => e.created_at || '',
+          render: (e) => fmtDateShort(e.created_at),
+        },
     {
       key: 'actions',
       header: '',
@@ -127,11 +152,13 @@ export function EmployeesPage() {
           onClick={() => e.id && setOpenId(e.id)}
           className="cursor-pointer appearance-none rounded-sm border-0 bg-surface-muted px-2.5 py-1 text-2xs font-bold text-primary hover:bg-primary hover:text-primary-on focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
         >
-          {approvalOf(e) === 'pending' && canApprove ? t('admin.emp.review') : t('admin.emp.view')}
+          {viewingRemoved && canApprove ? t('admin.emp.restore')
+            : approvalOf(e) === 'pending' && canApprove ? t('admin.emp.review')
+            : t('admin.emp.view')}
         </button>
       ),
     },
-  ], [t, canApprove]);
+  ], [t, canApprove, viewingRemoved]);
 
   if (loading && employees.length === 0) return <Spinner />;
   if (error) return <EmptyState icon="🔒">{error}</EmptyState>;
@@ -158,9 +185,13 @@ export function EmployeesPage() {
         caption={t('admin.emp.title')}
         searchable
         searchPlaceholder={t('admin.emp.search')}
-        exportFileName="employees.csv"
+        exportFileName={viewingRemoved ? 'employees-removed.csv' : 'employees.csv'}
         pageSize={25}
-        empty={<EmptyState icon="🧑‍💼">{t('admin.emp.empty')}</EmptyState>}
+        empty={
+          <EmptyState icon={viewingRemoved ? '🗂️' : '🧑‍💼'}>
+            {viewingRemoved ? t('admin.emp.noRemoved') : t('admin.emp.empty')}
+          </EmptyState>
+        }
       />
 
       <EmployeeDetailSheet
@@ -168,6 +199,7 @@ export function EmployeesPage() {
         open={openId !== null}
         canApprove={canApprove}
         canManage={canApprove}
+        selfEmpId={user?.emp_id}
         onClose={() => setOpenId(null)}
         onChanged={load}
         onEdit={(emp) => { setOpenId(null); setFormMode({ emp }); }}

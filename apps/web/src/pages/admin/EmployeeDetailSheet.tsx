@@ -22,6 +22,7 @@ export function EmployeeDetailSheet({
   open,
   canApprove,
   canManage,
+  selfEmpId,
   onClose,
   onChanged,
   onEdit,
@@ -30,6 +31,10 @@ export function EmployeeDetailSheet({
   open: boolean;
   canApprove: boolean;
   canManage: boolean;
+  /** The viewer's own Employee ID. Removing yourself revokes your own login mid-request
+   *  and locks you out of the console that would undo it — the server refuses, and the
+   *  button should not be there to press. */
+  selfEmpId?: string | null;
   onClose: () => void;
   onChanged: () => void;
   onEdit: (emp: Employee) => void;
@@ -65,24 +70,46 @@ export function EmployeeDetailSheet({
       ) : !emp ? (
         <Spinner />
       ) : (
-        <Body emp={emp} history={history} canApprove={canApprove} canManage={canManage} onDone={() => { onChanged(); onClose(); }} onEdit={onEdit} />
+        <Body emp={emp} history={history} canApprove={canApprove} canManage={canManage} selfEmpId={selfEmpId} onDone={() => { onChanged(); onClose(); }} onEdit={onEdit} />
       )}
     </Sheet>
   );
 }
 
-function Body({ emp, history, canApprove, canManage, onDone, onEdit }: { emp: Employee; history: EmployeeAuditEntry[]; canApprove: boolean; canManage: boolean; onDone: () => void; onEdit: (emp: Employee) => void }) {
+function Body({ emp, history, canApprove, canManage, selfEmpId, onDone, onEdit }: { emp: Employee; history: EmployeeAuditEntry[]; canApprove: boolean; canManage: boolean; selfEmpId?: string | null; onDone: () => void; onEdit: (emp: Employee) => void }) {
   const { t } = useTranslation();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [showReject, setShowReject] = useState(false);
+  const [showRemove, setShowRemove] = useState(false);
   const [reason, setReason] = useState('');
+  // Whether a login actually exists, resolved when the confirm opens rather than
+  // guessed from the Employee ID — having an ID does NOT mean a login was ever created.
+  // undefined = not known yet (or the lookup failed), and the copy stays generic.
+  const [hasLogin, setHasLogin] = useState<boolean | undefined>(undefined);
 
   const status = String(emp.approval_status || 'pending');
+  // A removed employee is read-only: no edit, no approve, no reject. The server 404s
+  // all three, so offering them would only produce a confusing error.
+  const removed = !!emp.deleted_at;
+  const isSelf = !!emp.emp_id && !!selfEmpId && emp.emp_id === selfEmpId;
   const name = `${emp.fname || ''} ${emp.lname || ''}`.trim() || '—';
   const mgr = emp.reporting_manager
     ? `${emp.reporting_manager}${emp.reporting_manager_emp_id ? ` (${emp.reporting_manager_emp_id})` : ''}`
     : null;
+
+  /** Open the confirm, and find out whether there is actually a login to revoke. An
+   *  employee with no Employee ID can never have one (a login is bound to the ID), so
+   *  that case is settled without asking. A failed lookup is not an error worth
+   *  blocking on — the confirm just falls back to the generic wording. */
+  function openRemove() {
+    setShowRemove(true);
+    if (!emp.emp_id) { setHasLogin(false); return; }
+    setHasLogin(undefined);
+    api.lookupEmployee(String(emp.emp_id))
+      .then((r) => setHasLogin(!!r.existing_login_id))
+      .catch(() => setHasLogin(undefined));
+  }
 
   async function run(fn: () => Promise<{ message: string }>) {
     setBusy(true);
@@ -107,10 +134,32 @@ function Body({ emp, history, canApprove, canManage, onDone, onEdit }: { emp: Em
         {emp.is_manager ? <Tag label={t('admin.emp.mgr')} bg="var(--info)" /> : null}
         {emp.is_board_director ? <Tag label={t('admin.emp.bod')} bg="var(--warning-strong)" /> : null}
         {emp.is_hr_admin ? <Tag label={t('admin.emp.hr')} bg="var(--info)" /> : null}
-        {canManage ? <Button variant="ghost" onClick={() => onEdit(emp)} className="ml-auto">{t('admin.emp.edit')}</Button> : null}
+        {removed ? <Tag label={t('admin.emp.removed')} bg="var(--danger)" /> : null}
+        {canManage && !removed ? <Button variant="ghost" onClick={() => onEdit(emp)} className="ml-auto">{t('admin.emp.edit')}</Button> : null}
       </div>
 
-      {status === 'pending' && canApprove ? (
+      {removed ? (
+        <section className="flex flex-col gap-2 rounded-base border border-danger/40 bg-surface-muted p-3">
+          <div>
+            <p className="text-sm font-bold text-danger">{t('admin.emp.removedBanner')}</p>
+            <p className="mt-0.5 text-2xs text-fg-muted">
+              {t('admin.emp.removedOn')}: {fmtDate(emp.deleted_at)}
+            </p>
+          </div>
+          {canApprove ? (
+            <>
+              <p className="text-2xs text-fg-muted">{t('admin.emp.restoreHint')}</p>
+              <div>
+                <Button onClick={() => run(() => api.restoreEmployee(emp.id!))} disabled={busy}>
+                  {busy ? t('admin.emp.restoring') : t('admin.emp.restore')}
+                </Button>
+              </div>
+            </>
+          ) : null}
+        </section>
+      ) : null}
+
+      {status === 'pending' && canApprove && !removed ? (
         <section className="flex flex-col gap-2 rounded-base border border-border-subtle bg-surface-muted p-3">
           <p className="text-2xs text-fg-muted">{t('admin.emp.approveHint')}</p>
           <div className="flex flex-wrap gap-2">
@@ -160,6 +209,40 @@ function Body({ emp, history, canApprove, canManage, onDone, onEdit }: { emp: Em
       <Section title={`📍 ${t('admin.emp.history')}`}>
         <AuditLogList rows={history} loading={false} emptyText={t('admin.emp.noHistory')} />
       </Section>
+
+      {canApprove && !removed ? (
+        <section className="flex flex-wrap items-center justify-between gap-2 rounded-base border border-danger/40 p-3">
+          <p className="text-2xs text-fg-muted">
+            {isSelf ? t('admin.emp.selfRemoveHint') : t('admin.emp.removeKeepsRecord')}
+          </p>
+          <Button variant="danger" onClick={() => openRemove()} disabled={busy || isSelf}>
+            {t('admin.emp.remove')}
+          </Button>
+        </section>
+      ) : null}
+
+      <Modal
+        open={showRemove}
+        title={t('admin.emp.removeConfirm')}
+        subtitle={name}
+        onClose={() => setShowRemove(false)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setShowRemove(false)} disabled={busy}>{t('admin.emp.cancel')}</Button>
+            <Button variant="danger" onClick={() => run(() => api.removeEmployee(emp.id!))} disabled={busy}>
+              {busy ? t('admin.emp.removing') : t('admin.emp.remove')}
+            </Button>
+          </>
+        }
+      >
+        {/* Both halves, stated plainly. A confirm that says only "are you sure?" leaves
+            the person guessing at the two things they actually need to know: the login
+            dies now, and the record does not die at all. */}
+        <p className="text-sm text-fg">
+          {hasLogin === false ? t('admin.emp.removeNoLogin') : t('admin.emp.removeLoginWarning')}
+        </p>
+        <p className="mt-2 text-2xs text-fg-muted">{t('admin.emp.removeKeepsRecord')}</p>
+      </Modal>
 
       <Modal
         open={showReject}

@@ -15,6 +15,7 @@ import type {
   AdminReturnsResponse, AdminReturn, AdminListing,
   AdminPayoutsResponse, RunSettlementResponse,
   EmployeesResponse, Employee, EmployeeAuditResponse, EmployeePayload,
+  RemoveEmployeeResponse, RestoreEmployeeResponse,
   OtpSendResponse, RegisterPayload, RegisterResponse,
   UserAuditResponse, LoginHistoryResponse,
 } from './types';
@@ -374,13 +375,26 @@ export const api = {
   },
 
   // ── Admin: employee tracker (Head Office / State Head / HR Admin / BoD) ──
-  /** Optional filters: status, approval_status, q (search). */
+  /** Optional filters: status, approval_status, q (search).
+   *  Removed employees are excluded — use getRemovedEmployees() for those. */
   getEmployees(params?: Record<string, string>): Promise<EmployeesResponse> {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
     return apiFetch<EmployeesResponse>('GET', '/employees' + qs);
   },
+  /** ONLY the removed employees. A separate call, not a filter on the list above,
+   *  because the server treats them as a different set — they are absent from every
+   *  ordinary employee query by design. */
+  getRemovedEmployees(): Promise<EmployeesResponse> {
+    return apiFetch<EmployeesResponse>('GET', '/employees?deleted=1');
+  },
   getEmployee(id: string): Promise<{ employee: Employee }> {
     return apiFetch<{ employee: Employee }>('GET', '/employees/' + id);
+  },
+  /** Look an employee up by Employee ID. `existing_login_id` is the staff login bound
+   *  to that ID, or null if they never got one — an Employee ID does NOT imply a login.
+   *  404s for a removed employee. */
+  lookupEmployee(empId: string): Promise<{ employee: Employee; existing_login_id: string | null }> {
+    return apiFetch('GET', '/employees/lookup/' + encodeURIComponent(empId));
   },
   getEmployeeHistory(id: string): Promise<EmployeeAuditResponse> {
     return apiFetch<EmployeeAuditResponse>('GET', '/employees/' + id + '/history');
@@ -410,6 +424,19 @@ export const api = {
   /** emp_id is never editable; trust flags honoured only for minters. */
   updateEmployee(id: string, body: EmployeePayload): Promise<{ message: string; employee: Employee }> {
     return apiFetch('PATCH', '/employees/' + id, body);
+  },
+  /** Remove an employee — a SOFT delete. The record and its audit history survive
+   *  (they are what the removal exists to preserve), and the login joined to their
+   *  Employee ID is revoked: requireAuth re-reads the user row on every request, so
+   *  they are signed out on their very next call rather than when their token expires.
+   *  Reversible with restoreEmployee(). */
+  removeEmployee(id: string): Promise<RemoveEmployeeResponse> {
+    return apiFetch<RemoveEmployeeResponse>('DELETE', '/employees/' + id);
+  },
+  /** Undo a removal — for the re-hire, and for the misclick. Brings back the record
+   *  and re-enables the login. */
+  restoreEmployee(id: string): Promise<RestoreEmployeeResponse> {
+    return apiFetch<RestoreEmployeeResponse>('POST', '/employees/' + id + '/restore', {});
   },
 };
 

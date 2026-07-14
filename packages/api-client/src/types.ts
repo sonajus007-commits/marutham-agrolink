@@ -316,11 +316,30 @@ export interface Employee {
   rejected_reason?: string | null;
   created_at?: string | null;
   notes?: string | null;
+  /** Set when the employee has been REMOVED. The removal is soft: the record and its
+   *  history survive, and their login is revoked. Null for everyone still on staff. */
+  deleted_at?: string | null;
+  deleted_by?: string | null;
   [key: string]: unknown;
 }
 
 export interface EmployeesResponse {
   employees: Employee[];
+}
+
+/** Removing an employee also revokes the login joined to their Employee ID — if they
+ *  ever had one. `login_revoked` is false when there was no login to revoke, which is
+ *  the ordinary case for staff who never got an account. */
+export interface RemoveEmployeeResponse {
+  message: string;
+  login_revoked: boolean;
+  employee: Employee;
+}
+
+export interface RestoreEmployeeResponse {
+  message: string;
+  login_restored: boolean;
+  employee: Employee;
 }
 
 /** One row from the employee_audit_log (DB audit trigger).
