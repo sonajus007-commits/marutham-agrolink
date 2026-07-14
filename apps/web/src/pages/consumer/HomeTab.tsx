@@ -1,7 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { Button, EmptyState, OrderProgress, Spinner, StatTile } from '@marutham/ui';
-import { buildPipeline, fmtDateShort, fmtMoney, statusColor, type Order } from '@marutham/lib';
+import {
+  buildPipeline, fmtDateShort, fmtMoney, statusColor,
+  bestOffer, offerConsumerPrice, getProductEmoji, type Order, type Product,
+} from '@marutham/lib';
 import { useOrders } from './OrdersContext';
+import { useConsumerData } from './ConsumerDataContext';
 import { OrderRow, orderLabel } from './OrderRow';
 
 /** Past orders shown on Home before the user has to open the Orders tab. */
@@ -10,6 +14,17 @@ const PAST_PREVIEW = 4;
 export function HomeTab({ onOpenOrder, onGoToShop }: { onOpenOrder: (id: string) => void; onGoToShop: () => void }) {
   const { t } = useTranslation();
   const { orders, groups, loading, error } = useOrders();
+  const { products, offersByProduct } = useConsumerData();
+
+  // Recommended = products currently buyable (they have a live offer), with their best
+  // consumer price via the same helpers the Shop uses (so the fee maths matches exactly).
+  const recommended = products
+    .map((p) => {
+      const best = bestOffer(offersByProduct[p.id] || []);
+      return best ? { product: p, price: offerConsumerPrice(best, p) } : null;
+    })
+    .filter((x): x is { product: Product; price: number } => x !== null)
+    .slice(0, 8);
 
   // KPI row (mockup's dashboard header). All real, from order data — Wallet & Reward
   // Points are a Phase-2 feature and are intentionally not shown as fake numbers.
@@ -31,6 +46,32 @@ export function HomeTab({ onOpenOrder, onGoToShop }: { onOpenOrder: (id: string)
         <StatTile label={t('consumer.home.thisMonth', 'Orders this month')} value={thisMonth} hint={t('consumer.home.thisMonthHint', 'Placed in {{month}}', { month: now.toLocaleString('en', { month: 'long' }) })} accent="var(--accent)" />
         <StatTile label={t('consumer.home.totalSpent', 'Total spent')} value={fmtMoney(totalSpent)} hint={t('consumer.home.totalSpentHint', 'On delivered orders')} accent="var(--info)" />
       </div>
+
+      {recommended.length > 0 ? (
+        <section className="cons-reco">
+          <div className="cons-reco__head">
+            <h2 className="cons-section-title">{t('consumer.home.recommended', 'Recommended for You')}</h2>
+            <button type="button" className="cons-reco__all" onClick={onGoToShop}>
+              {t('consumer.home.browseAll', 'Browse all')} <span aria-hidden="true">→</span>
+            </button>
+          </div>
+          <div className="cons-reco__strip">
+            {recommended.map(({ product, price }) => (
+              <button
+                key={product.id}
+                type="button"
+                className="cons-reco__card"
+                onClick={onGoToShop}
+                aria-label={`${product.name} — ${t('consumer.home.from', 'from')} ${fmtMoney(price)}`}
+              >
+                <span className="cons-reco__emoji" aria-hidden="true">{getProductEmoji(product.name)}</span>
+                <span className="cons-reco__name">{product.name}</span>
+                <span className="cons-reco__price">{t('consumer.home.from', 'from')} {fmtMoney(price)}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {orders.length === 0 ? (
         <EmptyState icon="🌿">

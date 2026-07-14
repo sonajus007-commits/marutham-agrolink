@@ -242,3 +242,26 @@
   padding: 8px 0; border-bottom: 1px solid var(--surface-muted); cursor: pointer;
 }
 .ret-item input { width: 16px; height: 16px; accent-color: var(--forest); }
+
+/* Recommended-for-you strip (mockup's consumer dashboard). Horizontal scroll on
+   narrow screens; the card is a button linking to the shop. */
+.cons-reco { margin: 14px 0; }
+.cons-reco__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cons-reco__all {
+  background: none; border: 0; cursor: pointer; color: var(--accent);
+  font-weight: 700; font-size: 12px;
+}
+.cons-reco__strip {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 130px; gap: 10px;
+  overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin;
+}
+.cons-reco__card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 12px;
+  padding: 12px; cursor: pointer; text-align: left;
+  transition: border-color var(--duration-base) ease, transform var(--duration-base) ease;
+}
+.cons-reco__card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.cons-reco__emoji { font-size: 30px; line-height: 1; }
+.cons-reco__name { font-size: 13px; font-weight: 600; color: var(--text); }
+.cons-reco__price { font-size: 12px; font-weight: 700; color: var(--accent); }
