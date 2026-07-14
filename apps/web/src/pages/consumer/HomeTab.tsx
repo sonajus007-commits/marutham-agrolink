@@ -11,14 +11,25 @@ export function HomeTab({ onOpenOrder, onGoToShop }: { onOpenOrder: (id: string)
   const { t } = useTranslation();
   const { orders, groups, loading, error } = useOrders();
 
+  // KPI row (mockup's dashboard header). All real, from order data — Wallet & Reward
+  // Points are a Phase-2 feature and are intentionally not shown as fake numbers.
+  const now = new Date();
+  const thisMonth = orders.filter((o) => {
+    const d = o.created_at ? new Date(o.created_at) : null;
+    return d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+  const totalSpent = groups.delivered.reduce((s, o) => s + (Number(o.total) || 0), 0);
+
   if (loading && orders.length === 0) return <Spinner />;
   if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
 
   return (
     <>
-      <div className="cons-stats">
+      <div className="cons-kpis">
         <StatTile label={t('consumer.home.activeOrders')} value={groups.active.length} hint={t('consumer.home.inProgress')} />
         <StatTile label={t('consumer.home.completed')} value={groups.delivered.length} hint={t('consumer.home.delivered')} />
+        <StatTile label={t('consumer.home.thisMonth', 'Orders this month')} value={thisMonth} hint={t('consumer.home.thisMonthHint', 'Placed in {{month}}', { month: now.toLocaleString('en', { month: 'long' }) })} accent="var(--accent)" />
+        <StatTile label={t('consumer.home.totalSpent', 'Total spent')} value={fmtMoney(totalSpent)} hint={t('consumer.home.totalSpentHint', 'On delivered orders')} accent="var(--info)" />
       </div>
 
       {orders.length === 0 ? (
