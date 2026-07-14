@@ -246,7 +246,19 @@ router.post('/register', async (req, res) => {
   }
 
   const password_hash = await bcrypt.hash(password, 12);
-  const login_id = await generateLoginId(role, req.body.admin_role, state, district, fname, seller_type);
+
+  // generateLoginId THROWS when its lookup fails, and Express 4 does not catch an
+  // async throw — the promise rejects, no response is ever sent, and Node's default
+  // unhandled-rejection behaviour takes the whole API process down with it. One
+  // failed read during one signup, and every other user's request dies too.
+  // orders.js has always guarded its equivalent (generateOrderCode); this did not.
+  let login_id;
+  try {
+    login_id = await generateLoginId(role, req.body.admin_role, state, district, fname, seller_type);
+  } catch (err) {
+    console.error('generateLoginId error:', err.message);
+    return res.status(500).json({ error: 'Could not create your account. Please try again.' });
+  }
 
   // Farmers and retailers go into pending review; consumers are immediately active
   const approval_status = role === 'farmer' ? 'pending_review' : 'active';
@@ -590,7 +602,16 @@ router.post('/create-staff', requireAuth, async (req, res) => {
   if (existing) return res.status(409).json({ error: 'A user with this phone number already exists.' });
 
   const password_hash = await bcrypt.hash(password, 12);
-  const login_id = await generateLoginId('admin', admin_role, state || req.user.state, district || req.user.district, fname);
+
+  // As in /register: an async throw here is an unhandled rejection, and an
+  // unhandled rejection is a dead API server.
+  let login_id;
+  try {
+    login_id = await generateLoginId('admin', admin_role, state || req.user.state, district || req.user.district, fname);
+  } catch (err) {
+    console.error('generateLoginId error:', err.message);
+    return res.status(500).json({ error: 'Could not create the staff account. Please try again.' });
+  }
 
   const newUser = {
     login_id, phone, password_hash,

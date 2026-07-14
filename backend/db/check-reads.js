@@ -15,11 +15,22 @@
 //     `listings: []` to every caller for months.
 //   • GET /dashboard selected a column that does not exist. "Top Products" was
 //     empty on every dashboard, ever.
-//   • POST /auth/register discarded the error from its duplicate-phone guard. A
-//     transient failure let a SECOND account onto a phone that already had one —
-//     and login matches on `phone`, so `.maybeSingle()` then raised PGRST116 for
-//     BOTH accounts and answered "invalid phone number or password" forever. One
-//     swallowed error, two users permanently locked out, blamed on their password.
+//   • POST /payouts/run discarded the error from the read that says which orders
+//     have already been settled. The comment above it says "so we don't double-pay".
+//     A failed read left that set EMPTY, every delivered order was reclassified as
+//     unpaid, and every farmer was paid a second time.
+//
+// THE SHAPE, and it is worth learning: A GUARD WHOSE QUERY FAILS DOES NOT REJECT —
+// IT EVAPORATES. `if (existing)`, `if (listing)`, `if (cur && …)` all go false when
+// the read errored, so the check silently passes and the request proceeds.
+//
+// Whether that costs anything depends on whether the DATABASE also says no. It
+// often does, and quietly: /auth/register's duplicate-phone guard fails open the
+// same way, but users.phone is UNIQUE, so the INSERT is rejected and the caller
+// merely gets a confusing 500 where they should have had a clean 409. No duplicate,
+// no corruption. payouts and returns had no such constraint — which is exactly why
+// those two were where a failed read could do real damage, and why 026 added the
+// unique indexes that now make both impossible below the application entirely.
 //
 // check-embeds.js catches the first two by asking the database. It cannot catch
 // the third, cannot run in CI (there is no database there), and neither can a

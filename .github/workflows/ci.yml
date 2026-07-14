@@ -71,10 +71,17 @@ jobs:
       - name: Test — packages/lib (pure domain logic)
         run: pnpm test
 
-      # backend/ is CommonJS and deliberately outside the pnpm workspace. These
-      # tests cover the pure return/refund logic and need no database, so there
-      # is nothing to install.
-      - name: Test — backend (return + refund logic)
+      # backend/ is CommonJS and deliberately outside the pnpm workspace, so it gets
+      # its own install. It used to need none — the tests were pure functions. The
+      # ROUTE tests mount the real Express routers, so express/bcryptjs/qrcode have
+      # to be here. They still need NO database: the supabase client is replaced by
+      # a fake (backend/test/helpers/fakeSupabase.js), which is the only way to make
+      # a query fail on demand — and a query failing on demand is the entire bug
+      # class these tests exist to prevent.
+      - name: Install backend dependencies
+        run: npm ci --prefix backend
+
+      - name: Test — backend (routes + pure logic)
         run: node --test backend/test/
 
       # Replays backend/db/migrations/ and diffs the result against the
@@ -87,9 +94,9 @@ jobs:
       # supabase-js never throws — it resolves to { data, error }. A query that
       # fails returns data: null with an error nobody reads, and the route carries
       # on with nothing and answers as though all were well. That is how
-      # /products/:id served an empty list for months, how a duplicate slipped onto
-      # a registered phone, and how the payout run was one failed read away from
-      # paying every farmer twice. Static analysis, no database, so it gates here.
+      # /products/:id served an empty list for months, and how the payout run was
+      # one failed read away from paying every farmer twice. Static analysis, no
+      # database, so it gates here.
       - name: Reads — every supabase call reads its error
         run: node backend/db/check-reads.js
 
