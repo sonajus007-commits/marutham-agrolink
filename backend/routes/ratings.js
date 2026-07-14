@@ -135,4 +135,37 @@ router.get('/top', async (req, res) => {
   res.json({ top_ratings: results });
 });
 
+// ── GET /ratings/mine  (seller: my customer-ratings summary) ──────────────────
+// The overall average + count across all this seller's products, plus a per-product
+// breakdown, straight from the product_ratings aggregate (keyed by farmer_id).
+router.get('/mine', async (req, res) => {
+  if (req.user.role !== 'farmer') {
+    return res.status(403).json({ error: 'Only sellers have customer ratings.' });
+  }
+  const { data, error } = await supabase
+    .from('product_ratings')
+    .select('product_id, sum_stars, num_ratings, product:products ( name, unit )')
+    .eq('farmer_id', req.user.id)
+    .gt('num_ratings', 0);
+  if (error) return res.status(500).json({ error: 'Could not load your customer ratings.' });
+
+  const rows = data || [];
+  const totalRatings = rows.reduce((s, r) => s + (r.num_ratings || 0), 0);
+  const totalStars = rows.reduce((s, r) => s + (r.sum_stars || 0), 0);
+  const products = rows
+    .map((r) => ({
+      product: r.product?.name || '—',
+      unit: r.product?.unit || '',
+      avg: r.num_ratings ? Number((r.sum_stars / r.num_ratings).toFixed(1)) : 0,
+      count: r.num_ratings || 0,
+    }))
+    .sort((a, b) => b.avg - a.avg || b.count - a.count);
+
+  res.json({
+    avg: totalRatings ? Number((totalStars / totalRatings).toFixed(1)) : 0,
+    total_ratings: totalRatings,
+    products,
+  });
+});
+
 module.exports = router;

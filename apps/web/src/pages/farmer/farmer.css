@@ -204,3 +204,24 @@
   position: absolute; width: 1px; height: 1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }
+
+/* Weekly-earnings chart spacing (ChartContainer brings its own card chrome). */
+.fm-chart { margin-bottom: 14px; }
+
+/* Customer-ratings card */
+.fm-rating { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 6px 0 10px; }
+.fm-rating__score {
+  font-family: 'Outfit', sans-serif; font-size: 34px; font-weight: 800;
+  color: var(--forest); line-height: 1;
+}
+.fm-rating__stars { font-size: 20px; color: var(--gold); letter-spacing: 2px; }
+.fm-rating__starsoff { color: var(--border); }
+.fm-rating__count { font-size: 13px; color: var(--fg-muted); }
+.fm-rating__list { list-style: none; padding: 0; margin: 0; }
+.fm-rating__row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 0; border-bottom: 1px solid var(--border-subtle); font-size: 13px;
+}
+.fm-rating__row:last-child { border-bottom: 0; }
+.fm-rating__prod { color: var(--text); font-weight: 600; }
+.fm-rating__prodscore { color: var(--warning-strong); font-weight: 700; white-space: nowrap; }

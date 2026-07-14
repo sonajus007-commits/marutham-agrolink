@@ -432,6 +432,14 @@ export interface TopRatingsResponse {
   }>;
 }
 
+/** A seller's own customer-ratings summary (GET /ratings/mine). */
+export interface MyRatingsResponse {
+  /** Overall average across all rated products, 1 decimal (0 when none). */
+  avg: number;
+  total_ratings: number;
+  products: Array<{ product: string; unit: string; avg: number; count: number }>;
+}
+
 export interface LocationsResponse {
   tree: Record<string, Record<string, string[]>>;
 }

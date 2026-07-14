@@ -6,6 +6,7 @@ import {
   farmerEarnings, farmerWeeklyEarnings, subscriptionStatus, fmtMoney, fmtMoneyInt, fmtDateShort,
   type Order, type Payout, type SubscriptionStatus,
 } from '@marutham/lib';
+import type { MyRatingsResponse } from '@marutham/api-client';
 import { chartPalette, colors } from '@marutham/tokens';
 import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
@@ -16,6 +17,7 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [ratings, setRatings] = useState<MyRatingsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +28,8 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
       const [o, p] = await Promise.all([api.getOrders(), api.getPayouts()]);
       setOrders(o.orders || []);
       setPayouts(p.payouts || []);
+      // Ratings are secondary: a failure here must not blank the whole earnings tab.
+      api.getMyRatings().then(setRatings).catch(() => setRatings(null));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load earnings');
     } finally {
@@ -89,6 +93,30 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
       >
         <EChart option={trendOption} height={260} />
       </ChartContainer>
+
+      {ratings && ratings.total_ratings > 0 ? (
+        <section className="fm-card">
+          <h3>⭐ {t('farmer.earn.ratings', 'Customer Ratings')}</h3>
+          <div className="fm-rating">
+            <span className="fm-rating__score">{ratings.avg.toFixed(1)}</span>
+            <span className="fm-rating__stars" aria-hidden="true">
+              {'★★★★★'.slice(0, Math.round(ratings.avg))}
+              <span className="fm-rating__starsoff">{'★★★★★'.slice(Math.round(ratings.avg))}</span>
+            </span>
+            <span className="fm-rating__count">
+              {t('farmer.earn.ratingsCount', '{{count}} ratings', { count: ratings.total_ratings })}
+            </span>
+          </div>
+          <ul className="fm-rating__list">
+            {ratings.products.slice(0, 5).map((p) => (
+              <li key={p.product} className="fm-rating__row">
+                <span className="fm-rating__prod">{p.product}</span>
+                <span className="fm-rating__prodscore">★ {p.avg.toFixed(1)} · {p.count}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="fm-card">
         <h3>💰 {t('farmer.earn.lifetime')}</h3>

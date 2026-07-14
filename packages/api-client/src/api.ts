@@ -4,7 +4,7 @@ import { apiFetch } from './client';
 import type {
   LoginResponse, MeResponse, ScanResponse, EligibleAgentsResponse,
   FieldDashboardResponse, MyEmployeeResponse, User,
-  OrderingWindowResponse, TopRatingsResponse, LocationsResponse, PlaceOrderPayload,
+  OrderingWindowResponse, TopRatingsResponse, MyRatingsResponse, LocationsResponse, PlaceOrderPayload,
   TrackResponse, ReturnRequestPayload, ReturnResponse, RateItemResponse,
   SubscriptionPlansResponse, SubscriptionPayResponse,
   ProfileChangeRequestResponse, MyChangeRequestsResponse,
@@ -155,6 +155,10 @@ export const api = {
   },
   getTopRatings(): Promise<TopRatingsResponse> {
     return apiFetch<TopRatingsResponse>('GET', '/ratings/top');
+  },
+  /** The signed-in seller's own customer-ratings summary. */
+  getMyRatings(): Promise<MyRatingsResponse> {
+    return apiFetch<MyRatingsResponse>('GET', '/ratings/mine');
   },
   getLocations(): Promise<LocationsResponse> {
     return apiFetch<LocationsResponse>('GET', '/locations', undefined, false);
