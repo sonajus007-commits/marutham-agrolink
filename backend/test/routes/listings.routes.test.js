@@ -120,3 +120,46 @@ describe('GET /listings', () => {
     assert.notEqual(res.status, 200);
   });
 });
+
+// Body validation (Zod) on POST /listings. Price and stock are the numeric bug class
+// the ratings schema first closed: a raw `< 0` check let a bad value through untyped.
+describe('POST /listings — create validation', () => {
+  let app, mute;
+  beforeEach(() => { mute = muteConsoleError(); });
+  afterEach(async () => { mute.restore(); if (app) await app.close(); });
+
+  const bad = [
+    ['no product_id',          { farmer_price: 20, qty_available: 5 }],
+    ['a negative price',       { product_id: 'p1', farmer_price: -1, qty_available: 5 }],
+    ['a negative stock',       { product_id: 'p1', farmer_price: 20, qty_available: -5 }],
+    ['a non-numeric price',    { product_id: 'p1', farmer_price: 'cheap', qty_available: 5 }],
+  ];
+  for (const [label, body] of bad) {
+    test(`rejects ${label} at the edge (400, no product lookup)`, async () => {
+      const supa = fakeSupabase();
+      app = await mountRoute('listings', { supabase: supa, user: FARMER });
+      const res = await app.post('/', body);
+      assert.equal(res.status, 400);
+      assert.equal(supa.callsTo('products').length, 0);   // rejected before verifying the product
+    });
+  }
+
+  test('a non-farmer is turned away (403) before create validation', async () => {
+    app = await mountRoute('listings', { supabase: fakeSupabase(), user: ADMIN });
+    const res = await app.post('/', { farmer_price: -1 });   // also an invalid body
+    assert.equal(res.status, 403);
+  });
+
+  test('coerces a numeric-string price and creates the listing', async () => {
+    const supa = fakeSupabase({
+      'products:select': { data: [{ id: 'p1', available: true }] },
+      'farmer_listings:insert': { data: [{ id: 'listing-9', listing_status: 'pending' }] },
+    });
+    app = await mountRoute('listings', { supabase: supa, user: FARMER });
+    const res = await app.post('/', { product_id: 'p1', farmer_price: '20', qty_available: '5' });
+    assert.equal(res.status, 201);
+    const insert = supa.callsTo('farmer_listings', 'insert')[0];
+    assert.equal(insert.payload.farmer_price, 20);   // stored as a number, not "20"
+    assert.equal(insert.payload.qty_available, 5);
+  });
+});

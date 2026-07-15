@@ -1,3 +1,6 @@
+// Sentry FIRST — before express/routes load, so its instrumentation can patch them.
+// A no-op unless SENTRY_DSN is set (see instrument.js).
+const { Sentry, enabled: sentryEnabled } = require('./instrument');
 require('dotenv').config();
 const path    = require('path');
 const express = require('express');
@@ -234,6 +237,11 @@ app.use(express.static(path.join(__dirname, '../frontend'), { index: 'home.html'
 
 // ── 404 fallback ──────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Endpoint not found.' }));
+
+// Sentry's error handler goes AFTER the routes and BEFORE our own: it reports the
+// error, then lets our handler below format the JSON 500 the client sees. Guarded by
+// the DSN so it is never registered when Sentry is disabled.
+if (sentryEnabled) Sentry.setupExpressErrorHandler(app);
 
 // ── Error-handling middleware ───────────────────────────────────────────────────
 // The 4-argument signature is what marks this as Express's error handler. It catches

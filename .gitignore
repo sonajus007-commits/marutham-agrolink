@@ -15,6 +15,12 @@ apps/web/dist/
 apps/shop/.next/
 .turbo/
 *.tsbuildinfo
+# Storybook static build:
+apps/web/storybook-static/
+# Playwright e2e output:
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/.playwright/
 
 # Logs
 *.log

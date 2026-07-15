@@ -3,12 +3,43 @@ const jwt = require('jsonwebtoken');
 const QRCode = require('qrcode');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { validateBody, z } = require('../middleware/validate');
 const { generateOrderCode } = require('../utils/codeGen');
 const { getFeeForSeller } = require('../utils/fees');
 const { payoutByOrder } = require('../utils/payouts');
 
 const router = express.Router();
 router.use(requireAuth);
+
+// Only consumers place orders. A named guard, run ahead of body validation, keeps the
+// 403-before-400 order the inline check had (a farmer with a bad cart is still a 403).
+function consumersOnly(req, res, next) {
+  if (req.user.role !== 'consumer') {
+    return res.status(403).json({ error: 'Only consumers can place orders.' });
+  }
+  next();
+}
+
+// A cart line. `qty` is coerced to a number and required positive — the old check
+// (`!qty || qty <= 0`) compared the RAW body value with `<=`, so a JSON string "2"
+// slipped through untyped and then drove `listing.qty_available < qty` as a string.
+// `passthrough` keeps any extra per-line fields the client sends. Fractional qty is
+// allowed (produce sells by weight), so no `.int()`.
+const orderItemSchema = z
+  .object({
+    product_id: z.string().min(1, 'Each item needs product_id, farmer_id, and qty > 0.'),
+    farmer_id: z.string().min(1, 'Each item needs product_id, farmer_id, and qty > 0.'),
+    qty: z.coerce.number({ message: 'Each item needs product_id, farmer_id, and qty > 0.' })
+      .positive('Each item needs product_id, farmer_id, and qty > 0.'),
+  })
+  .passthrough();
+
+const createOrderSchema = z
+  .object({
+    items: z.array(orderItemSchema).min(1, 'items array is required and must not be empty.'),
+    pay_method: z.string().min(1, 'pay_method is required (UPI / Card / Cash on Delivery).'),
+  })
+  .passthrough(); // delivery_fee / delivery_address flow through to the handler unchanged
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -17,19 +48,8 @@ const CANCELLABLE_STAGES = [0, 1]; // Order Placed, Packaged — not once picked
 
 // ── POST /orders  (consumer only) ────────────────────────────────────────────
 // Body: { items: [{product_id, farmer_id, qty}], pay_method, address? }
-router.post('/', async (req, res) => {
-  if (req.user.role !== 'consumer') {
-    return res.status(403).json({ error: 'Only consumers can place orders.' });
-  }
-
+router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res) => {
   const { items, pay_method, delivery_fee: clientDeliveryFee, delivery_address } = req.body;
-
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ error: 'items array is required and must not be empty.' });
-  }
-  if (!pay_method) {
-    return res.status(400).json({ error: 'pay_method is required (UPI / Card / Cash on Delivery).' });
-  }
 
   // ── Ordering window: 8 PM – 8 AM IST only ────────────────────────────────
   // DISABLED FOR TESTING — re-enable by uncommenting the block below
@@ -47,10 +67,9 @@ router.post('/', async (req, res) => {
   let fulfilmentDistrict = null;
 
   for (const item of items) {
+    // Shape (product_id, farmer_id, qty > 0) is guaranteed by createOrderSchema; qty
+    // is now a real number, so the stock comparison below is numeric, not string-vs-string.
     const { product_id, farmer_id, qty } = item;
-    if (!product_id || !farmer_id || !qty || qty <= 0) {
-      return res.status(400).json({ error: 'Each item needs product_id, farmer_id, and qty > 0.' });
-    }
 
     // Fetch farmer listing (price + availability).
     // maybeSingle, not single: `.single()` errors when it matches nothing, so a

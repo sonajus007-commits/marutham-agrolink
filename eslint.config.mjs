@@ -11,6 +11,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 
 export default tseslint.config(
   // Never lint build output, deps, or generated artifacts.
@@ -18,6 +19,7 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/.next/**',
+      '**/storybook-static/**',
       '**/node_modules/**',
       '**/*.tsbuildinfo',
       // Generated — tokens.css is emitted from tokens.ts and checked separately.
@@ -43,8 +45,22 @@ export default tseslint.config(
     plugins: {
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      'jsx-a11y': jsxA11y,
     },
     rules: {
+      // Accessibility linting for JSX. We take the plugin's RECOMMENDED ruleset and
+      // fold its ENABLED rules down to warnings — the same "advisory during adoption"
+      // stance as no-explicit-any above: real issues surface (a known trio of them —
+      // see the design-system notes) without turning a first lint run, or a pre-commit
+      // hook on an untouched offending file, into a wall of blocking errors. Rules the
+      // recommended set leaves OFF (e.g. the deprecated label-has-for, superseded by
+      // label-has-associated-control) stay off, so we don't invent noise. Promote the
+      // set to errors once the backlog is clear.
+      ...Object.fromEntries(
+        Object.entries(jsxA11y.flatConfigs.recommended.rules)
+          .filter(([, severity]) => severity !== 'off' && severity !== 0)
+          .map(([rule]) => [rule, 'warn']),
+      ),
       // The two long-stable, high-value hooks rules — NOT the full v7 recommended
       // set. v7's recommended bundles React-Compiler-oriented advisories
       // (set-state-in-effect, immutability, preserve-manual-memoization) that flag
@@ -73,6 +89,15 @@ export default tseslint.config(
     files: ['**/*.config.{js,ts}', 'packages/**/scripts/**/*.{js,mjs}'],
     languageOptions: {
       globals: { ...globals.node },
+    },
+  },
+
+  // Storybook stories export a `meta` default and named story objects, not
+  // components, so the Fast-Refresh "components only" rule does not apply.
+  {
+    files: ['**/*.stories.{ts,tsx}', '**/.storybook/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
     },
   },
 );

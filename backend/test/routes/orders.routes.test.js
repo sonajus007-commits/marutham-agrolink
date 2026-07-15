@@ -257,3 +257,44 @@ describe('POST /orders/:id/cancel', () => {
     assert.ok(mute.lines.some((l) => l.includes('STOCK NOT RESTORED')));
   });
 });
+
+// Body validation (Zod) on POST /orders. A rejected cart must never reach the DB.
+describe('POST /orders — cart validation', () => {
+  let app, mute;
+  beforeEach(() => { mute = muteConsoleError(); });
+  afterEach(async () => { mute.restore(); if (app) await app.close(); });
+
+  const badCarts = [
+    ['an empty items array',        { items: [], pay_method: 'Cash on Delivery' }],
+    ['no pay_method',               { items: [{ product_id: PRODUCT_ID, farmer_id: FARMER_ID, qty: 1 }] }],
+    ['an item missing product_id',  { items: [{ farmer_id: FARMER_ID, qty: 1 }], pay_method: 'UPI' }],
+    ['a zero quantity',             { items: [{ product_id: PRODUCT_ID, farmer_id: FARMER_ID, qty: 0 }], pay_method: 'UPI' }],
+    ['a negative quantity',         { items: [{ product_id: PRODUCT_ID, farmer_id: FARMER_ID, qty: -3 }], pay_method: 'UPI' }],
+  ];
+  for (const [label, cart] of badCarts) {
+    test(`rejects ${label} at the edge (400, no listing read)`, async () => {
+      const supa = healthyCheckout();
+      app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+      const res = await app.post('/', cart);
+      assert.equal(res.status, 400);
+      assert.equal(supa.callsTo('farmer_listings').length, 0);   // stopped before any DB work
+    });
+  }
+
+  test('coerces a numeric-string qty and prices the order numerically', async () => {
+    // "2" as a JSON string used to flow through untyped; it is now a real 2, so the
+    // stock decrement (36 − 2) stays numeric.
+    const supa = healthyCheckout();
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+    const res = await app.post('/', { items: [{ product_id: PRODUCT_ID, farmer_id: FARMER_ID, qty: '2' }], pay_method: 'UPI' });
+    assert.equal(res.status, 201);
+    assert.equal(supa.callsTo('farmer_listings', 'update')[0].payload.qty_available, 34);
+  });
+
+  test('a non-consumer is turned away (403) before cart validation', async () => {
+    const supa = healthyCheckout();
+    app = await mountRoute('orders', { supabase: supa, user: { id: 'farmer-x', role: 'farmer' } });
+    const res = await app.post('/', { items: [], pay_method: '' });   // also an invalid body
+    assert.equal(res.status, 403);
+  });
+});

@@ -1,20 +1,35 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { validateBody, z } = require('../middleware/validate');
 
 const router = express.Router();
 router.use(requireAuth);
 
-// ── POST /orders/:id/items/:itemId/rate  (consumer, after delivery, once only) ─
-router.post('/:id/items/:itemId/rate', async (req, res) => {
+// Only consumers rate items. Kept as its own guard, ahead of body validation, so a
+// non-consumer is turned away with 403 before we bother inspecting what they sent —
+// the same order the hand-rolled checks ran in.
+function consumersOnly(req, res, next) {
   if (req.user.role !== 'consumer') {
     return res.status(403).json({ error: 'Only consumers can rate items.' });
   }
+  next();
+}
 
+// A rating is a whole number of stars, 1..5. `coerce` accepts the numeric string a
+// JSON client might send ("4") — which the old `<`/`>` check let through untyped —
+// but a fractional 3.5 or a non-number is now a clean 400, not a bad row.
+const rateSchema = z.object({
+  rating_value: z.coerce
+    .number({ message: 'rating_value must be a number from 1 to 5.' })
+    .int('rating_value must be a whole number from 1 to 5.')
+    .min(1, 'rating_value must be between 1 and 5.')
+    .max(5, 'rating_value must be between 1 and 5.'),
+});
+
+// ── POST /orders/:id/items/:itemId/rate  (consumer, after delivery, once only) ─
+router.post('/:id/items/:itemId/rate', consumersOnly, validateBody(rateSchema), async (req, res) => {
   const { rating_value } = req.body;
-  if (!rating_value || rating_value < 1 || rating_value > 5) {
-    return res.status(400).json({ error: 'rating_value must be between 1 and 5.' });
-  }
 
   // Fetch the order — must be delivered and owned by this consumer
   const { data: order, error: orderErr } = await supabase

@@ -20,6 +20,7 @@
     "db:verify-rebuild": "node db/migrate.js --verify-rebuild"
   },
   "dependencies": {
+    "@sentry/node": "^8.40.0",
     "@supabase/supabase-js": "^2.45.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
@@ -33,7 +34,8 @@
     "pino": "^10.3.1",
     "qrcode": "^1.5.4",
     "sharp": "^0.35.3",
-    "ws": "^8.21.0"
+    "ws": "^8.21.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.4",

@@ -1,6 +1,7 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { validateBody, z } = require('../middleware/validate');
 const { getFeeForSeller } = require('../utils/fees');
 const { validateImages } = require('../utils/listings');
 const notify = require('../utils/notify');
@@ -9,6 +10,46 @@ const router = express.Router();
 
 // All listing routes require login
 router.use(requireAuth);
+
+// Role guards kept ahead of body validation so the 403 still precedes any 400.
+function farmersOnly(req, res, next) {
+  if (req.user.role !== 'farmer') {
+    return res.status(403).json({ error: 'Only farmers can create listings.' });
+  }
+  next();
+}
+function adminsOnly(req, res, next) {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required.' });
+  }
+  next();
+}
+
+// Create: price and stock are coerced to numbers and required ≥ 0. The old checks
+// (`farmer_price < 0`, `qty_available < 0`) compared the RAW body value, so a numeric
+// string sailed past and was written to the listing untyped. `images` stays with the
+// existing validateImages helper; passthrough carries the rest of the form through.
+const createListingSchema = z
+  .object({
+    product_id: z.string().min(1, 'product_id, farmer_price, and qty_available are required.'),
+    farmer_price: z.coerce
+      .number({ message: 'product_id, farmer_price, and qty_available are required.' })
+      .min(0, 'farmer_price must be ≥ 0.'),
+    qty_available: z.coerce
+      .number({ message: 'product_id, farmer_price, and qty_available are required.' })
+      .min(0, 'qty_available must be ≥ 0.'),
+  })
+  .passthrough();
+
+// Only the status word is validated here; the "a rejection must give a reason" rule
+// is conditional and stays in the handler.
+const listingStatusSchema = z
+  .object({
+    status: z.enum(['active', 'rejected', 'pending'], {
+      message: 'status must be active, rejected, or pending.',
+    }),
+  })
+  .passthrough();
 
 // ── GET /listings ─────────────────────────────────────────────────────────────
 // Farmer → their own listings
@@ -130,22 +171,12 @@ router.get('/', async (req, res) => {
 });
 
 // ── POST /listings  (farmer only) ────────────────────────────────────────────
-router.post('/', async (req, res) => {
-  if (req.user.role !== 'farmer') {
-    return res.status(403).json({ error: 'Only farmers can create listings.' });
-  }
-
+router.post('/', farmersOnly, validateBody(createListingSchema), async (req, res) => {
   const {
     product_id, farmer_price, qty_available,
     time_available, cutoff_ts, bulk_qty, bulk_disc_pct,
     qty_type, qty_value,
   } = req.body;
-
-  if (!product_id || farmer_price == null || qty_available == null) {
-    return res.status(400).json({ error: 'product_id, farmer_price, and qty_available are required.' });
-  }
-  if (farmer_price < 0) return res.status(400).json({ error: 'farmer_price must be ≥ 0.' });
-  if (qty_available < 0) return res.status(400).json({ error: 'qty_available must be ≥ 0.' });
 
   // `images` was omitted from the destructure above and never inserted, so every
   // photo a farmer attached on create was silently discarded — they only stuck if
@@ -303,14 +334,8 @@ router.get('/admin/pending', async (req, res) => {
 });
 
 // ── PATCH /listings/:id/status  (admin only) ─────────────────────────────────
-router.patch('/:id/status', async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin access required.' });
-  }
+router.patch('/:id/status', adminsOnly, validateBody(listingStatusSchema), async (req, res) => {
   const { status } = req.body;
-  if (!['active', 'rejected', 'pending'].includes(status)) {
-    return res.status(400).json({ error: 'status must be active, rejected, or pending.' });
-  }
 
   // A rejection MUST say why.
   //

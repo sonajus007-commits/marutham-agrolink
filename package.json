@@ -13,7 +13,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "corepack pnpm --filter @marutham/lib test",
+    "test": "corepack pnpm --filter @marutham/lib --filter @marutham/web run test",
     "test:backend": "npm --prefix backend test",
     "tokens:build": "corepack pnpm --filter @marutham/tokens tokens:build",
     "tokens:check": "corepack pnpm --filter @marutham/tokens tokens:check",
@@ -35,6 +35,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.7.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",

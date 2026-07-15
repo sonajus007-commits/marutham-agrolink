@@ -68,7 +68,7 @@ jobs:
       - name: Parse-check backend sources
         run: find backend -name '*.js' -not -path '*/node_modules/*' -print0 | xargs -0 -n1 node --check
 
-      - name: Test — packages/lib (pure domain logic)
+      - name: Test — packages/lib (domain logic) + apps/web (components)
         run: pnpm test
 
       # backend/ is CommonJS and deliberately outside the pnpm workspace, so it gets
@@ -122,3 +122,12 @@ jobs:
       # and test suite all miss it. Needs the build above, so it runs last.
       - name: UI — every Tailwind class resolves to CSS
         run: pnpm ui:classes
+
+      # E2E smoke: Playwright drives the built SPA (served by vite preview) with the
+      # /api layer mocked, so it needs no backend or database. Browser + its OS libs
+      # are installed here; the webServer in playwright.config rebuilds and serves.
+      - name: Install Playwright browser (chromium)
+        run: pnpm --filter @marutham/web exec playwright install --with-deps chromium
+
+      - name: E2E — web smoke (Playwright, mocked API)
+        run: pnpm --filter @marutham/web exec playwright test

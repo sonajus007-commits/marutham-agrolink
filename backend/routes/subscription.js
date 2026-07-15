@@ -2,11 +2,27 @@ const express  = require('express');
 const crypto   = require('crypto');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { validateBody, z } = require('../middleware/validate');
 const { getPlan, planList, REGISTRATION_CHARGE, concessionFor, discountedAmount } = require('../utils/subscriptionPlans');
 const notify   = require('../utils/notify');
 
 const router = express.Router();
 router.use(requireAuth);
+
+// Only sellers pay a subscription — guard ahead of validation to keep 403 before 400.
+function sellersOnly(req, res, next) {
+  if (req.user.role !== 'farmer') {
+    return res.status(403).json({ error: 'Only sellers have a subscription to pay for.' });
+  }
+  next();
+}
+
+// `plan` must be a non-empty string; whether it names a REAL plan is still decided by
+// getPlan() in the handler. Message mirrors that check so the response is unchanged.
+const paySchema = z
+  .object({ plan: z.string({ message: 'Please select a valid subscription plan.' })
+                    .min(1, 'Please select a valid subscription plan.') })
+  .passthrough();
 
 // A seller pays the registration charge only on their very first activation.
 // `payment_confirmed_at` is set the first time they ever pay — so its absence
@@ -42,11 +58,7 @@ router.get('/plans', (req, res) => {
 // Body: { plan }.  SIMULATED payment (prototype) — marks the payment successful
 // immediately and activates the account. Replace the "simulated success" block
 // with a real gateway (e.g. Razorpay) verification when ready.
-router.post('/pay', async (req, res) => {
-  if (req.user.role !== 'farmer') {
-    return res.status(403).json({ error: 'Only sellers have a subscription to pay for.' });
-  }
-
+router.post('/pay', sellersOnly, validateBody(paySchema), async (req, res) => {
   const planName = req.body.plan;
   const plan = getPlan(planName);
   if (!plan) {

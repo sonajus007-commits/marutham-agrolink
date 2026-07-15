@@ -1,3 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Workspace packages ship TypeScript source, not a build — Next must compile them.
@@ -11,4 +13,10 @@ const nextConfig = {
   reactStrictMode: true,
 };
 
-export default nextConfig;
+// withSentryConfig adds the build-time plugin (source-map handling, tree-shaking of
+// Sentry logger). With no org/project/auth token it does NOT upload anything and
+// makes no network call, so the CI build (which has no DSN and no token) is safe.
+export default withSentryConfig(nextConfig, {
+  silent: !process.env.CI, // quiet locally; let CI surface any plugin output
+  disableLogger: true, // drop Sentry's own debug logging from the client bundle
+});

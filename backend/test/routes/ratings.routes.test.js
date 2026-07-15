@@ -52,3 +52,47 @@ test('GET /ratings/mine — a failed read is a 500, never a false "no ratings"',
   const res = await app.get('/mine');
   assert.equal(res.status, 500);
 });
+
+// ── POST /:id/items/:itemId/rate — body validation (Zod middleware) ────────────
+const RATE_PATH = '/o1/items/i1/rate';
+
+test('POST rate — a missing rating_value is rejected at the edge (400, no DB touched)', async () => {
+  const db = fakeSupabase();
+  app = await mountRoute('ratings', { supabase: db, user: CONSUMER });
+  const res = await app.post(RATE_PATH, {});
+  assert.equal(res.status, 400);
+  assert.equal(db.callsTo('orders').length, 0);   // validation ran before the handler
+});
+
+test('POST rate — a rating above 5 is rejected (400)', async () => {
+  app = await mountRoute('ratings', { supabase: fakeSupabase(), user: CONSUMER });
+  const res = await app.post(RATE_PATH, { rating_value: 6 });
+  assert.equal(res.status, 400);
+});
+
+test('POST rate — a fractional rating is rejected (400)', async () => {
+  // The exact hole the schema closes: 3.5 passed the old `< 1 || > 5` range check
+  // and was written to the database as a fractional star.
+  app = await mountRoute('ratings', { supabase: fakeSupabase(), user: CONSUMER });
+  const res = await app.post(RATE_PATH, { rating_value: 3.5 });
+  assert.equal(res.status, 400);
+});
+
+test('POST rate — a non-consumer is turned away (403) before body validation', async () => {
+  // Precedence is preserved: the role guard runs ahead of validation, so a bad body
+  // from a farmer is still a 403, not a 400.
+  app = await mountRoute('ratings', { supabase: fakeSupabase(), user: FARMER });
+  const res = await app.post(RATE_PATH, { rating_value: 99 });
+  assert.equal(res.status, 403);
+});
+
+test('POST rate — a valid rating sent as a string clears the gate and reaches the order lookup', async () => {
+  // `coerce` accepts the JSON string "4" the old check let through untyped; with no
+  // order programmed the route answers 404, proving the request passed validation
+  // rather than being stopped at it.
+  const db = fakeSupabase();
+  app = await mountRoute('ratings', { supabase: db, user: CONSUMER });
+  const res = await app.post(RATE_PATH, { rating_value: '4' });
+  assert.equal(res.status, 404);
+  assert.equal(db.callsTo('orders', 'select').length, 1);
+});

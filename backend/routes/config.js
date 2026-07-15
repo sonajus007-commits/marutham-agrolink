@@ -1,8 +1,30 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireRole } = require('../middleware/auth');
+const { validateBody, z } = require('../middleware/validate');
 
 const router = express.Router();
+
+// Both hours are coerced to integers in 0..23 and must differ. Replaces the manual
+// parseInt / isNaN / range dance; `requireRole('admin')` still runs first, so a
+// non-admin is 403'd before the body is ever inspected.
+const orderingWindowSchema = z
+  .object({
+    open_hour: z.coerce
+      .number({ message: 'open_hour and close_hour are required (0–23).' })
+      .int('open_hour and close_hour must be integers 0–23.')
+      .min(0, 'open_hour and close_hour must be integers 0–23.')
+      .max(23, 'open_hour and close_hour must be integers 0–23.'),
+    close_hour: z.coerce
+      .number({ message: 'open_hour and close_hour are required (0–23).' })
+      .int('open_hour and close_hour must be integers 0–23.')
+      .min(0, 'open_hour and close_hour must be integers 0–23.')
+      .max(23, 'open_hour and close_hour must be integers 0–23.'),
+  })
+  .refine((v) => v.open_hour !== v.close_hour, {
+    message: 'open_hour and close_hour cannot be the same.',
+    path: ['close_hour'],
+  });
 
 // In-memory config — resets on server restart.
 // Default: ordering window 8 PM (20) to 8 AM (8) IST
@@ -14,20 +36,9 @@ router.get('/ordering-window', (req, res) => {
 });
 
 // ── PUT /config/ordering-window ───────────────────────────────────────────────
-router.put('/ordering-window', requireRole('admin'), (req, res) => {
-  const { open_hour, close_hour } = req.body;
-  if (open_hour === undefined || close_hour === undefined) {
-    return res.status(400).json({ error: 'open_hour and close_hour are required (0–23).' });
-  }
-  const oh = parseInt(open_hour);
-  const ch = parseInt(close_hour);
-  if (isNaN(oh) || isNaN(ch) || oh < 0 || oh > 23 || ch < 0 || ch > 23) {
-    return res.status(400).json({ error: 'open_hour and close_hour must be integers 0–23.' });
-  }
-  if (oh === ch) {
-    return res.status(400).json({ error: 'open_hour and close_hour cannot be the same.' });
-  }
-  orderingWindow = { open_hour: oh, close_hour: ch };
+router.put('/ordering-window', requireRole('admin'), validateBody(orderingWindowSchema), (req, res) => {
+  const { open_hour, close_hour } = req.body;   // validated integers 0–23, guaranteed to differ
+  orderingWindow = { open_hour, close_hour };
   res.json({ message: 'Ordering window updated.', ordering_window: orderingWindow });
 });
 

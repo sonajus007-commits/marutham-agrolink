@@ -1,6 +1,7 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { validateBody, z } = require('../middleware/validate');
 const { generateReturnCode } = require('../utils/codeGen');
 const {
   RETURN_WINDOW_HOURS,
@@ -13,6 +14,17 @@ const {
 
 const router = express.Router();
 router.use(requireAuth);
+
+// Only admins decide returns — guard first, so 403 precedes any 400.
+function decidersOnly(req, res, next) {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Only admins can decide on returns.' });
+  }
+  next();
+}
+const decideSchema = z.object({
+  decision: z.enum(['accepted', 'rejected'], { message: 'decision must be "accepted" or "rejected".' }),
+});
 
 // ── POST /orders/:id/return  (consumer, within return window) ─────────────────
 // Body: { full_return?, lines: [{ order_item_id, qty?, reason }], photos?: [url] }
@@ -194,14 +206,8 @@ router.get('/', async (req, res) => {
 });
 
 // ── PATCH /returns/:id/decide  (VCO or admin) ────────────────────────────────
-router.patch('/:id/decide', async (req, res) => {
-  const u = req.user;
-  if (u.role !== 'admin') return res.status(403).json({ error: 'Only admins can decide on returns.' });
-
+router.patch('/:id/decide', decidersOnly, validateBody(decideSchema), async (req, res) => {
   const { decision } = req.body;
-  if (!['accepted', 'rejected'].includes(decision)) {
-    return res.status(400).json({ error: 'decision must be "accepted" or "rejected".' });
-  }
 
   const { data: ret, error: retErr } = await supabase
     .from('returns')
