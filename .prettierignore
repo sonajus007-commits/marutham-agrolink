@@ -5,6 +5,9 @@ node_modules
 pnpm-lock.yaml
 # Generated from tokens.ts — never hand-format.
 packages/tokens/src/tokens.css
+# Vendored geo data — pretty-printing it inflates a 100KB asset into thousands
+# of lines and churns every future diff/blame. Not hand-maintained source.
+**/*.geo.json
 # Legacy static site (huge, hand-authored HTML) — out of scope.
 frontend
 index.html
