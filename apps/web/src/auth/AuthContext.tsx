@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, getToken, getUser, setSession, clearSession, type User } from '@marutham/api-client';
+import { enablePushForSession, disablePushForSession } from '../native/push';
 
 interface AuthState {
   user: User | null;
@@ -31,6 +32,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((res) => {
         if (!active) return;
         setUser(res.user);
+        // Session restored from a stored token (e.g. app relaunch) — re-register this
+        // device for push. No-op in the browser.
+        void enablePushForSession();
       })
       .catch(() => {
         if (!active) return;
@@ -51,15 +55,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await api.login(phone, password);
         setSession(res.token, res.user);
         setUser(res.user);
+        void enablePushForSession(); // register this device for push (no-op in browser)
         return res.user;
       },
       async loginWithOtp(phone, otp) {
         const res = await api.verifyOtp(phone, otp);
         setSession(res.token, res.user);
         setUser(res.user);
+        void enablePushForSession();
         return res.user;
       },
       logout() {
+        void disablePushForSession(); // drop this device's token before clearing the session
         clearSession();
         setUser(null);
       },

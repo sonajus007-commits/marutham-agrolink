@@ -63,6 +63,7 @@ const registrationsRouter = require('./routes/registrations');
 const subscriptionRouter  = require('./routes/subscription');
 const locationsRouter     = require('./routes/locations');
 const employeesRouter     = require('./routes/employees');
+const notificationsRouter = require('./routes/notifications');
 
 // The whole API lives under /api. It used to own the ROOT namespace (/products,
 // /orders, /users …), which made the root unusable for anything else: a public
@@ -96,6 +97,7 @@ api.use('/registrations', registrationsRouter);
 api.use('/subscription',  subscriptionRouter);
 api.use('/locations',     locationsRouter);
 api.use('/employees',     employeesRouter);
+api.use('/notifications', notificationsRouter);
 
 // /me lives under /auth but the spec exposes it at /me — alias both
 api.get('/me',   require('./middleware/auth').requireAuth, (req, res) => res.redirect(307, '/api/auth/me'));

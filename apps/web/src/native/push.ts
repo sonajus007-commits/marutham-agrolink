@@ -13,6 +13,7 @@
  * app is running in a browser. */
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications, type PushNotificationSchema } from '@capacitor/push-notifications';
+import { api } from '@marutham/api-client';
 
 export type PushMessageHandler = (message: PushNotificationSchema) => void;
 
@@ -48,4 +49,41 @@ export async function registerPush(onMessage?: PushMessageHandler): Promise<stri
 export async function unregisterPush(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   await PushNotifications.removeAllListeners();
+}
+
+// The token this session registered with the backend, so sign-out can delete the
+// right row. Held in-module because it is device state, not React state.
+let registeredToken: string | null = null;
+
+/* AuthContext calls these on every session start/end. Both are safe in the browser:
+ * registerPush() returns null off-device, so enable* never hits the API from the web
+ * portal — only the native app registers a token. That is deliberate; a signed-in
+ * browser tab has no push token to store. */
+
+/** Obtain this device's push token and register it against the signed-in user.
+ *  No-op (and no API call) in the browser. */
+export async function enablePushForSession(onMessage?: PushMessageHandler): Promise<void> {
+  const token = await registerPush(onMessage);
+  if (!token) return;
+  registeredToken = token;
+  const platform = Capacitor.getPlatform() as 'android' | 'ios' | 'web';
+  try {
+    await api.registerPushToken(token, platform);
+  } catch (err) {
+    // A failed registration must never block sign-in — the user is in either way.
+    console.error('[push] could not register token with backend', err);
+  }
+}
+
+/** Unregister this device's token on sign-out, then tear down the listeners. */
+export async function disablePushForSession(): Promise<void> {
+  if (registeredToken) {
+    try {
+      await api.unregisterPushToken(registeredToken);
+    } catch (err) {
+      console.error('[push] could not unregister token with backend', err);
+    }
+    registeredToken = null;
+  }
+  await unregisterPush();
 }

@@ -24,6 +24,37 @@
         }
       }
     },
+    "device_tokens": {
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "primaryKey": true
+        },
+        "user_id": {
+          "type": "uuid",
+          "notNull": true
+        },
+        "token": {
+          "type": "text",
+          "notNull": true
+        },
+        "platform": {
+          "type": "text",
+          "notNull": true
+        },
+        "last_seen_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        }
+      }
+    },
     "employee_audit_log": {
       "columns": {
         "action": {

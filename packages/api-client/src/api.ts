@@ -518,6 +518,22 @@ export const api = {
   restoreEmployee(id: string): Promise<RestoreEmployeeResponse> {
     return apiFetch<RestoreEmployeeResponse>('POST', '/employees/' + id + '/restore', {});
   },
+
+  /** Register the native app's push token (FCM/APNs) against the signed-in user, so
+   *  the backend can target a notification at this device. Called after sign-in from
+   *  the Capacitor shell; a no-op in the browser (see apps/web/src/native/push.ts). */
+  registerPushToken(
+    token: string,
+    platform: 'android' | 'ios' | 'web',
+  ): Promise<{ message: string }> {
+    return apiFetch('POST', '/notifications/device', { token, platform });
+  },
+
+  /** Drop this device's push token on sign-out, so a signed-out phone stops receiving
+   *  the previous user's notifications. */
+  unregisterPushToken(token: string): Promise<{ message: string }> {
+    return apiFetch('DELETE', '/notifications/device', { token });
+  },
 };
 
 export type Api = typeof api;
