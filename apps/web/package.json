@@ -16,6 +16,7 @@
     "@marutham/tokens": "workspace:*",
     "@marutham/ui": "workspace:*",
     "@tanstack/react-query": "^5.101.2",
+    "@tanstack/react-table": "^8.21.3",
     "echarts": "^5.5.1",
     "echarts-for-react": "^3.0.2",
     "framer-motion": "^12.42.2",
