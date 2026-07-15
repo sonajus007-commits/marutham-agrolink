@@ -12,7 +12,7 @@ import {
   HOME_DISTRICT,
   type PublicListing,
 } from '@marutham/lib';
-import { getProduct, REVALIDATE_SECONDS } from '@/lib/api';
+import { getProduct } from '@/lib/api';
 import { absoluteUrl } from '@/lib/site';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Dict, type Lang } from '@/lib/dict';
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome';
@@ -29,22 +29,24 @@ import { OrderButton } from '@/components/OrderButton';
  * it is the API's allow-list (backend/utils/publicShape.js): an anonymous caller
  * is never sent a farmer's name. Signing in is what buys you the name, and the
  * page says so rather than leaving a suspicious blank. */
-export const revalidate = REVALIDATE_SECONDS;
+// Next 15 requires a literal here (not an imported identifier); mirrors REVALIDATE_SECONDS in lib/api.ts.
+export const revalidate = 300;
 
 interface Params {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-function lang(): Lang {
-  const c = cookies().get(LANG_COOKIE)?.value;
+async function lang(): Promise<Lang> {
+  const c = (await cookies()).get(LANG_COOKIE)?.value;
   return isLang(c) ? c : DEFAULT_LANG;
 }
 
 /* Next memoises fetch() across generateMetadata and the render, so asking for the
  * product twice costs one request. */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const detail = await getProduct(params.id);
-  const t = DICT[lang()];
+  const { id } = await params;
+  const detail = await getProduct(id);
+  const t = DICT[await lang()];
 
   if (!detail) {
     return { title: t.product.notFound, robots: { index: false, follow: false } };
@@ -70,12 +72,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function ProductPage({ params }: Params) {
-  const l = lang();
+  const { id } = await params;
+  const l = await lang();
   const t = DICT[l];
 
   // null means the API said 404. A dead backend THROWS instead of landing here —
   // serving a 404 for a product that exists would tell Google to de-index it.
-  const detail = await getProduct(params.id);
+  const detail = await getProduct(id);
   if (!detail) notFound();
 
   const { product, listings } = detail;

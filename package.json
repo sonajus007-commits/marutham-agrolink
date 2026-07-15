@@ -27,7 +27,7 @@
   },
   "lint-staged": {
     "{apps,packages}/**/*.{ts,tsx}": [
-      "eslint --fix",
+      "eslint --fix --no-warn-ignored",
       "prettier --write"
     ],
     "**/*.{js,jsx,mjs,cjs,json,css,scss,md,yml,yaml}": "prettier --write --ignore-unknown"

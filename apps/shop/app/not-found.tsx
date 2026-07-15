@@ -8,8 +8,8 @@ import { SiteHeader, SiteFooter } from '@/components/SiteChrome';
  * A dead backend must never land here: lib/api.ts throws instead of returning
  * null, so an outage renders a 5xx. The difference matters to a crawler, which
  * reads a 404 as "drop this URL" and a 5xx as "come back later". */
-export default function NotFound() {
-  const c = cookies().get(LANG_COOKIE)?.value;
+export default async function NotFound() {
+  const c = (await cookies()).get(LANG_COOKIE)?.value;
   const l: Lang = isLang(c) ? c : DEFAULT_LANG;
   const t = DICT[l];
 

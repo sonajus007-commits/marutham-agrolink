@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { HOME_PRODUCT_LIMIT, type Product } from '@marutham/lib';
-import { getAvailableProducts, getPublicStats, REVALIDATE_SECONDS } from '@/lib/api';
+import { getAvailableProducts, getPublicStats } from '@/lib/api';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Dict, type Lang } from '@/lib/dict';
 import { PORTAL_REGISTER } from '@/lib/portal';
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome';
@@ -14,10 +14,11 @@ import { ProductCard } from '@/components/ProductCard';
  * indexable. Only two client components exist, and both are there because they
  * touch the browser: the language toggle (writes a cookie) and the order button
  * (writes localStorage). */
-export const revalidate = REVALIDATE_SECONDS;
+// Next 15 requires a literal here (not an imported identifier); mirrors REVALIDATE_SECONDS in lib/api.ts.
+export const revalidate = 300;
 
 export default async function HomePage() {
-  const cookieLang = cookies().get(LANG_COOKIE)?.value;
+  const cookieLang = (await cookies()).get(LANG_COOKIE)?.value;
   const lang: Lang = isLang(cookieLang) ? cookieLang : DEFAULT_LANG;
   const t = DICT[lang];
 

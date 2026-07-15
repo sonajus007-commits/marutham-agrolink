@@ -24,8 +24,8 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const cookieLang = cookies().get(LANG_COOKIE)?.value;
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieLang = (await cookies()).get(LANG_COOKIE)?.value;
   const lang = isLang(cookieLang) ? cookieLang : DEFAULT_LANG;
 
   return (

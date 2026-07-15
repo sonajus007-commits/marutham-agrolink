@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
-import { getAllProducts, REVALIDATE_SECONDS } from '@/lib/api';
+import { getAllProducts } from '@/lib/api';
 import { absoluteUrl } from '@/lib/site';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Lang } from '@/lib/dict';
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome';
@@ -11,15 +11,16 @@ import { ProductCard } from '@/components/ProductCard';
  * This is where "View All Products" goes. It used to go to the sign-in page,
  * which meant the public marketplace showed ten products and then asked for a
  * password, and a crawler could reach exactly one page. */
-export const revalidate = REVALIDATE_SECONDS;
+// Next 15 requires a literal here (not an imported identifier); mirrors REVALIDATE_SECONDS in lib/api.ts.
+export const revalidate = 300;
 
-function lang(): Lang {
-  const c = cookies().get(LANG_COOKIE)?.value;
+async function lang(): Promise<Lang> {
+  const c = (await cookies()).get(LANG_COOKIE)?.value;
   return isLang(c) ? c : DEFAULT_LANG;
 }
 
-export function generateMetadata(): Metadata {
-  const t = DICT[lang()];
+export async function generateMetadata(): Promise<Metadata> {
+  const t = DICT[await lang()];
   return {
     title: t.catalogue.metaTitle,
     description: t.catalogue.metaDesc,
@@ -34,7 +35,7 @@ export function generateMetadata(): Metadata {
 }
 
 export default async function CataloguePage() {
-  const l = lang();
+  const l = await lang();
   const t = DICT[l];
   const products = await getAllProducts();
 

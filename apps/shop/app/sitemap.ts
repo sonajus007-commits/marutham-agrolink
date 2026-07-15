@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { getAllProducts, REVALIDATE_SECONDS } from '@/lib/api';
+import { getAllProducts } from '@/lib/api';
 import { absoluteUrl } from '@/lib/site';
 
 /* /sitemap.xml — how a crawler finds the product pages at all.
@@ -12,7 +12,8 @@ import { absoluteUrl } from '@/lib/site';
  * If the API is unreachable this degrades to the static routes rather than
  * throwing: a sitemap that 500s is worse than a short one, because a crawler
  * backs off the whole site. */
-export const revalidate = REVALIDATE_SECONDS;
+// Next 15 requires a literal here (not an imported identifier); mirrors REVALIDATE_SECONDS in lib/api.ts.
+export const revalidate = 300;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const products = await getAllProducts();
