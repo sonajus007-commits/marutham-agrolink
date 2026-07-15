@@ -134,16 +134,18 @@ async function fetchActiveOrder(id, res) {
   return order;
 }
 
-// Optional proof-of-delivery coordinates on a scan body. Absent → { coords: null }
-// (the agent declined location; delivery proceeds). Present but malformed → an
-// { error } the caller turns into a 400, so a bad pair never lands in the row.
-function parseDeliveryCoords(body) {
-  const { delivered_lat, delivered_lng } = body || {};
-  if (delivered_lat == null && delivered_lng == null) return { coords: null };
-  const lat = Number(delivered_lat);
-  const lng = Number(delivered_lng);
+// Optional "where the scanner is" coordinates on a scan body. One generic lat/lng
+// serves every handoff — the stage decides which column it lands in (verified_* at
+// VCO, delivered_* at delivery, dispatched_* at the hub). Absent → { coords: null }
+// (location was declined; the scan proceeds). Malformed → an { error } the caller
+// turns into a 400, so a bad pair never lands in a row.
+function parseScanCoords(body) {
+  const { lat: rawLat, lng: rawLng } = body || {};
+  if (rawLat == null && rawLng == null) return { coords: null };
+  const lat = Number(rawLat);
+  const lng = Number(rawLng);
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-    return { error: 'Invalid delivery location.' };
+    return { error: 'Invalid location.' };
   }
   return { coords: { lat, lng } };
 }
@@ -200,9 +202,9 @@ router.post('/:id/scan', async (req, res) => {
   const order = await fetchActiveOrder(req.params.id, res);
   if (!order) return;
 
-  // Proof-of-delivery location, if the agent's device shared one. Only stored when
-  // this scan is the final one (→ Delivered); ignored on every earlier stage.
-  const coords = parseDeliveryCoords(req.body);
+  // Where the scanner is, if the device shared it. Each branch below stamps it onto
+  // the column for the stage it completes (VCO verify, hub dispatch, delivery).
+  const coords = parseScanCoords(req.body);
   if (coords.error) return res.status(400).json({ error: coords.error });
 
   const adminRole = u.admin_role;
@@ -220,6 +222,13 @@ router.post('/:id/scan', async (req, res) => {
 
     const { agent_id, route } = req.body;
     const extra = {};
+
+    // Where the VCO verified/collected the order. This branch only ever produces
+    // 'VCO Verified', so it is stored unconditionally (no gating needed).
+    if (coords.coords) {
+      extra.verified_lat = coords.coords.lat;
+      extra.verified_lng = coords.coords.lng;
+    }
 
     if (route !== undefined) {
       if (route !== 'direct' && route !== 'hub') {

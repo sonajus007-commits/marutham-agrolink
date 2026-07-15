@@ -42,7 +42,7 @@ afterEach(async () => {
 test('scan to Delivered stores the delivery coordinates', async () => {
   const db = dbFor(outForDelivery());
   app = await mountRoute('delivery', { supabase: db, user: AGENT });
-  const res = await app.post('/o1/scan', { delivered_lat: 10.5, delivered_lng: 78.8 });
+  const res = await app.post('/o1/scan', { lat: 10.5, lng: 78.8 });
 
   assert.equal(res.status, 200);
   const update = db.callsTo('orders', 'update')[0].payload;
@@ -68,7 +68,7 @@ test('delivery without coordinates still succeeds and writes no lat/lng', async 
 test('malformed coordinates are a 400, and nothing is written', async () => {
   const db = dbFor(outForDelivery());
   app = await mountRoute('delivery', { supabase: db, user: AGENT });
-  const res = await app.post('/o1/scan', { delivered_lat: 999, delivered_lng: 78.8 });
+  const res = await app.post('/o1/scan', { lat: 999, lng: 78.8 });
 
   assert.equal(res.status, 400);
   assert.equal(db.callsTo('orders', 'update').length, 0);
@@ -78,7 +78,7 @@ test('coordinates on a non-final scan are ignored (only stored on delivery)', as
   // stage 3 (Picked Up) → 4 (Out for Delivery): not the Delivered transition.
   const db = dbFor(outForDelivery({ stage: 3, status: 'Picked Up' }));
   app = await mountRoute('delivery', { supabase: db, user: AGENT });
-  const res = await app.post('/o1/scan', { delivered_lat: 10.5, delivered_lng: 78.8 });
+  const res = await app.post('/o1/scan', { lat: 10.5, lng: 78.8 });
 
   assert.equal(res.status, 200);
   const update = db.callsTo('orders', 'update')[0].payload;
@@ -89,7 +89,7 @@ test('coordinates on a non-final scan are ignored (only stored on delivery)', as
 test('a consumer cannot scan', async () => {
   const db = dbFor(outForDelivery());
   app = await mountRoute('delivery', { supabase: db, user: CONSUMER });
-  const res = await app.post('/o1/scan', { delivered_lat: 10.5, delivered_lng: 78.8 });
+  const res = await app.post('/o1/scan', { lat: 10.5, lng: 78.8 });
   assert.equal(res.status, 403);
   assert.equal(db.callsTo('orders', 'update').length, 0);
 });
@@ -103,7 +103,7 @@ test('a delivery near the pin stores a small distance and adds no off-site note'
   const db = dbFor(outForDelivery(PINNED));
   app = await mountRoute('delivery', { supabase: db, user: AGENT });
   // ~110 m north of the pin — inside the 500 m geofence.
-  const res = await app.post('/o1/scan', { delivered_lat: 10.501, delivered_lng: 78.8 });
+  const res = await app.post('/o1/scan', { lat: 10.501, lng: 78.8 });
 
   assert.equal(res.status, 200);
   const update = db.callsTo('orders', 'update')[0].payload;
@@ -116,7 +116,7 @@ test('a delivery far from the pin stores the distance and flags it off-site', as
   const db = dbFor(outForDelivery(PINNED));
   app = await mountRoute('delivery', { supabase: db, user: AGENT });
   // ~1.1 km north of the pin — outside the geofence.
-  const res = await app.post('/o1/scan', { delivered_lat: 10.51, delivered_lng: 78.8 });
+  const res = await app.post('/o1/scan', { lat: 10.51, lng: 78.8 });
 
   assert.equal(res.status, 200);
   const update = db.callsTo('orders', 'update')[0].payload;
@@ -128,9 +128,45 @@ test('a delivery far from the pin stores the distance and flags it off-site', as
 test('a delivery on an order with no pinned address stores no distance', async () => {
   const db = dbFor(outForDelivery()); // no delivery_address
   app = await mountRoute('delivery', { supabase: db, user: AGENT });
-  const res = await app.post('/o1/scan', { delivered_lat: 10.5, delivered_lng: 78.8 });
+  const res = await app.post('/o1/scan', { lat: 10.5, lng: 78.8 });
 
   assert.equal(res.status, 200);
   const update = db.callsTo('orders', 'update')[0].payload;
   assert.ok(!('delivery_distance_m' in update), 'nothing to compare against → no distance');
+});
+
+// ── VCO verify location ─────────────────────────────────────────────────────────
+// Verifying a Packaged order (stage 1 → VCO Verified) stamps the VCO's location.
+const VCO = { id: 'v1', role: 'admin', admin_role: 'VCO', fname: 'Vco' };
+
+function packaged() {
+  return { id: 'o1', code: 'ORD1', stage: 1, status: 'Packaged', cancelled: false, pay_method: 'UPI' };
+}
+
+test('VCO verify stores the collection location as verified_lat/lng', async () => {
+  const db = fakeSupabase({
+    'orders:select': { data: [packaged()] },
+    'orders:update': { data: { id: 'o1', status: 'VCO Verified' } },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { lat: 10.5, lng: 78.8, route: 'direct' });
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.equal(update.status, 'VCO Verified');
+  assert.equal(update.verified_lat, 10.5);
+  assert.equal(update.verified_lng, 78.8);
+});
+
+test('VCO verify without a location still succeeds and stores no coordinates', async () => {
+  const db = fakeSupabase({
+    'orders:select': { data: [packaged()] },
+    'orders:update': { data: { id: 'o1', status: 'VCO Verified' } },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { route: 'direct' });
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.ok(!('verified_lat' in update), 'no lat when none was sent');
 });

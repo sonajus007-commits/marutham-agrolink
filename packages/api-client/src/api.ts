@@ -165,14 +165,24 @@ export const api = {
     const body: Record<string, unknown> = {};
     if (routeHint) body.route = routeHint;
     if (coords) {
-      body.delivered_lat = coords.lat;
-      body.delivered_lng = coords.lng;
+      body.lat = coords.lat;
+      body.lng = coords.lng;
     }
     return apiFetch<ScanResponse>('POST', '/orders/' + idOrCode + '/scan', body);
   },
-  /** VCO verify: sets route + assigns collection agent (same /scan endpoint). */
-  verifyOrder(id: string, data: { route?: string; agent_id?: string }): Promise<ScanResponse> {
-    return apiFetch<ScanResponse>('POST', '/orders/' + id + '/scan', data || {});
+  /** VCO verify: sets route + assigns collection agent (same /scan endpoint).
+   *  `coords` is the VCO's location at verification (stored as verified_lat/lng). */
+  verifyOrder(
+    id: string,
+    data: { route?: string; agent_id?: string; coords?: { lat: number; lng: number } },
+  ): Promise<ScanResponse> {
+    const { coords, ...rest } = data || {};
+    const body: Record<string, unknown> = { ...rest };
+    if (coords) {
+      body.lat = coords.lat;
+      body.lng = coords.lng;
+    }
+    return apiFetch<ScanResponse>('POST', '/orders/' + id + '/scan', body);
   },
   /* Hub dispatch: At Hub → Out for Delivery, assigning the last-mile agent.
    * Same /scan endpoint as every other advance — the stage decides what it means

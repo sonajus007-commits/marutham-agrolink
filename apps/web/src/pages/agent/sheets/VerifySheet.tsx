@@ -3,6 +3,7 @@ import { Sheet, Spinner } from '@marutham/ui';
 import { api, type EligibleAgent } from '@marutham/api-client';
 import type { Order } from '@marutham/lib';
 import { useToast } from '../../../components/Toast';
+import { getCurrentPosition } from '../../../native/geolocation';
 
 export function VerifySheet({
   open,
@@ -49,7 +50,9 @@ export function VerifySheet({
     if (!orderId) return;
     setBusy(true);
     try {
-      const res = await api.verifyOrder(orderId, { route, agent_id: agentId || undefined });
+      // Best-effort collection location; a declined permission never blocks verify.
+      const coords = (await getCurrentPosition()) ?? undefined;
+      const res = await api.verifyOrder(orderId, { route, agent_id: agentId || undefined, coords });
       toast(res.message || 'Order verified.', 'ok');
       onChanged();
     } catch (e) {

@@ -657,6 +657,14 @@
           "notNull": true,
           "default": "now()"
         },
+        "verified_lat": {
+          "type": "double precision",
+          "notNull": false
+        },
+        "verified_lng": {
+          "type": "double precision",
+          "notNull": false
+        },
         "village": {
           "type": "text",
           "notNull": false
