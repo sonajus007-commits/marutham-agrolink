@@ -20,6 +20,16 @@ const config: CapacitorConfig = {
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
     },
+    // Brand launch screen. JS hides it once the app has rendered (initNative), so
+    // autoHide is off and there is no fixed duration — the user never sees a white
+    // flash, and never a splash that lingers after the UI is ready.
+    SplashScreen: {
+      launchShowDuration: 0,
+      launchAutoHide: false,
+      backgroundColor: '#2E7D32',
+      showSpinner: false,
+      androidScaleType: 'CENTER_CROP',
+    },
   },
 };
 
