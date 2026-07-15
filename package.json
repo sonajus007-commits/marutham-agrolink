@@ -22,7 +22,11 @@
     "tokens:audit": "pnpm --filter @marutham/tokens tokens:audit",
     "ui:classes": "pnpm --filter @marutham/ui check:classes",
     "build:shop": "pnpm --filter @marutham/shop build",
-    "dev:shop": "pnpm --filter @marutham/shop dev"
+    "dev:shop": "pnpm --filter @marutham/shop dev",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "{apps,packages}/**/*.{ts,tsx}": "eslint --fix"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
