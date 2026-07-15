@@ -9,6 +9,7 @@ import {
   type AddressObject,
 } from '@marutham/lib';
 import { useToast } from '../../../components/Toast';
+import { getCurrentPosition } from '../../../native/geolocation';
 
 export function DeliverSheet({
   open,
@@ -60,7 +61,11 @@ export function DeliverSheet({
     if (!orderId) return;
     setBusy(true);
     try {
-      await api.scanOrder(orderId);
+      // Best-effort proof-of-delivery location. Never blocks the delivery: if the
+      // agent declines permission or there is no fix, coords is null and we deliver
+      // without it.
+      const coords = (await getCurrentPosition()) ?? undefined;
+      await api.scanOrder(orderId, undefined, coords);
       toast('Order delivered! 🎉', 'ok');
       onChanged();
     } catch (e) {

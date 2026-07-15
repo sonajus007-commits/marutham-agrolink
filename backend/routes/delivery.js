@@ -41,7 +41,9 @@ function statusForStage(route, stage) {
 }
 
 // ── Shared: advance an order one stage forward ────────────────────────────────
-async function advanceStage(order, actorLabel, extraUpdates = {}) {
+// `deliveryCoords` ({ lat, lng } or null) is proof-of-delivery location; it is only
+// written when THIS transition is the one to Delivered, alongside delivered_at.
+async function advanceStage(order, actorLabel, extraUpdates = {}, deliveryCoords = null) {
   const route = resolveRoute(order);
   const newStage = order.stage + 1;
   const newStatus = statusForStage(route, newStage);
@@ -51,14 +53,18 @@ async function advanceStage(order, actorLabel, extraUpdates = {}) {
   }
 
   const now = new Date().toISOString();
+  const delivering = newStatus === 'Delivered';
   const updates = {
     stage: newStage,
     status: newStatus,
     updated_at: now,
-    ...(newStatus === 'Delivered' ? { delivered_at: now } : {}),
+    ...(delivering ? { delivered_at: now } : {}),
+    ...(delivering && deliveryCoords
+      ? { delivered_lat: deliveryCoords.lat, delivered_lng: deliveryCoords.lng }
+      : {}),
     ...(newStatus === 'Picked Up'  ? { picked_up_at: now } : {}),
     // COD orders collect cash at doorstep — mark paid on delivery
-    ...(newStatus === 'Delivered' && order.pay_method === 'Cash on Delivery' ? { pay_status: 'paid' } : {}),
+    ...(delivering && order.pay_method === 'Cash on Delivery' ? { pay_status: 'paid' } : {}),
     ...extraUpdates,
   };
 
@@ -94,6 +100,20 @@ async function fetchActiveOrder(id, res) {
   if (order.cancelled)  { res.status(400).json({ error: 'Order is cancelled.' }); return null; }
   if (order.status === 'Delivered') { res.status(400).json({ error: 'Order is already delivered.' }); return null; }
   return order;
+}
+
+// Optional proof-of-delivery coordinates on a scan body. Absent → { coords: null }
+// (the agent declined location; delivery proceeds). Present but malformed → an
+// { error } the caller turns into a 400, so a bad pair never lands in the row.
+function parseDeliveryCoords(body) {
+  const { delivered_lat, delivered_lng } = body || {};
+  if (delivered_lat == null && delivered_lng == null) return { coords: null };
+  const lat = Number(delivered_lat);
+  const lng = Number(delivered_lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return { error: 'Invalid delivery location.' };
+  }
+  return { coords: { lat, lng } };
 }
 
 // ── POST /orders/:id/pack  (farmer only) ──────────────────────────────────────
@@ -147,6 +167,11 @@ router.post('/:id/scan', async (req, res) => {
 
   const order = await fetchActiveOrder(req.params.id, res);
   if (!order) return;
+
+  // Proof-of-delivery location, if the agent's device shared one. Only stored when
+  // this scan is the final one (→ Delivered); ignored on every earlier stage.
+  const coords = parseDeliveryCoords(req.body);
+  if (coords.error) return res.status(400).json({ error: coords.error });
 
   const adminRole = u.admin_role;
   const { stage } = order;
@@ -269,9 +294,10 @@ router.post('/:id/scan', async (req, res) => {
       if (histErr) console.error(`Order ${order.id}: last-mile history entry failed:`, histErr.message);
     }
 
-  // Delivery Agent (or admin) advances an in-progress order
+  // Delivery Agent (or admin) advances an in-progress order. This is the branch that
+  // reaches Delivered, so the proof-of-delivery coordinates ride along here.
   } else if (stage >= 3) {
-    result = await advanceStage(order, `Agent ${req.user.fname}`);
+    result = await advanceStage(order, `Agent ${req.user.fname}`, {}, coords.coords);
 
   } else {
     return res.status(400).json({

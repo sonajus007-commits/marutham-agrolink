@@ -154,13 +154,21 @@ export const api = {
       rating_value,
     });
   },
-  /** Advance an order one step (scan-to-advance). Accepts an id or an order code. */
-  scanOrder(idOrCode: string, routeHint?: string): Promise<ScanResponse> {
-    return apiFetch<ScanResponse>(
-      'POST',
-      '/orders/' + idOrCode + '/scan',
-      routeHint ? { route: routeHint } : {},
-    );
+  /** Advance an order one step (scan-to-advance). Accepts an id or an order code.
+   *  `coords` is optional proof-of-delivery location, stored only when this scan
+   *  completes delivery (see backend/routes/delivery.js). */
+  scanOrder(
+    idOrCode: string,
+    routeHint?: string,
+    coords?: { lat: number; lng: number },
+  ): Promise<ScanResponse> {
+    const body: Record<string, unknown> = {};
+    if (routeHint) body.route = routeHint;
+    if (coords) {
+      body.delivered_lat = coords.lat;
+      body.delivered_lng = coords.lng;
+    }
+    return apiFetch<ScanResponse>('POST', '/orders/' + idOrCode + '/scan', body);
   },
   /** VCO verify: sets route + assigns collection agent (same /scan endpoint). */
   verifyOrder(id: string, data: { route?: string; agent_id?: string }): Promise<ScanResponse> {

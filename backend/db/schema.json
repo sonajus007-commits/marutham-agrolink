@@ -549,6 +549,14 @@
           "type": "timestamp with time zone",
           "notNull": false
         },
+        "delivered_lat": {
+          "type": "double precision",
+          "notNull": false
+        },
+        "delivered_lng": {
+          "type": "double precision",
+          "notNull": false
+        },
         "delivery": {
           "type": "integer",
           "notNull": true,
