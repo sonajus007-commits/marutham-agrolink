@@ -69,7 +69,9 @@ export function ReturnRequestModal({
       onClose={onClose}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={busy}>Close</Button>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Close
+          </Button>
           <Button variant="danger" onClick={submit} disabled={busy}>
             {busy ? 'Submitting…' : 'Submit return'}
           </Button>
@@ -77,11 +79,15 @@ export function ReturnRequestModal({
       }
     >
       <fieldset style={{ border: 'none', padding: 0, margin: '0 0 12px' }}>
-        <legend className="fl" style={{ marginBottom: 6 }}>Select items to return</legend>
+        <legend className="fl" style={{ marginBottom: 6 }}>
+          Select items to return
+        </legend>
         {items.map((it, idx) => (
           <label key={it.id || idx} className="ret-item">
             <input type="checkbox" checked={selected.has(idx)} onChange={() => toggle(idx)} />
-            <span style={{ fontSize: 13 }}>{getProductEmoji(it.name)} {it.name}</span>
+            <span style={{ fontSize: 13 }}>
+              {getProductEmoji(it.name)} {it.name}
+            </span>
             <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--gray)' }}>
               {it.qty} {it.unit}
             </span>
@@ -90,7 +96,9 @@ export function ReturnRequestModal({
       </fieldset>
 
       <div className="fg">
-        <label className="fl" htmlFor="return-reason">Reason <span className="rq">*</span></label>
+        <label className="fl" htmlFor="return-reason">
+          Reason <span className="rq">*</span>
+        </label>
         <textarea
           id="return-reason"
           className="cons-input"

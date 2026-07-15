@@ -1,7 +1,12 @@
 import { useMemo, useState } from 'react';
 import { FilterChips, Spinner, EmptyState, type ChipOption } from '@marutham/ui';
 import {
-  filterProducts, bestOffer, offersForSeller, fmtMoney, type Product, type SellerFilter,
+  filterProducts,
+  bestOffer,
+  offersForSeller,
+  fmtMoney,
+  type Product,
+  type SellerFilter,
 } from '@marutham/lib';
 import { useConsumerData } from './ConsumerDataContext';
 import { useCart } from './CartContext';
@@ -17,7 +22,16 @@ const SELLER_OPTIONS: ChipOption[] = [
 ];
 
 export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
-  const { products, offersByProduct, ratingsMap, ratingsByFP, district, setDistrict, loading, error } = useConsumerData();
+  const {
+    products,
+    offersByProduct,
+    ratingsMap,
+    ratingsByFP,
+    district,
+    setDistrict,
+    loading,
+    error,
+  } = useConsumerData();
   const cart = useCart();
   const toast = useToast();
   const locations = useLocations();
@@ -33,20 +47,34 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
 
   // Filter chip option lists derived from the catalog.
   const groupOptions = useMemo<ChipOption[]>(() => {
-    const gs = ['All', ...new Set(products.map((p) => p.product_group).filter(Boolean) as string[])];
+    const gs = [
+      'All',
+      ...new Set(products.map((p) => p.product_group).filter(Boolean) as string[]),
+    ];
     return gs.map((g) => ({ value: g, label: g }));
   }, [products]);
 
   const catOptions = useMemo<ChipOption[]>(() => {
     const inGroup = group === 'All' ? products : products.filter((p) => p.product_group === group);
     const cs = [...new Set(inGroup.map((p) => p.category).filter(Boolean) as string[])];
-    return cs.length > 1 ? [{ value: 'All', label: 'All' }, ...cs.map((c) => ({ value: c, label: c }))] : [];
+    return cs.length > 1
+      ? [{ value: 'All', label: 'All' }, ...cs.map((c) => ({ value: c, label: c }))]
+      : [];
   }, [products, group]);
 
   const subOptions = useMemo<ChipOption[]>(() => {
     if (cat === 'All') return [];
-    const subs = [...new Set(products.filter((p) => p.category === cat).map((p) => p.sub_type).filter(Boolean) as string[])];
-    return subs.length > 1 ? [{ value: 'All', label: 'All' }, ...subs.map((s) => ({ value: s, label: s }))] : [];
+    const subs = [
+      ...new Set(
+        products
+          .filter((p) => p.category === cat)
+          .map((p) => p.sub_type)
+          .filter(Boolean) as string[],
+      ),
+    ];
+    return subs.length > 1
+      ? [{ value: 'All', label: 'All' }, ...subs.map((s) => ({ value: s, label: s }))]
+      : [];
   }, [products, cat]);
 
   const filtered = useMemo(
@@ -76,30 +104,74 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
     <>
       <div className="cons-lochero">
         <div className="cons-lochero__label">Fresh From Farms Near You</div>
-        <div className="cons-lochero__scope">{district}, {state}</div>
+        <div className="cons-lochero__scope">
+          {district}, {state}
+        </div>
         <div className="cons-lochero__sub">Same-morning harvest · delivered to your door</div>
       </div>
 
       {cart.count > 0 ? (
-        <div className="cart-bar" role="button" tabIndex={0} onClick={onGoToCart} onKeyDown={(e) => { if (e.key === 'Enter') onGoToCart(); }}>
-          <div><span style={{ fontSize: 18 }}>🛒</span> <span className="cart-bar__count">{cart.count} item{cart.count === 1 ? '' : 's'} in cart</span></div>
+        <div
+          className="cart-bar"
+          role="button"
+          tabIndex={0}
+          onClick={onGoToCart}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onGoToCart();
+          }}
+        >
+          <div>
+            <span style={{ fontSize: 18 }}>🛒</span>{' '}
+            <span className="cart-bar__count">
+              {cart.count} item{cart.count === 1 ? '' : 's'} in cart
+            </span>
+          </div>
           <div className="cart-bar__total">{fmtMoney(cartTotal)}</div>
         </div>
       ) : null}
 
       <div style={{ position: 'relative' }}>
-        <input className="cons-input" type="text" placeholder="🔍  Search products…" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search products" />
+        <input
+          className="cons-input"
+          type="text"
+          placeholder="🔍  Search products…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search products"
+        />
       </div>
 
       <div>
         <div className="filt-label">Seller</div>
-        <FilterChips options={SELLER_OPTIONS} value={seller} onChange={(v) => setSeller(v as SellerFilter)} aria-label="Seller filter" />
+        <FilterChips
+          options={SELLER_OPTIONS}
+          value={seller}
+          onChange={(v) => setSeller(v as SellerFilter)}
+          aria-label="Seller filter"
+        />
         <div className="filt-label">Group</div>
-        <FilterChips options={groupOptions} value={group} onChange={(v) => { setGroup(v); setCat('All'); setSub('All'); }} aria-label="Product group" />
+        <FilterChips
+          options={groupOptions}
+          value={group}
+          onChange={(v) => {
+            setGroup(v);
+            setCat('All');
+            setSub('All');
+          }}
+          aria-label="Product group"
+        />
         {catOptions.length ? (
           <>
             <div className="filt-label">Category</div>
-            <FilterChips options={catOptions} value={cat} onChange={(v) => { setCat(v); setSub('All'); }} aria-label="Category" />
+            <FilterChips
+              options={catOptions}
+              value={cat}
+              onChange={(v) => {
+                setCat(v);
+                setSub('All');
+              }}
+              aria-label="Category"
+            />
           </>
         ) : null}
         {subOptions.length ? (
@@ -111,14 +183,42 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
 
         <div className="filt-label">Location</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <select className="cons-select" value={state} onChange={(e) => setState(e.target.value)} aria-label="State">
-            {(locations.states.length ? locations.states : ['Tamil Nadu']).map((s) => <option key={s} value={s}>{s}</option>)}
+          <select
+            className="cons-select"
+            value={state}
+            onChange={(e) => setState(e.target.value)}
+            aria-label="State"
+          >
+            {(locations.states.length ? locations.states : ['Tamil Nadu']).map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
           </select>
-          <select className="cons-select" value={district} onChange={(e) => setDistrict(e.target.value)} aria-label="District">
-            {(locations.districtsOf(state).length ? locations.districtsOf(state) : [district]).map((d) => <option key={d} value={d}>{d}</option>)}
+          <select
+            className="cons-select"
+            value={district}
+            onChange={(e) => setDistrict(e.target.value)}
+            aria-label="District"
+          >
+            {(locations.districtsOf(state).length ? locations.districtsOf(state) : [district]).map(
+              (d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ),
+            )}
           </select>
         </div>
-        <input className="cons-input" style={{ fontSize: 12, padding: '8px 10px' }} type="text" placeholder="🔍 Village / city (optional)" value={city} onChange={(e) => setCity(e.target.value)} aria-label="Village or city filter" />
+        <input
+          className="cons-input"
+          style={{ fontSize: 12, padding: '8px 10px' }}
+          type="text"
+          placeholder="🔍 Village / city (optional)"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          aria-label="Village or city filter"
+        />
       </div>
 
       {loading ? (
@@ -126,7 +226,9 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
       ) : error ? (
         <EmptyState>{error}</EmptyState>
       ) : filtered.length === 0 ? (
-        <EmptyState icon="🔍">{search ? `No products match "${search}".` : 'No products in this category.'}</EmptyState>
+        <EmptyState icon="🔍">
+          {search ? `No products match "${search}".` : 'No products in this category.'}
+        </EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {filtered.map((p) => (

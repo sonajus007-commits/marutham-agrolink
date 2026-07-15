@@ -18,7 +18,9 @@ export default function NotFound() {
       <SiteHeader t={t} lang={l} />
 
       <main className="mx-auto flex max-w-2xl flex-col items-center px-5 py-28 text-center">
-        <div className="text-7xl" aria-hidden="true">🌾</div>
+        <div className="text-7xl" aria-hidden="true">
+          🌾
+        </div>
         <h1 className="mt-6 font-display text-3xl font-bold text-forest">{t.product.notFound}</h1>
         <p className="mt-2 text-sm text-fg-muted">{t.product.notFoundSub}</p>
         <Link

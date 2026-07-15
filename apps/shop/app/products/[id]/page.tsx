@@ -159,7 +159,9 @@ export default async function ProductPage({ params }: Params) {
 
 function Tag({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-forest">{children}</span>
+    <span className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-forest">
+      {children}
+    </span>
   );
 }
 
@@ -168,14 +170,20 @@ function Breadcrumb({ t, name }: { t: Dict; name: string }) {
     <nav aria-label="Breadcrumb">
       <ol className="flex list-none flex-wrap items-center gap-2 p-0 text-xs font-semibold text-fg-muted">
         <li>
-          <Link href="/" className="no-underline hover:text-forest hover:underline">{t.product.home}</Link>
+          <Link href="/" className="no-underline hover:text-forest hover:underline">
+            {t.product.home}
+          </Link>
         </li>
         <li aria-hidden="true">/</li>
         <li>
-          <Link href="/products" className="no-underline hover:text-forest hover:underline">{t.product.all}</Link>
+          <Link href="/products" className="no-underline hover:text-forest hover:underline">
+            {t.product.all}
+          </Link>
         </li>
         <li aria-hidden="true">/</li>
-        <li aria-current="page" className="text-forest">{name}</li>
+        <li aria-current="page" className="text-forest">
+          {name}
+        </li>
       </ol>
     </nav>
   );

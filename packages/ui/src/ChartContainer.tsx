@@ -39,9 +39,17 @@ export interface ChartContainerProps {
 }
 
 export function ChartContainer({
-  title, subtitle, action, summary,
-  loading = false, error, empty = false,
-  height = 320, footer, children, className,
+  title,
+  subtitle,
+  action,
+  summary,
+  loading = false,
+  error,
+  empty = false,
+  height = 320,
+  footer,
+  children,
+  className,
 }: ChartContainerProps) {
   const captionId = useId();
   const summaryId = useId();
@@ -62,7 +70,11 @@ export function ChartContainer({
             {title}
           </h3>
           {subtitle ? <div className="mt-0.5 text-sm text-fg-muted">{subtitle}</div> : null}
-          {summary ? <p id={summaryId} className="sr-only">{summary}</p> : null}
+          {summary ? (
+            <p id={summaryId} className="sr-only">
+              {summary}
+            </p>
+          ) : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </figcaption>
@@ -71,7 +83,9 @@ export function ChartContainer({
       <div style={{ minHeight }} className="relative flex flex-col">
         {error ? (
           <div className="flex flex-1 items-center">
-            <Alert tone="danger" className="w-full">{error}</Alert>
+            <Alert tone="danger" className="w-full">
+              {error}
+            </Alert>
           </div>
         ) : loading ? (
           // aria-busy lets a screen reader know the region is updating, not empty.

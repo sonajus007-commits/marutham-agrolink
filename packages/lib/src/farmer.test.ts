@@ -1,11 +1,27 @@
 import { describe, it, expect } from 'vitest';
 import {
-  projectConsumerPrice, projectBulkPrice, cutoffTimestamp, validateListing,
-  farmerEarnings, farmerWeeklyEarnings, subscriptionStatus, needsSubscriptionPayment,
-  listingState, canConfirmListing, listingPriceRs, requestableProducts, rupeesToPaise,
-  parseCutoffHour, cutoffLabel, DEFAULT_CUTOFF,
-  CUTOFF_OPTIONS, MAX_BULK_DISC_PCT, SUBSCRIPTION_WARN_DAYS,
-  type ListingDraft, type Payout, type FarmerListing,
+  projectConsumerPrice,
+  projectBulkPrice,
+  cutoffTimestamp,
+  validateListing,
+  farmerEarnings,
+  farmerWeeklyEarnings,
+  subscriptionStatus,
+  needsSubscriptionPayment,
+  listingState,
+  canConfirmListing,
+  listingPriceRs,
+  requestableProducts,
+  rupeesToPaise,
+  parseCutoffHour,
+  cutoffLabel,
+  DEFAULT_CUTOFF,
+  CUTOFF_OPTIONS,
+  MAX_BULK_DISC_PCT,
+  SUBSCRIPTION_WARN_DAYS,
+  type ListingDraft,
+  type Payout,
+  type FarmerListing,
 } from './farmer';
 import type { Order } from './orders';
 import { sellerFeePct, FARMER_FEE_PCT, RETAILER_FEE_PCT } from './fees';
@@ -49,7 +65,7 @@ describe('projectConsumerPrice', () => {
     expect(p.consumerPrice).toBe(113);
   });
 
-  it('reports the seller\'s own price back unchanged', () => {
+  it("reports the seller's own price back unchanged", () => {
     expect(projectConsumerPrice(42.5, 'Farmer').farmerPrice).toBe(42.5);
   });
 });
@@ -78,20 +94,37 @@ describe('projectBulkPrice', () => {
 });
 
 describe('offerConsumerPrice falls back to the seller fee, not platform_fee_pct', () => {
-  const product = { id: 'p1', name: 'x', district_price: { handling: '0' }, platform_fee_pct: 5 } as Product;
+  const product = {
+    id: 'p1',
+    name: 'x',
+    district_price: { handling: '0' },
+    platform_fee_pct: 5,
+  } as Product;
 
   it('prefers the server-computed consumer_price (paise)', () => {
-    const offer = { farmer_price: '100', consumer_price: 11000, farmer: { seller_type: 'Retailer' } } as Offer;
+    const offer = {
+      farmer_price: '100',
+      consumer_price: 11000,
+      farmer: { seller_type: 'Retailer' },
+    } as Offer;
     expect(offerConsumerPrice(offer, product)).toBe(110);
   });
 
-  it('a retailer offer without consumer_price falls back to 10%, not the product\'s 5%', () => {
-    const offer = { farmer_price: '100', consumer_price: null, farmer: { seller_type: 'Retailer' } } as Offer;
+  it("a retailer offer without consumer_price falls back to 10%, not the product's 5%", () => {
+    const offer = {
+      farmer_price: '100',
+      consumer_price: null,
+      farmer: { seller_type: 'Retailer' },
+    } as Offer;
     expect(offerConsumerPrice(offer, product)).toBeCloseTo(110); // 100 * 1.1 has float dust
   });
 
   it('a farmer offer falls back to 5%', () => {
-    const offer = { farmer_price: '100', consumer_price: null, farmer: { seller_type: 'Farmer' } } as Offer;
+    const offer = {
+      farmer_price: '100',
+      consumer_price: null,
+      farmer: { seller_type: 'Farmer' },
+    } as Offer;
     expect(offerConsumerPrice(offer, product)).toBeCloseTo(105);
   });
 });
@@ -166,7 +199,11 @@ describe('cutoffLabel', () => {
 
 describe('validateListing', () => {
   const draft = (over: Partial<ListingDraft> = {}): ListingDraft => ({
-    product_id: 'p1', farmer_price: 30, qty_available: 10, time_available: '8 PM', ...over,
+    product_id: 'p1',
+    farmer_price: 30,
+    qty_available: 10,
+    time_available: '8 PM',
+    ...over,
   });
 
   it('accepts a complete draft', () => {
@@ -195,7 +232,9 @@ describe('validateListing', () => {
   });
 
   it('rejects a bulk quantity larger than the stock on hand', () => {
-    expect(validateListing(draft({ qty_available: 4, bulk_qty: 5, bulk_disc_pct: 10 }))).toMatch(/more than you have/);
+    expect(validateListing(draft({ qty_available: 4, bulk_qty: 5, bulk_disc_pct: 10 }))).toMatch(
+      /more than you have/,
+    );
   });
 
   it('an order rule needs a type', () => {
@@ -204,21 +243,28 @@ describe('validateListing', () => {
   });
 
   it('rejects an order rule bigger than the stock on hand', () => {
-    expect(validateListing(draft({ qty_available: 1, qty_value: 5, qty_type: 'SPQ' }))).toMatch(/larger than the quantity/);
+    expect(validateListing(draft({ qty_available: 1, qty_value: 5, qty_type: 'SPQ' }))).toMatch(
+      /larger than the quantity/,
+    );
   });
 });
 
 describe('farmerEarnings', () => {
   // The API sends money as rupee strings; farmer_payout is computed per order.
-  const order = (over: Partial<Order>): Order => ({ id: 'o1', status: 'Delivered', ...over }) as Order;
-  const payout = (over: Partial<Payout>): Payout => ({ id: 'p1', amount: '100.00', status: 'paid', ...over }) as Payout;
+  const order = (over: Partial<Order>): Order =>
+    ({ id: 'o1', status: 'Delivered', ...over }) as Order;
+  const payout = (over: Partial<Payout>): Payout =>
+    ({ id: 'p1', amount: '100.00', status: 'paid', ...over }) as Payout;
 
   it('sums paid and pending payouts separately', () => {
-    const e = farmerEarnings([], [
-      payout({ id: 'a', amount: '100.00', status: 'paid' }),
-      payout({ id: 'b', amount: '50.50', status: 'paid' }),
-      payout({ id: 'c', amount: '25.00', status: 'pending' }),
-    ]);
+    const e = farmerEarnings(
+      [],
+      [
+        payout({ id: 'a', amount: '100.00', status: 'paid' }),
+        payout({ id: 'b', amount: '50.50', status: 'paid' }),
+        payout({ id: 'c', amount: '25.00', status: 'pending' }),
+      ],
+    );
     expect(e.paid).toBeCloseTo(150.5);
     expect(e.pending).toBeCloseTo(25);
   });
@@ -246,7 +292,10 @@ describe('farmerEarnings', () => {
   });
 
   it('ignores cancelled orders in both buckets', () => {
-    const e = farmerEarnings([order({ id: 'o3', status: 'Cancelled', farmer_payout: '99.00' })], []);
+    const e = farmerEarnings(
+      [order({ id: 'o3', status: 'Cancelled', farmer_payout: '99.00' })],
+      [],
+    );
     expect(e.awaiting).toBe(0);
     expect(e.inFlight).toBe(0);
   });
@@ -260,7 +309,13 @@ describe('farmerEarnings', () => {
   });
 
   it('an empty seller has an all-zero ledger', () => {
-    expect(farmerEarnings([], [])).toEqual({ paid: 0, pending: 0, awaiting: 0, inFlight: 0, lifetime: 0 });
+    expect(farmerEarnings([], [])).toEqual({
+      paid: 0,
+      pending: 0,
+      awaiting: 0,
+      inFlight: 0,
+      lifetime: 0,
+    });
   });
 });
 
@@ -273,13 +328,18 @@ describe('subscriptionStatus', () => {
   });
 
   it('is active well before expiry', () => {
-    const s = subscriptionStatus({ subscription_plan: 'Yearly', subscription_expires_at: days(200) }, now);
+    const s = subscriptionStatus(
+      { subscription_plan: 'Yearly', subscription_expires_at: days(200) },
+      now,
+    );
     expect(s.level).toBe('active');
     expect(s.daysLeft).toBe(200);
   });
 
   it('warns inside the reminder window', () => {
-    expect(subscriptionStatus({ subscription_expires_at: days(SUBSCRIPTION_WARN_DAYS) }, now).level).toBe('expiring');
+    expect(
+      subscriptionStatus({ subscription_expires_at: days(SUBSCRIPTION_WARN_DAYS) }, now).level,
+    ).toBe('expiring');
     expect(subscriptionStatus({ subscription_expires_at: days(1) }, now).level).toBe('expiring');
   });
 
@@ -289,7 +349,9 @@ describe('subscriptionStatus', () => {
   });
 
   it('the boundary at warn+1 days is still active', () => {
-    expect(subscriptionStatus({ subscription_expires_at: days(SUBSCRIPTION_WARN_DAYS + 1) }, now).level).toBe('active');
+    expect(
+      subscriptionStatus({ subscription_expires_at: days(SUBSCRIPTION_WARN_DAYS + 1) }, now).level,
+    ).toBe('active');
   });
 });
 
@@ -307,8 +369,13 @@ describe('needsSubscriptionPayment', () => {
 
 describe('listingState — collapses four flags into one value', () => {
   const listing = (over: Partial<FarmerListing> = {}): FarmerListing => ({
-    id: 'l1', product_id: 'p1', farmer_price: '30.00',
-    listing_status: 'active', listed: true, confirmed: false, ...over,
+    id: 'l1',
+    product_id: 'p1',
+    farmer_price: '30.00',
+    listing_status: 'active',
+    listed: true,
+    confirmed: false,
+    ...over,
   });
 
   it('an unreviewed product request is pending', () => {
@@ -342,12 +409,20 @@ describe('listingState — collapses four flags into one value', () => {
   });
 
   it('a pending request is pending even if it somehow has a price', () => {
-    expect(listingState(listing({ listing_status: 'pending', farmer_price: '30' }))).toBe('pending');
+    expect(listingState(listing({ listing_status: 'pending', farmer_price: '30' }))).toBe(
+      'pending',
+    );
   });
 });
 
 describe('canConfirmListing', () => {
-  const base: FarmerListing = { id: 'l', product_id: 'p', farmer_price: '30', listing_status: 'active', listed: true };
+  const base: FarmerListing = {
+    id: 'l',
+    product_id: 'p',
+    farmer_price: '30',
+    listing_status: 'active',
+    listed: true,
+  };
   it('only a live, priced, unconfirmed listing', () => {
     expect(canConfirmListing(base)).toBe(true);
     expect(canConfirmListing({ ...base, confirmed: true })).toBe(false);
@@ -385,7 +460,9 @@ describe('requestableProducts', () => {
   });
 
   it('matches on the joined product id as well as product_id', () => {
-    const listings = [{ id: 'l', product_id: 'x', farmer_price: 0, product: { id: 'p2', name: 'B' } }] as FarmerListing[];
+    const listings = [
+      { id: 'l', product_id: 'x', farmer_price: 0, product: { id: 'p2', name: 'B' } },
+    ] as FarmerListing[];
     expect(requestableProducts(products, listings).map((p) => p.id)).toEqual(['p1']);
   });
 });
@@ -431,7 +508,10 @@ describe('projectConsumerPrice rounds in paise, like the server', () => {
   it('agrees with the server across awkward prices', () => {
     for (const rs of [0.01, 1.005, 12.34, 29.4, 33.5, 99.99, 100, 1234.56]) {
       expect(projectConsumerPrice(rs, 'Farmer').consumerPrice).toBeCloseTo(serverPrice(rs, 5), 6);
-      expect(projectConsumerPrice(rs, 'Retailer').consumerPrice).toBeCloseTo(serverPrice(rs, 10), 6);
+      expect(projectConsumerPrice(rs, 'Retailer').consumerPrice).toBeCloseTo(
+        serverPrice(rs, 10),
+        6,
+      );
     }
   });
 
@@ -449,7 +529,12 @@ describe('projectConsumerPrice rounds in paise, like the server', () => {
 describe('farmerWeeklyEarnings — the earnings trend', () => {
   const NOW = new Date('2026-07-15T10:00:00Z'); // a Wednesday
   const mk = (payout: number, deliveredISO: string, status = 'Delivered'): Order =>
-    ({ id: Math.random().toString(36), status, delivered_at: deliveredISO, farmer_payout: payout } as unknown as Order);
+    ({
+      id: Math.random().toString(36),
+      status,
+      delivered_at: deliveredISO,
+      farmer_payout: payout,
+    }) as unknown as Order;
 
   it('returns one bar per week, oldest first, zero-filled', () => {
     const rows = farmerWeeklyEarnings([], 8, NOW);
@@ -457,7 +542,9 @@ describe('farmerWeeklyEarnings — the earnings trend', () => {
     expect(rows.every((r) => r.amount === 0)).toBe(true);
     // strictly increasing week starts
     for (let i = 1; i < rows.length; i++) {
-      expect(new Date(rows[i].weekStart).getTime()).toBeGreaterThan(new Date(rows[i - 1].weekStart).getTime());
+      expect(new Date(rows[i].weekStart).getTime()).toBeGreaterThan(
+        new Date(rows[i - 1].weekStart).getTime(),
+      );
     }
   });
 
@@ -467,16 +554,30 @@ describe('farmerWeeklyEarnings — the earnings trend', () => {
   });
 
   it('ignores cancelled and non-delivered orders, and money older than the window', () => {
-    const rows = farmerWeeklyEarnings([
-      mk(500, '2026-07-15T09:00:00Z', 'Out for Delivery'), // not delivered
-      { id: 'x', status: 'Delivered', cancelled: true, delivered_at: '2026-07-15T09:00:00Z', farmer_payout: 999 } as unknown as Order,
-      mk(700, '2026-01-01T09:00:00Z'), // before the 8-week window
-    ], 8, NOW);
+    const rows = farmerWeeklyEarnings(
+      [
+        mk(500, '2026-07-15T09:00:00Z', 'Out for Delivery'), // not delivered
+        {
+          id: 'x',
+          status: 'Delivered',
+          cancelled: true,
+          delivered_at: '2026-07-15T09:00:00Z',
+          farmer_payout: 999,
+        } as unknown as Order,
+        mk(700, '2026-01-01T09:00:00Z'), // before the 8-week window
+      ],
+      8,
+      NOW,
+    );
     expect(rows.reduce((s, r) => s + r.amount, 0)).toBe(0);
   });
 
   it('handles farmer_payout arriving as a string (the numeric-as-string trap)', () => {
-    const rows = farmerWeeklyEarnings([mk('250' as unknown as number, '2026-07-15T09:00:00Z')], 8, NOW);
+    const rows = farmerWeeklyEarnings(
+      [mk('250' as unknown as number, '2026-07-15T09:00:00Z')],
+      8,
+      NOW,
+    );
     expect(rows[rows.length - 1].amount).toBe(250);
   });
 });

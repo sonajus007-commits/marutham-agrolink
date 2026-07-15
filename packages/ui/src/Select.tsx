@@ -12,6 +12,9 @@ export const SELECT_CLASS = CONTROL_CLASS + ' px-2.5 py-2 text-xs';
 
 export type SelectProps = SelectHTMLAttributes<HTMLSelectElement>;
 
-export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select({ className, ...rest }, ref) {
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
+  { className, ...rest },
+  ref,
+) {
   return <select ref={ref} className={cn(SELECT_CLASS, className)} {...rest} />;
 });

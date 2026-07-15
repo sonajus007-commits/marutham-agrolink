@@ -1,7 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { Spinner } from '@marutham/ui';
 import type { AuditEntry, LoginTone } from '@marutham/lib';
-import { auditActionLabel, auditChanges, fmtDate, loginOutcome, shortUserAgent } from '@marutham/lib';
+import {
+  auditActionLabel,
+  auditChanges,
+  fmtDate,
+  loginOutcome,
+  shortUserAgent,
+} from '@marutham/lib';
 import type { LoginHistoryEntry } from '@marutham/api-client';
 
 /* The record-change trail and the login trail, rendered once and used by both
@@ -26,8 +32,16 @@ export interface HistoryPanelProps<T> {
   emptyText: string;
 }
 
-function PanelState({ loading, error, empty, emptyText }: {
-  loading: boolean; error?: string | null; empty: boolean; emptyText: string;
+function PanelState({
+  loading,
+  error,
+  empty,
+  emptyText,
+}: {
+  loading: boolean;
+  error?: string | null;
+  empty: boolean;
+  emptyText: string;
 }) {
   if (loading) return <Spinner />;
   if (error) return <p className="py-2 text-2xs text-danger">{error}</p>;
@@ -38,7 +52,9 @@ function PanelState({ loading, error, empty, emptyText }: {
 /** Record changes from the audit trigger: what changed, from what, to what. */
 export function AuditLogList({ rows, loading, error, emptyText }: HistoryPanelProps<AuditEntry>) {
   if (loading || error || rows.length === 0) {
-    return <PanelState loading={loading} error={error} empty={rows.length === 0} emptyText={emptyText} />;
+    return (
+      <PanelState loading={loading} error={error} empty={rows.length === 0} emptyText={emptyText} />
+    );
   }
 
   return (
@@ -48,7 +64,9 @@ export function AuditLogList({ rows, loading, error, emptyText }: HistoryPanelPr
         return (
           <li key={entry.id} className="rounded-base bg-surface-muted p-2.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-2xs font-bold text-primary">{auditActionLabel(entry.action)}</span>
+              <span className="text-2xs font-bold text-primary">
+                {auditActionLabel(entry.action)}
+              </span>
               <span className="text-2xs text-fg-muted">{fmtDate(entry.changed_at)}</span>
             </div>
             {changes.map((c) => (
@@ -67,10 +85,17 @@ export function AuditLogList({ rows, loading, error, emptyText }: HistoryPanelPr
 }
 
 /** Every login attempt — the failures are the point, so they are not filtered. */
-export function LoginHistoryList({ rows, loading, error, emptyText }: HistoryPanelProps<LoginHistoryEntry>) {
+export function LoginHistoryList({
+  rows,
+  loading,
+  error,
+  emptyText,
+}: HistoryPanelProps<LoginHistoryEntry>) {
   const { t } = useTranslation();
   if (loading || error || rows.length === 0) {
-    return <PanelState loading={loading} error={error} empty={rows.length === 0} emptyText={emptyText} />;
+    return (
+      <PanelState loading={loading} error={error} empty={rows.length === 0} emptyText={emptyText} />
+    );
   }
 
   return (

@@ -42,14 +42,19 @@ export function ProductsPage() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   // District list for the price editor — flatten the state→district→taluk tree.
   useEffect(() => {
-    api.getLocations()
+    api
+      .getLocations()
       .then((res) => {
         const set = new Set<string>();
-        Object.values(res.tree || {}).forEach((state) => Object.keys(state).forEach((d) => set.add(d)));
+        Object.values(res.tree || {}).forEach((state) =>
+          Object.keys(state).forEach((d) => set.add(d)),
+        );
         setDistricts(Array.from(set).sort((a, b) => a.localeCompare(b)));
       })
       .catch(() => setDistricts([]));
@@ -57,7 +62,10 @@ export function ProductsPage() {
 
   const groupOptions = useMemo(() => {
     const counts: Record<string, number> = {};
-    products.forEach((p) => { const g = p.product_group || '—'; counts[g] = (counts[g] || 0) + 1; });
+    products.forEach((p) => {
+      const g = p.product_group || '—';
+      counts[g] = (counts[g] || 0) + 1;
+    });
     const groups = Object.keys(counts).sort((a, b) => a.localeCompare(b));
     return [
       { value: 'all', label: `${t('admin.prod.all')} (${products.length})` },
@@ -70,66 +78,85 @@ export function ProductsPage() {
     [products, group],
   );
 
-  const columns = useMemo<TableColumn<Product>[]>(() => [
-    {
-      key: 'name',
-      header: t('admin.prod.name'),
-      value: (p) => p.name || '',
-      render: (p) => (
-        <div className="min-w-0">
-          <div className="truncate font-semibold text-fg">{p.name}</div>
-          {p.regional_name ? <div className="truncate text-2xs text-fg-muted tamil">{p.regional_name}</div> : null}
-        </div>
-      ),
-    },
-    { key: 'group', header: t('admin.prod.group'), value: (p) => p.product_group || '' },
-    { key: 'unit', header: t('admin.prod.unit'), value: (p) => p.unit || '' },
-    { key: 'fee', header: t('admin.prod.fee'), value: (p) => (p.platform_fee_pct != null ? `${p.platform_fee_pct}%` : '') },
-    {
-      key: 'price',
-      header: t('admin.prod.price'),
-      value: (p) => { const fp = firstPrice(p); return fp?.market_price != null ? String(parseFloat(String(fp.market_price))) : ''; },
-      render: (p) => {
-        const fp = firstPrice(p);
-        if (!fp) return <span className="text-2xs text-fg-muted">{t('admin.prod.noPrice')}</span>;
-        const n = priceCount(p);
-        return (
-          <span className="tabular-nums">
-            {fmtMoney(fp.market_price)}
-            <span className="text-2xs text-fg-muted"> {fp.district}{n > 1 ? ` +${n - 1}` : ''}</span>
-          </span>
-        );
+  const columns = useMemo<TableColumn<Product>[]>(
+    () => [
+      {
+        key: 'name',
+        header: t('admin.prod.name'),
+        value: (p) => p.name || '',
+        render: (p) => (
+          <div className="min-w-0">
+            <div className="truncate font-semibold text-fg">{p.name}</div>
+            {p.regional_name ? (
+              <div className="truncate text-2xs text-fg-muted tamil">{p.regional_name}</div>
+            ) : null}
+          </div>
+        ),
       },
-    },
-    {
-      key: 'available',
-      header: t('admin.prod.availability'),
-      value: (p) => (p.available !== false ? 'available' : 'unavailable'),
-      render: (p) => {
-        const on = p.available !== false;
-        return (
-          <span className="inline-block rounded-pill px-2 py-0.5 text-2xs font-bold text-white" style={{ background: on ? 'var(--success)' : 'var(--fg-muted)' }}>
-            {on ? t('admin.prod.available') : t('admin.prod.unavailable')}
-          </span>
-        );
+      { key: 'group', header: t('admin.prod.group'), value: (p) => p.product_group || '' },
+      { key: 'unit', header: t('admin.prod.unit'), value: (p) => p.unit || '' },
+      {
+        key: 'fee',
+        header: t('admin.prod.fee'),
+        value: (p) => (p.platform_fee_pct != null ? `${p.platform_fee_pct}%` : ''),
       },
-    },
-    {
-      key: 'actions',
-      header: '',
-      sortable: false,
-      exportable: false,
-      render: (p) => (
-        <button
-          type="button"
-          onClick={() => setEditing(p)}
-          className="cursor-pointer appearance-none rounded-sm border-0 bg-surface-muted px-2.5 py-1 text-2xs font-bold text-primary hover:bg-primary hover:text-primary-on focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
-        >
-          {canEdit ? t('admin.prod.edit') : t('admin.prod.view')}
-        </button>
-      ),
-    },
-  ], [t, canEdit]);
+      {
+        key: 'price',
+        header: t('admin.prod.price'),
+        value: (p) => {
+          const fp = firstPrice(p);
+          return fp?.market_price != null ? String(parseFloat(String(fp.market_price))) : '';
+        },
+        render: (p) => {
+          const fp = firstPrice(p);
+          if (!fp) return <span className="text-2xs text-fg-muted">{t('admin.prod.noPrice')}</span>;
+          const n = priceCount(p);
+          return (
+            <span className="tabular-nums">
+              {fmtMoney(fp.market_price)}
+              <span className="text-2xs text-fg-muted">
+                {' '}
+                {fp.district}
+                {n > 1 ? ` +${n - 1}` : ''}
+              </span>
+            </span>
+          );
+        },
+      },
+      {
+        key: 'available',
+        header: t('admin.prod.availability'),
+        value: (p) => (p.available !== false ? 'available' : 'unavailable'),
+        render: (p) => {
+          const on = p.available !== false;
+          return (
+            <span
+              className="inline-block rounded-pill px-2 py-0.5 text-2xs font-bold text-white"
+              style={{ background: on ? 'var(--success)' : 'var(--fg-muted)' }}
+            >
+              {on ? t('admin.prod.available') : t('admin.prod.unavailable')}
+            </span>
+          );
+        },
+      },
+      {
+        key: 'actions',
+        header: '',
+        sortable: false,
+        exportable: false,
+        render: (p) => (
+          <button
+            type="button"
+            onClick={() => setEditing(p)}
+            className="cursor-pointer appearance-none rounded-sm border-0 bg-surface-muted px-2.5 py-1 text-2xs font-bold text-primary hover:bg-primary hover:text-primary-on focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
+          >
+            {canEdit ? t('admin.prod.edit') : t('admin.prod.view')}
+          </button>
+        ),
+      },
+    ],
+    [t, canEdit],
+  );
 
   if (loading && products.length === 0) return <Spinner />;
   if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
@@ -139,8 +166,12 @@ export function ProductsPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-primary">{t('admin.prod.title')}</h1>
         <div className="flex items-center gap-2">
-          {canEdit ? <Button onClick={() => setCreating(true)}>+ {t('admin.prod.add')}</Button> : null}
-          <Button variant="ghost" onClick={load} disabled={loading}>↻ {t('admin.prod.refresh')}</Button>
+          {canEdit ? (
+            <Button onClick={() => setCreating(true)}>+ {t('admin.prod.add')}</Button>
+          ) : null}
+          <Button variant="ghost" onClick={load} disabled={loading}>
+            ↻ {t('admin.prod.refresh')}
+          </Button>
         </div>
       </div>
 

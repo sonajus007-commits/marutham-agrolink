@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { Button, Modal } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import {
-  addressSummary, addressTitle, removeAddress, setDefaultAddress, upsertAddress, validateAddress,
+  addressSummary,
+  addressTitle,
+  removeAddress,
+  setDefaultAddress,
+  upsertAddress,
+  validateAddress,
   type SavedAddress,
 } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
@@ -10,8 +15,16 @@ import { useToast } from '../../components/Toast';
 import { AddressFields } from '../../components/AddressFields';
 
 const EMPTY: SavedAddress = {
-  label: '', house_no: '', street1: '', landmark: '',
-  state: '', district: '', taluk: '', village_town: '', city: '', pincode: '',
+  label: '',
+  house_no: '',
+  street1: '',
+  landmark: '',
+  state: '',
+  district: '',
+  taluk: '',
+  village_town: '',
+  city: '',
+  pincode: '',
 };
 
 export function AddressBook() {
@@ -52,7 +65,11 @@ export function AddressBook() {
   }
 
   function openAdd() {
-    setDraft({ ...EMPTY, state: (user?.state as string) || '', district: (user?.district as string) || '' });
+    setDraft({
+      ...EMPTY,
+      state: (user?.state as string) || '',
+      district: (user?.district as string) || '',
+    });
     setError(null);
     setEditing(-1);
   }
@@ -89,7 +106,9 @@ export function AddressBook() {
       <div className="prof-cardhead">
         <h3>📍 Address Book</h3>
         {editing === null ? (
-          <button className="prof-addbtn" onClick={openAdd}>+ Add</button>
+          <button className="prof-addbtn" onClick={openAdd}>
+            + Add
+          </button>
         ) : null}
       </div>
 
@@ -108,11 +127,17 @@ export function AddressBook() {
               </div>
               <div className="addr-item__actions">
                 {!a.is_default ? (
-                  <button className="addr-btn addr-btn--default" disabled={busy} onClick={() => makeDefault(i)}>
+                  <button
+                    className="addr-btn addr-btn--default"
+                    disabled={busy}
+                    onClick={() => makeDefault(i)}
+                  >
                     Default
                   </button>
                 ) : null}
-                <button className="addr-btn" disabled={busy} onClick={() => openEdit(i)}>Edit</button>
+                <button className="addr-btn" disabled={busy} onClick={() => openEdit(i)}>
+                  Edit
+                </button>
                 <button
                   className="addr-btn addr-btn--danger"
                   disabled={busy}
@@ -129,11 +154,17 @@ export function AddressBook() {
 
       {editing !== null ? (
         <div className="prof-form">
-          <h4 className="prof-form__title">{editing === -1 ? 'Add address' : `Edit ${addressTitle(addresses[editing], editing)}`}</h4>
+          <h4 className="prof-form__title">
+            {editing === -1 ? 'Add address' : `Edit ${addressTitle(addresses[editing], editing)}`}
+          </h4>
           <AddressFields value={draft} onChange={setDraft} showLabel error={error} />
           <div className="prof-actions">
-            <Button onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save Address'}</Button>
-            <Button variant="ghost" onClick={() => setEditing(null)} disabled={busy}>Cancel</Button>
+            <Button onClick={save} disabled={busy}>
+              {busy ? 'Saving…' : 'Save Address'}
+            </Button>
+            <Button variant="ghost" onClick={() => setEditing(null)} disabled={busy}>
+              Cancel
+            </Button>
           </div>
         </div>
       ) : null}
@@ -144,8 +175,14 @@ export function AddressBook() {
         onClose={() => setConfirmDelete(null)}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setConfirmDelete(null)} disabled={busy}>Keep it</Button>
-            <Button variant="danger" onClick={() => confirmDelete !== null && remove(confirmDelete)} disabled={busy}>
+            <Button variant="ghost" onClick={() => setConfirmDelete(null)} disabled={busy}>
+              Keep it
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => confirmDelete !== null && remove(confirmDelete)}
+              disabled={busy}
+            >
               {busy ? 'Deleting…' : 'Delete'}
             </Button>
           </>

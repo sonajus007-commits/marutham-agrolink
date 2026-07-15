@@ -47,7 +47,12 @@ const TRIGGER =
   'focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-leaf';
 
 export function Tabs({
-  items, value, defaultValue, onValueChange, className, 'aria-label': ariaLabel,
+  items,
+  value,
+  defaultValue,
+  onValueChange,
+  className,
+  'aria-label': ariaLabel,
 }: TabsProps) {
   return (
     <RadixTabs.Root

@@ -1,7 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import {
-  toISO, fromISO, daysInMonth, weekdayOf, compareDates, isSameDate,
-  addMonths, addDays, isDisabled, isMonthReachable, monthGrid, weekdayOrder,
+  toISO,
+  fromISO,
+  daysInMonth,
+  weekdayOf,
+  compareDates,
+  isSameDate,
+  addMonths,
+  addDays,
+  isDisabled,
+  isMonthReachable,
+  monthGrid,
+  weekdayOrder,
   type CivilDate,
 } from './calendar';
 

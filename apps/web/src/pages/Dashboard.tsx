@@ -43,8 +43,15 @@ export function Dashboard() {
       <p className="page__sub">{t('dashboard.proofNote')}</p>
 
       <div className="kpi-row">
-        <KpiCard label={t('dashboard.welcome')} value={fullName} hint={String(user?.login_id ?? '')} />
-        <KpiCard label={t('dashboard.role')} value={String(user?.admin_role || user?.role || '—')} />
+        <KpiCard
+          label={t('dashboard.welcome')}
+          value={fullName}
+          hint={String(user?.login_id ?? '')}
+        />
+        <KpiCard
+          label={t('dashboard.role')}
+          value={String(user?.admin_role || user?.role || '—')}
+        />
         <KpiCard label={t('dashboard.status')} value={String(user?.status ?? '—')} />
       </div>
 

@@ -36,11 +36,18 @@ const glow = (color: string): CSSProperties => ({
 function Connector({ kind }: { kind: GapKind | 'spacer' }) {
   if (kind === 'spacer') return <div className="flex-1" />;
   if (kind === 'green') return <div className="h-0.5 flex-1 bg-success" />;
-  if (kind === 'dash') return <div className="h-0 flex-1 border-t-2 border-dashed border-neutral-300" />;
+  if (kind === 'dash')
+    return <div className="h-0 flex-1 border-t-2 border-dashed border-neutral-300" />;
   return <div className="h-0.5 flex-1 bg-neutral-200" />;
 }
 
-export function OrderPipeline({ nodes, activeColor = 'var(--sun)' }: { nodes: PipelineNode[]; activeColor?: string }) {
+export function OrderPipeline({
+  nodes,
+  activeColor = 'var(--sun)',
+}: {
+  nodes: PipelineNode[];
+  activeColor?: string;
+}) {
   const N = nodes.length;
   const totalW = N * NODE_W;
 
@@ -126,7 +133,14 @@ export function OrderPipeline({ nodes, activeColor = 'var(--sun)' }: { nodes: Pi
                     strokeDasharray="4 3"
                   />
                   <path d={`M ${x2 - 4} 8 L ${x2 + 4} 8 L ${x2} 1 Z`} fill="var(--neutral-400)" />
-                  <text x={midX} y={depth + 8} textAnchor="middle" fontSize={8} fill="var(--neutral-400)" fontWeight={700}>
+                  <text
+                    x={midX}
+                    y={depth + 8}
+                    textAnchor="middle"
+                    fontSize={8}
+                    fill="var(--neutral-400)"
+                    fontWeight={700}
+                  >
                     skips ahead
                   </text>
                 </svg>

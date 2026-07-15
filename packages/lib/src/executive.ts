@@ -55,10 +55,7 @@ export function dbDistrictName(geoName: string): string {
 }
 
 /** Find a district row from a name in EITHER spelling — what a map click gives you. */
-export function findDistrict(
-  districts: DistrictPerf[],
-  name: string,
-): DistrictPerf | null {
+export function findDistrict(districts: DistrictPerf[], name: string): DistrictPerf | null {
   const wanted = dbDistrictName(name).toLowerCase();
   return (
     districts.find(

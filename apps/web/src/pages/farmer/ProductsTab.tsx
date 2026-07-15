@@ -3,8 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Button, EmptyState, Modal, Spinner, Select, FIELD_LABEL_CLASS } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import {
-  DEFAULT_CUTOFF, cutoffTimestamp, requestableProducts,
-  type FarmerListing, type Product,
+  DEFAULT_CUTOFF,
+  cutoffTimestamp,
+  requestableProducts,
+  type FarmerListing,
+  type Product,
 } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
@@ -71,15 +74,17 @@ export function ProductsTab() {
     const cutoff_ts = cutoffTimestamp(REQUEST_CUTOFF);
     if (!cutoff_ts) return;
     setRequesting(false);
-    await act(productId, () =>
-      api.createListing({
-        product_id: productId,
-        farmer_price: 0,
-        qty_available: 0,
-        time_available: REQUEST_CUTOFF,
-        cutoff_ts,
-        listed: false,
-      }),
+    await act(
+      productId,
+      () =>
+        api.createListing({
+          product_id: productId,
+          farmer_price: 0,
+          qty_available: 0,
+          time_available: REQUEST_CUTOFF,
+          cutoff_ts,
+          listed: false,
+        }),
       'Product request submitted — an admin will review it.',
     );
   }
@@ -110,8 +115,20 @@ export function ProductsTab() {
               listing={l}
               busy={busyId === l.id}
               onEdit={() => setEditing(l)}
-              onConfirm={() => act(l.id, () => api.setListingFlags(l.id, { confirmed: true }), 'Confirmed — customers can order it.')}
-              onUnconfirm={() => act(l.id, () => api.setListingFlags(l.id, { confirmed: false }), 'Confirmation removed.')}
+              onConfirm={() =>
+                act(
+                  l.id,
+                  () => api.setListingFlags(l.id, { confirmed: true }),
+                  'Confirmed — customers can order it.',
+                )
+              }
+              onUnconfirm={() =>
+                act(
+                  l.id,
+                  () => api.setListingFlags(l.id, { confirmed: false }),
+                  'Confirmation removed.',
+                )
+              }
               onDelete={() => setConfirmDelete(l)}
             />
           ))}
@@ -122,10 +139,15 @@ export function ProductsTab() {
         <ListingFormSheet
           open
           listing={editing}
-          product={products.find((p) => p.id === (editing.product?.id ?? editing.product_id)) || null}
+          product={
+            products.find((p) => p.id === (editing.product?.id ?? editing.product_id)) || null
+          }
           sellerType={user?.seller_type}
           onClose={() => setEditing(null)}
-          onSaved={() => { setEditing(null); void load(); }}
+          onSaved={() => {
+            setEditing(null);
+            void load();
+          }}
         />
       ) : null}
 
@@ -138,11 +160,17 @@ export function ProductsTab() {
 
       <Modal
         open={confirmDelete !== null}
-        title={confirmDelete?.listing_status === 'pending' ? 'Cancel this request?' : 'Remove this listing?'}
+        title={
+          confirmDelete?.listing_status === 'pending'
+            ? 'Cancel this request?'
+            : 'Remove this listing?'
+        }
         onClose={() => setConfirmDelete(null)}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setConfirmDelete(null)}>Keep it</Button>
+            <Button variant="ghost" onClick={() => setConfirmDelete(null)}>
+              Keep it
+            </Button>
             <Button
               variant="danger"
               onClick={() => {
@@ -166,7 +194,10 @@ export function ProductsTab() {
 }
 
 function RequestProductModal({
-  open, products, onClose, onRequest,
+  open,
+  products,
+  onClose,
+  onRequest,
 }: {
   open: boolean;
   products: Product[];
@@ -174,7 +205,9 @@ function RequestProductModal({
   onRequest: (productId: string) => void;
 }) {
   const [pick, setPick] = useState('');
-  useEffect(() => { if (open) setPick(''); }, [open]);
+  useEffect(() => {
+    if (open) setPick('');
+  }, [open]);
 
   return (
     <Modal
@@ -184,8 +217,12 @@ function RequestProductModal({
       onClose={onClose}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button disabled={!pick} onClick={() => onRequest(pick)}>Submit request</Button>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button disabled={!pick} onClick={() => onRequest(pick)}>
+            Submit request
+          </Button>
         </>
       }
     >
@@ -198,7 +235,8 @@ function RequestProductModal({
             <option value="">— Select a product —</option>
             {products.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name}{p.regional_name ? ` — ${p.regional_name}` : ''} ({p.unit})
+                {p.name}
+                {p.regional_name ? ` — ${p.regional_name}` : ''} ({p.unit})
               </option>
             ))}
           </Select>

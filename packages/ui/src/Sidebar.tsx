@@ -64,10 +64,22 @@ const ITEM_ACTIVE = 'bg-accent-bg font-bold text-accent-fg';
  * of activeTrail — never a per-item path test. An index item like Overview
  * (`/admin`) is an ancestor of every `/admin/*` route, so a per-item test would
  * keep it lit on nested pages; the deepest-wins rule lights only the real leaf. */
-function Leaf({ item, active, collapsed }: { item: SidebarItem; active: boolean; collapsed: boolean }) {
+function Leaf({
+  item,
+  active,
+  collapsed,
+}: {
+  item: SidebarItem;
+  active: boolean;
+  collapsed: boolean;
+}) {
   const inner = (
     <>
-      {item.icon ? <span className="flex shrink-0 items-center" aria-hidden="true">{item.icon}</span> : null}
+      {item.icon ? (
+        <span className="flex shrink-0 items-center" aria-hidden="true">
+          {item.icon}
+        </span>
+      ) : null}
       <span className={cn('min-w-0 flex-1 truncate', collapsed && 'sr-only')}>{item.label}</span>
       {item.badge != null && !collapsed ? (
         <span className="shrink-0 rounded-pill bg-surface-muted px-1.5 py-0.5 text-2xs font-bold text-fg-muted">
@@ -81,20 +93,38 @@ function Leaf({ item, active, collapsed }: { item: SidebarItem; active: boolean;
 
   if (item.href) {
     return (
-      <a href={item.href} onClick={item.onClick} className={cls} title={title} aria-current={active ? 'page' : undefined}>
+      <a
+        href={item.href}
+        onClick={item.onClick}
+        className={cls}
+        title={title}
+        aria-current={active ? 'page' : undefined}
+      >
         {inner}
       </a>
     );
   }
   return (
-    <button type="button" onClick={item.onClick} className={cls} title={title} aria-current={active ? 'page' : undefined}>
+    <button
+      type="button"
+      onClick={item.onClick}
+      className={cls}
+      title={title}
+      aria-current={active ? 'page' : undefined}
+    >
       {inner}
     </button>
   );
 }
 
 function Group({
-  item, activeId, onTrail, expanded, onToggle, collapsed, onExpandRail,
+  item,
+  activeId,
+  onTrail,
+  expanded,
+  onToggle,
+  collapsed,
+  onExpandRail,
 }: {
   item: SidebarItem;
   activeId: string | undefined;
@@ -110,17 +140,28 @@ function Group({
         type="button"
         // In the rail there is nowhere to show children, so open the rail first.
         onClick={collapsed ? onExpandRail : onToggle}
-        className={cn(ITEM_BASE, onTrail && !expanded ? ITEM_ACTIVE : ITEM_IDLE, collapsed && 'justify-center')}
+        className={cn(
+          ITEM_BASE,
+          onTrail && !expanded ? ITEM_ACTIVE : ITEM_IDLE,
+          collapsed && 'justify-center',
+        )}
         title={collapsed ? item.label : undefined}
         aria-expanded={collapsed ? undefined : expanded}
       >
-        {item.icon ? <span className="flex shrink-0 items-center" aria-hidden="true">{item.icon}</span> : null}
+        {item.icon ? (
+          <span className="flex shrink-0 items-center" aria-hidden="true">
+            {item.icon}
+          </span>
+        ) : null}
         <span className={cn('min-w-0 flex-1 truncate', collapsed && 'sr-only')}>{item.label}</span>
         {!collapsed ? (
           <ChevronDown
             size={15}
             aria-hidden="true"
-            className={cn('shrink-0 transition-transform duration-[var(--duration-fast)]', expanded && 'rotate-180')}
+            className={cn(
+              'shrink-0 transition-transform duration-[var(--duration-fast)]',
+              expanded && 'rotate-180',
+            )}
           />
         ) : null}
       </button>
@@ -139,12 +180,25 @@ function Group({
 }
 
 export function Sidebar({
-  sections, currentPath = '', collapsed = false, onCollapsedChange,
-  brand, footer, 'aria-label': ariaLabel = 'Main', className,
+  sections,
+  currentPath = '',
+  collapsed = false,
+  onCollapsedChange,
+  brand,
+  footer,
+  'aria-label': ariaLabel = 'Main',
+  className,
 }: SidebarProps) {
   // One global match: the deepest item that owns currentPath, and every group id
   // above it. Both the highlight and the auto-expand read from this.
-  const trail = useMemo(() => activeTrail(sections.flatMap((s) => s.items), currentPath), [sections, currentPath]);
+  const trail = useMemo(
+    () =>
+      activeTrail(
+        sections.flatMap((s) => s.items),
+        currentPath,
+      ),
+    [sections, currentPath],
+  );
   const trailSet = useMemo(() => new Set(trail), [trail]);
   const activeId = trail[trail.length - 1];
 
@@ -173,7 +227,12 @@ export function Sidebar({
       )}
     >
       {brand ? (
-        <div className={cn('flex h-14 shrink-0 items-center border-b border-border-subtle px-3', collapsed && 'justify-center')}>
+        <div
+          className={cn(
+            'flex h-14 shrink-0 items-center border-b border-border-subtle px-3',
+            collapsed && 'justify-center',
+          )}
+        >
           {brand}
         </div>
       ) : null}
@@ -214,7 +273,12 @@ export function Sidebar({
       </div>
 
       {footer ? (
-        <div className={cn('shrink-0 border-t border-border-subtle p-2', collapsed && 'flex justify-center')}>
+        <div
+          className={cn(
+            'shrink-0 border-t border-border-subtle p-2',
+            collapsed && 'flex justify-center',
+          )}
+        >
           {footer}
         </div>
       ) : null}

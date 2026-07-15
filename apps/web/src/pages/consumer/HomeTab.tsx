@@ -1,8 +1,15 @@
 import { useTranslation } from 'react-i18next';
 import { Button, EmptyState, OrderProgress, Spinner, StatTile } from '@marutham/ui';
 import {
-  buildPipeline, fmtDateShort, fmtMoney, statusColor,
-  bestOffer, offerConsumerPrice, getProductEmoji, type Order, type Product,
+  buildPipeline,
+  fmtDateShort,
+  fmtMoney,
+  statusColor,
+  bestOffer,
+  offerConsumerPrice,
+  getProductEmoji,
+  type Order,
+  type Product,
 } from '@marutham/lib';
 import { useOrders } from './OrdersContext';
 import { useConsumerData } from './ConsumerDataContext';
@@ -11,7 +18,13 @@ import { OrderRow, orderLabel } from './OrderRow';
 /** Past orders shown on Home before the user has to open the Orders tab. */
 const PAST_PREVIEW = 4;
 
-export function HomeTab({ onOpenOrder, onGoToShop }: { onOpenOrder: (id: string) => void; onGoToShop: () => void }) {
+export function HomeTab({
+  onOpenOrder,
+  onGoToShop,
+}: {
+  onOpenOrder: (id: string) => void;
+  onGoToShop: () => void;
+}) {
   const { t } = useTranslation();
   const { orders, groups, loading, error } = useOrders();
   const { products, offersByProduct } = useConsumerData();
@@ -41,16 +54,38 @@ export function HomeTab({ onOpenOrder, onGoToShop }: { onOpenOrder: (id: string)
   return (
     <>
       <div className="cons-kpis">
-        <StatTile label={t('consumer.home.activeOrders')} value={groups.active.length} hint={t('consumer.home.inProgress')} />
-        <StatTile label={t('consumer.home.completed')} value={groups.delivered.length} hint={t('consumer.home.delivered')} />
-        <StatTile label={t('consumer.home.thisMonth', 'Orders this month')} value={thisMonth} hint={t('consumer.home.thisMonthHint', 'Placed in {{month}}', { month: now.toLocaleString('en', { month: 'long' }) })} accent="var(--accent)" />
-        <StatTile label={t('consumer.home.totalSpent', 'Total spent')} value={fmtMoney(totalSpent)} hint={t('consumer.home.totalSpentHint', 'On delivered orders')} accent="var(--info)" />
+        <StatTile
+          label={t('consumer.home.activeOrders')}
+          value={groups.active.length}
+          hint={t('consumer.home.inProgress')}
+        />
+        <StatTile
+          label={t('consumer.home.completed')}
+          value={groups.delivered.length}
+          hint={t('consumer.home.delivered')}
+        />
+        <StatTile
+          label={t('consumer.home.thisMonth', 'Orders this month')}
+          value={thisMonth}
+          hint={t('consumer.home.thisMonthHint', 'Placed in {{month}}', {
+            month: now.toLocaleString('en', { month: 'long' }),
+          })}
+          accent="var(--accent)"
+        />
+        <StatTile
+          label={t('consumer.home.totalSpent', 'Total spent')}
+          value={fmtMoney(totalSpent)}
+          hint={t('consumer.home.totalSpentHint', 'On delivered orders')}
+          accent="var(--info)"
+        />
       </div>
 
       {recommended.length > 0 ? (
         <section className="cons-reco">
           <div className="cons-reco__head">
-            <h2 className="cons-section-title">{t('consumer.home.recommended', 'Recommended for You')}</h2>
+            <h2 className="cons-section-title">
+              {t('consumer.home.recommended', 'Recommended for You')}
+            </h2>
             <button type="button" className="cons-reco__all" onClick={onGoToShop}>
               {t('consumer.home.browseAll', 'Browse all')} <span aria-hidden="true">→</span>
             </button>
@@ -64,9 +99,13 @@ export function HomeTab({ onOpenOrder, onGoToShop }: { onOpenOrder: (id: string)
                 onClick={onGoToShop}
                 aria-label={`${product.name} — ${t('consumer.home.from', 'from')} ${fmtMoney(price)}`}
               >
-                <span className="cons-reco__emoji" aria-hidden="true">{getProductEmoji(product.name)}</span>
+                <span className="cons-reco__emoji" aria-hidden="true">
+                  {getProductEmoji(product.name)}
+                </span>
                 <span className="cons-reco__name">{product.name}</span>
-                <span className="cons-reco__price">{t('consumer.home.from', 'from')} {fmtMoney(price)}</span>
+                <span className="cons-reco__price">
+                  {t('consumer.home.from', 'from')} {fmtMoney(price)}
+                </span>
               </button>
             ))}
           </div>
@@ -76,7 +115,9 @@ export function HomeTab({ onOpenOrder, onGoToShop }: { onOpenOrder: (id: string)
       {orders.length === 0 ? (
         <EmptyState icon="🌿">
           <p>{t('consumer.home.noOrders')}</p>
-          <Button style={{ marginTop: 16 }} onClick={onGoToShop}>{t('consumer.home.shopNow')} →</Button>
+          <Button style={{ marginTop: 16 }} onClick={onGoToShop}>
+            {t('consumer.home.shopNow')} →
+          </Button>
         </EmptyState>
       ) : (
         <>
@@ -84,7 +125,12 @@ export function HomeTab({ onOpenOrder, onGoToShop }: { onOpenOrder: (id: string)
             <section>
               <h2 className="cons-section-title">{t('consumer.home.activeOrders')}</h2>
               {groups.active.map((o) => (
-                <TrackingCard key={o.id} order={o} onOpen={onOpenOrder} trackLabel={t('consumer.home.track')} />
+                <TrackingCard
+                  key={o.id}
+                  order={o}
+                  onOpen={onOpenOrder}
+                  trackLabel={t('consumer.home.track')}
+                />
               ))}
             </section>
           ) : null}
@@ -111,14 +157,23 @@ export function HomeTab({ onOpenOrder, onGoToShop }: { onOpenOrder: (id: string)
  * in a <button> would nest block content — and, previously, a scrollable
  * pipeline — inside a control, which touch and screen readers both handle badly.
  */
-function TrackingCard({ order: o, onOpen, trackLabel }: { order: Order; onOpen: (id: string) => void; trackLabel: string }) {
+function TrackingCard({
+  order: o,
+  onOpen,
+  trackLabel,
+}: {
+  order: Order;
+  onOpen: (id: string) => void;
+  trackLabel: string;
+}) {
   return (
     <article className="track-card" style={{ borderLeftColor: statusColor(o.status) }}>
       <div className="track-card__top">
         <div>
           <span className="ord-id">{orderLabel(o)}</span>
           <span className="ord-loc">
-            {fmtDateShort(o.created_at)}{o.agent_name ? ` · 🛵 ${o.agent_name}` : ''}
+            {fmtDateShort(o.created_at)}
+            {o.agent_name ? ` · 🛵 ${o.agent_name}` : ''}
           </span>
         </div>
         <div style={{ textAlign: 'right' }}>

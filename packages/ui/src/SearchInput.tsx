@@ -22,7 +22,12 @@ export interface SearchInputProps {
 }
 
 export function SearchInput({
-  value, onChange, placeholder = 'Search…', 'aria-label': ariaLabel, disabled, className,
+  value,
+  onChange,
+  placeholder = 'Search…',
+  'aria-label': ariaLabel,
+  disabled,
+  className,
 }: SearchInputProps) {
   return (
     <div className={cn('relative', className)}>

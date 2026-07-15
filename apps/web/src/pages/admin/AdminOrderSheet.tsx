@@ -1,10 +1,26 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, INPUT_CLASS, Modal, OrderPipeline, OrderTimeline, Sheet, Spinner } from '@marutham/ui';
+import {
+  Button,
+  INPUT_CLASS,
+  Modal,
+  OrderPipeline,
+  OrderTimeline,
+  Sheet,
+  Spinner,
+} from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import {
-  buildPipeline, canCancelOrder, deriveOrderCharges, fmtDate, fmtMoney, getProductEmoji,
-  isOrderCancelled, itemLineTotal, resolveAddress, statusColor,
+  buildPipeline,
+  canCancelOrder,
+  deriveOrderCharges,
+  fmtDate,
+  fmtMoney,
+  getProductEmoji,
+  isOrderCancelled,
+  itemLineTotal,
+  resolveAddress,
+  statusColor,
   type OrderDetail,
 } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
@@ -52,7 +68,13 @@ export function AdminOrderSheet({
       ) : !data ? (
         <Spinner />
       ) : (
-        <Body data={data} onChanged={() => { onChanged(); onClose(); }} />
+        <Body
+          data={data}
+          onChanged={() => {
+            onChanged();
+            onClose();
+          }}
+        />
       )}
     </Sheet>
   );
@@ -90,25 +112,37 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <span className="rounded-pill px-3 py-1 text-xs font-bold text-white" style={{ background: statusColor(statusLabel) }}>
+        <span
+          className="rounded-pill px-3 py-1 text-xs font-bold text-white"
+          style={{ background: statusColor(statusLabel) }}
+        >
           {statusLabel}
         </span>
         {canCancelOrder(o) ? (
-          <Button variant="danger" onClick={() => setShowCancel(true)}>{t('admin.orders.cancel')}</Button>
+          <Button variant="danger" onClick={() => setShowCancel(true)}>
+            {t('admin.orders.cancel')}
+          </Button>
         ) : null}
       </div>
 
       <Section title={`📋 ${t('admin.orders.info')}`}>
         <Row label={t('admin.orders.code')} value={o.code || '—'} />
         <Row label={t('admin.orders.placedOn')} value={fmtDate(o.created_at)} />
-        <Row label={t('admin.orders.payment')} value={`${o.pay_method || '—'} · ${o.pay_status || ''}`} />
-        {o.delivered_at ? <Row label={t('admin.orders.delivered')} value={fmtDate(o.delivered_at)} /> : null}
+        <Row
+          label={t('admin.orders.payment')}
+          value={`${o.pay_method || '—'} · ${o.pay_status || ''}`}
+        />
+        {o.delivered_at ? (
+          <Row label={t('admin.orders.delivered')} value={fmtDate(o.delivered_at)} />
+        ) : null}
         {o.agent_name ? <Row label={t('admin.orders.agent')} value={o.agent_name} /> : null}
       </Section>
 
       <Section title={`👤 ${t('admin.orders.customer')}`}>
         <Row label={t('admin.orders.name')} value={o.consumer_name || '—'} />
-        {o.consumer_phone ? <Row label={t('admin.orders.phone')} value={o.consumer_phone} mono /> : null}
+        {o.consumer_phone ? (
+          <Row label={t('admin.orders.phone')} value={o.consumer_phone} mono />
+        ) : null}
         <div className="pt-1.5 text-2xs text-fg-muted">{address || '—'}</div>
       </Section>
 
@@ -117,7 +151,9 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
           {items.map((item, idx) => (
             <li key={item.id || idx} className="flex items-start justify-between gap-2">
               <span className="min-w-0">
-                <span className="text-sm font-semibold text-fg">{getProductEmoji(item.name)} {item.name}</span>
+                <span className="text-sm font-semibold text-fg">
+                  {getProductEmoji(item.name)} {item.name}
+                </span>
                 <span className="block text-2xs text-fg-muted">
                   {item.qty} {item.unit || ''} × {fmtMoney(item.price)}
                   {item.farmer_name ? ` · ${item.farmer_name}` : ''}
@@ -131,9 +167,16 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
 
       <Section title={`💰 ${t('admin.orders.breakdown')}`}>
         <Row label={t('admin.orders.itemTotal')} value={fmtMoney(charges.itemTotal)} />
-        {charges.handling > 0 ? <Row label={t('admin.orders.handling')} value={fmtMoney(charges.handling)} /> : null}
-        {charges.marketFee > 0 ? <Row label={t('admin.orders.marketFee')} value={fmtMoney(charges.marketFee)} /> : null}
-        <Row label={t('admin.orders.delivery')} value={charges.delivery > 0 ? fmtMoney(charges.delivery) : t('admin.orders.free')} />
+        {charges.handling > 0 ? (
+          <Row label={t('admin.orders.handling')} value={fmtMoney(charges.handling)} />
+        ) : null}
+        {charges.marketFee > 0 ? (
+          <Row label={t('admin.orders.marketFee')} value={fmtMoney(charges.marketFee)} />
+        ) : null}
+        <Row
+          label={t('admin.orders.delivery')}
+          value={charges.delivery > 0 ? fmtMoney(charges.delivery) : t('admin.orders.free')}
+        />
         <Row label={t('admin.orders.total')} value={fmtMoney(charges.total)} strong />
       </Section>
 
@@ -146,7 +189,10 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
       {qr_svg ? (
         <Section title={`📷 ${t('admin.orders.qr')}`}>
           <div className="flex flex-col items-center gap-1">
-            <div className="rounded-sm bg-surface p-2 leading-none" dangerouslySetInnerHTML={{ __html: qr_svg }} />
+            <div
+              className="rounded-sm bg-surface p-2 leading-none"
+              dangerouslySetInnerHTML={{ __html: qr_svg }}
+            />
             <div className="font-mono text-sm font-bold text-primary">{o.code}</div>
           </div>
         </Section>
@@ -159,8 +205,12 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
         onClose={() => setShowCancel(false)}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setShowCancel(false)} disabled={busy}>{t('admin.orders.keep')}</Button>
-            <Button variant="danger" onClick={cancel} disabled={busy}>{busy ? '…' : t('admin.orders.cancel')}</Button>
+            <Button variant="ghost" onClick={() => setShowCancel(false)} disabled={busy}>
+              {t('admin.orders.keep')}
+            </Button>
+            <Button variant="danger" onClick={cancel} disabled={busy}>
+              {busy ? '…' : t('admin.orders.cancel')}
+            </Button>
           </>
         }
       >
@@ -188,11 +238,25 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function Row({ label, value, mono = false, strong = false }: { label: string; value: string; mono?: boolean; strong?: boolean }) {
+function Row({
+  label,
+  value,
+  mono = false,
+  strong = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  strong?: boolean;
+}) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-border-subtle py-1.5 last:border-b-0">
       <span className="text-2xs uppercase tracking-wide text-fg-muted">{label}</span>
-      <span className={`text-sm ${strong ? 'font-bold' : 'font-semibold'} text-fg ${mono ? 'tabular-nums' : ''}`}>{value}</span>
+      <span
+        className={`text-sm ${strong ? 'font-bold' : 'font-semibold'} text-fg ${mono ? 'tabular-nums' : ''}`}
+      >
+        {value}
+      </span>
     </div>
   );
 }

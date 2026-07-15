@@ -37,8 +37,7 @@ export function homepagePrice(
   if (!prices.length) return null;
 
   const wanted = district.toLowerCase();
-  const row =
-    prices.find((p) => (p.district || '').toLowerCase().includes(wanted)) || prices[0];
+  const row = prices.find((p) => (p.district || '').toLowerCase().includes(wanted)) || prices[0];
 
   const amount = Number(row?.market_price ?? NaN);
   if (!row || !Number.isFinite(amount) || amount <= 0) return null;
@@ -51,14 +50,38 @@ export function homepagePrice(
  * far more common than a wrong emoji. Matched on a substring of the name, in
  * order, so "Green Chilli" hits chilli before the generic fallback. */
 const EMOJI: ReadonlyArray<readonly [string, string]> = [
-  ['tomato', '🍅'], ['potato', '🥔'], ['onion', '🧅'], ['carrot', '🥕'],
-  ['brinjal', '🍆'], ['eggplant', '🍆'], ['chilli', '🌶️'], ['chili', '🌶️'],
-  ['banana', '🍌'], ['mango', '🥭'], ['grape', '🍇'], ['apple', '🍎'],
-  ['coconut', '🥥'], ['lemon', '🍋'], ['corn', '🌽'], ['cucumber', '🥒'],
-  ['garlic', '🧄'], ['pumpkin', '🎃'], ['leaf', '🥬'], ['spinach', '🥬'],
-  ['cabbage', '🥬'], ['beet', '🫜'], ['pea', '🫛'], ['bean', '🫘'],
-  ['rice', '🍚'], ['milk', '🥛'], ['egg', '🥚'], ['honey', '🍯'],
-  ['groundnut', '🥜'], ['peanut', '🥜'], ['mushroom', '🍄'], ['pepper', '🫑'],
+  ['tomato', '🍅'],
+  ['potato', '🥔'],
+  ['onion', '🧅'],
+  ['carrot', '🥕'],
+  ['brinjal', '🍆'],
+  ['eggplant', '🍆'],
+  ['chilli', '🌶️'],
+  ['chili', '🌶️'],
+  ['banana', '🍌'],
+  ['mango', '🥭'],
+  ['grape', '🍇'],
+  ['apple', '🍎'],
+  ['coconut', '🥥'],
+  ['lemon', '🍋'],
+  ['corn', '🌽'],
+  ['cucumber', '🥒'],
+  ['garlic', '🧄'],
+  ['pumpkin', '🎃'],
+  ['leaf', '🥬'],
+  ['spinach', '🥬'],
+  ['cabbage', '🥬'],
+  ['beet', '🫜'],
+  ['pea', '🫛'],
+  ['bean', '🫘'],
+  ['rice', '🍚'],
+  ['milk', '🥛'],
+  ['egg', '🥚'],
+  ['honey', '🍯'],
+  ['groundnut', '🥜'],
+  ['peanut', '🥜'],
+  ['mushroom', '🍄'],
+  ['pepper', '🫑'],
 ];
 
 export function productEmoji(name?: string | null): string {
@@ -116,13 +139,11 @@ export function offerInStock(listing: PublicListing): boolean {
  * most likely to survive to checkout sorts first.
  */
 export function sortedOffers(listings: PublicListing[] | null | undefined): PublicListing[] {
-  return (listings || [])
-    .filter(offerInStock)
-    .sort((a, b) => {
-      const byPrice = (offerPrice(a) as number) - (offerPrice(b) as number);
-      if (byPrice !== 0) return byPrice;
-      return Number(b.qty_available ?? 0) - Number(a.qty_available ?? 0);
-    });
+  return (listings || []).filter(offerInStock).sort((a, b) => {
+    const byPrice = (offerPrice(a) as number) - (offerPrice(b) as number);
+    if (byPrice !== 0) return byPrice;
+    return Number(b.qty_available ?? 0) - Number(a.qty_available ?? 0);
+  });
 }
 
 /** Every district this product is priced in, alphabetical, priceless rows dropped. */
@@ -150,7 +171,11 @@ export function districtPriceRows(
  * and it is why availability tracks the same `sortedOffers` the markup renders.
  */
 export function productJsonLd(args: {
-  product: Pick<Product, 'name' | 'unit'> & { regional_name?: string; category?: string; avg_rating?: string | number };
+  product: Pick<Product, 'name' | 'unit'> & {
+    regional_name?: string;
+    category?: string;
+    avg_rating?: string | number;
+  };
   price: number | null;
   listings: PublicListing[] | null | undefined;
   url: string;
@@ -172,9 +197,7 @@ export function productJsonLd(args: {
       '@type': 'Offer',
       priceCurrency: 'INR',
       price: price.toFixed(2),
-      availability: offers.length
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
+      availability: offers.length ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       url,
     },
     ...(Number.isFinite(rating) && rating > 0

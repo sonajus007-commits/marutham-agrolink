@@ -25,8 +25,13 @@ interface ProfileDraft {
 function draftFrom(user: Record<string, unknown>): ProfileDraft {
   const s = (k: string) => (user[k] as string) || '';
   return {
-    gender: s('gender'), email: s('email'), street1: s('street1'), street2: s('street2'),
-    village_town: s('village_town'), city: s('city'), pincode: s('pincode'),
+    gender: s('gender'),
+    email: s('email'),
+    street1: s('street1'),
+    street2: s('street2'),
+    village_town: s('village_town'),
+    city: s('city'),
+    pincode: s('pincode'),
   };
 }
 
@@ -48,8 +53,10 @@ export function ProfileTab() {
   }
 
   async function save() {
-    if (draft.pincode && !/^\d{6}$/.test(draft.pincode)) return setError('Pincode must be 6 digits.');
-    if (draft.email && !/^\S+@\S+\.\S+$/.test(draft.email)) return setError('Enter a valid email address.');
+    if (draft.pincode && !/^\d{6}$/.test(draft.pincode))
+      return setError('Pincode must be 6 digits.');
+    if (draft.email && !/^\S+@\S+\.\S+$/.test(draft.email))
+      return setError('Enter a valid email address.');
     setError(null);
     setBusy(true);
     try {
@@ -91,14 +98,20 @@ export function ProfileTab() {
         <dl className="prof-rows">
           <ProfRow label="Full Name" value={fullName} />
           <ProfRow label="Gender" value={(user.gender as string) || '—'} />
-          <ProfRow label="Phone" value={`${(user.country_code as string) || '+91'} ${user.phone}`} mono />
+          <ProfRow
+            label="Phone"
+            value={`${(user.country_code as string) || '+91'} ${user.phone}`}
+            mono
+          />
           <ProfRow label="Email" value={(user.email as string) || '—'} />
           <ProfRow label="District" value={(user.district as string) || '—'} />
           <ProfRow label="Address" value={profileAddress || '—'} />
         </dl>
 
         {!editing ? (
-          <button className="prof-editbtn" onClick={openEdit}>✏️ Edit Profile</button>
+          <button className="prof-editbtn" onClick={openEdit}>
+            ✏️ Edit Profile
+          </button>
         ) : (
           <div className="prof-form">
             <h4 className="prof-form__title">Editable Fields</h4>
@@ -107,42 +120,94 @@ export function ProfileTab() {
               {(p) => (
                 <Select {...p} value={draft.gender} onChange={(e) => set('gender', e.target.value)}>
                   <option value="">— Select Gender —</option>
-                  {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
+                  {GENDERS.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
                 </Select>
               )}
             </Field>
 
             <Field label="Email">
               {(p) => (
-                <Input {...p} type="email" autoComplete="email" placeholder="your@email.com"
-                  value={draft.email} onChange={(e) => set('email', e.target.value)} />
+                <Input
+                  {...p}
+                  type="email"
+                  autoComplete="email"
+                  placeholder="your@email.com"
+                  value={draft.email}
+                  onChange={(e) => set('email', e.target.value)}
+                />
               )}
             </Field>
 
             <Field label="Street Line 1">
-              {(p) => <Input {...p} type="text" value={draft.street1} onChange={(e) => set('street1', e.target.value)} />}
+              {(p) => (
+                <Input
+                  {...p}
+                  type="text"
+                  value={draft.street1}
+                  onChange={(e) => set('street1', e.target.value)}
+                />
+              )}
             </Field>
             <Field label="Street Line 2">
-              {(p) => <Input {...p} type="text" value={draft.street2} onChange={(e) => set('street2', e.target.value)} />}
+              {(p) => (
+                <Input
+                  {...p}
+                  type="text"
+                  value={draft.street2}
+                  onChange={(e) => set('street2', e.target.value)}
+                />
+              )}
             </Field>
             <Field label="Village / Town">
-              {(p) => <Input {...p} type="text" value={draft.village_town} onChange={(e) => set('village_town', e.target.value)} />}
+              {(p) => (
+                <Input
+                  {...p}
+                  type="text"
+                  value={draft.village_town}
+                  onChange={(e) => set('village_town', e.target.value)}
+                />
+              )}
             </Field>
             <Field label="City">
-              {(p) => <Input {...p} type="text" value={draft.city} onChange={(e) => set('city', e.target.value)} />}
+              {(p) => (
+                <Input
+                  {...p}
+                  type="text"
+                  value={draft.city}
+                  onChange={(e) => set('city', e.target.value)}
+                />
+              )}
             </Field>
             <Field label="Pincode">
               {(p) => (
-                <Input {...p} type="text" inputMode="numeric" autoComplete="postal-code"
-                  value={draft.pincode} onChange={(e) => set('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))} />
+                <Input
+                  {...p}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  value={draft.pincode}
+                  onChange={(e) => set('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))}
+                />
               )}
             </Field>
 
-            {error ? <div className={FIELD_ERR_CLASS} role="alert" style={{ marginBottom: 8 }}>{error}</div> : null}
+            {error ? (
+              <div className={FIELD_ERR_CLASS} role="alert" style={{ marginBottom: 8 }}>
+                {error}
+              </div>
+            ) : null}
 
             <div className="prof-actions">
-              <Button onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save Changes'}</Button>
-              <Button variant="ghost" onClick={() => setEditing(false)} disabled={busy}>Cancel</Button>
+              <Button onClick={save} disabled={busy}>
+                {busy ? 'Saving…' : 'Save Changes'}
+              </Button>
+              <Button variant="ghost" onClick={() => setEditing(false)} disabled={busy}>
+                Cancel
+              </Button>
             </div>
           </div>
         )}

@@ -18,55 +18,62 @@
  */
 
 export type PlaceholderGroupId =
-  | 'finance' | 'cost' | 'inventory' | 'logistics' | 'field' | 'satisfaction' | 'other';
+  'finance' | 'cost' | 'inventory' | 'logistics' | 'field' | 'satisfaction' | 'other';
 
 /** Groups render in this order; `other` is the catch-all and always comes last. */
 export const PLACEHOLDER_GROUP_ORDER: readonly PlaceholderGroupId[] = [
-  'finance', 'cost', 'inventory', 'logistics', 'field', 'satisfaction', 'other',
+  'finance',
+  'cost',
+  'inventory',
+  'logistics',
+  'field',
+  'satisfaction',
+  'other',
 ];
 
-const PLACEHOLDER_CATALOGUE: Readonly<Record<string, { group: PlaceholderGroupId; icon: string }>> = {
-  // ── Executive (EXEC_PLACEHOLDERS) ──
-  net_profit: { group: 'finance', icon: '💵' },
-  ebitda: { group: 'finance', icon: '📊' },
-  cash_flow: { group: 'finance', icon: '🏦' },
-  revenue_forecast: { group: 'finance', icon: '📉' },
-  receivables: { group: 'finance', icon: '📥' },
-  payables: { group: 'finance', icon: '📤' },
-  gst: { group: 'finance', icon: '🧾' },
-  tds: { group: 'finance', icon: '🧮' },
-  bank_balance: { group: 'finance', icon: '🏧' },
-  daily_settlement: { group: 'finance', icon: '💳' },
-  salary_cost: { group: 'cost', icon: '👥' },
-  warehouse_cost: { group: 'cost', icon: '🏬' },
-  hub_cost: { group: 'cost', icon: '🏪' },
-  vehicle_utilization: { group: 'logistics', icon: '🚙' },
-  fuel_cost: { group: 'logistics', icon: '⛽' },
-  farmer_satisfaction: { group: 'satisfaction', icon: '😊' },
-  customer_complaints: { group: 'satisfaction', icon: '📣' },
-  hub_issues: { group: 'satisfaction', icon: '🛠️' },
-  stock_shortage: { group: 'satisfaction', icon: '📦' },
+const PLACEHOLDER_CATALOGUE: Readonly<Record<string, { group: PlaceholderGroupId; icon: string }>> =
+  {
+    // ── Executive (EXEC_PLACEHOLDERS) ──
+    net_profit: { group: 'finance', icon: '💵' },
+    ebitda: { group: 'finance', icon: '📊' },
+    cash_flow: { group: 'finance', icon: '🏦' },
+    revenue_forecast: { group: 'finance', icon: '📉' },
+    receivables: { group: 'finance', icon: '📥' },
+    payables: { group: 'finance', icon: '📤' },
+    gst: { group: 'finance', icon: '🧾' },
+    tds: { group: 'finance', icon: '🧮' },
+    bank_balance: { group: 'finance', icon: '🏧' },
+    daily_settlement: { group: 'finance', icon: '💳' },
+    salary_cost: { group: 'cost', icon: '👥' },
+    warehouse_cost: { group: 'cost', icon: '🏬' },
+    hub_cost: { group: 'cost', icon: '🏪' },
+    vehicle_utilization: { group: 'logistics', icon: '🚙' },
+    fuel_cost: { group: 'logistics', icon: '⛽' },
+    farmer_satisfaction: { group: 'satisfaction', icon: '😊' },
+    customer_complaints: { group: 'satisfaction', icon: '📣' },
+    hub_issues: { group: 'satisfaction', icon: '🛠️' },
+    stock_shortage: { group: 'satisfaction', icon: '📦' },
 
-  // ── Operations (OPS_PLACEHOLDERS) ──
-  hub_stock: { group: 'inventory', icon: '🏬' },
-  transfer_stock: { group: 'inventory', icon: '📦' },
-  agents_online: { group: 'logistics', icon: '🛰️' },
-  vco_attendance: { group: 'field', icon: '🗓️' },
-  farmer_visits: { group: 'field', icon: '🚶' },
+    // ── Operations (OPS_PLACEHOLDERS) ──
+    hub_stock: { group: 'inventory', icon: '🏬' },
+    transfer_stock: { group: 'inventory', icon: '📦' },
+    agents_online: { group: 'logistics', icon: '🛰️' },
+    vco_attendance: { group: 'field', icon: '🗓️' },
+    farmer_visits: { group: 'field', icon: '🚶' },
 
-  // ── Admin Head (ADMINHEAD_PLACEHOLDERS) ──
-  support_tickets: { group: 'satisfaction', icon: '🎫' },
-  escalations: { group: 'satisfaction', icon: '🚨' },
-  warehouse_utilization: { group: 'inventory', icon: '🏭' },
-  inventory_stock: { group: 'inventory', icon: '📦' },
+    // ── Admin Head (ADMINHEAD_PLACEHOLDERS) ──
+    support_tickets: { group: 'satisfaction', icon: '🎫' },
+    escalations: { group: 'satisfaction', icon: '🚨' },
+    warehouse_utilization: { group: 'inventory', icon: '🏭' },
+    inventory_stock: { group: 'inventory', icon: '📦' },
 
-  // ── Field: VCO & Delivery Agent (FIELD_PLACEHOLDERS) ──
-  todays_schedule: { group: 'field', icon: '🗓️' },
-  gps_route: { group: 'field', icon: '🗺️' },
-  daily_earnings: { group: 'finance', icon: '💰' },
-  distance_travelled: { group: 'logistics', icon: '📍' },
-  fuel_allowance: { group: 'logistics', icon: '⛽' },
-};
+    // ── Field: VCO & Delivery Agent (FIELD_PLACEHOLDERS) ──
+    todays_schedule: { group: 'field', icon: '🗓️' },
+    gps_route: { group: 'field', icon: '🗺️' },
+    daily_earnings: { group: 'finance', icon: '💰' },
+    distance_travelled: { group: 'logistics', icon: '📍' },
+    fuel_allowance: { group: 'logistics', icon: '⛽' },
+  };
 
 export interface PlaceholderMetric {
   /** The backend's key — also the i18n key suffix (`admin.ph.<key>`). */

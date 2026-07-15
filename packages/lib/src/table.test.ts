@@ -1,9 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import {
-  nextSort, compareCells, sortRows, filterRows,
-  pageCount, clampPage, pageSlice,
-  selectionState, toggleAll, toggleOne,
-  toCsv, type Accessors,
+  nextSort,
+  compareCells,
+  sortRows,
+  filterRows,
+  pageCount,
+  clampPage,
+  pageSlice,
+  selectionState,
+  toggleAll,
+  toggleOne,
+  toCsv,
+  type Accessors,
 } from './table';
 
 interface Row {
@@ -14,8 +22,13 @@ interface Row {
   amount: string; // Postgres numeric arrives as a string
 }
 
-const row = (id: string, name: string, qty: number | null, paid: boolean, amount: string): Row =>
-  ({ id, name, qty, paid, amount });
+const row = (id: string, name: string, qty: number | null, paid: boolean, amount: string): Row => ({
+  id,
+  name,
+  qty,
+  paid,
+  amount,
+});
 
 const accessors: Accessors<Row> = {
   name: (r) => r.name,
@@ -89,13 +102,21 @@ describe('sortRows', () => {
   });
 
   it('sorts ascending', () => {
-    expect(names(sortRows(rows, { key: 'qty', dir: 'asc' }, accessors)))
-      .toEqual(['Kavitha', 'arun', 'Arun', 'Bala']);
+    expect(names(sortRows(rows, { key: 'qty', dir: 'asc' }, accessors))).toEqual([
+      'Kavitha',
+      'arun',
+      'Arun',
+      'Bala',
+    ]);
   });
 
   it('sorts descending', () => {
-    expect(names(sortRows(rows, { key: 'qty', dir: 'desc' }, accessors)))
-      .toEqual(['Arun', 'arun', 'Kavitha', 'Bala']);
+    expect(names(sortRows(rows, { key: 'qty', dir: 'desc' }, accessors))).toEqual([
+      'Arun',
+      'arun',
+      'Kavitha',
+      'Bala',
+    ]);
   });
 
   it('keeps empty cells last in BOTH directions', () => {
@@ -107,20 +128,24 @@ describe('sortRows', () => {
 
   it('is stable — ties keep their arrival order', () => {
     const tied = [row('a', 'first', 1, true, '0'), row('b', 'second', 1, true, '0')];
-    expect(names(sortRows(tied, { key: 'qty', dir: 'desc' }, accessors))).toEqual(['first', 'second']);
+    expect(names(sortRows(tied, { key: 'qty', dir: 'desc' }, accessors))).toEqual([
+      'first',
+      'second',
+    ]);
   });
 
   it('sorts a numeric-string column by magnitude, not lexically', () => {
-    expect(names(sortRows(rows, { key: 'amount', dir: 'asc' }, accessors)))
-      .toEqual(['Bala', 'arun', 'Kavitha', 'Arun']);
+    expect(names(sortRows(rows, { key: 'amount', dir: 'asc' }, accessors))).toEqual([
+      'Bala',
+      'arun',
+      'Kavitha',
+      'Arun',
+    ]);
   });
 });
 
 describe('filterRows', () => {
-  const rows = [
-    row('a', 'Kavitha', 3, true, '900'),
-    row('b', 'Arun', 10, false, '1200.50'),
-  ];
+  const rows = [row('a', 'Kavitha', 3, true, '900'), row('b', 'Arun', 10, false, '1200.50')];
 
   it('returns the same reference for an empty query', () => {
     expect(filterRows(rows, '   ', accessors)).toBe(rows);
@@ -231,7 +256,9 @@ describe('toCsv', () => {
   });
 
   it('writes an empty cell for null', () => {
-    expect(toCsv([row('a', 'Bala', null, true, '0')], columns, accessors)).toBe('Name,Qty\r\nBala,');
+    expect(toCsv([row('a', 'Bala', null, true, '0')], columns, accessors)).toBe(
+      'Name,Qty\r\nBala,',
+    );
   });
 
   it('writes only the header when there are no rows', () => {
@@ -239,7 +266,11 @@ describe('toCsv', () => {
   });
 
   it('writes an empty cell for a column with no accessor', () => {
-    const csv = toCsv([row('a', 'Arun', 3, true, '0')], [{ key: 'ghost', header: 'Ghost' }], accessors);
+    const csv = toCsv(
+      [row('a', 'Arun', 3, true, '0')],
+      [{ key: 'ghost', header: 'Ghost' }],
+      accessors,
+    );
     expect(csv).toBe('Ghost\r\n');
   });
 
@@ -253,8 +284,8 @@ describe('toCsv', () => {
   });
 
   it('defuses a formula so a spreadsheet cannot execute it', () => {
-    const csv = toCsv([row('a', '=cmd|\' /C calc\'!A0', 1, true, '0')], columns, accessors);
-    expect(csv).toBe('Name,Qty\r\n\'=cmd|\' /C calc\'!A0,1');
+    const csv = toCsv([row('a', "=cmd|' /C calc'!A0", 1, true, '0')], columns, accessors);
+    expect(csv).toBe("Name,Qty\r\n'=cmd|' /C calc'!A0,1");
   });
 
   it.each(['+1+cmd', '@SUM(A1)', '-1+cmd'])('defuses the formula lead in %o', (name) => {

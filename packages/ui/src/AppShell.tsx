@@ -32,7 +32,12 @@ export interface AppShellProps {
 }
 
 export function AppShell({
-  sidebar, header, children, currentPath, navLabel = 'Navigation', className,
+  sidebar,
+  header,
+  children,
+  currentPath,
+  navLabel = 'Navigation',
+  className,
 }: AppShellProps) {
   const [navOpen, setNavOpen] = useState(false);
   const returnFocus = useReturnFocus(navOpen);
@@ -53,7 +58,8 @@ export function AppShell({
     return () => mq.removeEventListener('change', sync);
   }, []);
 
-  const headerNode = typeof header === 'function' ? header({ openNav: () => setNavOpen(true) }) : header;
+  const headerNode =
+    typeof header === 'function' ? header({ openNav: () => setNavOpen(true) }) : header;
 
   return (
     <div className={cn('flex h-screen overflow-hidden bg-bg', className)}>

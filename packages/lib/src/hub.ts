@@ -25,7 +25,11 @@ export const HUB_READY_STATUS = 'At Hub';
 /* Who may work the hub. Mirrors the isHubStaff test the /scan endpoint applies
  * to a hub dispatch — a Delivery Agent or VCO is NOT hub staff. */
 export const HUB_STAFF_ROLES = [
-  'Hub Incharge', 'Head Office', 'State Head', 'Regional Manager', 'District Manager',
+  'Hub Incharge',
+  'Head Office',
+  'State Head',
+  'Regional Manager',
+  'District Manager',
 ] as const;
 
 export function isHubStaff(adminRole?: string | null): boolean {

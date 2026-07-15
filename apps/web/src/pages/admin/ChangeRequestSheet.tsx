@@ -49,7 +49,12 @@ export function ChangeRequestSheet({
     setAmount('');
   }
 
-  if (!request) return <Sheet open={open} title={t('admin.cr.title')} onClose={onClose}><div /></Sheet>;
+  if (!request)
+    return (
+      <Sheet open={open} title={t('admin.cr.title')} onClose={onClose}>
+        <div />
+      </Sheet>
+    );
 
   const renewal = isRenewal(request);
   const status = String(request.status);
@@ -73,34 +78,65 @@ export function ChangeRequestSheet({
   function approve() {
     if (renewal) {
       const rs = parseFloat(amount);
-      if (!rs || rs <= 0) { toast(t('admin.cr.amountRequired'), 'er'); return; }
-      void act(() => api.approveChangeRequest(request!.id, { notes: notes.trim() || undefined, renewal_amount: rs }));
+      if (!rs || rs <= 0) {
+        toast(t('admin.cr.amountRequired'), 'er');
+        return;
+      }
+      void act(() =>
+        api.approveChangeRequest(request!.id, {
+          notes: notes.trim() || undefined,
+          renewal_amount: rs,
+        }),
+      );
     } else {
       void act(() => api.approveChangeRequest(request!.id, { notes: notes.trim() || undefined }));
     }
   }
 
   return (
-    <Sheet open={open} title={renewal ? t('admin.cr.renewalTitle') : t('admin.cr.title')} onClose={onClose}>
+    <Sheet
+      open={open}
+      title={renewal ? t('admin.cr.renewalTitle') : t('admin.cr.title')}
+      onClose={onClose}
+    >
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="rounded-pill px-3 py-1 text-xs font-bold text-white" style={{ background: CR_STATUS_TONE[status] || 'var(--fg-muted)' }}>
+          <span
+            className="rounded-pill px-3 py-1 text-xs font-bold text-white"
+            style={{ background: CR_STATUS_TONE[status] || 'var(--fg-muted)' }}
+          >
             {t('admin.cr.status.' + status, status)}
           </span>
-          {renewal ? <span className="text-2xs uppercase tracking-wide text-fg-muted">🔄 {t('admin.cr.renewal')}</span> : null}
+          {renewal ? (
+            <span className="text-2xs uppercase tracking-wide text-fg-muted">
+              🔄 {t('admin.cr.renewal')}
+            </span>
+          ) : null}
         </div>
 
         <Section title={`👤 ${t('admin.cr.seller')}`}>
           <Row label={t('admin.cr.name')} value={request.fname || '—'} />
           <Row label={t('admin.cr.loginId')} value={request.login_id || '—'} mono />
-          {request.subscription_plan ? <Row label={t('admin.cr.currentPlan')} value={String(request.subscription_plan)} /> : null}
-          {request.subscription_expires_at ? <Row label={t('admin.cr.expires')} value={fmtDateShort(request.subscription_expires_at)} /> : null}
-          {request.requested_at ? <Row label={t('admin.cr.requestedOn')} value={fmtDateShort(request.requested_at)} /> : null}
+          {request.subscription_plan ? (
+            <Row label={t('admin.cr.currentPlan')} value={String(request.subscription_plan)} />
+          ) : null}
+          {request.subscription_expires_at ? (
+            <Row
+              label={t('admin.cr.expires')}
+              value={fmtDateShort(request.subscription_expires_at)}
+            />
+          ) : null}
+          {request.requested_at ? (
+            <Row label={t('admin.cr.requestedOn')} value={fmtDateShort(request.requested_at)} />
+          ) : null}
         </Section>
 
         {renewal ? (
           <Section title={`🔄 ${t('admin.cr.requestedRenewal')}`}>
-            <Row label={t('admin.cr.newPlan')} value={String(request.requested_changes?.new_plan || '—')} />
+            <Row
+              label={t('admin.cr.newPlan')}
+              value={String(request.requested_changes?.new_plan || '—')}
+            />
           </Section>
         ) : (
           <Section title={`📝 ${t('admin.cr.requestedChanges')}`}>
@@ -117,12 +153,20 @@ export function ChangeRequestSheet({
             {/* renewal_amount is PAISE — the /100 stays. It is the amount the
                 seller says they paid, so it now shows the paise too rather than
                 rounding the figure we are asked to reconcile against. */}
-            {request.renewal_amount ? <Row label={t('admin.cr.amount')} value={fmtMoney(request.renewal_amount / 100)} mono /> : null}
+            {request.renewal_amount ? (
+              <Row
+                label={t('admin.cr.amount')}
+                value={fmtMoney(request.renewal_amount / 100)}
+                mono
+              />
+            ) : null}
           </section>
         ) : null}
 
         {request.notes && !pending ? (
-          <div className="text-2xs text-fg-muted">{t('admin.cr.notes')}: {request.notes}</div>
+          <div className="text-2xs text-fg-muted">
+            {t('admin.cr.notes')}: {request.notes}
+          </div>
         ) : null}
 
         {/* Controls */}
@@ -130,17 +174,45 @@ export function ChangeRequestSheet({
           <section className="flex flex-col gap-3 rounded-base border border-border-subtle bg-surface-muted p-3">
             {renewal ? (
               <div>
-                <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-fg-muted">{t('admin.cr.amountLabel')}</label>
-                <input className={INPUT_CLASS} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={t('admin.cr.amountPlaceholder')} />
+                <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-fg-muted">
+                  {t('admin.cr.amountLabel')}
+                </label>
+                <input
+                  className={INPUT_CLASS}
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder={t('admin.cr.amountPlaceholder')}
+                />
               </div>
             ) : null}
             <div>
-              <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-fg-muted">{t('admin.cr.notesLabel')}</label>
-              <textarea className={INPUT_CLASS} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('admin.cr.notesPlaceholder')} />
+              <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-fg-muted">
+                {t('admin.cr.notesLabel')}
+              </label>
+              <textarea
+                className={INPUT_CLASS}
+                rows={2}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={t('admin.cr.notesPlaceholder')}
+              />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={approve} disabled={busy}>{renewal ? t('admin.cr.approveRenewal') : t('admin.cr.approve')}</Button>
-              <Button variant="danger" onClick={() => { if (!notes.trim()) { toast(t('admin.cr.rejectReasonRequired'), 'er'); return; } void act(() => api.rejectChangeRequest(request!.id, notes.trim())); }} disabled={busy}>
+              <Button onClick={approve} disabled={busy}>
+                {renewal ? t('admin.cr.approveRenewal') : t('admin.cr.approve')}
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  if (!notes.trim()) {
+                    toast(t('admin.cr.rejectReasonRequired'), 'er');
+                    return;
+                  }
+                  void act(() => api.rejectChangeRequest(request!.id, notes.trim()));
+                }}
+                disabled={busy}
+              >
                 {t('admin.cr.reject')}
               </Button>
             </div>
@@ -149,7 +221,12 @@ export function ChangeRequestSheet({
 
         {paymentPending ? (
           <div>
-            <Button onClick={() => void act(() => api.confirmRenewalPayment(request!.id))} disabled={busy}>{t('admin.cr.confirmPayment')}</Button>
+            <Button
+              onClick={() => void act(() => api.confirmRenewalPayment(request!.id))}
+              disabled={busy}
+            >
+              {t('admin.cr.confirmPayment')}
+            </Button>
           </div>
         ) : null}
       </div>

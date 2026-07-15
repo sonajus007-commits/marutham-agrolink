@@ -20,13 +20,22 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
           Marutham <span className="text-leaf">AgroLink</span>
         </a>
         <nav className="ml-auto hidden items-center gap-6 sm:flex">
-          <a href="/products" className="text-sm font-semibold text-fg-muted no-underline hover:text-forest">
+          <a
+            href="/products"
+            className="text-sm font-semibold text-fg-muted no-underline hover:text-forest"
+          >
             {t.nav.shop}
           </a>
-          <a href="/#about" className="text-sm font-semibold text-fg-muted no-underline hover:text-forest">
+          <a
+            href="/#about"
+            className="text-sm font-semibold text-fg-muted no-underline hover:text-forest"
+          >
             {t.nav.about}
           </a>
-          <a href="/#stories" className="text-sm font-semibold text-fg-muted no-underline hover:text-forest">
+          <a
+            href="/#stories"
+            className="text-sm font-semibold text-fg-muted no-underline hover:text-forest"
+          >
             {t.nav.stories}
           </a>
         </nav>

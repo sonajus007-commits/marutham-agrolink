@@ -14,7 +14,7 @@ export const EMP_APPROVAL_TONE: Record<string, string> = {
 
 const maskAadhar = (a?: unknown) => {
   const s = a ? String(a) : '';
-  return s.length >= 4 ? '•••• •••• ' + s.slice(-4) : (s || '—');
+  return s.length >= 4 ? '•••• •••• ' + s.slice(-4) : s || '—';
 };
 
 export function EmployeeDetailSheet({
@@ -59,8 +59,12 @@ export function EmployeeDetailSheet({
     let active = true;
     setEmp(null);
     setHistory([]);
-    reload(employeeId).catch((err) => active && setError(err instanceof Error ? err.message : 'Could not load employee'));
-    return () => { active = false; };
+    reload(employeeId).catch(
+      (err) => active && setError(err instanceof Error ? err.message : 'Could not load employee'),
+    );
+    return () => {
+      active = false;
+    };
   }, [open, employeeId, reload]);
 
   return (
@@ -70,13 +74,40 @@ export function EmployeeDetailSheet({
       ) : !emp ? (
         <Spinner />
       ) : (
-        <Body emp={emp} history={history} canApprove={canApprove} canManage={canManage} selfEmpId={selfEmpId} onDone={() => { onChanged(); onClose(); }} onEdit={onEdit} />
+        <Body
+          emp={emp}
+          history={history}
+          canApprove={canApprove}
+          canManage={canManage}
+          selfEmpId={selfEmpId}
+          onDone={() => {
+            onChanged();
+            onClose();
+          }}
+          onEdit={onEdit}
+        />
       )}
     </Sheet>
   );
 }
 
-function Body({ emp, history, canApprove, canManage, selfEmpId, onDone, onEdit }: { emp: Employee; history: EmployeeAuditEntry[]; canApprove: boolean; canManage: boolean; selfEmpId?: string | null; onDone: () => void; onEdit: (emp: Employee) => void }) {
+function Body({
+  emp,
+  history,
+  canApprove,
+  canManage,
+  selfEmpId,
+  onDone,
+  onEdit,
+}: {
+  emp: Employee;
+  history: EmployeeAuditEntry[];
+  canApprove: boolean;
+  canManage: boolean;
+  selfEmpId?: string | null;
+  onDone: () => void;
+  onEdit: (emp: Employee) => void;
+}) {
   const { t } = useTranslation();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -104,9 +135,13 @@ function Body({ emp, history, canApprove, canManage, selfEmpId, onDone, onEdit }
    *  blocking on — the confirm just falls back to the generic wording. */
   function openRemove() {
     setShowRemove(true);
-    if (!emp.emp_id) { setHasLogin(false); return; }
+    if (!emp.emp_id) {
+      setHasLogin(false);
+      return;
+    }
     setHasLogin(undefined);
-    api.lookupEmployee(String(emp.emp_id))
+    api
+      .lookupEmployee(String(emp.emp_id))
       .then((r) => setHasLogin(!!r.existing_login_id))
       .catch(() => setHasLogin(undefined));
   }
@@ -127,15 +162,28 @@ function Body({ emp, history, canApprove, canManage, selfEmpId, onDone, onEdit }
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-pill px-3 py-1 text-xs font-bold text-white" style={{ background: EMP_APPROVAL_TONE[status] || 'var(--fg-muted)' }}>
+        <span
+          className="rounded-pill px-3 py-1 text-xs font-bold text-white"
+          style={{ background: EMP_APPROVAL_TONE[status] || 'var(--fg-muted)' }}
+        >
           {t('admin.emp.approval.' + status, status)}
         </span>
-        {emp.status ? <span className="text-2xs uppercase tracking-wide text-fg-muted">{String(emp.status)}</span> : null}
+        {emp.status ? (
+          <span className="text-2xs uppercase tracking-wide text-fg-muted">
+            {String(emp.status)}
+          </span>
+        ) : null}
         {emp.is_manager ? <Tag label={t('admin.emp.mgr')} bg="var(--info)" /> : null}
-        {emp.is_board_director ? <Tag label={t('admin.emp.bod')} bg="var(--warning-strong)" /> : null}
+        {emp.is_board_director ? (
+          <Tag label={t('admin.emp.bod')} bg="var(--warning-strong)" />
+        ) : null}
         {emp.is_hr_admin ? <Tag label={t('admin.emp.hr')} bg="var(--info)" /> : null}
         {removed ? <Tag label={t('admin.emp.removed')} bg="var(--danger)" /> : null}
-        {canManage && !removed ? <Button variant="ghost" onClick={() => onEdit(emp)} className="ml-auto">{t('admin.emp.edit')}</Button> : null}
+        {canManage && !removed ? (
+          <Button variant="ghost" onClick={() => onEdit(emp)} className="ml-auto">
+            {t('admin.emp.edit')}
+          </Button>
+        ) : null}
       </div>
 
       {removed ? (
@@ -163,15 +211,21 @@ function Body({ emp, history, canApprove, canManage, selfEmpId, onDone, onEdit }
         <section className="flex flex-col gap-2 rounded-base border border-border-subtle bg-surface-muted p-3">
           <p className="text-2xs text-fg-muted">{t('admin.emp.approveHint')}</p>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => run(() => api.approveEmployee(emp.id!))} disabled={busy}>{t('admin.emp.approve')}</Button>
-            <Button variant="danger" onClick={() => setShowReject(true)} disabled={busy}>{t('admin.emp.reject')}</Button>
+            <Button onClick={() => run(() => api.approveEmployee(emp.id!))} disabled={busy}>
+              {t('admin.emp.approve')}
+            </Button>
+            <Button variant="danger" onClick={() => setShowReject(true)} disabled={busy}>
+              {t('admin.emp.reject')}
+            </Button>
           </div>
         </section>
       ) : null}
 
       {status === 'rejected' && emp.rejected_reason ? (
         <section className="rounded-base border border-danger/40 bg-surface-muted p-3">
-          <span className="text-2xs uppercase tracking-wide text-danger">{t('admin.emp.rejectionReason')}</span>
+          <span className="text-2xs uppercase tracking-wide text-danger">
+            {t('admin.emp.rejectionReason')}
+          </span>
           <p className="mt-1 text-sm text-fg">{String(emp.rejected_reason)}</p>
         </section>
       ) : null}
@@ -182,25 +236,52 @@ function Body({ emp, history, canApprove, canManage, selfEmpId, onDone, onEdit }
         {emp.gender ? <Row label={t('admin.emp.gender')} value={String(emp.gender)} /> : null}
         {emp.phone ? <Row label={t('admin.emp.phone')} value={String(emp.phone)} mono /> : null}
         {emp.email ? <Row label={t('admin.emp.email')} value={String(emp.email)} /> : null}
-        {emp.aadhar ? <Row label={t('admin.emp.aadhar')} value={maskAadhar(emp.aadhar)} mono /> : null}
+        {emp.aadhar ? (
+          <Row label={t('admin.emp.aadhar')} value={maskAadhar(emp.aadhar)} mono />
+        ) : null}
       </Section>
 
       <Section title={`💼 ${t('admin.emp.employment')}`}>
-        {emp.designation ? <Row label={t('admin.emp.designation')} value={String(emp.designation)} /> : null}
-        {emp.department ? <Row label={t('admin.emp.department')} value={String(emp.department)} /> : null}
-        {emp.employment_type ? <Row label={t('admin.emp.type')} value={String(emp.employment_type)} /> : null}
-        {emp.date_of_joining ? <Row label={t('admin.emp.doj')} value={fmtDateShort(emp.date_of_joining)} /> : null}
-        {emp.work_location ? <Row label={t('admin.emp.workLocation')} value={String(emp.work_location)} /> : null}
-        {emp.work_district ? <Row label={t('admin.emp.workDistrict')} value={String(emp.work_district)} /> : null}
-        {emp.work_state ? <Row label={t('admin.emp.workState')} value={String(emp.work_state)} /> : null}
+        {emp.designation ? (
+          <Row label={t('admin.emp.designation')} value={String(emp.designation)} />
+        ) : null}
+        {emp.department ? (
+          <Row label={t('admin.emp.department')} value={String(emp.department)} />
+        ) : null}
+        {emp.employment_type ? (
+          <Row label={t('admin.emp.type')} value={String(emp.employment_type)} />
+        ) : null}
+        {emp.date_of_joining ? (
+          <Row label={t('admin.emp.doj')} value={fmtDateShort(emp.date_of_joining)} />
+        ) : null}
+        {emp.work_location ? (
+          <Row label={t('admin.emp.workLocation')} value={String(emp.work_location)} />
+        ) : null}
+        {emp.work_district ? (
+          <Row label={t('admin.emp.workDistrict')} value={String(emp.work_district)} />
+        ) : null}
+        {emp.work_state ? (
+          <Row label={t('admin.emp.workState')} value={String(emp.work_state)} />
+        ) : null}
         {mgr ? <Row label={t('admin.emp.reportsTo')} value={mgr} /> : null}
       </Section>
 
       <Section title={`🔑 ${t('admin.emp.roles')}`}>
-        <Row label={t('admin.emp.mgr')} value={emp.is_manager ? t('admin.emp.yes') : t('admin.emp.no')} />
-        <Row label={t('admin.emp.bod')} value={emp.is_board_director ? t('admin.emp.yes') : t('admin.emp.no')} />
-        <Row label={t('admin.emp.hr')} value={emp.is_hr_admin ? t('admin.emp.yes') : t('admin.emp.no')} />
-        {emp.approved_at ? <Row label={t('admin.emp.approvedOn')} value={fmtDate(emp.approved_at)} /> : null}
+        <Row
+          label={t('admin.emp.mgr')}
+          value={emp.is_manager ? t('admin.emp.yes') : t('admin.emp.no')}
+        />
+        <Row
+          label={t('admin.emp.bod')}
+          value={emp.is_board_director ? t('admin.emp.yes') : t('admin.emp.no')}
+        />
+        <Row
+          label={t('admin.emp.hr')}
+          value={emp.is_hr_admin ? t('admin.emp.yes') : t('admin.emp.no')}
+        />
+        {emp.approved_at ? (
+          <Row label={t('admin.emp.approvedOn')} value={fmtDate(emp.approved_at)} />
+        ) : null}
       </Section>
 
       {/* Was hand-rolled here and rendered every diff blank: the trigger writes
@@ -228,8 +309,14 @@ function Body({ emp, history, canApprove, canManage, selfEmpId, onDone, onEdit }
         onClose={() => setShowRemove(false)}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setShowRemove(false)} disabled={busy}>{t('admin.emp.cancel')}</Button>
-            <Button variant="danger" onClick={() => run(() => api.removeEmployee(emp.id!))} disabled={busy}>
+            <Button variant="ghost" onClick={() => setShowRemove(false)} disabled={busy}>
+              {t('admin.emp.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => run(() => api.removeEmployee(emp.id!))}
+              disabled={busy}
+            >
               {busy ? t('admin.emp.removing') : t('admin.emp.remove')}
             </Button>
           </>
@@ -251,22 +338,43 @@ function Body({ emp, history, canApprove, canManage, selfEmpId, onDone, onEdit }
         onClose={() => setShowReject(false)}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setShowReject(false)} disabled={busy}>{t('admin.emp.cancel')}</Button>
-            <Button variant="danger" onClick={() => run(() => api.rejectEmployee(emp.id!, reason))} disabled={busy}>
+            <Button variant="ghost" onClick={() => setShowReject(false)} disabled={busy}>
+              {t('admin.emp.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => run(() => api.rejectEmployee(emp.id!, reason))}
+              disabled={busy}
+            >
               {busy ? '…' : t('admin.emp.reject')}
             </Button>
           </>
         }
       >
-        <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-fg-muted">{t('admin.emp.rejectReason')}</label>
-        <textarea className={INPUT_CLASS} rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('admin.emp.rejectReasonPlaceholder')} />
+        <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-fg-muted">
+          {t('admin.emp.rejectReason')}
+        </label>
+        <textarea
+          className={INPUT_CLASS}
+          rows={3}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder={t('admin.emp.rejectReasonPlaceholder')}
+        />
       </Modal>
     </div>
   );
 }
 
 function Tag({ label, bg }: { label: string; bg: string }) {
-  return <span className="rounded-pill px-2 py-0.5 text-2xs font-bold text-white" style={{ background: bg }}>{label}</span>;
+  return (
+    <span
+      className="rounded-pill px-2 py-0.5 text-2xs font-bold text-white"
+      style={{ background: bg }}
+    >
+      {label}
+    </span>
+  );
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {

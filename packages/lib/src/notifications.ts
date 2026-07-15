@@ -53,7 +53,11 @@ export function relativeTime(iso: string, now: number = Date.now(), locale = 'en
   const days = Math.round(hours / 24);
   if (days === 1) return 'Yesterday';
   if (days < 7) return days + ' days ago';
-  return new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', year: 'numeric' }).format(then);
+  return new Intl.DateTimeFormat(locale, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(then);
 }
 
 export interface NotificationGroup {
@@ -74,7 +78,10 @@ function localDayNumber(ms: number): number {
  * `groups` straight through without checking for holes. A future-dated item
  * falls in with Today.
  */
-export function groupByRecency(items: NotificationItem[], now: number = Date.now()): NotificationGroup[] {
+export function groupByRecency(
+  items: NotificationItem[],
+  now: number = Date.now(),
+): NotificationGroup[] {
   const todayNo = localDayNumber(now);
   // Yesterday is "now minus a day", computed on the calendar, not now − 86.4e6,
   // so it stays correct across a daylight-saving shift.

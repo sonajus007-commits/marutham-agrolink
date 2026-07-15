@@ -39,7 +39,9 @@ export function CancelOrderModal({
       onClose={onClose}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={busy}>Keep order</Button>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Keep order
+          </Button>
           <Button variant="danger" onClick={submit} disabled={busy}>
             {busy ? 'Cancelling…' : 'Cancel order'}
           </Button>
@@ -48,10 +50,14 @@ export function CancelOrderModal({
     >
       <p style={{ fontSize: 12, color: 'var(--gray)', lineHeight: 1.6, marginBottom: 12 }}>
         Order <strong>{order.code || order.id.slice(0, 8).toUpperCase()}</strong> will be cancelled.
-        {order.pay_status === 'paid' ? ' Your payment will be refunded to the original payment method.' : ''}
+        {order.pay_status === 'paid'
+          ? ' Your payment will be refunded to the original payment method.'
+          : ''}
       </p>
       <div className="fg">
-        <label className="fl" htmlFor="cancel-reason">Reason <span style={{ fontWeight: 400, color: 'var(--gray)' }}>(optional)</span></label>
+        <label className="fl" htmlFor="cancel-reason">
+          Reason <span style={{ fontWeight: 400, color: 'var(--gray)' }}>(optional)</span>
+        </label>
         <textarea
           id="cancel-reason"
           className="cons-input"

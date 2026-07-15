@@ -2,25 +2,62 @@
  * mental map. Grows per-role as each role migrates. */
 import { apiFetch } from './client';
 import type {
-  LoginResponse, MeResponse, ScanResponse, EligibleAgentsResponse,
-  FieldDashboardResponse, MyEmployeeResponse, User,
-  OrderingWindowResponse, TopRatingsResponse, MyRatingsResponse, LocationsResponse, PlaceOrderPayload,
-  TrackResponse, ReturnRequestPayload, ReturnResponse, RateItemResponse,
-  SubscriptionPlansResponse, SubscriptionPayResponse,
-  ProfileChangeRequestResponse, MyChangeRequestsResponse,
-  DashboardResponse, ExecutiveDashboardResponse, ExecutiveTrendMode,
-  OperationsDashboardResponse, AdminHeadDashboardResponse,
-  AccountStatus, UserStatusHistoryEntry,
-  Registration, ProfileChangeRequest, ProductPayload, ProductPriceInput,
-  AdminReturnsResponse, AdminReturn, AdminListing,
-  AdminPayoutsResponse, RunSettlementResponse,
-  EmployeesResponse, Employee, EmployeeAuditResponse, EmployeePayload,
-  RemoveEmployeeResponse, RestoreEmployeeResponse,
-  OtpSendResponse, RegisterPayload, RegisterResponse,
-  UserAuditResponse, LoginHistoryResponse,
+  LoginResponse,
+  MeResponse,
+  ScanResponse,
+  EligibleAgentsResponse,
+  FieldDashboardResponse,
+  MyEmployeeResponse,
+  User,
+  OrderingWindowResponse,
+  TopRatingsResponse,
+  MyRatingsResponse,
+  LocationsResponse,
+  PlaceOrderPayload,
+  TrackResponse,
+  ReturnRequestPayload,
+  ReturnResponse,
+  RateItemResponse,
+  SubscriptionPlansResponse,
+  SubscriptionPayResponse,
+  ProfileChangeRequestResponse,
+  MyChangeRequestsResponse,
+  DashboardResponse,
+  ExecutiveDashboardResponse,
+  ExecutiveTrendMode,
+  OperationsDashboardResponse,
+  AdminHeadDashboardResponse,
+  AccountStatus,
+  UserStatusHistoryEntry,
+  Registration,
+  ProfileChangeRequest,
+  ProductPayload,
+  ProductPriceInput,
+  AdminReturnsResponse,
+  AdminReturn,
+  AdminListing,
+  AdminPayoutsResponse,
+  RunSettlementResponse,
+  EmployeesResponse,
+  Employee,
+  EmployeeAuditResponse,
+  EmployeePayload,
+  RemoveEmployeeResponse,
+  RestoreEmployeeResponse,
+  OtpSendResponse,
+  RegisterPayload,
+  RegisterResponse,
+  UserAuditResponse,
+  LoginHistoryResponse,
 } from './types';
 import type {
-  Order, OrderDetail, Product, Offer, Payout, FarmerListing, ListingReviewStatus,
+  Order,
+  OrderDetail,
+  Product,
+  Offer,
+  Payout,
+  FarmerListing,
+  ListingReviewStatus,
 } from '@marutham/lib';
 import { rupeesToPaise } from '@marutham/lib';
 
@@ -113,11 +150,17 @@ export const api = {
     return apiFetch<ReturnResponse>('POST', '/orders/' + orderId + '/return', data);
   },
   rateItem(orderId: string, itemId: string, rating_value: number): Promise<RateItemResponse> {
-    return apiFetch<RateItemResponse>('POST', `/orders/${orderId}/items/${itemId}/rate`, { rating_value });
+    return apiFetch<RateItemResponse>('POST', `/orders/${orderId}/items/${itemId}/rate`, {
+      rating_value,
+    });
   },
   /** Advance an order one step (scan-to-advance). Accepts an id or an order code. */
   scanOrder(idOrCode: string, routeHint?: string): Promise<ScanResponse> {
-    return apiFetch<ScanResponse>('POST', '/orders/' + idOrCode + '/scan', routeHint ? { route: routeHint } : {});
+    return apiFetch<ScanResponse>(
+      'POST',
+      '/orders/' + idOrCode + '/scan',
+      routeHint ? { route: routeHint } : {},
+    );
   },
   /** VCO verify: sets route + assigns collection agent (same /scan endpoint). */
   verifyOrder(id: string, data: { route?: string; agent_id?: string }): Promise<ScanResponse> {
@@ -128,7 +171,11 @@ export const api = {
    * (backend/routes/delivery.js). `agent_id` is optional: "Assign later" is a
    * real choice the server accepts. */
   dispatchFromHub(id: string, agentId?: string): Promise<ScanResponse> {
-    return apiFetch<ScanResponse>('POST', '/orders/' + id + '/scan', agentId ? { agent_id: agentId } : {});
+    return apiFetch<ScanResponse>(
+      'POST',
+      '/orders/' + id + '/scan',
+      agentId ? { agent_id: agentId } : {},
+    );
   },
   getEligibleAgents(id: string, leg?: string): Promise<EligibleAgentsResponse> {
     const qs = leg ? '?leg=' + encodeURIComponent(leg) : '';
@@ -179,7 +226,10 @@ export const api = {
     return apiFetch('PATCH', '/listings/' + id, toListingBody(draft));
   },
   /** Flip confirmed/listed without touching price or stock. */
-  setListingFlags(id: string, flags: { confirmed?: boolean; listed?: boolean }): Promise<{ listing: FarmerListing }> {
+  setListingFlags(
+    id: string,
+    flags: { confirmed?: boolean; listed?: boolean },
+  ): Promise<{ listing: FarmerListing }> {
     return apiFetch('PATCH', '/listings/' + id, flags);
   },
   deleteListing(id: string): Promise<{ message: string }> {
@@ -239,7 +289,9 @@ export const api = {
   },
   /** Company-wide business overview. 403s for anyone outside EXECUTIVE_ROLES.
    *  Every money value comes back in RUPEES already — see ExecutiveDashboardResponse. */
-  getExecutiveDashboard(trend: ExecutiveTrendMode = 'monthly'): Promise<ExecutiveDashboardResponse> {
+  getExecutiveDashboard(
+    trend: ExecutiveTrendMode = 'monthly',
+  ): Promise<ExecutiveDashboardResponse> {
     return apiFetch<ExecutiveDashboardResponse>('GET', `/dashboard/executive?trend=${trend}`);
   },
   /** District/region-scoped operations dashboard. 403s outside the OPS_* roles.
@@ -265,11 +317,18 @@ export const api = {
     return apiFetch<{ user: User }>('GET', '/users/' + id);
   },
   /** active | suspended | blocked. A block needs a reason (server enforces). */
-  setUserStatus(id: string, status: AccountStatus, reason?: string): Promise<{ message: string; user: User }> {
+  setUserStatus(
+    id: string,
+    status: AccountStatus,
+    reason?: string,
+  ): Promise<{ message: string; user: User }> {
     return apiFetch('PATCH', '/users/' + id + '/status', { status, reason: reason || null });
   },
   getUserStatusHistory(id: string): Promise<{ history: UserStatusHistoryEntry[] }> {
-    return apiFetch<{ history: UserStatusHistoryEntry[] }>('GET', '/users/' + id + '/status-history');
+    return apiFetch<{ history: UserStatusHistoryEntry[] }>(
+      'GET',
+      '/users/' + id + '/status-history',
+    );
   },
   /* Record-change trail from the DB audit trigger, and every login attempt.
    * Both are Head Office / State Head only — a scoped admin gets a 403, so
@@ -310,7 +369,10 @@ export const api = {
   },
   /** A renewal needs renewal_amount (RUPEES) → sends the seller a payment request.
    *  A regular change applies the fields straight away. */
-  approveChangeRequest(id: string, opts?: { notes?: string; renewal_amount?: number }): Promise<{ message: string; payment_reference?: string }> {
+  approveChangeRequest(
+    id: string,
+    opts?: { notes?: string; renewal_amount?: number },
+  ): Promise<{ message: string; payment_reference?: string }> {
     return apiFetch('POST', '/users/change-requests/' + id + '/approve', {
       notes: opts?.notes || null,
       ...(opts?.renewal_amount != null ? { renewal_amount: opts.renewal_amount } : {}),
@@ -354,11 +416,18 @@ export const api = {
   },
   /** Accept or reject a pending return. A rejected return is closed; an accepted
    *  one still needs collectReturn to trigger the refund. */
-  decideReturn(id: string, decision: 'accepted' | 'rejected'): Promise<{ message: string; return: AdminReturn }> {
+  decideReturn(
+    id: string,
+    decision: 'accepted' | 'rejected',
+  ): Promise<{ message: string; return: AdminReturn }> {
     return apiFetch('PATCH', '/returns/' + id + '/decide', { decision });
   },
   /** Mark accepted goods collected → triggers the refund. */
-  collectReturn(id: string): Promise<{ message: string; return: AdminReturn; refund: { amount_paise: number; to: string } }> {
+  collectReturn(id: string): Promise<{
+    message: string;
+    return: AdminReturn;
+    refund: { amount_paise: number; to: string };
+  }> {
     return apiFetch('PATCH', '/returns/' + id + '/collect', {});
   },
 
@@ -412,7 +481,11 @@ export const api = {
   },
   /** Managers for the reporting-manager picker — scoped to a Work District +
    *  Department (both required); pass the employee's own id to exclude self. */
-  getManagers(params: { district: string; department: string; exclude?: string }): Promise<{ managers: Employee[] }> {
+  getManagers(params: {
+    district: string;
+    department: string;
+    exclude?: string;
+  }): Promise<{ managers: Employee[] }> {
     const qs = new URLSearchParams({
       district: params.district,
       department: params.department,
@@ -426,7 +499,10 @@ export const api = {
     return apiFetch('POST', '/employees', body);
   },
   /** emp_id is never editable; trust flags honoured only for minters. */
-  updateEmployee(id: string, body: EmployeePayload): Promise<{ message: string; employee: Employee }> {
+  updateEmployee(
+    id: string,
+    body: EmployeePayload,
+  ): Promise<{ message: string; employee: Employee }> {
     return apiFetch('PATCH', '/employees/' + id, body);
   },
   /** Remove an employee — a SOFT delete. The record and its audit history survive

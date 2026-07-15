@@ -18,7 +18,10 @@ import { ProfileSheet } from './sheets/ProfileSheet';
 import './agent.css';
 
 type SheetKind = 'view' | 'deliver' | 'verify' | 'profile' | null;
-interface SheetState { kind: SheetKind; orderId: string | null }
+interface SheetState {
+  kind: SheetKind;
+  orderId: string | null;
+}
 
 export function AgentPage() {
   return (
@@ -40,7 +43,11 @@ function AgentPageInner() {
 
   const [sheet, setSheet] = useState<SheetState>({ kind: null, orderId: null });
   const close = () => setSheet({ kind: null, orderId: null });
-  const afterChange = () => { close(); reload(); field.reload(); };
+  const afterChange = () => {
+    close();
+    reload();
+    field.reload();
+  };
 
   if (!user) return null;
 
@@ -65,19 +72,54 @@ function AgentPageInner() {
   const sections = queues
     ? [
         isVCO && queues.toVerify.length
-          ? { key: 'verify', title: `📋 ${t('agent.queue.verify')}`, orders: queues.toVerify, action: 'verify' as const, cls: 'q-section--verify', btn: `✓ ${t('agent.btn.verify')}` }
+          ? {
+              key: 'verify',
+              title: `📋 ${t('agent.queue.verify')}`,
+              orders: queues.toVerify,
+              action: 'verify' as const,
+              cls: 'q-section--verify',
+              btn: `✓ ${t('agent.btn.verify')}`,
+            }
           : null,
         queues.toPickUp.length
-          ? { key: 'pickup', title: `📦 ${t('agent.queue.pickup')}`, orders: queues.toPickUp, action: 'pickup' as const, cls: 'q-section--pickup', btn: `⬆ ${t('agent.btn.pickup')}` }
+          ? {
+              key: 'pickup',
+              title: `📦 ${t('agent.queue.pickup')}`,
+              orders: queues.toPickUp,
+              action: 'pickup' as const,
+              cls: 'q-section--pickup',
+              btn: `⬆ ${t('agent.btn.pickup')}`,
+            }
           : null,
         queues.inTransit.length
-          ? { key: 'transit', title: `🚚 ${t('agent.queue.transit')}`, orders: queues.inTransit, action: 'transit' as const, cls: 'q-section--transit', btn: `→ ${t('agent.btn.outForDelivery')}` }
+          ? {
+              key: 'transit',
+              title: `🚚 ${t('agent.queue.transit')}`,
+              orders: queues.inTransit,
+              action: 'transit' as const,
+              cls: 'q-section--transit',
+              btn: `→ ${t('agent.btn.outForDelivery')}`,
+            }
           : null,
         queues.toDeliver.length
-          ? { key: 'deliver', title: `🛵 ${t('agent.queue.deliver')}`, orders: queues.toDeliver, action: 'deliver' as const, cls: 'q-section--deliver', btn: `${t('agent.btn.deliver')} →` }
+          ? {
+              key: 'deliver',
+              title: `🛵 ${t('agent.queue.deliver')}`,
+              orders: queues.toDeliver,
+              action: 'deliver' as const,
+              cls: 'q-section--deliver',
+              btn: `${t('agent.btn.deliver')} →`,
+            }
           : null,
         queues.inProgress.length
-          ? { key: 'inprogress', title: `🚚 ${t('agent.queue.inProgress')}`, orders: queues.inProgress, action: 'view' as const, cls: 'q-section--transit', btn: '' }
+          ? {
+              key: 'inprogress',
+              title: `🚚 ${t('agent.queue.inProgress')}`,
+              orders: queues.inProgress,
+              action: 'view' as const,
+              cls: 'q-section--transit',
+              btn: '',
+            }
           : null,
       ].filter(Boolean)
     : [];
@@ -87,10 +129,16 @@ function AgentPageInner() {
       <header className="agent-hdr">
         <a href="/app/agent" className="agent-hdr__brand">
           <div className="hring" style={{ width: 42, height: 32 }}>
-            <img src="/img/logo-sm.jpg" alt="MA" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <img
+              src="/img/logo-sm.jpg"
+              alt="MA"
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
           </div>
           <div>
-            <div className="agent-hdr__name">Marutham <span>Agrolink</span></div>
+            <div className="agent-hdr__name">
+              Marutham <span>Agrolink</span>
+            </div>
             <div className="agent-hdr__tag">{isVCO ? 'VCO' : t('agent.tag')}</div>
           </div>
         </a>
@@ -100,11 +148,26 @@ function AgentPageInner() {
             <span className="agent-pill__text">{t('agent.onDuty')}</span>
           </div>
           <div className="agent-lang">
-            <button className={i18n.language === 'en' ? 'on' : ''} onClick={() => setLang('en')}>EN</button>
-            <button className={`tamil ${i18n.language === 'ta' ? 'on' : ''}`} onClick={() => setLang('ta')}>த</button>
+            <button className={i18n.language === 'en' ? 'on' : ''} onClick={() => setLang('en')}>
+              EN
+            </button>
+            <button
+              className={`tamil ${i18n.language === 'ta' ? 'on' : ''}`}
+              onClick={() => setLang('ta')}
+            >
+              த
+            </button>
           </div>
-          <button className="agent-iconbtn" onClick={() => setSheet({ kind: 'profile', orderId: null })} aria-label={t('agent.profile')}>👤</button>
-          <button className="agent-iconbtn" onClick={logout} aria-label={t('agent.exit')}>⎋</button>
+          <button
+            className="agent-iconbtn"
+            onClick={() => setSheet({ kind: 'profile', orderId: null })}
+            aria-label={t('agent.profile')}
+          >
+            👤
+          </button>
+          <button className="agent-iconbtn" onClick={logout} aria-label={t('agent.exit')}>
+            ⎋
+          </button>
         </div>
       </header>
 
@@ -123,7 +186,12 @@ function AgentPageInner() {
 
         <FieldDashboard data={field.data} onRefresh={field.reload} />
 
-        <ScanBar onScanned={() => { reload(); field.reload(); }} />
+        <ScanBar
+          onScanned={() => {
+            reload();
+            field.reload();
+          }}
+        />
 
         {loading ? (
           <Spinner label={t('agent.loadingOrders')} />
@@ -148,13 +216,28 @@ function AgentPageInner() {
           ))
         )}
 
-        {queues ? <DeliveredList orders={queues.delivered} onOpenView={(id) => setSheet({ kind: 'view', orderId: id })} /> : null}
+        {queues ? (
+          <DeliveredList
+            orders={queues.delivered}
+            onOpenView={(id) => setSheet({ kind: 'view', orderId: id })}
+          />
+        ) : null}
       </div>
 
       {/* Sheets */}
       <OrderViewSheet open={sheet.kind === 'view'} orderId={sheet.orderId} onClose={close} />
-      <DeliverSheet open={sheet.kind === 'deliver'} orderId={sheet.orderId} onClose={close} onChanged={afterChange} />
-      <VerifySheet open={sheet.kind === 'verify'} orderId={sheet.orderId} onClose={close} onChanged={afterChange} />
+      <DeliverSheet
+        open={sheet.kind === 'deliver'}
+        orderId={sheet.orderId}
+        onClose={close}
+        onChanged={afterChange}
+      />
+      <VerifySheet
+        open={sheet.kind === 'verify'}
+        orderId={sheet.orderId}
+        onClose={close}
+        onChanged={afterChange}
+      />
       <ProfileSheet open={sheet.kind === 'profile'} onClose={close} isVCO={isVCO} />
     </div>
   );

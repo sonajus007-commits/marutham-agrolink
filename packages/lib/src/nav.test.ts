@@ -66,7 +66,9 @@ describe('filterNavByRole', () => {
   });
 
   it('keeps a childless survivor that is itself a link', () => {
-    const g: NavNode[] = [{ id: 'g', href: '/g', children: [{ id: 'x', href: '/x', roles: ['HO'] }] }];
+    const g: NavNode[] = [
+      { id: 'g', href: '/g', children: [{ id: 'x', href: '/x', roles: ['HO'] }] },
+    ];
     const out = filterNavByRole(g, 'other');
     expect(out.map((i) => i.id)).toEqual(['g']);
     expect(out[0]!.children).toEqual([]);

@@ -30,12 +30,34 @@ export interface AlertProps {
 
 const TONE: Record<AlertTone, { wrap: string; icon: string; Icon: typeof Info; label: string }> = {
   info: { wrap: 'bg-info-bg text-info-fg', icon: 'text-info', Icon: Info, label: 'Information' },
-  success: { wrap: 'bg-success-bg text-success-fg', icon: 'text-success', Icon: CheckCircle2, label: 'Success' },
-  warning: { wrap: 'bg-warning-bg text-warning-fg', icon: 'text-warning-strong', Icon: AlertTriangle, label: 'Warning' },
-  danger: { wrap: 'bg-danger-bg text-danger-fg', icon: 'text-danger', Icon: AlertCircle, label: 'Error' },
+  success: {
+    wrap: 'bg-success-bg text-success-fg',
+    icon: 'text-success',
+    Icon: CheckCircle2,
+    label: 'Success',
+  },
+  warning: {
+    wrap: 'bg-warning-bg text-warning-fg',
+    icon: 'text-warning-strong',
+    Icon: AlertTriangle,
+    label: 'Warning',
+  },
+  danger: {
+    wrap: 'bg-danger-bg text-danger-fg',
+    icon: 'text-danger',
+    Icon: AlertCircle,
+    label: 'Error',
+  },
 };
 
-export function Alert({ tone = 'info', title, children, action, onDismiss, className }: AlertProps) {
+export function Alert({
+  tone = 'info',
+  title,
+  children,
+  action,
+  onDismiss,
+  className,
+}: AlertProps) {
   const t = TONE[tone];
   const Icon = t.Icon;
 
@@ -50,7 +72,9 @@ export function Alert({ tone = 'info', title, children, action, onDismiss, class
       <div className="min-w-0 flex-1">
         {title ? <p className="font-sans text-sm font-bold leading-snug">{title}</p> : null}
         {children ? (
-          <div className={cn('font-sans text-sm leading-normal', title && 'mt-0.5')}>{children}</div>
+          <div className={cn('font-sans text-sm leading-normal', title && 'mt-0.5')}>
+            {children}
+          </div>
         ) : null}
         {action ? <div className="mt-2 flex gap-2">{action}</div> : null}
       </div>

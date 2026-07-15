@@ -3,8 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { Button, Modal, Sheet } from '@marutham/ui';
 import { api, type AdminListing } from '@marutham/api-client';
 import {
-  fmtDate, fmtMoney, subscriptionStatus,
-  listingActions, listingActionStatus, listingWaitDays, isListingStale,
+  fmtDate,
+  fmtMoney,
+  subscriptionStatus,
+  listingActions,
+  listingActionStatus,
+  listingWaitDays,
+  isListingStale,
   type ListingAction,
 } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
@@ -43,7 +48,11 @@ export function ListingReviewSheet({
   const [reason, setReason] = useState('');
 
   if (!listing) {
-    return <Sheet open={open} title={t('admin.lst.title')} onClose={onClose}><div /></Sheet>;
+    return (
+      <Sheet open={open} title={t('admin.lst.title')} onClose={onClose}>
+        <div />
+      </Sheet>
+    );
   }
 
   const status = String(listing.listing_status || 'pending');
@@ -167,11 +176,16 @@ export function ListingReviewSheet({
               </span>
             </span>
           </div>
-          {sub.expiresAt ? <Row label={t('admin.lst.expiresOn')} value={fmtDate(sub.expiresAt)} /> : null}
+          {sub.expiresAt ? (
+            <Row label={t('admin.lst.expiresOn')} value={fmtDate(sub.expiresAt)} />
+          ) : null}
         </Section>
 
         {sub.level === 'expired' ? (
-          <p role="alert" className="rounded-base border border-danger bg-danger-bg px-3 py-2 text-2xs text-danger-fg">
+          <p
+            role="alert"
+            className="rounded-base border border-danger bg-danger-bg px-3 py-2 text-2xs text-danger-fg"
+          >
             {t('admin.lst.expiredWarning')}
           </p>
         ) : null}
@@ -191,7 +205,9 @@ export function ListingReviewSheet({
         ) : null}
 
         <section className="flex flex-col gap-2 rounded-base border border-border-subtle bg-surface-muted p-3">
-          <p className="text-2xs text-fg-muted">{t('admin.lst.hint.' + status, { defaultValue: '' })}</p>
+          <p className="text-2xs text-fg-muted">
+            {t('admin.lst.hint.' + status, { defaultValue: '' })}
+          </p>
           <div className="flex flex-wrap gap-2">
             {actions.map((a) => (
               <Button
@@ -234,7 +250,9 @@ export function ListingReviewSheet({
         }
       >
         <p className="text-sm text-fg">
-          {confirming ? t('admin.lst.confirm.' + confirming, { seller: sellerName, product: p?.name || '' }) : ''}
+          {confirming
+            ? t('admin.lst.confirm.' + confirming, { seller: sellerName, product: p?.name || '' })
+            : ''}
         </p>
 
         {/* The reason. Required, and it is not paperwork: this text is emailed and
@@ -242,7 +260,10 @@ export function ListingReviewSheet({
             can act on. Collected AT the decision, not before it. */}
         {confirming === 'reject' ? (
           <div className="mt-3 flex flex-col gap-1">
-            <label htmlFor="lst-reason" className="text-2xs font-bold uppercase tracking-wide text-fg-muted">
+            <label
+              htmlFor="lst-reason"
+              className="text-2xs font-bold uppercase tracking-wide text-fg-muted"
+            >
               {t('admin.lst.reasonLabel')}
             </label>
             <textarea
@@ -272,11 +293,25 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function Row({ label, value, mono = false, strong = false }: { label: string; value: string; mono?: boolean; strong?: boolean }) {
+function Row({
+  label,
+  value,
+  mono = false,
+  strong = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  strong?: boolean;
+}) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-border-subtle py-1.5 last:border-b-0">
       <span className="text-2xs uppercase tracking-wide text-fg-muted">{label}</span>
-      <span className={`text-sm ${strong ? 'font-bold' : 'font-semibold'} text-fg ${mono ? 'tabular-nums' : ''}`}>{value}</span>
+      <span
+        className={`text-sm ${strong ? 'font-bold' : 'font-semibold'} text-fg ${mono ? 'tabular-nums' : ''}`}
+      >
+        {value}
+      </span>
     </div>
   );
 }

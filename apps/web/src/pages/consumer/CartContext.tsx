@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { CartItem } from '@marutham/lib';
 
 const CART_KEY = 'ma_cart';
@@ -35,7 +43,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addItem = useCallback((item: CartItem) => {
     setItems((prev) => {
       const idx = prev.findIndex(
-        (i) => i.product_id === item.product_id && (i.farmer_id || null) === (item.farmer_id || null),
+        (i) =>
+          i.product_id === item.product_id && (i.farmer_id || null) === (item.farmer_id || null),
       );
       if (idx === -1) return [...prev, item];
       const next = prev.slice();

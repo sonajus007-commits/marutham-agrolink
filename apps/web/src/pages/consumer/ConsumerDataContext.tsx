@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { api } from '@marutham/api-client';
 import type { Product, Offer, Rating } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
@@ -46,7 +54,8 @@ export function ConsumerDataProvider({ children }: { children: ReactNode }) {
         const fid = r.farmer?.id;
         if (!pid) return;
         const avg = parseFloat(String(r.avg_rating));
-        if (!rMap[pid] || avg > rMap[pid].avg_rating) rMap[pid] = { avg_rating: avg, num_ratings: r.num_ratings };
+        if (!rMap[pid] || avg > rMap[pid].avg_rating)
+          rMap[pid] = { avg_rating: avg, num_ratings: r.num_ratings };
         if (fid) rFP[`${fid}_${pid}`] = { avg_rating: avg, num_ratings: r.num_ratings };
       });
       setRatingsMap(rMap);
@@ -64,12 +73,24 @@ export function ConsumerDataProvider({ children }: { children: ReactNode }) {
 
   const productById = useMemo(() => {
     const m: Record<string, Product> = {};
-    products.forEach((p) => { m[p.id] = p; });
+    products.forEach((p) => {
+      m[p.id] = p;
+    });
     return m;
   }, [products]);
 
   const value = useMemo<ConsumerData>(
-    () => ({ products, productById, offersByProduct, ratingsMap, ratingsByFP, district, setDistrict, loading, error }),
+    () => ({
+      products,
+      productById,
+      offersByProduct,
+      ratingsMap,
+      ratingsByFP,
+      district,
+      setDistrict,
+      loading,
+      error,
+    }),
     [products, productById, offersByProduct, ratingsMap, ratingsByFP, district, loading, error],
   );
 

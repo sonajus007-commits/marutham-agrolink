@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
-  deliveryStages, totalInPipeline, rankedOpsDistricts,
+  deliveryStages,
+  totalInPipeline,
+  rankedOpsDistricts,
   type OpsDistrict,
 } from './operations';
 
@@ -16,15 +18,17 @@ describe('deliveryStages', () => {
       'VCO Verified': 1,
     };
     expect(deliveryStages(breakdown).map((s) => s.status)).toEqual([
-      'Order Placed', 'Packaged', 'VCO Verified', 'Out for Delivery', 'Delivered',
+      'Order Placed',
+      'Packaged',
+      'VCO Verified',
+      'Out for Delivery',
+      'Delivered',
     ]);
   });
 
   it('keeps a status the pipeline has never heard of — those orders are real', () => {
     const stages = deliveryStages({ Delivered: 1, Quarantined: 3, Packaged: 2 });
-    expect(stages.map((s) => s.status)).toEqual([
-      'Packaged', 'Delivered', 'Quarantined',
-    ]);
+    expect(stages.map((s) => s.status)).toEqual(['Packaged', 'Delivered', 'Quarantined']);
     expect(stages.find((s) => s.status === 'Quarantined')?.count).toBe(3);
   });
 
@@ -52,7 +56,10 @@ describe('totalInPipeline', () => {
 
 describe('rankedOpsDistricts', () => {
   const d = (district: string, orders: number): OpsDistrict => ({
-    district, orders, revenue: orders * 10, pending: 1,
+    district,
+    orders,
+    revenue: orders * 10,
+    pending: 1,
   });
 
   it('sorts busiest first and does not mutate the input', () => {

@@ -35,9 +35,22 @@ export interface EmployeeRecord {
 }
 
 /** Label/value pairs for an employee master record. Returns null if no record. */
-export function employeeDetailPairs(e: EmployeeRecord | null | undefined): [string, string][] | null {
+export function employeeDetailPairs(
+  e: EmployeeRecord | null | undefined,
+): [string, string][] | null {
   if (!e) return null;
-  const addr = [e.house_no, e.street1, e.street2, e.address_line, e.village_town, e.city, e.taluk, e.district, e.state, e.pincode]
+  const addr = [
+    e.house_no,
+    e.street1,
+    e.street2,
+    e.address_line,
+    e.village_town,
+    e.city,
+    e.taluk,
+    e.district,
+    e.state,
+    e.pincode,
+  ]
     .filter(Boolean)
     .join(', ');
   return [

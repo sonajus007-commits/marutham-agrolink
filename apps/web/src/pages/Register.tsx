@@ -4,9 +4,19 @@ import { useTranslation } from 'react-i18next';
 import { Button, Field, Input, Select } from '@marutham/ui';
 import { api, type RegisterPayload, type RegisterResponse } from '@marutham/api-client';
 import {
-  emptyRegisterForm, validateRegistration, hasErrors, passwordRuleResults,
-  quoteRegistration, SUBSCRIPTION_PLANS, GENDERS, BUSINESS_TYPES, fmtMoney,
-  type RegisterForm, type RegisterErrors, type RegisterRole, type RegisterSellerType,
+  emptyRegisterForm,
+  validateRegistration,
+  hasErrors,
+  passwordRuleResults,
+  quoteRegistration,
+  SUBSCRIPTION_PLANS,
+  GENDERS,
+  BUSINESS_TYPES,
+  fmtMoney,
+  type RegisterForm,
+  type RegisterErrors,
+  type RegisterRole,
+  type RegisterSellerType,
 } from '@marutham/lib';
 import { useAuth } from '../auth/AuthContext';
 import { useLocations } from '../hooks/useLocations';
@@ -45,7 +55,8 @@ export function Register() {
   const set = (patch: Partial<RegisterForm>) => setForm((f) => ({ ...f, ...patch }));
 
   // Only demand a taluk when the chosen district actually has any.
-  const districtHasTaluks = taluksOf(form.address.state || '', form.address.district || '').length > 0;
+  const districtHasTaluks =
+    taluksOf(form.address.state || '', form.address.district || '').length > 0;
 
   const pwRules = useMemo(() => passwordRuleResults(form.password), [form.password]);
   const quote = useMemo(
@@ -139,7 +150,11 @@ export function Register() {
   /* The address means different things to a farm, a shop and a home, so the
    * labels and the required-markers move with the role. */
   const addressLabels: Partial<Record<AddressFieldKey, string>> = {
-    house_no: isFarmer ? t('reg.addr.survey') : isRetailer ? t('reg.addr.unit') : t('reg.addr.house'),
+    house_no: isFarmer
+      ? t('reg.addr.survey')
+      : isRetailer
+        ? t('reg.addr.unit')
+        : t('reg.addr.house'),
     street1: t('reg.addr.street1'),
     street2: t('reg.addr.street2'),
     landmark: t('reg.addr.landmark'),
@@ -157,12 +172,26 @@ export function Register() {
         <h1>{t('reg.title')}</h1>
         <p className="sub">{t('brand')}</p>
 
-        {serverError ? <div className="form-error" role="alert">{serverError}</div> : null}
+        {serverError ? (
+          <div className="form-error" role="alert">
+            {serverError}
+          </div>
+        ) : null}
 
         {/* ── Who is signing up ── */}
         <div className="reg-roles" role="radiogroup" aria-label={t('reg.roleLegend')}>
-          <RoleButton on={!isSeller} icon="🛒" label={t('reg.roleConsumer')} onClick={() => switchRole('consumer')} />
-          <RoleButton on={isSeller} icon="🌾" label={t('reg.roleSeller')} onClick={() => switchRole('farmer')} />
+          <RoleButton
+            on={!isSeller}
+            icon="🛒"
+            label={t('reg.roleConsumer')}
+            onClick={() => switchRole('consumer')}
+          />
+          <RoleButton
+            on={isSeller}
+            icon="🌾"
+            label={t('reg.roleSeller')}
+            onClick={() => switchRole('farmer')}
+          />
         </div>
 
         <form onSubmit={onSubmit} noValidate>
@@ -171,12 +200,24 @@ export function Register() {
               and a tab that controls no tabpanel is a lie to a screen reader. */}
           {isSeller ? (
             <div className="auth-tabs" role="radiogroup" aria-label={t('reg.sellerTypeLegend')}>
-              <button type="button" role="radio" aria-checked={isFarmer}
+              <button
+                type="button"
+                role="radio"
+                aria-checked={isFarmer}
                 className={`auth-tab ${isFarmer ? 'active' : ''}`}
-                onClick={() => switchSellerType('Farmer')}>👨‍🌾 {t('reg.farmer')}</button>
-              <button type="button" role="radio" aria-checked={isRetailer}
+                onClick={() => switchSellerType('Farmer')}
+              >
+                👨‍🌾 {t('reg.farmer')}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={isRetailer}
                 className={`auth-tab ${isRetailer ? 'active' : ''}`}
-                onClick={() => switchSellerType('Retailer')}>🏪 {t('reg.retailer')}</button>
+                onClick={() => switchSellerType('Retailer')}
+              >
+                🏪 {t('reg.retailer')}
+              </button>
             </div>
           ) : null}
 
@@ -184,48 +225,99 @@ export function Register() {
           <h2 className="reg-section">{t('reg.personal')}</h2>
           <div className="reg-grid">
             <Field label={t('reg.fname')} required error={errors.fname}>
-              {(p) => <Input {...p} type="text" autoComplete="given-name" value={form.fname}
-                onChange={(e) => set({ fname: e.target.value })} />}
+              {(p) => (
+                <Input
+                  {...p}
+                  type="text"
+                  autoComplete="given-name"
+                  value={form.fname}
+                  onChange={(e) => set({ fname: e.target.value })}
+                />
+              )}
             </Field>
             <Field label={t('reg.lname')}>
-              {(p) => <Input {...p} type="text" autoComplete="family-name" value={form.lname}
-                onChange={(e) => set({ lname: e.target.value })} />}
+              {(p) => (
+                <Input
+                  {...p}
+                  type="text"
+                  autoComplete="family-name"
+                  value={form.lname}
+                  onChange={(e) => set({ lname: e.target.value })}
+                />
+              )}
             </Field>
           </div>
 
-          <Field label={t('reg.gender')} required error={errors.gender}
-            hint={isSeller ? t('reg.genderHint') : undefined}>
+          <Field
+            label={t('reg.gender')}
+            required
+            error={errors.gender}
+            hint={isSeller ? t('reg.genderHint') : undefined}
+          >
             {(p) => (
               <Select {...p} value={form.gender} onChange={(e) => set({ gender: e.target.value })}>
                 <option value="">{t('reg.selectGender')}</option>
-                {GENDERS.map((g) => <option key={g} value={g}>{t(`reg.gender.${g}`)}</option>)}
+                {GENDERS.map((g) => (
+                  <option key={g} value={g}>
+                    {t(`reg.gender.${g}`)}
+                  </option>
+                ))}
               </Select>
             )}
           </Field>
 
           <Field label={t('reg.phone')} required error={errors.phone} hint={t('reg.phoneHint')}>
-            {(p) => <Input {...p} type="tel" inputMode="numeric" autoComplete="tel" value={form.phone}
-              onChange={(e) => set({ phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} />}
+            {(p) => (
+              <Input
+                {...p}
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel"
+                value={form.phone}
+                onChange={(e) => set({ phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+              />
+            )}
           </Field>
 
           <Field label={t('reg.email')} error={errors.email}>
-            {(p) => <Input {...p} type="email" autoComplete="email" placeholder="your@email.com"
-              value={form.email} onChange={(e) => set({ email: e.target.value })} />}
+            {(p) => (
+              <Input
+                {...p}
+                type="email"
+                autoComplete="email"
+                placeholder="your@email.com"
+                value={form.email}
+                onChange={(e) => set({ email: e.target.value })}
+              />
+            )}
           </Field>
 
           {/* ── Address ── */}
           <h2 className="reg-section">
-            {isFarmer ? t('reg.farmAddress') : isRetailer ? t('reg.businessAddress') : t('reg.address')}
+            {isFarmer
+              ? t('reg.farmAddress')
+              : isRetailer
+                ? t('reg.businessAddress')
+                : t('reg.address')}
           </h2>
           <AddressFields
             value={form.address}
             onChange={(address) => set({ address })}
             showStreet2
             labels={addressLabels}
-            required={{ street1: true, city: true, village_town: isFarmer, taluk: districtHasTaluks }}
+            required={{
+              street1: true,
+              city: true,
+              village_town: isFarmer,
+              taluk: districtHasTaluks,
+            }}
             errors={{
-              street1: errors.street1, state: errors.state, district: errors.district,
-              taluk: errors.taluk, city: errors.city, pincode: errors.pincode,
+              street1: errors.street1,
+              state: errors.state,
+              district: errors.district,
+              taluk: errors.taluk,
+              city: errors.city,
+              pincode: errors.pincode,
               village_town: errors.village_town,
             }}
           />
@@ -235,25 +327,70 @@ export function Register() {
             <>
               <h2 className="reg-section">{t('reg.kyc')}</h2>
               <Field label={t('reg.aadhaar')} required error={errors.aadhar}>
-                {(p) => <Input {...p} type="text" inputMode="numeric" placeholder="12-digit Aadhaar"
-                  value={form.aadhar}
-                  onChange={(e) => set({ aadhar: e.target.value.replace(/\D/g, '').slice(0, 12) })} />}
+                {(p) => (
+                  <Input
+                    {...p}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="12-digit Aadhaar"
+                    value={form.aadhar}
+                    onChange={(e) =>
+                      set({ aadhar: e.target.value.replace(/\D/g, '').slice(0, 12) })
+                    }
+                  />
+                )}
               </Field>
               <Field label={t('reg.bankName')} required error={errors.bank_name}>
-                {(p) => <Input {...p} type="text" value={form.bank_name}
-                  onChange={(e) => set({ bank_name: e.target.value })} />}
+                {(p) => (
+                  <Input
+                    {...p}
+                    type="text"
+                    value={form.bank_name}
+                    onChange={(e) => set({ bank_name: e.target.value })}
+                  />
+                )}
               </Field>
               <Field label={t('reg.bankAccount')} required error={errors.bank_account}>
-                {(p) => <Input {...p} type="text" inputMode="numeric" value={form.bank_account}
-                  onChange={(e) => set({ bank_account: e.target.value.replace(/\D/g, '').slice(0, 18) })} />}
+                {(p) => (
+                  <Input
+                    {...p}
+                    type="text"
+                    inputMode="numeric"
+                    value={form.bank_account}
+                    onChange={(e) =>
+                      set({ bank_account: e.target.value.replace(/\D/g, '').slice(0, 18) })
+                    }
+                  />
+                )}
               </Field>
-              <Field label={t('reg.bankAccountConfirm')} required error={errors.confirm_bank_account}>
-                {(p) => <Input {...p} type="text" inputMode="numeric" value={form.confirm_bank_account}
-                  onChange={(e) => set({ confirm_bank_account: e.target.value.replace(/\D/g, '').slice(0, 18) })} />}
+              <Field
+                label={t('reg.bankAccountConfirm')}
+                required
+                error={errors.confirm_bank_account}
+              >
+                {(p) => (
+                  <Input
+                    {...p}
+                    type="text"
+                    inputMode="numeric"
+                    value={form.confirm_bank_account}
+                    onChange={(e) =>
+                      set({ confirm_bank_account: e.target.value.replace(/\D/g, '').slice(0, 18) })
+                    }
+                  />
+                )}
               </Field>
               <Field label={t('reg.ifsc')} error={errors.ifsc} hint={t('reg.ifscHint')}>
-                {(p) => <Input {...p} type="text" placeholder="SBIN0001234" style={{ textTransform: 'uppercase' }}
-                  value={form.ifsc} onChange={(e) => set({ ifsc: e.target.value.toUpperCase() })} />}
+                {(p) => (
+                  <Input
+                    {...p}
+                    type="text"
+                    placeholder="SBIN0001234"
+                    style={{ textTransform: 'uppercase' }}
+                    value={form.ifsc}
+                    onChange={(e) => set({ ifsc: e.target.value.toUpperCase() })}
+                  />
+                )}
               </Field>
             </>
           ) : null}
@@ -262,19 +399,42 @@ export function Register() {
             <>
               <h2 className="reg-section">{t('reg.business')}</h2>
               <Field label={t('reg.businessName')} required error={errors.business_name}>
-                {(p) => <Input {...p} type="text" placeholder="Sri Murugan Provisions"
-                  value={form.business_name} onChange={(e) => set({ business_name: e.target.value })} />}
+                {(p) => (
+                  <Input
+                    {...p}
+                    type="text"
+                    placeholder="Sri Murugan Provisions"
+                    value={form.business_name}
+                    onChange={(e) => set({ business_name: e.target.value })}
+                  />
+                )}
               </Field>
               <Field label={t('reg.gst')} error={errors.gst_number} hint={t('reg.gstHint')}>
-                {(p) => <Input {...p} type="text" maxLength={15} placeholder="33AABCU9603R1ZX"
-                  style={{ textTransform: 'uppercase' }} value={form.gst_number}
-                  onChange={(e) => set({ gst_number: e.target.value.toUpperCase() })} />}
+                {(p) => (
+                  <Input
+                    {...p}
+                    type="text"
+                    maxLength={15}
+                    placeholder="33AABCU9603R1ZX"
+                    style={{ textTransform: 'uppercase' }}
+                    value={form.gst_number}
+                    onChange={(e) => set({ gst_number: e.target.value.toUpperCase() })}
+                  />
+                )}
               </Field>
               <Field label={t('reg.businessType')}>
                 {(p) => (
-                  <Select {...p} value={form.business_type} onChange={(e) => set({ business_type: e.target.value })}>
+                  <Select
+                    {...p}
+                    value={form.business_type}
+                    onChange={(e) => set({ business_type: e.target.value })}
+                  >
                     <option value="">{t('reg.selectType')}</option>
-                    {BUSINESS_TYPES.map((b) => <option key={b} value={b}>{b}</option>)}
+                    {BUSINESS_TYPES.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
                   </Select>
                 )}
               </Field>
@@ -284,8 +444,15 @@ export function Register() {
           {/* ── Security ── */}
           <h2 className="reg-section">{t('reg.security')}</h2>
           <Field label={t('reg.password')} required error={errors.password}>
-            {(p) => <Input {...p} type="password" autoComplete="new-password" value={form.password}
-              onChange={(e) => set({ password: e.target.value })} />}
+            {(p) => (
+              <Input
+                {...p}
+                type="password"
+                autoComplete="new-password"
+                value={form.password}
+                onChange={(e) => set({ password: e.target.value })}
+              />
+            )}
           </Field>
           <ul className="pw-rules">
             {pwRules.map((r) => (
@@ -295,8 +462,15 @@ export function Register() {
             ))}
           </ul>
           <Field label={t('reg.confirmPassword')} required error={errors.confirm_password}>
-            {(p) => <Input {...p} type="password" autoComplete="new-password" value={form.confirm_password}
-              onChange={(e) => set({ confirm_password: e.target.value })} />}
+            {(p) => (
+              <Input
+                {...p}
+                type="password"
+                autoComplete="new-password"
+                value={form.confirm_password}
+                onChange={(e) => set({ confirm_password: e.target.value })}
+              />
+            )}
           </Field>
 
           {/* ── Plan (sellers only) ── */}
@@ -305,8 +479,11 @@ export function Register() {
               <h2 className="reg-section">{t('reg.plan')}</h2>
               <Field label={t('reg.choosePlan')} required error={errors.subscription_plan}>
                 {(p) => (
-                  <Select {...p} value={form.subscription_plan}
-                    onChange={(e) => set({ subscription_plan: e.target.value })}>
+                  <Select
+                    {...p}
+                    value={form.subscription_plan}
+                    onChange={(e) => set({ subscription_plan: e.target.value })}
+                  >
                     <option value="">{t('reg.selectPlan')}</option>
                     {SUBSCRIPTION_PLANS.map((pl) => (
                       <option key={pl.name} value={pl.name}>
@@ -320,10 +497,14 @@ export function Register() {
               {quote ? (
                 <div className="reg-fees">
                   <div className="reg-fee-row">
-                    <span>{t('reg.regCharge')}</span><span>{fmtMoney(quote.registrationChargeRs)}</span>
+                    <span>{t('reg.regCharge')}</span>
+                    <span>{fmtMoney(quote.registrationChargeRs)}</span>
                   </div>
                   <div className="reg-fee-row">
-                    <span>{quote.plan.name} {t('reg.subscription')}</span><span>{fmtMoney(quote.planFeeRs)}</span>
+                    <span>
+                      {quote.plan.name} {t('reg.subscription')}
+                    </span>
+                    <span>{fmtMoney(quote.planFeeRs)}</span>
                   </div>
                   {quote.discountRs > 0 ? (
                     <div className="reg-fee-row concession">
@@ -332,7 +513,8 @@ export function Register() {
                     </div>
                   ) : null}
                   <div className="reg-fee-row total">
-                    <span>{t('reg.totalPayable')}</span><span>{fmtMoney(quote.totalRs)}</span>
+                    <span>{t('reg.totalPayable')}</span>
+                    <span>{fmtMoney(quote.totalRs)}</span>
                   </div>
                   <p className="reg-fee-note">{t('reg.payAfterApproval')}</p>
                 </div>
@@ -345,7 +527,9 @@ export function Register() {
           </Button>
 
           <div className="auth-links">
-            <Link className="auth-link muted" to="/login">{t('login.backToLogin')}</Link>
+            <Link className="auth-link muted" to="/login">
+              {t('login.backToLogin')}
+            </Link>
           </div>
         </form>
       </div>
@@ -353,13 +537,28 @@ export function Register() {
   );
 }
 
-function RoleButton({ on, icon, label, onClick }: {
-  on: boolean; icon: string; label: string; onClick: () => void;
+function RoleButton({
+  on,
+  icon,
+  label,
+  onClick,
+}: {
+  on: boolean;
+  icon: string;
+  label: string;
+  onClick: () => void;
 }) {
   return (
-    <button type="button" role="radio" aria-checked={on}
-      className={`reg-role ${on ? 'on' : ''}`} onClick={onClick}>
-      <span className="reg-role-icon" aria-hidden="true">{icon}</span>
+    <button
+      type="button"
+      role="radio"
+      aria-checked={on}
+      className={`reg-role ${on ? 'on' : ''}`}
+      onClick={onClick}
+    >
+      <span className="reg-role-icon" aria-hidden="true">
+        {icon}
+      </span>
       {label}
     </button>
   );
@@ -372,7 +571,9 @@ function PendingPanel({ loginId }: { loginId: string }) {
   return (
     <main className="login-wrap">
       <div className="login-card">
-        <div className="reg-done-icon" aria-hidden="true">🎉</div>
+        <div className="reg-done-icon" aria-hidden="true">
+          🎉
+        </div>
         <h1>{t('reg.pendingTitle')}</h1>
         <p className="reg-done-body">{t('reg.pendingBody')}</p>
         <div className="reg-loginid">

@@ -64,10 +64,16 @@ function ConsumerInner() {
       <header className="cons-hdr">
         <a href="/app/consumer" className="cons-hdr__brand">
           <div className="hring" style={{ width: 42, height: 32 }}>
-            <img src="/img/logo-sm.jpg" alt="MA" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <img
+              src="/img/logo-sm.jpg"
+              alt="MA"
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
           </div>
           <div>
-            <div className="cons-hdr__name">Marutham <span>Agrolink</span></div>
+            <div className="cons-hdr__name">
+              Marutham <span>Agrolink</span>
+            </div>
             <div className="cons-hdr__tag">{t('consumer.tag')}</div>
           </div>
         </a>
@@ -89,14 +95,18 @@ function ConsumerInner() {
           >
             👤
           </IconButton>
-          <IconButton onClick={logout} aria-label={t('consumer.logout')}>⎋</IconButton>
+          <IconButton onClick={logout} aria-label={t('consumer.logout')}>
+            ⎋
+          </IconButton>
         </div>
       </header>
 
       <div className="cons-hero">
         <div className="cons-hero__icon">🌿</div>
         <div>
-          <h2>{t('consumer.welcome')}, {user.fname}!</h2>
+          <h2>
+            {t('consumer.welcome')}, {user.fname}!
+          </h2>
           <p>Fresh vegetables · Same morning harvest</p>
         </div>
       </div>

@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  clampPage, filterRows, nextSort, pageSlice, selectionState,
-  sortRows, toCsv, toggleAll, toggleOne,
-  type Accessors, type CellValue, type SortState,
+  clampPage,
+  filterRows,
+  nextSort,
+  pageSlice,
+  selectionState,
+  sortRows,
+  toCsv,
+  toggleAll,
+  toggleOne,
+  type Accessors,
+  type CellValue,
+  type SortState,
 } from '@marutham/lib';
 import { ArrowDown, ArrowUp, ChevronsUpDown, Download, X } from 'lucide-react';
 import { Button } from './Button';
@@ -101,7 +110,11 @@ const SORT_BTN =
 const CHECKBOX = 'size-4 cursor-pointer accent-primary';
 
 export function Table<T>({
-  rows, columns, rowId, rowLabel, caption,
+  rows,
+  columns,
+  rowId,
+  rowLabel,
+  caption,
   loading = false,
   empty = 'Nothing here yet.',
   searchable = false,
@@ -125,7 +138,8 @@ export function Table<T>({
   const accessors = useMemo<Accessors<T>>(() => {
     const map: Accessors<T> = {};
     for (const col of columns) {
-      map[col.key] = col.value ?? ((row: T) => (row as Record<string, unknown>)[col.key] as CellValue);
+      map[col.key] =
+        col.value ?? ((row: T) => (row as Record<string, unknown>)[col.key] as CellValue);
     }
     return map;
   }, [columns]);
@@ -157,7 +171,10 @@ export function Table<T>({
    * would also fire on mount, telling the caller about a selection it made. */
   function commit(next: Set<string>) {
     setSelected(next);
-    onSelectionChange?.([...next], rows.filter((row) => next.has(rowId(row))));
+    onSelectionChange?.(
+      [...next],
+      rows.filter((row) => next.has(rowId(row))),
+    );
   }
 
   function onSort(key: string) {
@@ -176,7 +193,9 @@ export function Table<T>({
      * reader is looking at — every filtered row, in sort order, not just the
      * current page. */
     const source = selected.size ? selectedRows : sorted;
-    const cols = columns.filter((c) => c.exportable !== false).map((c) => ({ key: c.key, header: c.header }));
+    const cols = columns
+      .filter((c) => c.exportable !== false)
+      .map((c) => ({ key: c.key, header: c.header }));
     downloadCsv(exportFileName, toCsv(source, cols, accessors));
   }
 
@@ -259,10 +278,13 @@ export function Table<T>({
                     style={col.width ? { width: col.width } : undefined}
                     className={cn(TH, col.align === 'right' && 'text-right')}
                     aria-sort={
-                      !sortable ? undefined
-                        : !active ? 'none'
-                        : active.dir === 'asc' ? 'ascending'
-                        : 'descending'
+                      !sortable
+                        ? undefined
+                        : !active
+                          ? 'none'
+                          : active.dir === 'asc'
+                            ? 'ascending'
+                            : 'descending'
                     }
                   >
                     {sortable ? (
@@ -273,7 +295,11 @@ export function Table<T>({
                       >
                         {col.header}
                         {!active ? (
-                          <ChevronsUpDown size={12} aria-hidden="true" className="text-neutral-400" />
+                          <ChevronsUpDown
+                            size={12}
+                            aria-hidden="true"
+                            className="text-neutral-400"
+                          />
                         ) : active.dir === 'asc' ? (
                           <ArrowUp size={12} aria-hidden="true" />
                         ) : (
@@ -309,7 +335,10 @@ export function Table<T>({
                     </td>
                   ) : null}
                   {columns.map((col) => (
-                    <td key={col.key} className={cn(TD, col.align === 'right' && 'text-right tabular-nums')}>
+                    <td
+                      key={col.key}
+                      className={cn(TD, col.align === 'right' && 'text-right tabular-nums')}
+                    >
                       {col.render ? col.render(row) : String(accessors[col.key]!(row) ?? '')}
                     </td>
                   ))}
@@ -328,7 +357,11 @@ export function Table<T>({
             ) : (
               <>
                 <div>No rows match “{query}”.</div>
-                <Button variant="ghost" className="mt-3 px-3 py-1.5 text-sm" onClick={() => onQuery('')}>
+                <Button
+                  variant="ghost"
+                  className="mt-3 px-3 py-1.5 text-sm"
+                  onClick={() => onQuery('')}
+                >
                   Clear search
                 </Button>
               </>

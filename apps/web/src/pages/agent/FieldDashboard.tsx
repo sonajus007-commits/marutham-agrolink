@@ -15,7 +15,13 @@ function TileGrid({ children }: { children: React.ReactNode }) {
   return <div className="fd-grid">{children}</div>;
 }
 
-export function FieldDashboard({ data, onRefresh }: { data: FieldDashboardResponse | null; onRefresh: () => void }) {
+export function FieldDashboard({
+  data,
+  onRefresh,
+}: {
+  data: FieldDashboardResponse | null;
+  onRefresh: () => void;
+}) {
   const { t } = useTranslation();
   if (!data) return null;
   const s = data.stats || {};
@@ -43,12 +49,42 @@ export function FieldDashboard({ data, onRefresh }: { data: FieldDashboardRespon
 
       {isVCO ? (
         <TileGrid>
-          <StatTile icon="🧺" label={t('agent.field.vco.collectionsToday')} value={fmtNum(s.collections_today)} accent={colors.forest} />
-          <StatTile icon="🚶" label={t('agent.field.vco.farmersToVisit')} value={fmtNum(s.farmers_to_visit)} accent={colors.gold} />
-          <StatTile icon="✅" label={t('agent.field.vco.productsCollected')} value={fmtNum(s.products_collected)} accent={colors.green} />
-          <StatTile icon="⏳" label={t('agent.field.vco.pendingCollection')} value={fmtNum(s.pending_collection)} accent={colors.gold} />
-          <StatTile icon="❌" label={t('agent.field.vco.rejectedProduce')} value={fmtNum(s.rejected_produce)} accent={colors.red} />
-          <StatTile icon="↩️" label={t('agent.field.vco.returnsPending')} value={fmtNum(s.returns_pending)} accent={colors.bloom} />
+          <StatTile
+            icon="🧺"
+            label={t('agent.field.vco.collectionsToday')}
+            value={fmtNum(s.collections_today)}
+            accent={colors.forest}
+          />
+          <StatTile
+            icon="🚶"
+            label={t('agent.field.vco.farmersToVisit')}
+            value={fmtNum(s.farmers_to_visit)}
+            accent={colors.gold}
+          />
+          <StatTile
+            icon="✅"
+            label={t('agent.field.vco.productsCollected')}
+            value={fmtNum(s.products_collected)}
+            accent={colors.green}
+          />
+          <StatTile
+            icon="⏳"
+            label={t('agent.field.vco.pendingCollection')}
+            value={fmtNum(s.pending_collection)}
+            accent={colors.gold}
+          />
+          <StatTile
+            icon="❌"
+            label={t('agent.field.vco.rejectedProduce')}
+            value={fmtNum(s.rejected_produce)}
+            accent={colors.red}
+          />
+          <StatTile
+            icon="↩️"
+            label={t('agent.field.vco.returnsPending')}
+            value={fmtNum(s.returns_pending)}
+            accent={colors.bloom}
+          />
           <StatTile
             icon="💸"
             label={t('agent.field.vco.farmerPayments')}
@@ -66,7 +102,12 @@ export function FieldDashboard({ data, onRefresh }: { data: FieldDashboardRespon
         </TileGrid>
       ) : (
         <TileGrid>
-          <StatTile icon="📦" label={t('agent.field.agent.deliveriesToday')} value={fmtNum(s.deliveries_today)} accent={colors.forest} />
+          <StatTile
+            icon="📦"
+            label={t('agent.field.agent.deliveriesToday')}
+            value={fmtNum(s.deliveries_today)}
+            accent={colors.forest}
+          />
           <StatTile
             icon="✅"
             label={t('agent.field.agent.completed')}
@@ -74,10 +115,30 @@ export function FieldDashboard({ data, onRefresh }: { data: FieldDashboardRespon
             accent={colors.green}
             hint={t('agent.field.agent.completedHint')}
           />
-          <StatTile icon="⏳" label={t('agent.field.agent.pending')} value={fmtNum(s.pending)} accent={colors.gold} />
-          <StatTile icon="❌" label={t('agent.field.agent.failed')} value={fmtNum(s.failed)} accent={colors.red} />
-          <StatTile icon="💵" label={t('agent.field.agent.cod')} value={fmtMoneyInt(s.cod_amount)} accent={colors.forest} />
-          <StatTile icon="💳" label={t('agent.field.agent.digital')} value={fmtMoneyInt(s.digital_amount)} accent={colors.leaf} />
+          <StatTile
+            icon="⏳"
+            label={t('agent.field.agent.pending')}
+            value={fmtNum(s.pending)}
+            accent={colors.gold}
+          />
+          <StatTile
+            icon="❌"
+            label={t('agent.field.agent.failed')}
+            value={fmtNum(s.failed)}
+            accent={colors.red}
+          />
+          <StatTile
+            icon="💵"
+            label={t('agent.field.agent.cod')}
+            value={fmtMoneyInt(s.cod_amount)}
+            accent={colors.forest}
+          />
+          <StatTile
+            icon="💳"
+            label={t('agent.field.agent.digital')}
+            value={fmtMoneyInt(s.digital_amount)}
+            accent={colors.leaf}
+          />
           <StatTile
             icon="⭐"
             label={t('agent.field.agent.rating')}

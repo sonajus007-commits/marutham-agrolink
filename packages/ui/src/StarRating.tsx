@@ -21,7 +21,11 @@ const lit = (on: boolean) => (on ? 'text-sun' : 'text-neutral-300');
 export function StarRating({ value, onRate, disabled = false, label }: StarRatingProps) {
   if (!onRate) {
     return (
-      <span className="inline-flex items-center gap-0.5 leading-none" role="img" aria-label={`Rated ${value} out of 5`}>
+      <span
+        className="inline-flex items-center gap-0.5 leading-none"
+        role="img"
+        aria-label={`Rated ${value} out of 5`}
+      >
         {STARS.map((s) => (
           <span key={s} aria-hidden="true" className={cn('text-xl', lit(s <= value))}>
             {s <= value ? '★' : '☆'}

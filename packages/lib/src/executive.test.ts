@@ -1,12 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import {
-  TREND_MODES, DISTRICT_ALIAS, geoDistrictName, dbDistrictName, findDistrict,
-  districtTone, growthDirection, formatGrowth, rankedDistricts,
+  TREND_MODES,
+  DISTRICT_ALIAS,
+  geoDistrictName,
+  dbDistrictName,
+  findDistrict,
+  districtTone,
+  growthDirection,
+  formatGrowth,
+  rankedDistricts,
   type DistrictPerf,
 } from './executive';
 
 const d = (district: string, revenue: number, status?: string): DistrictPerf => ({
-  district, revenue, orders: 1, status,
+  district,
+  revenue,
+  orders: 1,
+  status,
 });
 
 describe('district name aliasing', () => {

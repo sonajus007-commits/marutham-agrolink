@@ -36,11 +36,18 @@ export interface MapContainerProps extends Omit<ChartContainerProps, 'subtitle' 
 }
 
 function Legend({ stops, min, max, label }: ChoroplethLegend) {
-  const text = 'Scale' + (label ? ' for ' + String(label) : '') +
-    ', low ' + String(min) + ' to high ' + String(max);
+  const text =
+    'Scale' +
+    (label ? ' for ' + String(label) : '') +
+    ', low ' +
+    String(min) +
+    ' to high ' +
+    String(max);
   return (
     <div>
-      {label ? <div className="mb-1 text-2xs font-bold uppercase tracking-wide text-fg-muted">{label}</div> : null}
+      {label ? (
+        <div className="mb-1 text-2xs font-bold uppercase tracking-wide text-fg-muted">{label}</div>
+      ) : null}
       {/* One labelled image to the AT; the swatches and end labels are decorative. */}
       <div role="img" aria-label={text}>
         <div className="flex h-2.5 overflow-hidden rounded-pill" aria-hidden="true">
@@ -48,7 +55,10 @@ function Legend({ stops, min, max, label }: ChoroplethLegend) {
             <span key={i} className="flex-1" style={{ backgroundColor: color }} />
           ))}
         </div>
-        <div aria-hidden="true" className="mt-1 flex justify-between text-2xs tabular-nums text-fg-muted">
+        <div
+          aria-hidden="true"
+          className="mt-1 flex justify-between text-2xs tabular-nums text-fg-muted"
+        >
           <span>{min}</span>
           <span>{max}</span>
         </div>
@@ -61,9 +71,7 @@ export function MapContainer({ drillPath, legend, subtitle, ...rest }: MapContai
   return (
     <ChartContainer
       {...rest}
-      subtitle={
-        drillPath && drillPath.length ? <Breadcrumbs items={drillPath} /> : subtitle
-      }
+      subtitle={drillPath && drillPath.length ? <Breadcrumbs items={drillPath} /> : subtitle}
       footer={legend ? <Legend {...legend} /> : undefined}
     />
   );

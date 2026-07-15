@@ -5,8 +5,13 @@ import { Button, ChartContainer, StatTile } from '@marutham/ui';
 import { api, type AdminHeadDashboardResponse } from '@marutham/api-client';
 import { semantic, colors } from '@marutham/tokens';
 import {
-  rankedStaffRoles, rankedDepartments, staffTotal, approvalQueue,
-  sortAlerts, alertTone, fmtNum,
+  rankedStaffRoles,
+  rankedDepartments,
+  staffTotal,
+  approvalQueue,
+  sortAlerts,
+  alertTone,
+  fmtNum,
   type ApprovalQueueItem,
 } from '@marutham/lib';
 import type { EChartsOption } from 'echarts';
@@ -95,7 +100,12 @@ export function AdminHeadPage() {
           itemStyle: { color: colors.leaf, borderRadius: [0, 4, 4, 0] },
           // Direct-labelled: the count IS the point, and there is no x-axis to read
           // it off (the axis labels are hidden — they would only repeat these).
-          label: { show: true, position: 'right', color: colors.gray, formatter: (p) => fmtNum(Number(p.value)) },
+          label: {
+            show: true,
+            position: 'right',
+            color: colors.gray,
+            formatter: (p) => fmtNum(Number(p.value)),
+          },
           data: roles.map((r) => r.count).reverse(),
         },
       ],
@@ -126,7 +136,12 @@ export function AdminHeadPage() {
           type: 'bar',
           barMaxWidth: 14,
           itemStyle: { color: colors.leaf, borderRadius: [0, 4, 4, 0] },
-          label: { show: true, position: 'right', color: colors.gray, formatter: (p) => fmtNum(Number(p.value)) },
+          label: {
+            show: true,
+            position: 'right',
+            color: colors.gray,
+            formatter: (p) => fmtNum(Number(p.value)),
+          },
           data: depts.map((d) => d.count).reverse(),
         },
       ],
@@ -138,7 +153,10 @@ export function AdminHeadPage() {
   const audit = data?.audit;
   const failed = audit?.failed_logins_today ?? 0;
   const updated = data?.generated_at
-    ? new Date(data.generated_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    ? new Date(data.generated_at).toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
     : '';
 
   return (
@@ -157,18 +175,41 @@ export function AdminHeadPage() {
       </header>
 
       {error ? (
-        <div role="alert" className="rounded-lg border border-danger bg-danger-bg p-4 text-sm text-danger-fg">
+        <div
+          role="alert"
+          className="rounded-lg border border-danger bg-danger-bg p-4 text-sm text-danger-fg"
+        >
           {/403|restricted/i.test(error) ? t('admin.head.denied') : error}
         </div>
       ) : null}
 
       {/* ── The organisation at a glance ─────────────────────────────────── */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatTile icon="🧑‍💼" label={t('admin.head.kpi.employees')} value={fmtNum(s?.employees_active ?? 0)} />
-        <StatTile icon="🔑" label={t('admin.head.kpi.staffLogins')} value={fmtNum(s?.staff_logins ?? 0)} />
-        <StatTile icon="📍" label={t('admin.head.kpi.districts')} value={fmtNum(s?.districts_active ?? 0)} />
-        <StatTile icon="🗺️" label={t('admin.head.kpi.states')} value={fmtNum(s?.states_covered ?? 0)} />
-        <StatTile icon="🌾" label={t('admin.head.kpi.products')} value={fmtNum(s?.products_catalogue ?? 0)} />
+        <StatTile
+          icon="🧑‍💼"
+          label={t('admin.head.kpi.employees')}
+          value={fmtNum(s?.employees_active ?? 0)}
+        />
+        <StatTile
+          icon="🔑"
+          label={t('admin.head.kpi.staffLogins')}
+          value={fmtNum(s?.staff_logins ?? 0)}
+        />
+        <StatTile
+          icon="📍"
+          label={t('admin.head.kpi.districts')}
+          value={fmtNum(s?.districts_active ?? 0)}
+        />
+        <StatTile
+          icon="🗺️"
+          label={t('admin.head.kpi.states')}
+          value={fmtNum(s?.states_covered ?? 0)}
+        />
+        <StatTile
+          icon="🌾"
+          label={t('admin.head.kpi.products')}
+          value={fmtNum(s?.products_catalogue ?? 0)}
+        />
       </section>
 
       {/* ── The approval backlog ─────────────────────────────────────────────
@@ -225,8 +266,14 @@ export function AdminHeadPage() {
         height="auto"
       >
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatTile label={t('admin.head.audit.userChanges')} value={fmtNum(audit?.user_changes_7d ?? 0)} />
-          <StatTile label={t('admin.head.audit.employeeChanges')} value={fmtNum(audit?.employee_changes_7d ?? 0)} />
+          <StatTile
+            label={t('admin.head.audit.userChanges')}
+            value={fmtNum(audit?.user_changes_7d ?? 0)}
+          />
+          <StatTile
+            label={t('admin.head.audit.employeeChanges')}
+            value={fmtNum(audit?.employee_changes_7d ?? 0)}
+          />
           <StatTile label={t('admin.head.audit.logins')} value={fmtNum(audit?.logins_today ?? 0)} />
           <StatTile
             label={t('admin.head.audit.failedLogins')}
@@ -245,7 +292,10 @@ export function AdminHeadPage() {
         ) : (
           <ul className="space-y-2">
             {alerts.map((a, i) => (
-              <li key={`${a.type}-${i}`} className="flex items-start gap-2 rounded-lg bg-surface-muted p-3 text-sm">
+              <li
+                key={`${a.type}-${i}`}
+                className="flex items-start gap-2 rounded-lg bg-surface-muted p-3 text-sm"
+              >
                 <ToneDot tone={alertTone(a.severity)} />
                 <span className="text-fg">{a.message}</span>
               </li>

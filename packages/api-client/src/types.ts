@@ -463,19 +463,25 @@ export interface PlaceOrderPayload {
  * admin portal and the approval applies it. Mirrors backend SENSITIVE_FIELDS in
  * routes/auth.js. See [[project-profile-change-requests]]. */
 export const SENSITIVE_FIELDS = [
-  'bank_name', 'bank_account', 'ifsc', 'gst_number', 'business_name', 'business_type',
+  'bank_name',
+  'bank_account',
+  'ifsc',
+  'gst_number',
+  'business_name',
+  'business_type',
 ] as const;
 export type SensitiveField = (typeof SENSITIVE_FIELDS)[number];
 
 export type ChangeRequestStatus =
-  | 'pending' | 'approved' | 'rejected' | 'payment_pending' | (string & {});
+  'pending' | 'approved' | 'rejected' | 'payment_pending' | (string & {});
 
 export interface ProfileChangeRequest {
   id: string;
   status: ChangeRequestStatus;
   /** The field → new-value map the seller asked for. A subscription renewal is
    *  encoded as { subscription_renewal: true, new_plan }, not a field map. */
-  requested_changes: (Record<string, string> & { subscription_renewal?: boolean; new_plan?: string }) | null;
+  requested_changes:
+    (Record<string, string> & { subscription_renewal?: boolean; new_plan?: string }) | null;
   requested_at?: string;
   reviewed_at?: string | null;
   reviewer_name?: string | null;
@@ -498,7 +504,7 @@ export interface ProfileChangeRequest {
  * A seller signup awaiting review. It's a users row, so it reuses the User
  * shape; `approval_status` drives the workflow (not `status`). */
 export type RegistrationStatus =
-  | 'pending_review' | 'approved' | 'payment_pending' | 'active' | 'rejected' | (string & {});
+  'pending_review' | 'approved' | 'payment_pending' | 'active' | 'rejected' | (string & {});
 
 export type Registration = User;
 
@@ -665,7 +671,13 @@ export interface ExecutiveDashboardResponse {
   scope: string;
   generated_at: string;
   summary: ExecutiveSummary;
-  orders: { today: number; delivered: number; cancelled: number; pending: number; refunded: number };
+  orders: {
+    today: number;
+    delivered: number;
+    cancelled: number;
+    pending: number;
+    refunded: number;
+  };
   customers: { new: number; repeat: number; retention_pct: number; avg_basket: number };
   farmers: {
     registered: number;

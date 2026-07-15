@@ -6,23 +6,46 @@ import { placeholderGroups, humanizeMetricKey } from './placeholders';
  * metric the catalogue has not been taught, the "uncatalogued" test below is
  * what tells us — loudly — rather than a mystery 🔌 tile in production. */
 const EXEC = [
-  'net_profit', 'ebitda', 'cash_flow', 'revenue_forecast',
-  'receivables', 'payables', 'gst', 'tds', 'bank_balance', 'daily_settlement',
-  'salary_cost', 'warehouse_cost', 'hub_cost',
-  'vehicle_utilization', 'fuel_cost',
-  'farmer_satisfaction', 'customer_complaints', 'hub_issues', 'stock_shortage',
+  'net_profit',
+  'ebitda',
+  'cash_flow',
+  'revenue_forecast',
+  'receivables',
+  'payables',
+  'gst',
+  'tds',
+  'bank_balance',
+  'daily_settlement',
+  'salary_cost',
+  'warehouse_cost',
+  'hub_cost',
+  'vehicle_utilization',
+  'fuel_cost',
+  'farmer_satisfaction',
+  'customer_complaints',
+  'hub_issues',
+  'stock_shortage',
 ];
 const OPS = ['hub_stock', 'farmer_visits', 'vco_attendance', 'agents_online', 'transfer_stock'];
 
 describe('placeholderGroups', () => {
   it('groups the reported metrics by theme, in display order', () => {
     const groups = placeholderGroups([
-      'fuel_cost', 'net_profit', 'hub_issues', 'salary_cost', 'ebitda', 'hub_stock',
+      'fuel_cost',
+      'net_profit',
+      'hub_issues',
+      'salary_cost',
+      'ebitda',
+      'hub_stock',
     ]);
     // Finance → cost → inventory → logistics → satisfaction, regardless of the
     // order the API happened to list them in.
     expect(groups.map((g) => g.id)).toEqual([
-      'finance', 'cost', 'inventory', 'logistics', 'satisfaction',
+      'finance',
+      'cost',
+      'inventory',
+      'logistics',
+      'satisfaction',
     ]);
     expect(groups[0].metrics.map((m) => m.key)).toEqual(['net_profit', 'ebitda']);
     expect(groups[0].metrics[0].icon).toBe('💵');

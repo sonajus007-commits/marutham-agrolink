@@ -17,7 +17,15 @@ const BTN =
   'disabled:opacity-50 disabled:cursor-not-allowed ' +
   'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-leaf';
 
-export function QtyStepper({ value, onChange, min = 0, step = 1, unit, disabled, integer }: QtyStepperProps) {
+export function QtyStepper({
+  value,
+  onChange,
+  min = 0,
+  step = 1,
+  unit,
+  disabled,
+  integer,
+}: QtyStepperProps) {
   // Local text state lets the user type freely without the value snapping mid-edit.
   const [text, setText] = useState(String(value));
   useEffect(() => setText(String(value)), [value]);

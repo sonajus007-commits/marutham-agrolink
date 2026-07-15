@@ -67,7 +67,11 @@ export function useAgentOrders(isVCO: boolean): AgentOrdersState {
 }
 
 /** Field dashboard tiles, polled every 60s alongside orders. */
-export function useFieldDashboard(): { data: FieldDashboardResponse | null; error: string | null; reload: () => void } {
+export function useFieldDashboard(): {
+  data: FieldDashboardResponse | null;
+  error: string | null;
+  reload: () => void;
+} {
   const [data, setData] = useState<FieldDashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);

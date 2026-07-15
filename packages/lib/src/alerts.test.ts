@@ -3,7 +3,9 @@ import { sortAlerts, alertTone, type DashboardAlert } from './alerts';
 
 describe('sortAlerts', () => {
   const a = (severity: string, type: string): DashboardAlert => ({
-    severity, type, message: `${type} (${severity})`,
+    severity,
+    type,
+    message: `${type} (${severity})`,
   });
 
   it('puts the most urgent action item first — the list is worked top-down', () => {
@@ -13,9 +15,7 @@ describe('sortAlerts', () => {
 
   it('keeps the server order within a severity, so like alerts stay together', () => {
     const alerts = [a('medium', 'returns'), a('medium', 'farmer_approval'), a('high', 'pay')];
-    expect(sortAlerts(alerts).map((x) => x.type)).toEqual([
-      'pay', 'returns', 'farmer_approval',
-    ]);
+    expect(sortAlerts(alerts).map((x) => x.type)).toEqual(['pay', 'returns', 'farmer_approval']);
   });
 
   it('sinks an unknown severity below the known ones rather than dropping it', () => {

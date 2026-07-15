@@ -5,8 +5,13 @@ import { Button, ChartContainer, StatTile } from '@marutham/ui';
 import { api, type OperationsDashboardResponse } from '@marutham/api-client';
 import { semantic, colors } from '@marutham/tokens';
 import {
-  deliveryStages, totalInPipeline, rankedOpsDistricts, sortAlerts, alertTone,
-  fmtMoney, fmtNum,
+  deliveryStages,
+  totalInPipeline,
+  rankedOpsDistricts,
+  sortAlerts,
+  alertTone,
+  fmtMoney,
+  fmtNum,
 } from '@marutham/lib';
 import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
@@ -140,7 +145,10 @@ export function OperationsPage() {
   const s = data?.summary;
   const scope = data?.scope;
   const updated = data?.generated_at
-    ? new Date(data.generated_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    ? new Date(data.generated_at).toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
     : '';
 
   return (
@@ -165,17 +173,36 @@ export function OperationsPage() {
       </header>
 
       {error ? (
-        <div role="alert" className="rounded-lg border border-danger bg-danger-bg p-4 text-sm text-danger-fg">
+        <div
+          role="alert"
+          className="rounded-lg border border-danger bg-danger-bg p-4 text-sm text-danger-fg"
+        >
           {/403|restricted/i.test(error) ? t('admin.ops.denied') : error}
         </div>
       ) : null}
 
       {/* ── Today ────────────────────────────────────────────────────────── */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <StatTile icon="🆕" label={t('admin.ops.kpi.ordersToday')} value={fmtNum(s?.orders_today ?? 0)} />
-        <StatTile icon="💰" label={t('admin.ops.kpi.revenueToday')} value={fmtMoney(s?.revenue_today ?? 0)} />
-        <StatTile icon="📅" label={t('admin.ops.kpi.revenueWeek')} value={fmtMoney(s?.revenue_week ?? 0)} />
-        <StatTile icon="📦" label={t('admin.ops.kpi.activeOrders')} value={fmtNum(s?.active_orders ?? 0)} />
+        <StatTile
+          icon="🆕"
+          label={t('admin.ops.kpi.ordersToday')}
+          value={fmtNum(s?.orders_today ?? 0)}
+        />
+        <StatTile
+          icon="💰"
+          label={t('admin.ops.kpi.revenueToday')}
+          value={fmtMoney(s?.revenue_today ?? 0)}
+        />
+        <StatTile
+          icon="📅"
+          label={t('admin.ops.kpi.revenueWeek')}
+          value={fmtMoney(s?.revenue_week ?? 0)}
+        />
+        <StatTile
+          icon="📦"
+          label={t('admin.ops.kpi.activeOrders')}
+          value={fmtNum(s?.active_orders ?? 0)}
+        />
         <StatTile
           icon="✅"
           label={t('admin.ops.kpi.deliveredToday')}
@@ -239,33 +266,66 @@ export function OperationsPage() {
           <EChart option={stageOption} height={260} />
         </ChartContainer>
 
-        <ChartContainer title={t('admin.ops.collections.title')} loading={loading && !data} height="auto">
+        <ChartContainer
+          title={t('admin.ops.collections.title')}
+          loading={loading && !data}
+          height="auto"
+        >
           <div className="grid grid-cols-3 gap-3">
-            <StatTile label={t('admin.ops.collections.confirmed')} value={fmtNum(data?.collections.confirmed_listings ?? 0)} />
-            <StatTile label={t('admin.ops.collections.listed')} value={fmtNum(data?.collections.listed_active ?? 0)} />
-            <StatTile label={t('admin.ops.collections.updatedToday')} value={fmtNum(data?.collections.updated_today ?? 0)} />
+            <StatTile
+              label={t('admin.ops.collections.confirmed')}
+              value={fmtNum(data?.collections.confirmed_listings ?? 0)}
+            />
+            <StatTile
+              label={t('admin.ops.collections.listed')}
+              value={fmtNum(data?.collections.listed_active ?? 0)}
+            />
+            <StatTile
+              label={t('admin.ops.collections.updatedToday')}
+              value={fmtNum(data?.collections.updated_today ?? 0)}
+            />
           </div>
         </ChartContainer>
       </div>
 
       {/* ── Returns + Payments ───────────────────────────────────────────── */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <ChartContainer title={t('admin.ops.quality.title')} loading={loading && !data} height="auto">
+        <ChartContainer
+          title={t('admin.ops.quality.title')}
+          loading={loading && !data}
+          height="auto"
+        >
           <div className="grid grid-cols-3 gap-3">
             <StatTile
               label={t('admin.ops.quality.pending')}
               value={fmtNum(data?.quality.pending_returns ?? 0)}
               accent={semantic.light.warning}
             />
-            <StatTile label={t('admin.ops.quality.toCollect')} value={fmtNum(data?.quality.to_collect ?? 0)} />
-            <StatTile label={t('admin.ops.quality.rejected')} value={fmtNum(data?.quality.rejected_returns ?? 0)} />
+            <StatTile
+              label={t('admin.ops.quality.toCollect')}
+              value={fmtNum(data?.quality.to_collect ?? 0)}
+            />
+            <StatTile
+              label={t('admin.ops.quality.rejected')}
+              value={fmtNum(data?.quality.rejected_returns ?? 0)}
+            />
           </div>
         </ChartContainer>
 
-        <ChartContainer title={t('admin.ops.payments.title')} loading={loading && !data} height="auto">
+        <ChartContainer
+          title={t('admin.ops.payments.title')}
+          loading={loading && !data}
+          height="auto"
+        >
           <div className="grid grid-cols-3 gap-3">
-            <StatTile label={t('admin.ops.payments.pending')} value={fmtNum(data?.payments.pending_count ?? 0)} />
-            <StatTile label={t('admin.ops.payments.amount')} value={fmtMoney(data?.payments.pending_amount ?? 0)} />
+            <StatTile
+              label={t('admin.ops.payments.pending')}
+              value={fmtNum(data?.payments.pending_count ?? 0)}
+            />
+            <StatTile
+              label={t('admin.ops.payments.amount')}
+              value={fmtMoney(data?.payments.pending_amount ?? 0)}
+            />
             <StatTile
               label={t('admin.ops.payments.overdue')}
               value={fmtNum(data?.payments.stale_count ?? 0)}
@@ -278,21 +338,36 @@ export function OperationsPage() {
 
       {/* ── Farmers + Agents ─────────────────────────────────────────────── */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <ChartContainer title={t('admin.ops.farmers.title')} loading={loading && !data} height="auto">
+        <ChartContainer
+          title={t('admin.ops.farmers.title')}
+          loading={loading && !data}
+          height="auto"
+        >
           <div className="grid grid-cols-3 gap-3">
-            <StatTile label={t('admin.ops.farmers.registered')} value={fmtNum(data?.farmers.registered ?? 0)} />
-            <StatTile label={t('admin.ops.farmers.active')} value={fmtNum(data?.farmers.active ?? 0)} accent={semantic.light.success} />
+            <StatTile
+              label={t('admin.ops.farmers.registered')}
+              value={fmtNum(data?.farmers.registered ?? 0)}
+            />
+            <StatTile
+              label={t('admin.ops.farmers.active')}
+              value={fmtNum(data?.farmers.active ?? 0)}
+              accent={semantic.light.success}
+            />
             <StatTile
               label={t('admin.ops.farmers.pendingApproval')}
               value={fmtNum(data?.farmers.pending_approval ?? 0)}
-              accent={(data?.farmers.pending_approval ?? 0) > 0 ? semantic.light.warning : undefined}
+              accent={
+                (data?.farmers.pending_approval ?? 0) > 0 ? semantic.light.warning : undefined
+              }
             />
           </div>
         </ChartContainer>
 
         <ChartContainer
           title={t('admin.ops.agents.title')}
-          subtitle={t('admin.ops.agents.active', { count: data?.delivery_status.agents_total ?? 0 })}
+          subtitle={t('admin.ops.agents.active', {
+            count: data?.delivery_status.agents_total ?? 0,
+          })}
           loading={loading && !data}
           empty={!loading && (data?.agents.length ?? 0) === 0 ? t('admin.ops.agents.none') : false}
           height="auto"
@@ -309,7 +384,10 @@ export function OperationsPage() {
                   {a.vehicle ? <span className="text-fg-muted"> · {a.vehicle}</span> : null}
                 </span>
                 {a.phone ? (
-                  <a href={`tel:${a.phone}`} className="tabular-nums text-fg-muted hover:text-primary">
+                  <a
+                    href={`tel:${a.phone}`}
+                    className="tabular-nums text-fg-muted hover:text-primary"
+                  >
                     {a.phone}
                   </a>
                 ) : null}
@@ -338,19 +416,33 @@ export function OperationsPage() {
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-subtle text-left">
-                  <th className="py-2 pr-4 font-bold text-fg">{t('admin.ops.districts.district')}</th>
-                  <th className="py-2 pr-4 text-right font-bold text-fg">{t('admin.ops.districts.orders')}</th>
-                  <th className="py-2 pr-4 text-right font-bold text-fg">{t('admin.ops.districts.pending')}</th>
-                  <th className="py-2 text-right font-bold text-fg">{t('admin.ops.districts.revenue')}</th>
+                  <th className="py-2 pr-4 font-bold text-fg">
+                    {t('admin.ops.districts.district')}
+                  </th>
+                  <th className="py-2 pr-4 text-right font-bold text-fg">
+                    {t('admin.ops.districts.orders')}
+                  </th>
+                  <th className="py-2 pr-4 text-right font-bold text-fg">
+                    {t('admin.ops.districts.pending')}
+                  </th>
+                  <th className="py-2 text-right font-bold text-fg">
+                    {t('admin.ops.districts.revenue')}
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {districts.map((d) => (
                   <tr key={d.district} className="border-b border-subtle">
                     <td className="py-2 pr-4 text-fg">{d.district}</td>
-                    <td className="py-2 pr-4 text-right tabular-nums text-fg-muted">{fmtNum(d.orders)}</td>
-                    <td className="py-2 pr-4 text-right tabular-nums text-fg-muted">{fmtNum(d.pending)}</td>
-                    <td className="py-2 text-right tabular-nums text-fg-muted">{fmtMoney(d.revenue)}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums text-fg-muted">
+                      {fmtNum(d.orders)}
+                    </td>
+                    <td className="py-2 pr-4 text-right tabular-nums text-fg-muted">
+                      {fmtNum(d.pending)}
+                    </td>
+                    <td className="py-2 text-right tabular-nums text-fg-muted">
+                      {fmtMoney(d.revenue)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -366,7 +458,10 @@ export function OperationsPage() {
         ) : (
           <ul className="space-y-2">
             {alerts.map((a, i) => (
-              <li key={`${a.type}-${i}`} className="flex items-start gap-2 rounded-lg bg-surface-muted p-3 text-sm">
+              <li
+                key={`${a.type}-${i}`}
+                className="flex items-start gap-2 rounded-lg bg-surface-muted p-3 text-sm"
+              >
                 {/* Severity carries an icon + the message, never colour alone. */}
                 <ToneDot tone={alertTone(a.severity)} />
                 <span className="text-fg">{a.message}</span>

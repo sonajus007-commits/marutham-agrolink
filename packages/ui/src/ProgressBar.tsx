@@ -62,7 +62,12 @@ export function ProgressBar({
            * `prefers-reduced-motion` — stopping it would leave a bar that says
            * nothing. The keyframe travels far enough to clear a third-width
            * bar off both ends. */
-          <div className={cn('absolute inset-y-0 left-0 w-1/3 rounded-pill animate-progress-slide', TONE[tone])} />
+          <div
+            className={cn(
+              'absolute inset-y-0 left-0 w-1/3 rounded-pill animate-progress-slide',
+              TONE[tone],
+            )}
+          />
         ) : (
           <div
             className={cn(

@@ -22,7 +22,9 @@ export function ChangeRequestsPage() {
     setLoading(true);
     setError(null);
     try {
-      const results = await Promise.all(STATUSES.map((s) => api.getChangeRequests(s).then((r) => r.requests || [])));
+      const results = await Promise.all(
+        STATUSES.map((s) => api.getChangeRequests(s).then((r) => r.requests || [])),
+      );
       setRequests(results.flat());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load change requests');
@@ -31,13 +33,21 @@ export function ChangeRequestsPage() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const statusOptions = useMemo(() => {
     const counts: Record<string, number> = {};
-    requests.forEach((r) => { const s = String(r.status); counts[s] = (counts[s] || 0) + 1; });
+    requests.forEach((r) => {
+      const s = String(r.status);
+      counts[s] = (counts[s] || 0) + 1;
+    });
     return [
-      ...STATUSES.map((s) => ({ value: s, label: `${t('admin.cr.status.' + s)} (${counts[s] || 0})` })),
+      ...STATUSES.map((s) => ({
+        value: s,
+        label: `${t('admin.cr.status.' + s)} (${counts[s] || 0})`,
+      })),
       { value: 'all', label: `${t('admin.cr.all')} (${requests.length})` },
     ];
   }, [requests, t]);
@@ -47,45 +57,60 @@ export function ChangeRequestsPage() {
     [requests, status],
   );
 
-  const columns = useMemo<TableColumn<ProfileChangeRequest>[]>(() => [
-    { key: 'login_id', header: t('admin.cr.loginId'), value: (r) => r.login_id || '', width: '150px' },
-    { key: 'name', header: t('admin.cr.name'), value: (r) => r.fname || '' },
-    { key: 'type', header: t('admin.cr.type'), value: (r) => (isRenewal(r) ? t('admin.cr.renewal') : t('admin.cr.profile')) },
-    {
-      key: 'status',
-      header: t('admin.cr.statusCol'),
-      value: (r) => String(r.status),
-      render: (r) => {
-        const s = String(r.status);
-        return (
-          <span className="inline-block rounded-pill px-2 py-0.5 text-2xs font-bold text-white" style={{ background: CR_STATUS_TONE[s] || 'var(--fg-muted)' }}>
-            {t('admin.cr.status.' + s, s)}
-          </span>
-        );
+  const columns = useMemo<TableColumn<ProfileChangeRequest>[]>(
+    () => [
+      {
+        key: 'login_id',
+        header: t('admin.cr.loginId'),
+        value: (r) => r.login_id || '',
+        width: '150px',
       },
-    },
-    {
-      key: 'requested',
-      header: t('admin.cr.requestedOn'),
-      value: (r) => r.requested_at || '',
-      render: (r) => fmtDateShort(r.requested_at),
-    },
-    {
-      key: 'actions',
-      header: '',
-      sortable: false,
-      exportable: false,
-      render: (r) => (
-        <button
-          type="button"
-          onClick={() => setOpen(r)}
-          className="cursor-pointer appearance-none rounded-sm border-0 bg-surface-muted px-2.5 py-1 text-2xs font-bold text-primary hover:bg-primary hover:text-primary-on focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
-        >
-          {t('admin.cr.review')}
-        </button>
-      ),
-    },
-  ], [t]);
+      { key: 'name', header: t('admin.cr.name'), value: (r) => r.fname || '' },
+      {
+        key: 'type',
+        header: t('admin.cr.type'),
+        value: (r) => (isRenewal(r) ? t('admin.cr.renewal') : t('admin.cr.profile')),
+      },
+      {
+        key: 'status',
+        header: t('admin.cr.statusCol'),
+        value: (r) => String(r.status),
+        render: (r) => {
+          const s = String(r.status);
+          return (
+            <span
+              className="inline-block rounded-pill px-2 py-0.5 text-2xs font-bold text-white"
+              style={{ background: CR_STATUS_TONE[s] || 'var(--fg-muted)' }}
+            >
+              {t('admin.cr.status.' + s, s)}
+            </span>
+          );
+        },
+      },
+      {
+        key: 'requested',
+        header: t('admin.cr.requestedOn'),
+        value: (r) => r.requested_at || '',
+        render: (r) => fmtDateShort(r.requested_at),
+      },
+      {
+        key: 'actions',
+        header: '',
+        sortable: false,
+        exportable: false,
+        render: (r) => (
+          <button
+            type="button"
+            onClick={() => setOpen(r)}
+            className="cursor-pointer appearance-none rounded-sm border-0 bg-surface-muted px-2.5 py-1 text-2xs font-bold text-primary hover:bg-primary hover:text-primary-on focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
+          >
+            {t('admin.cr.review')}
+          </button>
+        ),
+      },
+    ],
+    [t],
+  );
 
   if (loading && requests.length === 0) return <Spinner />;
   if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
@@ -94,7 +119,9 @@ export function ChangeRequestsPage() {
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-primary">{t('admin.cr.title')}</h1>
-        <Button variant="ghost" onClick={load} disabled={loading}>↻ {t('admin.cr.refresh')}</Button>
+        <Button variant="ghost" onClick={load} disabled={loading}>
+          ↻ {t('admin.cr.refresh')}
+        </Button>
       </div>
 
       <div className="mb-3">
@@ -114,7 +141,12 @@ export function ChangeRequestsPage() {
         empty={<EmptyState icon="📝">{t('admin.cr.empty')}</EmptyState>}
       />
 
-      <ChangeRequestSheet request={open} open={open !== null} onClose={() => setOpen(null)} onChanged={load} />
+      <ChangeRequestSheet
+        request={open}
+        open={open !== null}
+        onClose={() => setOpen(null)}
+        onChanged={load}
+      />
     </>
   );
 }

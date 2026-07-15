@@ -1,8 +1,6 @@
 import { useId, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import { UploadCloud, File as FileIcon, X, Check, AlertCircle } from 'lucide-react';
-import {
-  formatBytes, validateFiles, type Rejection, type FileLike,
-} from '@marutham/lib';
+import { formatBytes, validateFiles, type Rejection, type FileLike } from '@marutham/lib';
 import { cn } from './lib/cn';
 import { ProgressBar } from './ProgressBar';
 

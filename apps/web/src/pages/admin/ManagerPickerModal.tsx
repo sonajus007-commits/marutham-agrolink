@@ -28,10 +28,14 @@ export function ManagerPickerModal({
   useEffect(() => {
     if (!open) return;
     setQ('');
-    if (!workDistrict || !department) { setManagers([]); return; }
+    if (!workDistrict || !department) {
+      setManagers([]);
+      return;
+    }
     setLoading(true);
     setError(null);
-    api.getManagers({ district: workDistrict, department, exclude: excludeId })
+    api
+      .getManagers({ district: workDistrict, department, exclude: excludeId })
       .then((res) => setManagers(res.managers || []))
       .catch((e) => setError(e instanceof Error ? e.message : 'Could not load managers'))
       .finally(() => setLoading(false));
@@ -41,19 +45,31 @@ export function ManagerPickerModal({
     const term = q.trim().toLowerCase();
     if (!term) return managers;
     return managers.filter((m) =>
-      [m.emp_id, m.fname, m.lname, m.designation].filter(Boolean).some((v) => String(v).toLowerCase().includes(term)),
+      [m.emp_id, m.fname, m.lname, m.designation]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(term)),
     );
   }, [managers, q]);
 
   const missingUnit = !workDistrict || !department;
 
   return (
-    <Modal open={open} title={`👔 ${t('admin.emp.mgrPicker')}`} subtitle={missingUnit ? undefined : `${workDistrict} · ${department}`} onClose={onClose}>
+    <Modal
+      open={open}
+      title={`👔 ${t('admin.emp.mgrPicker')}`}
+      subtitle={missingUnit ? undefined : `${workDistrict} · ${department}`}
+      onClose={onClose}
+    >
       {missingUnit ? (
         <p className="text-sm text-fg-muted">{t('admin.emp.mgrNeedUnit')}</p>
       ) : (
         <div className="flex flex-col gap-3">
-          <input className={INPUT_CLASS} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('admin.emp.mgrSearch')} />
+          <input
+            className={INPUT_CLASS}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={t('admin.emp.mgrSearch')}
+          />
           {loading ? (
             <Spinner />
           ) : error ? (
@@ -70,10 +86,17 @@ export function ManagerPickerModal({
                     className="flex w-full cursor-pointer items-center gap-3 rounded-base border border-border-subtle bg-surface p-2.5 text-left hover:border-leaf hover:bg-surface-muted"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold text-fg">{`${m.fname || ''} ${m.lname || ''}`.trim() || '—'}</span>
-                      <span className="block truncate text-2xs text-fg-muted">{m.emp_id}{m.designation ? ` · ${m.designation}` : ''}</span>
+                      <span className="block truncate font-semibold text-fg">
+                        {`${m.fname || ''} ${m.lname || ''}`.trim() || '—'}
+                      </span>
+                      <span className="block truncate text-2xs text-fg-muted">
+                        {m.emp_id}
+                        {m.designation ? ` · ${m.designation}` : ''}
+                      </span>
                     </span>
-                    <span className="shrink-0 text-2xs font-bold text-primary">{t('admin.emp.mgrSelect')} →</span>
+                    <span className="shrink-0 text-2xs font-bold text-primary">
+                      {t('admin.emp.mgrSelect')} →
+                    </span>
                   </button>
                 </li>
               ))}

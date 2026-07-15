@@ -13,7 +13,10 @@ export interface StatTileProps {
 export function StatTile({ icon, label, value, hint, accent }: StatTileProps) {
   return (
     <div className="bg-surface border border-surface-muted rounded-base p-3 text-center shadow-xs">
-      <div className="text-2xl font-black text-primary" style={accent ? { color: accent } : undefined}>
+      <div
+        className="text-2xl font-black text-primary"
+        style={accent ? { color: accent } : undefined}
+      >
         {icon ? <span aria-hidden="true">{icon} </span> : null}
         {value}
       </div>

@@ -168,13 +168,14 @@ export function validateListing(d: ListingDraft): string | null {
 
   const bulkQty = Number(d.bulk_qty || 0);
   const bulkDisc = Number(d.bulk_disc_pct || 0);
-  if ((bulkQty > 0) !== (bulkDisc > 0)) return 'A bulk offer needs both a quantity and a discount.';
+  if (bulkQty > 0 !== bulkDisc > 0) return 'A bulk offer needs both a quantity and a discount.';
   if (bulkDisc > MAX_BULK_DISC_PCT) return `Bulk discount cannot exceed ${MAX_BULK_DISC_PCT}%.`;
   if (bulkQty > 0 && bulkQty > qty) return 'The bulk quantity is more than you have available.';
 
   const qtyValue = Number(d.qty_value || 0);
   if (qtyValue > 0 && !d.qty_type) return 'Choose whether that is a minimum order or a pack size.';
-  if (qtyValue > 0 && qtyValue > qty) return 'The order rule is larger than the quantity available.';
+  if (qtyValue > 0 && qtyValue > qty)
+    return 'The order rule is larger than the quantity available.';
 
   return null;
 }
@@ -219,7 +220,9 @@ export interface FarmerEarnings {
  */
 export function farmerEarnings(orders: Order[], payouts: Payout[]): FarmerEarnings {
   const paid = payouts.filter((p) => p.status === 'paid').reduce((s, p) => s + rs(p.amount), 0);
-  const pending = payouts.filter((p) => p.status === 'pending').reduce((s, p) => s + rs(p.amount), 0);
+  const pending = payouts
+    .filter((p) => p.status === 'pending')
+    .reduce((s, p) => s + rs(p.amount), 0);
 
   const settledOrderIds = new Set(payouts.map((p) => p.order?.id).filter(Boolean));
 
@@ -259,7 +262,11 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
  * `delivered_at` (falling back to `created_at` for older rows that predate that
  * column). Weeks with no deliveries are kept as zero so the axis is continuous.
  */
-export function farmerWeeklyEarnings(orders: Order[], weeks = 8, now: Date = new Date()): WeekEarning[] {
+export function farmerWeeklyEarnings(
+  orders: Order[],
+  weeks = 8,
+  now: Date = new Date(),
+): WeekEarning[] {
   const current = startOfWeek(now);
   const buckets = Array.from({ length: weeks }, (_, i) => {
     const start = new Date(current);
@@ -335,12 +342,12 @@ export function needsSubscriptionPayment(user: { role?: string; status?: string 
  */
 
 export type ListingState =
-  | 'pending'       // awaiting admin approval
-  | 'rejected'      // admin declined
-  | 'needs_price'   // approved, no price yet
+  | 'pending' // awaiting admin approval
+  | 'rejected' // admin declined
+  | 'needs_price' // approved, no price yet
   | 'cutoff_passed' // priced, but the cutoff elapsed — re-price to re-list
-  | 'listed'        // live, awaiting the seller's confirmation
-  | 'confirmed';    // live and confirmed for delivery
+  | 'listed' // live, awaiting the seller's confirmation
+  | 'confirmed'; // live and confirmed for delivery
 
 export interface FarmerListing {
   id: string;

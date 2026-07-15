@@ -74,7 +74,9 @@ function PlaceholderGroupBlock({ group }: { group: PlaceholderGroup }) {
 function PlaceholderTile({ icon, label, note }: { icon: string; label: string; note: string }) {
   return (
     <div className="rounded-xl border border-dashed border-subtle bg-surface-muted p-3">
-      <div className="text-sm" aria-hidden="true">{icon}</div>
+      <div className="text-sm" aria-hidden="true">
+        {icon}
+      </div>
       <div className="mt-1 text-sm font-bold text-fg-muted">—</div>
       <div className="text-xs text-fg-muted">{label}</div>
       <div className="text-[10px] italic text-fg-muted">{note}</div>

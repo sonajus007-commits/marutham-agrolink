@@ -129,7 +129,10 @@ export function monthGrid(view: YearMonth, weekStartsOn: Weekday = 0): DayCell[]
   for (let w = 0; w < 6; w++) {
     const row: DayCell[] = [];
     for (let d = 0; d < 7; d++) {
-      row.push({ date: cursor, inCurrentMonth: cursor.month === view.month && cursor.year === view.year });
+      row.push({
+        date: cursor,
+        inCurrentMonth: cursor.month === view.month && cursor.year === view.year,
+      });
       cursor = addDays(cursor, 1);
     }
     weeks.push(row);
@@ -145,5 +148,5 @@ export function addDays(d: CivilDate, delta: number): CivilDate {
 
 /** The seven weekday indices in display order for a given week start. */
 export function weekdayOrder(weekStartsOn: Weekday = 0): Weekday[] {
-  return Array.from({ length: 7 }, (_, i) => (((weekStartsOn + i) % 7) as Weekday));
+  return Array.from({ length: 7 }, (_, i) => ((weekStartsOn + i) % 7) as Weekday);
 }

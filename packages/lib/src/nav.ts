@@ -28,7 +28,10 @@ export function matchPath(href: string | undefined, currentPath: string): boolea
   return p === h || p.startsWith(h + '/');
 }
 
-export function isRoleAllowed(roles: readonly string[] | undefined, role: string | null | undefined): boolean {
+export function isRoleAllowed(
+  roles: readonly string[] | undefined,
+  role: string | null | undefined,
+): boolean {
   if (!roles || roles.length === 0) return true;
   return role != null && roles.includes(role);
 }
@@ -39,7 +42,10 @@ export function isRoleAllowed(roles: readonly string[] | undefined, role: string
  * A group that clears the role check but has an href survives even childless, so
  * a role-gated section that is also a link stays reachable.
  */
-export function filterNavByRole<T extends NavNode>(items: readonly T[], role: string | null | undefined): T[] {
+export function filterNavByRole<T extends NavNode>(
+  items: readonly T[],
+  role: string | null | undefined,
+): T[] {
   const out: T[] = [];
   for (const item of items) {
     if (!isRoleAllowed(item.roles, role)) continue;

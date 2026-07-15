@@ -14,16 +14,16 @@ shadcn's components are written against its own colour vocabulary —
 theme keys do not exist here, and most of them should not: this design system
 already names the same ideas.
 
-| shadcn | here |
-|---|---|
-| `background` / `foreground` | `bg` / `fg` |
+| shadcn                       | here                         |
+| ---------------------------- | ---------------------------- |
+| `background` / `foreground`  | `bg` / `fg`                  |
 | `muted` / `muted-foreground` | `surface-muted` / `fg-muted` |
-| `card`, `popover` | `surface`, `surface-raised` |
-| `border` | `border-subtle` |
-| `input` | `border-strong` |
-| `ring` | `leaf` |
-| `destructive` | `danger` |
-| `primary-foreground` | `primary-on` |
+| `card`, `popover`            | `surface`, `surface-raised`  |
+| `border`                     | `border-subtle`              |
+| `input`                      | `border-strong`              |
+| `ring`                       | `leaf`                       |
+| `destructive`                | `danger`                     |
+| `primary-foreground`         | `primary-on`                 |
 
 One of them is a genuine collision rather than a rename. **shadcn's `accent`
 means "the subtle background a row takes on hover."** Ours means the Marutham
@@ -124,7 +124,7 @@ outline, so it follows the rounded corners.
 ## Tabs, Breadcrumbs, Skeleton
 
 `Tabs` is Radix. It is **not** `.ma-tabs` in ui.css — those are the mobile
-shell's *navigation* tabs, which swap routes and whose correct role is a nav.
+shell's _navigation_ tabs, which swap routes and whose correct role is a nav.
 These switch panels within one screen. Do not merge them.
 
 Two things about Radix Tabs that will look like bugs and are not. Every panel
@@ -156,7 +156,7 @@ property, not a `transform`; `.transition-transform` covers it because v4's
 `transition-transform` lists `rotate` among its properties. `type="single" |
 "multiple"` is a discriminated union so `value` can't be the wrong shape.
 
-`Dropdown` is Radix DropdownMenu — a *menu* (every item runs a command), never a
+`Dropdown` is Radix DropdownMenu — a _menu_ (every item runs a command), never a
 value picker. A field that picks a value stays a `<select>`. It sits at
 `--z-overlay`, one below a dialog, and Radix portals it to the end of `<body>`,
 so a Modal opened afterwards still wins on DOM order. Its panel uses a real
@@ -193,7 +193,7 @@ the trigger a day early, the title slipped into the previous month, and the
 weekday header rotated by one. Invisible on a UTC/IST test box.
 
 Week starts on Sunday (India's convention); pass `weekStartsOn={1}` for Monday.
-`min`/`max` disable out-of-range days *and* the nav arrow that would only reach
+`min`/`max` disable out-of-range days _and_ the nav arrow that would only reach
 disabled months.
 
 ## FileUpload
@@ -210,7 +210,7 @@ Validation — `accept` matching (HTML syntax: `.pdf`, `image/*`, `image/png`),
 `maxSize`, `maxFiles`, and de-duplication by name+size — lives in
 `@marutham/lib/upload`, pure and unit-tested (17 tests), reading only
 `{ name, size, type }` so it needs no `File` and ports to a React Native asset.
-Rejections are reported most-specific-first (a wrong-type file that is *also*
+Rejections are reported most-specific-first (a wrong-type file that is _also_
 over the count says `type`, not `count`).
 
 This is **not** `apps/web`'s `ImagePicker`, which downscales to base64 data-URIs
@@ -241,7 +241,7 @@ Three different jobs, easy to confuse:
 reacts to `onItemClick`/`onMarkRead`/`onMarkAllRead`. The list logic (unread
 count, recency grouping, "time ago") is in `@marutham/lib/notifications`, pure
 and unit-tested (18 tests). Unlike the calendar, its times are **real instants**
-read in *local* time on purpose: a notification is grouped by the reader's
+read in _local_ time on purpose: a notification is grouped by the reader's
 calendar day, and `now` is injectable so the grouping is deterministic under
 test. The bell's `aria-label` carries the unread count; the count pill itself is
 `aria-hidden` so a screen reader hears the number once, not twice.
@@ -265,7 +265,7 @@ in `@marutham/tokens` — so the component stays palette-agnostic and light/dark
 the caller's choice of ramp.
 
 `sequential` (in tokens) is the single-hue green magnitude ramp, one array per
-theme, each stepped so its low-value end recedes toward *that* theme's surface.
+theme, each stepped so its low-value end recedes toward _that_ theme's surface.
 Both arrays pass the dataviz ordinal validator (single hue, monotone lightness,
 ΔL ≥ 0.06, low-value step ≥ 2:1 on its surface). **Re-run
 `scripts/validate_palette.js` before touching a stop** — the greens are chosen,
@@ -285,7 +285,7 @@ get wrong:
 
 - **Active is the single most-specific match, not per-item.** An Overview at
   `/admin` is an ancestor of every `/admin/*` route; a naïve per-item test keeps
-  it lit on nested pages. `activeTrail` picks the item whose href is the *longest*
+  it lit on nested pages. `activeTrail` picks the item whose href is the _longest_
   prefix of the path — so on `/admin/employees/42` the Employees leaf wins over
   its Overview sibling, and only the real leaf is `aria-current`.
 - **Groups on the active branch auto-expand** on load and on every route change,
@@ -294,7 +294,7 @@ get wrong:
 
 `collapsed` is the icon-only rail. A group can't expand inline there (no room for
 a label), so clicking a collapsed group expands the rail first. Role-gating is
-the caller's job via `filterNavByRole` *before* render — the component draws what
+the caller's job via `filterNavByRole` _before_ render — the component draws what
 it is given. The collapse control uses an inset-shadow top divider, not
 `border-t`: the `<button>` reset is `border-0`, and the two are one
 tailwind-merge group.
@@ -347,10 +347,10 @@ reads `aria-invalid`, which `Field` already sets on error, so a field goes red
 with no extra prop.
 
 `apps/web` can use it because `@tailwindcss/vite` scans the app source and
-`ui.css` only styles the `.ma-*` *classes*, never bare elements — so a Tailwind
+`ui.css` only styles the `.ma-*` _classes_, never bare elements — so a Tailwind
 `<input>` without `.ma-input` is not outranked by the unlayered legacy CSS. (One
 trap for the driver, not the code: `getComputedStyle` rounds a `1.5px` border to
-`"1px"` — assert the border *colour* and style, not its sub-pixel width.)
+`"1px"` — assert the border _colour_ and style, not its sub-pixel width.)
 
 ## Migration status
 

@@ -65,21 +65,59 @@ export function emptyRegisterForm(role: RegisterRole = 'consumer'): RegisterForm
   return {
     role,
     seller_type: 'Farmer',
-    fname: '', lname: '', gender: '', phone: '', country_code: '+91', email: '',
-    address: { house_no: '', street1: '', street2: '', landmark: '', village_town: '', city: '', taluk: '', district: '', state: '', pincode: '' },
-    password: '', confirm_password: '',
-    aadhar: '', bank_name: '', bank_account: '', confirm_bank_account: '', ifsc: '',
-    business_name: '', gst_number: '', business_type: '',
+    fname: '',
+    lname: '',
+    gender: '',
+    phone: '',
+    country_code: '+91',
+    email: '',
+    address: {
+      house_no: '',
+      street1: '',
+      street2: '',
+      landmark: '',
+      village_town: '',
+      city: '',
+      taluk: '',
+      district: '',
+      state: '',
+      pincode: '',
+    },
+    password: '',
+    confirm_password: '',
+    aadhar: '',
+    bank_name: '',
+    bank_account: '',
+    confirm_bank_account: '',
+    ifsc: '',
+    business_name: '',
+    gst_number: '',
+    business_type: '',
     subscription_plan: '',
   };
 }
 
 export type RegisterField =
-  | 'fname' | 'gender' | 'phone' | 'email'
-  | 'street1' | 'state' | 'district' | 'taluk' | 'city' | 'pincode' | 'village_town'
-  | 'password' | 'confirm_password'
-  | 'aadhar' | 'bank_name' | 'bank_account' | 'confirm_bank_account' | 'ifsc'
-  | 'business_name' | 'gst_number'
+  | 'fname'
+  | 'gender'
+  | 'phone'
+  | 'email'
+  | 'street1'
+  | 'state'
+  | 'district'
+  | 'taluk'
+  | 'city'
+  | 'pincode'
+  | 'village_town'
+  | 'password'
+  | 'confirm_password'
+  | 'aadhar'
+  | 'bank_name'
+  | 'bank_account'
+  | 'confirm_bank_account'
+  | 'ifsc'
+  | 'business_name'
+  | 'gst_number'
   | 'subscription_plan';
 
 export type RegisterErrors = Partial<Record<RegisterField, string>>;
@@ -90,7 +128,10 @@ export interface RegisterValidateOptions {
 }
 
 /** Faults on the form, keyed by field. Empty object = ready to submit. */
-export function validateRegistration(form: RegisterForm, opts: RegisterValidateOptions): RegisterErrors {
+export function validateRegistration(
+  form: RegisterForm,
+  opts: RegisterValidateOptions,
+): RegisterErrors {
   const e: RegisterErrors = {};
   const a = form.address;
   const trim = (v?: string | null) => (v || '').trim();

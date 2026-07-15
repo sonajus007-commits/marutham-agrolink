@@ -26,7 +26,12 @@ export interface PaginationProps {
 }
 
 export function Pagination({
-  page, pageSize, total, onPageChange, showRange = true, className,
+  page,
+  pageSize,
+  total,
+  onPageChange,
+  showRange = true,
+  className,
 }: PaginationProps) {
   // Nothing to page through — no pager, matching <Table>'s own guard.
   if (pageSize <= 0 || total <= 0) return null;

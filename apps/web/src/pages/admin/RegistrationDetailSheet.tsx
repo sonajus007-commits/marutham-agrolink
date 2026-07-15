@@ -39,8 +39,12 @@ export function RegistrationDetailSheet({
     if (!open || !regId) return;
     let active = true;
     setReg(null);
-    reload(regId).catch((e) => active && setError(e instanceof Error ? e.message : 'Could not load registration'));
-    return () => { active = false; };
+    reload(regId).catch(
+      (e) => active && setError(e instanceof Error ? e.message : 'Could not load registration'),
+    );
+    return () => {
+      active = false;
+    };
   }, [open, regId, reload]);
 
   return (
@@ -50,13 +54,31 @@ export function RegistrationDetailSheet({
       ) : !reg ? (
         <Spinner />
       ) : (
-        <Body reg={reg} onDone={() => { onChanged(); onClose(); }} onChanged={() => { onChanged(); if (regId) void reload(regId); }} />
+        <Body
+          reg={reg}
+          onDone={() => {
+            onChanged();
+            onClose();
+          }}
+          onChanged={() => {
+            onChanged();
+            if (regId) void reload(regId);
+          }}
+        />
       )}
     </Sheet>
   );
 }
 
-function Body({ reg, onDone, onChanged }: { reg: Registration; onDone: () => void; onChanged: () => void }) {
+function Body({
+  reg,
+  onDone,
+  onChanged,
+}: {
+  reg: Registration;
+  onDone: () => void;
+  onChanged: () => void;
+}) {
   const { t } = useTranslation();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -72,7 +94,8 @@ function Body({ reg, onDone, onChanged }: { reg: Registration; onDone: () => voi
     try {
       const res = await fn();
       toast(res.message || t('admin.reg.done'), 'ok');
-      if (close) onDone(); else onChanged();
+      if (close) onDone();
+      else onChanged();
       setShowReject(false);
       setReason('');
     } catch (e) {
@@ -85,10 +108,17 @@ function Body({ reg, onDone, onChanged }: { reg: Registration; onDone: () => voi
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="rounded-pill px-3 py-1 text-xs font-bold text-white" style={{ background: REG_STATUS_TONE[status] || 'var(--fg-muted)' }}>
+        <span
+          className="rounded-pill px-3 py-1 text-xs font-bold text-white"
+          style={{ background: REG_STATUS_TONE[status] || 'var(--fg-muted)' }}
+        >
           {t('admin.reg.status.' + status, status)}
         </span>
-        {reg.seller_type ? <span className="text-2xs uppercase tracking-wide text-fg-muted">{String(reg.seller_type)}</span> : null}
+        {reg.seller_type ? (
+          <span className="text-2xs uppercase tracking-wide text-fg-muted">
+            {String(reg.seller_type)}
+          </span>
+        ) : null}
       </div>
 
       {/* Action controls, gated by workflow state */}
@@ -96,8 +126,15 @@ function Body({ reg, onDone, onChanged }: { reg: Registration; onDone: () => voi
         <section className="flex flex-col gap-2 rounded-base border border-border-subtle bg-surface-muted p-3">
           <p className="text-2xs text-fg-muted">{t('admin.reg.approveHint')}</p>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => run(() => api.approveRegistration(reg.id), true)} disabled={busy}>{t('admin.reg.approve')}</Button>
-            <Button variant="danger" onClick={() => setShowReject(true)} disabled={busy}>{t('admin.reg.reject')}</Button>
+            <Button
+              onClick={() => run(() => api.approveRegistration(reg.id), true)}
+              disabled={busy}
+            >
+              {t('admin.reg.approve')}
+            </Button>
+            <Button variant="danger" onClick={() => setShowReject(true)} disabled={busy}>
+              {t('admin.reg.reject')}
+            </Button>
           </div>
         </section>
       ) : null}
@@ -105,16 +142,25 @@ function Body({ reg, onDone, onChanged }: { reg: Registration; onDone: () => voi
       {status === 'payment_pending' ? (
         <section className="flex flex-col gap-2 rounded-base border border-border-subtle bg-surface-muted p-3">
           <p className="text-2xs text-fg-muted">{t('admin.reg.confirmHint')}</p>
-          {reg.payment_reference ? <Row label={t('admin.reg.paymentRef')} value={String(reg.payment_reference)} mono /> : null}
+          {reg.payment_reference ? (
+            <Row label={t('admin.reg.paymentRef')} value={String(reg.payment_reference)} mono />
+          ) : null}
           <div>
-            <Button onClick={() => run(() => api.confirmRegistrationPayment(reg.id), true)} disabled={busy}>{t('admin.reg.confirmPayment')}</Button>
+            <Button
+              onClick={() => run(() => api.confirmRegistrationPayment(reg.id), true)}
+              disabled={busy}
+            >
+              {t('admin.reg.confirmPayment')}
+            </Button>
           </div>
         </section>
       ) : null}
 
       {status === 'rejected' && reg.rejection_reason ? (
         <section className="rounded-base border border-danger/40 bg-surface-muted p-3">
-          <span className="text-2xs uppercase tracking-wide text-danger">{t('admin.reg.rejectionReason')}</span>
+          <span className="text-2xs uppercase tracking-wide text-danger">
+            {t('admin.reg.rejectionReason')}
+          </span>
           <p className="mt-1 text-sm text-fg">{String(reg.rejection_reason)}</p>
         </section>
       ) : null}
@@ -122,7 +168,11 @@ function Body({ reg, onDone, onChanged }: { reg: Registration; onDone: () => voi
       <Section title={`👤 ${t('admin.reg.applicant')}`}>
         <Row label={t('admin.reg.name')} value={fullName} />
         <Row label={t('admin.reg.loginId')} value={reg.login_id || '—'} mono />
-        <Row label={t('admin.reg.phone')} value={`${(reg.country_code as string) || '+91'} ${reg.phone}`} mono />
+        <Row
+          label={t('admin.reg.phone')}
+          value={`${(reg.country_code as string) || '+91'} ${reg.phone}`}
+          mono
+        />
         {reg.email ? <Row label={t('admin.reg.email')} value={String(reg.email)} /> : null}
         {reg.district ? <Row label={t('admin.reg.district')} value={String(reg.district)} /> : null}
         {reg.state ? <Row label={t('admin.reg.state')} value={String(reg.state)} /> : null}
@@ -130,22 +180,39 @@ function Body({ reg, onDone, onChanged }: { reg: Registration; onDone: () => voi
         <Row label={t('admin.reg.appliedOn')} value={fmtDateShort(reg.created_at as string)} />
       </Section>
 
-      {(reg.business_name || reg.gst_number || reg.bank_name) ? (
+      {reg.business_name || reg.gst_number || reg.bank_name ? (
         <Section title={`🏦 ${t('admin.reg.business')}`}>
-          {reg.business_name ? <Row label={t('admin.reg.businessName')} value={String(reg.business_name)} /> : null}
-          {reg.business_type ? <Row label={t('admin.reg.businessType')} value={String(reg.business_type)} /> : null}
-          {reg.gst_number ? <Row label={t('admin.reg.gst')} value={String(reg.gst_number)} mono /> : null}
+          {reg.business_name ? (
+            <Row label={t('admin.reg.businessName')} value={String(reg.business_name)} />
+          ) : null}
+          {reg.business_type ? (
+            <Row label={t('admin.reg.businessType')} value={String(reg.business_type)} />
+          ) : null}
+          {reg.gst_number ? (
+            <Row label={t('admin.reg.gst')} value={String(reg.gst_number)} mono />
+          ) : null}
           {reg.bank_name ? <Row label={t('admin.reg.bank')} value={String(reg.bank_name)} /> : null}
-          {reg.bank_account ? <Row label={t('admin.reg.account')} value={String(reg.bank_account)} mono /> : null}
+          {reg.bank_account ? (
+            <Row label={t('admin.reg.account')} value={String(reg.bank_account)} mono />
+          ) : null}
           {reg.ifsc ? <Row label={t('admin.reg.ifsc')} value={String(reg.ifsc)} mono /> : null}
         </Section>
       ) : null}
 
       {reg.subscription_plan || reg.payment_confirmed_at ? (
         <Section title={`📅 ${t('admin.reg.subscription')}`}>
-          {reg.subscription_plan ? <Row label={t('admin.reg.plan')} value={String(reg.subscription_plan)} /> : null}
-          {reg.subscription_expires_at ? <Row label={t('admin.reg.expires')} value={fmtDate(String(reg.subscription_expires_at))} /> : null}
-          {reg.payment_confirmed_at ? <Row label={t('admin.reg.paidOn')} value={fmtDate(String(reg.payment_confirmed_at))} /> : null}
+          {reg.subscription_plan ? (
+            <Row label={t('admin.reg.plan')} value={String(reg.subscription_plan)} />
+          ) : null}
+          {reg.subscription_expires_at ? (
+            <Row
+              label={t('admin.reg.expires')}
+              value={fmtDate(String(reg.subscription_expires_at))}
+            />
+          ) : null}
+          {reg.payment_confirmed_at ? (
+            <Row label={t('admin.reg.paidOn')} value={fmtDate(String(reg.payment_confirmed_at))} />
+          ) : null}
         </Section>
       ) : null}
 
@@ -156,15 +223,29 @@ function Body({ reg, onDone, onChanged }: { reg: Registration; onDone: () => voi
         onClose={() => setShowReject(false)}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setShowReject(false)} disabled={busy}>{t('admin.reg.cancel')}</Button>
-            <Button variant="danger" onClick={() => run(() => api.rejectRegistration(reg.id, reason), true)} disabled={busy || !reason.trim()}>
+            <Button variant="ghost" onClick={() => setShowReject(false)} disabled={busy}>
+              {t('admin.reg.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => run(() => api.rejectRegistration(reg.id, reason), true)}
+              disabled={busy || !reason.trim()}
+            >
               {busy ? '…' : t('admin.reg.reject')}
             </Button>
           </>
         }
       >
-        <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-fg-muted">{t('admin.reg.rejectReason')}</label>
-        <textarea className={INPUT_CLASS} rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('admin.reg.rejectReasonPlaceholder')} />
+        <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-fg-muted">
+          {t('admin.reg.rejectReason')}
+        </label>
+        <textarea
+          className={INPUT_CLASS}
+          rows={3}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder={t('admin.reg.rejectReasonPlaceholder')}
+        />
       </Modal>
     </div>
   );

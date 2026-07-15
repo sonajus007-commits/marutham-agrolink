@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
-  auditChanges, auditActionLabel, auditFieldLabel, formatAuditValue,
-  maskSecret, loginOutcome, shortUserAgent,
+  auditChanges,
+  auditActionLabel,
+  auditFieldLabel,
+  formatAuditValue,
+  maskSecret,
+  loginOutcome,
+  shortUserAgent,
 } from './audit';
 
 describe('auditChanges — the trigger writes an object, not an array', () => {
@@ -15,7 +20,10 @@ describe('auditChanges — the trigger writes an object, not an array', () => {
     });
     expect(changes.map((c) => c.field)).toEqual(['approval_status', 'emp_id']); // sorted
     expect(changes[0]).toEqual({
-      field: 'approval_status', label: 'Approval status', old: 'pending', new: 'approved',
+      field: 'approval_status',
+      label: 'Approval status',
+      old: 'pending',
+      new: 'approved',
     });
     expect(changes[1].old).toBe('—'); // null reads as an em dash, not "null"
     expect(changes[1].new).toBe('MATN00006');

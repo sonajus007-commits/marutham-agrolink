@@ -50,23 +50,36 @@ export function EmployeesPage() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   useEffect(() => {
     const isHrOwner = user?.admin_role === 'Head Office' || user?.admin_role === 'State Head';
-    if (isHrOwner) { setCanApprove(true); setCanMintTrust(true); return; }
-    api.getMyEmployeeRecord()
+    if (isHrOwner) {
+      setCanApprove(true);
+      setCanMintTrust(true);
+      return;
+    }
+    api
+      .getMyEmployeeRecord()
       .then((res) => {
         const bod = !!res.employee?.is_board_director;
         setCanApprove(bod || !!res.employee?.is_hr_admin);
         setCanMintTrust(bod);
       })
-      .catch(() => { setCanApprove(false); setCanMintTrust(false); });
+      .catch(() => {
+        setCanApprove(false);
+        setCanMintTrust(false);
+      });
   }, [user?.admin_role]);
 
   const approvalOptions = useMemo(() => {
     const counts: Record<string, number> = {};
-    employees.forEach((e) => { const s = approvalOf(e); counts[s] = (counts[s] || 0) + 1; });
+    employees.forEach((e) => {
+      const s = approvalOf(e);
+      counts[s] = (counts[s] || 0) + 1;
+    });
     return [
       { value: 'pending', label: `${t('admin.emp.approval.pending')} (${counts.pending || 0})` },
       { value: 'approved', label: `${t('admin.emp.approval.approved')} (${counts.approved || 0})` },
@@ -88,77 +101,96 @@ export function EmployeesPage() {
     return employees.filter((e) => approvalOf(e) === approval);
   }, [employees, removed, approval, viewingRemoved]);
 
-  const columns = useMemo<TableColumn<Employee>[]>(() => [
-    {
-      key: 'emp_id',
-      header: t('admin.emp.empId'),
-      value: (e) => e.emp_id || '',
-      width: '130px',
-      render: (e) => (e.emp_id ? <span className="tabular-nums font-semibold text-fg">{e.emp_id}</span> : <span className="text-2xs text-fg-muted">{t('admin.emp.notIssued')}</span>),
-    },
-    {
-      key: 'name',
-      header: t('admin.emp.name'),
-      value: (e) => empName(e),
-      render: (e) => (
-        <span className="flex items-center gap-1.5">
-          <span className="font-medium text-fg">{empName(e) || '—'}</span>
-          {e.is_manager ? <Pill label={t('admin.emp.mgr')} bg="var(--info)" /> : null}
-          {e.is_board_director ? <Pill label={t('admin.emp.bod')} bg="var(--warning-strong)" /> : null}
-          {e.is_hr_admin ? <Pill label={t('admin.emp.hr')} bg="var(--info)" /> : null}
-        </span>
-      ),
-    },
-    {
-      key: 'role',
-      header: t('admin.emp.designation'),
-      value: (e) => `${e.designation || ''}${e.department ? ' · ' + e.department : ''}`,
-    },
-    { key: 'workDistrict', header: t('admin.emp.workDistrict'), value: (e) => e.work_district || '' },
-    {
-      key: 'approval',
-      header: t('admin.emp.approvalCol'),
-      value: (e) => approvalOf(e),
-      render: (e) => {
-        const s = approvalOf(e);
-        return (
-          <span className="inline-block rounded-pill px-2 py-0.5 text-2xs font-bold text-white" style={{ background: EMP_APPROVAL_TONE[s] || 'var(--fg-muted)' }}>
-            {t('admin.emp.approval.' + s, s)}
-          </span>
-        );
+  const columns = useMemo<TableColumn<Employee>[]>(
+    () => [
+      {
+        key: 'emp_id',
+        header: t('admin.emp.empId'),
+        value: (e) => e.emp_id || '',
+        width: '130px',
+        render: (e) =>
+          e.emp_id ? (
+            <span className="tabular-nums font-semibold text-fg">{e.emp_id}</span>
+          ) : (
+            <span className="text-2xs text-fg-muted">{t('admin.emp.notIssued')}</span>
+          ),
       },
-    },
-    viewingRemoved
-      ? {
-          key: 'removedOn',
-          header: t('admin.emp.removedOn'),
-          value: (e) => e.deleted_at || '',
-          render: (e) => fmtDateShort(e.deleted_at),
-        }
-      : {
-          key: 'created',
-          header: t('admin.emp.addedOn'),
-          value: (e) => e.created_at || '',
-          render: (e) => fmtDateShort(e.created_at),
+      {
+        key: 'name',
+        header: t('admin.emp.name'),
+        value: (e) => empName(e),
+        render: (e) => (
+          <span className="flex items-center gap-1.5">
+            <span className="font-medium text-fg">{empName(e) || '—'}</span>
+            {e.is_manager ? <Pill label={t('admin.emp.mgr')} bg="var(--info)" /> : null}
+            {e.is_board_director ? (
+              <Pill label={t('admin.emp.bod')} bg="var(--warning-strong)" />
+            ) : null}
+            {e.is_hr_admin ? <Pill label={t('admin.emp.hr')} bg="var(--info)" /> : null}
+          </span>
+        ),
+      },
+      {
+        key: 'role',
+        header: t('admin.emp.designation'),
+        value: (e) => `${e.designation || ''}${e.department ? ' · ' + e.department : ''}`,
+      },
+      {
+        key: 'workDistrict',
+        header: t('admin.emp.workDistrict'),
+        value: (e) => e.work_district || '',
+      },
+      {
+        key: 'approval',
+        header: t('admin.emp.approvalCol'),
+        value: (e) => approvalOf(e),
+        render: (e) => {
+          const s = approvalOf(e);
+          return (
+            <span
+              className="inline-block rounded-pill px-2 py-0.5 text-2xs font-bold text-white"
+              style={{ background: EMP_APPROVAL_TONE[s] || 'var(--fg-muted)' }}
+            >
+              {t('admin.emp.approval.' + s, s)}
+            </span>
+          );
         },
-    {
-      key: 'actions',
-      header: '',
-      sortable: false,
-      exportable: false,
-      render: (e) => (
-        <button
-          type="button"
-          onClick={() => e.id && setOpenId(e.id)}
-          className="cursor-pointer appearance-none rounded-sm border-0 bg-surface-muted px-2.5 py-1 text-2xs font-bold text-primary hover:bg-primary hover:text-primary-on focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
-        >
-          {viewingRemoved && canApprove ? t('admin.emp.restore')
-            : approvalOf(e) === 'pending' && canApprove ? t('admin.emp.review')
-            : t('admin.emp.view')}
-        </button>
-      ),
-    },
-  ], [t, canApprove, viewingRemoved]);
+      },
+      viewingRemoved
+        ? {
+            key: 'removedOn',
+            header: t('admin.emp.removedOn'),
+            value: (e) => e.deleted_at || '',
+            render: (e) => fmtDateShort(e.deleted_at),
+          }
+        : {
+            key: 'created',
+            header: t('admin.emp.addedOn'),
+            value: (e) => e.created_at || '',
+            render: (e) => fmtDateShort(e.created_at),
+          },
+      {
+        key: 'actions',
+        header: '',
+        sortable: false,
+        exportable: false,
+        render: (e) => (
+          <button
+            type="button"
+            onClick={() => e.id && setOpenId(e.id)}
+            className="cursor-pointer appearance-none rounded-sm border-0 bg-surface-muted px-2.5 py-1 text-2xs font-bold text-primary hover:bg-primary hover:text-primary-on focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
+          >
+            {viewingRemoved && canApprove
+              ? t('admin.emp.restore')
+              : approvalOf(e) === 'pending' && canApprove
+                ? t('admin.emp.review')
+                : t('admin.emp.view')}
+          </button>
+        ),
+      },
+    ],
+    [t, canApprove, viewingRemoved],
+  );
 
   if (loading && employees.length === 0) return <Spinner />;
   if (error) return <EmptyState icon="🔒">{error}</EmptyState>;
@@ -168,8 +200,12 @@ export function EmployeesPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-primary">{t('admin.emp.title')}</h1>
         <div className="flex items-center gap-2">
-          {canApprove ? <Button onClick={() => setFormMode({ emp: null })}>+ {t('admin.emp.add')}</Button> : null}
-          <Button variant="ghost" onClick={load} disabled={loading}>↻ {t('admin.emp.refresh')}</Button>
+          {canApprove ? (
+            <Button onClick={() => setFormMode({ emp: null })}>+ {t('admin.emp.add')}</Button>
+          ) : null}
+          <Button variant="ghost" onClick={load} disabled={loading}>
+            ↻ {t('admin.emp.refresh')}
+          </Button>
         </div>
       </div>
 
@@ -202,7 +238,10 @@ export function EmployeesPage() {
         selfEmpId={user?.emp_id}
         onClose={() => setOpenId(null)}
         onChanged={load}
-        onEdit={(emp) => { setOpenId(null); setFormMode({ emp }); }}
+        onEdit={(emp) => {
+          setOpenId(null);
+          setFormMode({ emp });
+        }}
       />
 
       <EmployeeFormSheet
@@ -217,5 +256,12 @@ export function EmployeesPage() {
 }
 
 function Pill({ label, bg }: { label: string; bg: string }) {
-  return <span className="rounded-pill px-1.5 py-0.5 text-[9px] font-bold text-white" style={{ background: bg }}>{label}</span>;
+  return (
+    <span
+      className="rounded-pill px-1.5 py-0.5 text-[9px] font-bold text-white"
+      style={{ background: bg }}
+    >
+      {label}
+    </span>
+  );
 }

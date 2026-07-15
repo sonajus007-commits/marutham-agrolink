@@ -9,3 +9,7 @@ packages/tokens/src/tokens.css
 frontend
 index.html
 *.html
+# Backend is CJS with deliberate manual alignment (aligned `=` requires,
+# aligned route mounts). Prettier would flatten it. Same scoping as ESLint;
+# format it separately if/when that style is retired.
+backend

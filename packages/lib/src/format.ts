@@ -33,7 +33,11 @@ export function fmtDate(isoStr?: string | null): string {
   if (!isoStr) return '—';
   const d = new Date(isoStr);
   return d.toLocaleDateString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
@@ -65,7 +69,17 @@ export interface AddressObject {
 
 /** Join a structured address object into a single line. */
 export function buildAddress(u: AddressObject): string {
-  return [u.house_no, u.street1, u.street2, u.landmark, u.village_town, u.city, u.district, u.pincode, u.state]
+  return [
+    u.house_no,
+    u.street1,
+    u.street2,
+    u.landmark,
+    u.village_town,
+    u.city,
+    u.district,
+    u.pincode,
+    u.state,
+  ]
     .filter(Boolean)
     .join(', ');
 }

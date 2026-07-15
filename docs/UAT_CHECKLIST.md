@@ -84,12 +84,12 @@ Legend: ☐ not tested · ✅ pass · ❌ fail (raise a defect)
 
 ## Severity definitions
 
-| Severity | Meaning |
-|----------|---------|
+| Severity     | Meaning                                                                                |
+| ------------ | -------------------------------------------------------------------------------------- |
 | **Critical** | Blocks a core workflow, corrupts data, or a security hole. Must fix before production. |
-| **High** | Major feature broken or wrong, no reasonable workaround. Fix before production. |
-| **Medium** | Feature works but with a notable flaw or awkward workaround. Fix when able. |
-| **Low** | Cosmetic, copy, or minor polish. Backlog. |
+| **High**     | Major feature broken or wrong, no reasonable workaround. Fix before production.        |
+| **Medium**   | Feature works but with a notable flaw or awkward workaround. Fix when able.            |
+| **Low**      | Cosmetic, copy, or minor polish. Backlog.                                              |
 
 Report defects with the five facts above. Fixes will address the reported defect only, keep
 backward compatibility, and add no unrelated changes.

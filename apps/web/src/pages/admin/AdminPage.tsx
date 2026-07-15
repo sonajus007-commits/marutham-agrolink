@@ -2,7 +2,12 @@ import { type MouseEvent } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  AppShell, Header, Sidebar, IconButton, LangToggle, EmptyState,
+  AppShell,
+  Header,
+  Sidebar,
+  IconButton,
+  LangToggle,
+  EmptyState,
   type SidebarSection,
 } from '@marutham/ui';
 import { filterNavByRole } from '@marutham/lib';
@@ -45,7 +50,8 @@ export function AdminPage() {
 
   const go = (to: string) => (e: MouseEvent<HTMLElement>) => {
     // Let the browser handle new-tab / new-window intents on the real anchor.
-    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+      return;
     e.preventDefault();
     navigate(to);
   };
@@ -63,7 +69,11 @@ export function AdminPage() {
   })).filter((s) => s.items.length > 0);
 
   const brand = (
-    <a href={`${APP_BASE}/admin`} onClick={go('/admin')} className="flex items-center gap-2 no-underline">
+    <a
+      href={`${APP_BASE}/admin`}
+      onClick={go('/admin')}
+      className="flex items-center gap-2 no-underline"
+    >
       <img src="/img/logo-sm.jpg" alt="" className="h-7 w-7 rounded-sm" />
       <span className="text-md font-bold text-primary">Marutham</span>
     </a>
@@ -75,8 +85,14 @@ export function AdminPage() {
       currentPath={currentPath}
       brand={<div className="px-1">{brand}</div>}
       footer={
-        <a href={`${APP_BASE}/admin/profile`} onClick={go('/admin/profile')} className="block min-w-0 no-underline">
-          <div className="truncate text-sm font-semibold text-fg">{user.fname || user.login_id}</div>
+        <a
+          href={`${APP_BASE}/admin/profile`}
+          onClick={go('/admin/profile')}
+          className="block min-w-0 no-underline"
+        >
+          <div className="truncate text-sm font-semibold text-fg">
+            {user.fname || user.login_id}
+          </div>
           <div className="truncate text-2xs text-fg-muted">{user.admin_role || 'Admin'}</div>
         </a>
       }
@@ -93,39 +109,43 @@ export function AdminPage() {
           { value: 'ta', label: 'த', className: 'tamil' },
         ]}
       />
-      <IconButton onClick={() => navigate('/admin/profile')} aria-label={t('admin.profile.title')}>👤</IconButton>
-      <IconButton onClick={logout} aria-label={t('nav.logout')}>⎋</IconButton>
+      <IconButton onClick={() => navigate('/admin/profile')} aria-label={t('admin.profile.title')}>
+        👤
+      </IconButton>
+      <IconButton onClick={logout} aria-label={t('nav.logout')}>
+        ⎋
+      </IconButton>
     </>
   );
 
   return (
     <ToastProvider>
-    <AppShell
-      currentPath={currentPath}
-      sidebar={sidebar}
-      header={({ openNav }) => <Header onMenuClick={openNav} brand={brand} actions={actions} />}
-    >
-      <div className="mx-auto w-full max-w-[1100px] p-4 sm:p-6">
-        <Routes>
-          <Route index element={<OverviewPage />} />
-          <Route path="executive" element={<ExecutivePage />} />
-          <Route path="operations" element={<OperationsPage />} />
-          <Route path="adminhead" element={<AdminHeadPage />} />
-          <Route path="orders" element={<OrdersPage />} />
-          <Route path="returns" element={<ReturnsPage />} />
-          <Route path="payouts" element={<PayoutsPage />} />
-          <Route path="users" element={<UsersPage />} />
-          <Route path="registrations" element={<RegistrationsPage />} />
-          <Route path="listings" element={<ListingsPage />} />
-          <Route path="change-requests" element={<ChangeRequestsPage />} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="employees" element={<EmployeesPage />} />
-          <Route path="hub" element={<HubQueuePage />} />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="*" element={<Placeholder titleKey="admin.nav.overview" />} />
-        </Routes>
-      </div>
-    </AppShell>
+      <AppShell
+        currentPath={currentPath}
+        sidebar={sidebar}
+        header={({ openNav }) => <Header onMenuClick={openNav} brand={brand} actions={actions} />}
+      >
+        <div className="mx-auto w-full max-w-[1100px] p-4 sm:p-6">
+          <Routes>
+            <Route index element={<OverviewPage />} />
+            <Route path="executive" element={<ExecutivePage />} />
+            <Route path="operations" element={<OperationsPage />} />
+            <Route path="adminhead" element={<AdminHeadPage />} />
+            <Route path="orders" element={<OrdersPage />} />
+            <Route path="returns" element={<ReturnsPage />} />
+            <Route path="payouts" element={<PayoutsPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="registrations" element={<RegistrationsPage />} />
+            <Route path="listings" element={<ListingsPage />} />
+            <Route path="change-requests" element={<ChangeRequestsPage />} />
+            <Route path="products" element={<ProductsPage />} />
+            <Route path="employees" element={<EmployeesPage />} />
+            <Route path="hub" element={<HubQueuePage />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="*" element={<Placeholder titleKey="admin.nav.overview" />} />
+          </Routes>
+        </div>
+      </AppShell>
     </ToastProvider>
   );
 }

@@ -63,57 +63,114 @@ export function VerifySheet({
   return (
     <Sheet open={open} title={order?.code || 'Verify Order'} onClose={onClose}>
       {error ? (
-        <div style={{ textAlign: 'center', padding: 24, color: 'var(--red)', fontSize: 13 }}>{error}</div>
+        <div style={{ textAlign: 'center', padding: 24, color: 'var(--red)', fontSize: 13 }}>
+          {error}
+        </div>
       ) : !order ? (
         <Spinner />
       ) : (
         <>
           <div className="a-card">
-            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--forest)' }}>{order.consumer_name || 'Consumer'}</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--forest)' }}>
+              {order.consumer_name || 'Consumer'}
+            </div>
             <div style={{ fontSize: 12, color: 'var(--gray)', marginTop: 2 }}>
               Fulfilment village: <b>{order.village || '—'}</b>
             </div>
           </div>
 
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--forest)', marginBottom: 8 }}>Delivery route</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--forest)', marginBottom: 8 }}>
+            Delivery route
+          </div>
           <div className="route-toggle" style={{ marginBottom: 14 }}>
-            <button className={`route-btn ${route === 'direct' ? 'on' : ''}`} onClick={() => setRoute('direct')}>
-              🛵 Direct Delivery<br /><span style={{ fontSize: 9, fontWeight: 400 }}>to consumer</span>
+            <button
+              className={`route-btn ${route === 'direct' ? 'on' : ''}`}
+              onClick={() => setRoute('direct')}
+            >
+              🛵 Direct Delivery
+              <br />
+              <span style={{ fontSize: 9, fontWeight: 400 }}>to consumer</span>
             </button>
-            <button className={`route-btn ${route === 'hub' ? 'on' : ''}`} onClick={() => setRoute('hub')}>
-              🏭 Transit to Hub<br /><span style={{ fontSize: 9, fontWeight: 400 }}>via hub</span>
+            <button
+              className={`route-btn ${route === 'hub' ? 'on' : ''}`}
+              onClick={() => setRoute('hub')}
+            >
+              🏭 Transit to Hub
+              <br />
+              <span style={{ fontSize: 9, fontWeight: 400 }}>via hub</span>
             </button>
           </div>
 
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--forest)', margin: '6px 0 8px' }}>Collection agent</div>
+          <div
+            style={{ fontSize: 12, fontWeight: 700, color: 'var(--forest)', margin: '6px 0 8px' }}
+          >
+            Collection agent
+          </div>
           {matched.length ? (
-            <div style={{ fontSize: 11, color: 'var(--success-fg)', background: 'var(--success-bg)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }}>
-              ✓ {matched.length} agent{matched.length > 1 ? 's' : ''} cover this village — auto-selected.
+            <div
+              style={{
+                fontSize: 11,
+                color: 'var(--success-fg)',
+                background: 'var(--success-bg)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 8,
+                padding: '8px 10px',
+                marginBottom: 8,
+              }}
+            >
+              ✓ {matched.length} agent{matched.length > 1 ? 's' : ''} cover this village —
+              auto-selected.
             </div>
           ) : (
-            <div style={{ fontSize: 11, color: 'var(--warning-fg)', background: 'var(--warning-bg)', border: '1px solid var(--gold2)', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }}>
+            <div
+              style={{
+                fontSize: 11,
+                color: 'var(--warning-fg)',
+                background: 'var(--warning-bg)',
+                border: '1px solid var(--gold2)',
+                borderRadius: 8,
+                padding: '8px 10px',
+                marginBottom: 8,
+              }}
+            >
               No agent is tagged to this village. Pick one manually.
             </div>
           )}
-          <select className="a-select" value={agentId} onChange={(e) => setAgentId(e.target.value)} aria-label="Collection agent">
+          <select
+            className="a-select"
+            value={agentId}
+            onChange={(e) => setAgentId(e.target.value)}
+            aria-label="Collection agent"
+          >
             <option value="">— Assign later —</option>
             {matched.length ? (
               <optgroup label="Covers this village">
                 {matched.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}{a.vehicle ? ` · ${a.vehicle}` : ''}</option>
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                    {a.vehicle ? ` · ${a.vehicle}` : ''}
+                  </option>
                 ))}
               </optgroup>
             ) : null}
             {others.length ? (
               <optgroup label="Other agents in district">
                 {others.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}{a.vehicle ? ` · ${a.vehicle}` : ''}</option>
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                    {a.vehicle ? ` · ${a.vehicle}` : ''}
+                  </option>
                 ))}
               </optgroup>
             ) : null}
           </select>
 
-          <button className="confirm-btn" style={{ borderRadius: 12, padding: 14, fontSize: 14 }} onClick={confirm} disabled={busy}>
+          <button
+            className="confirm-btn"
+            style={{ borderRadius: 12, padding: 14, fontSize: 14 }}
+            onClick={confirm}
+            disabled={busy}
+          >
             {busy ? '⏳ Verifying…' : '✓ Verify & Assign'}
           </button>
         </>

@@ -20,12 +20,27 @@ export interface Dict {
   htmlLang: string;
   nav: { shop: string; about: string; stories: string; login: string; register: string };
   hero: { titleA: string; titleB: string; sub: string; ctaShop: string; ctaSell: string };
-  fresh: { title: string; sub: string; empty: string; badge: string; order: string; viewAll: string; unavailable: string };
+  fresh: {
+    title: string;
+    sub: string;
+    empty: string;
+    badge: string;
+    order: string;
+    viewAll: string;
+    unavailable: string;
+  };
   stats: { sellers: string; customers: string; districts: string; states: string };
   founder: { title: string; heading: string; body: string; role: string };
   stories: { title: string; sub: string };
   footer: { tagline: string; rights: string };
-  catalogue: { title: string; sub: string; metaTitle: string; metaDesc: string; count: string; empty: string };
+  catalogue: {
+    title: string;
+    sub: string;
+    metaTitle: string;
+    metaDesc: string;
+    count: string;
+    empty: string;
+  };
   product: {
     home: string;
     all: string;
@@ -54,7 +69,13 @@ export interface Dict {
 
 const en: Dict = {
   htmlLang: 'en',
-  nav: { shop: 'Shop', about: 'About', stories: 'Farmer Stories', login: 'Login', register: 'Register' },
+  nav: {
+    shop: 'Shop',
+    about: 'About',
+    stories: 'Farmer Stories',
+    login: 'Login',
+    register: 'Register',
+  },
   hero: {
     titleA: 'Fresh from our farms,',
     titleB: 'straight to your home',
@@ -113,7 +134,8 @@ const en: Dict = {
     available: 'available',
     window: 'Ready',
     noOffers: 'No grower is selling this today.',
-    noOffersSub: 'Listings open each morning and close at the daily cutoff. Check back tomorrow. 🌱',
+    noOffersSub:
+      'Listings open each morning and close at the daily cutoff. Check back tomorrow. 🌱',
     prices: 'Market Price by District',
     pricesSub: "Today's reference price where we operate.",
     district: 'District',
@@ -129,7 +151,13 @@ const en: Dict = {
 
 const ta: Dict = {
   htmlLang: 'ta',
-  nav: { shop: 'கடை', about: 'எங்களை பற்றி', stories: 'விவசாயி கதைகள்', login: 'உள்நுழைய', register: 'பதிவு' },
+  nav: {
+    shop: 'கடை',
+    about: 'எங்களை பற்றி',
+    stories: 'விவசாயி கதைகள்',
+    login: 'உள்நுழைய',
+    register: 'பதிவு',
+  },
   hero: {
     titleA: 'எங்கள் வயல்களில் இருந்து,',
     titleB: 'நேரடியாக உங்கள் வீட்டிற்கு',
@@ -188,7 +216,8 @@ const ta: Dict = {
     available: 'கிடைக்கிறது',
     window: 'தயார்',
     noOffers: 'இன்று இதை யாரும் விற்கவில்லை.',
-    noOffersSub: 'ஒவ்வொரு காலையிலும் பட்டியல் திறக்கப்பட்டு, தினசரி நேரத்தில் மூடப்படும். நாளை மீண்டும் பாருங்கள். 🌱',
+    noOffersSub:
+      'ஒவ்வொரு காலையிலும் பட்டியல் திறக்கப்பட்டு, தினசரி நேரத்தில் மூடப்படும். நாளை மீண்டும் பாருங்கள். 🌱',
     prices: 'மாவட்ட வாரியான சந்தை விலை',
     pricesSub: 'நாங்கள் செயல்படும் இடங்களில் இன்றைய குறிப்பு விலை.',
     district: 'மாவட்டம்',

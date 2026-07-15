@@ -32,7 +32,10 @@ const TAB_CLASS =
 export function TabBar({ items, active, onSelect, className, ...rest }: TabBarProps) {
   return (
     <nav
-      className={cn('flex gap-1 overflow-x-auto border-b border-surface-muted bg-surface px-2.5 py-2', className)}
+      className={cn(
+        'flex gap-1 overflow-x-auto border-b border-surface-muted bg-surface px-2.5 py-2',
+        className,
+      )}
       aria-label={rest['aria-label']}
     >
       {items.map((tb) => {

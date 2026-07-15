@@ -14,30 +14,30 @@ greenfield decision.
 
 **What exists**
 
-| Area | State |
-|---|---|
-| Monorepo | pnpm workspaces — `apps/web` + 5 packages (`ui`, `lib`, `tokens`, `api-client`, `i18n`) |
-| Frontend (new) | React 18, TypeScript strict, Vite 5, react-router 6, served at `/app` |
-| Frontend (legacy) | ~13,100 lines of HTML/JS/CSS still live at `/` |
-| Backend | Express 4, 17 route modules, 11 util modules, RBAC in `backend/middleware/auth.js` |
-| Database | Supabase Postgres, 24 ordered migrations, `schema.json` snapshot + `db:check` verifier |
-| Auth | Express-issued JWT, bcrypt, session in `localStorage` |
-| Charts | ECharts via `apps/web/src/components/EChart.tsx` |
-| Maps | ECharts + GeoJSON, bundled by `apps/web` (`src/assets/tn-districts.geo.json`) |
-| Tests | Vitest (`packages/lib`), `node:test` (backend), CI on push + PR |
+| Area              | State                                                                                   |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| Monorepo          | pnpm workspaces — `apps/web` + 5 packages (`ui`, `lib`, `tokens`, `api-client`, `i18n`) |
+| Frontend (new)    | React 18, TypeScript strict, Vite 5, react-router 6, served at `/app`                   |
+| Frontend (legacy) | ~13,100 lines of HTML/JS/CSS still live at `/`                                          |
+| Backend           | Express 4, 17 route modules, 11 util modules, RBAC in `backend/middleware/auth.js`      |
+| Database          | Supabase Postgres, 24 ordered migrations, `schema.json` snapshot + `db:check` verifier  |
+| Auth              | Express-issued JWT, bcrypt, session in `localStorage`                                   |
+| Charts            | ECharts via `apps/web/src/components/EChart.tsx`                                        |
+| Maps              | ECharts + GeoJSON, bundled by `apps/web` (`src/assets/tn-districts.geo.json`)           |
+| Tests             | Vitest (`packages/lib`), `node:test` (backend), CI on push + PR                         |
 
 **Migration progress by role — COMPLETE.**
 
 The strangler-fig finished: every signed-in screen is React, under `/app`. The
 legacy pages below were deleted (~12.6k lines) once the last dashboard was ported.
 
-| Role | Was | Now |
-|---|---|---|
-| Agent | `agent.html` (896 ln) | `/app/agent` — incl. the field dashboard |
-| Consumer | `consumer.html` (2,047 ln) | `/app/consumer` |
-| Farmer | `farmer.html` (1,593 ln) | `/app/farmer` |
-| Admin | `admin.html` (4,855 ln) | `/app/admin` — incl. executive / operations / adminhead |
-| Login + sign-up | `index.html` (1,043 ln) | `/app/login`, `/app/register` |
+| Role            | Was                        | Now                                                     |
+| --------------- | -------------------------- | ------------------------------------------------------- |
+| Agent           | `agent.html` (896 ln)      | `/app/agent` — incl. the field dashboard                |
+| Consumer        | `consumer.html` (2,047 ln) | `/app/consumer`                                         |
+| Farmer          | `farmer.html` (1,593 ln)   | `/app/farmer`                                           |
+| Admin           | `admin.html` (4,855 ln)    | `/app/admin` — incl. executive / operations / adminhead |
+| Login + sign-up | `index.html` (1,043 ln)    | `/app/login`, `/app/register`                           |
 
 What survives under `frontend/` is NOT legacy debt — each file is load-bearing:
 `home.html` (public landing page and the shop's outage fallback), `img/` (the React
@@ -53,22 +53,22 @@ and the component layer, covered next.
 
 ## 2. Technology Gap Analysis
 
-| Target requirement | Today | Gap | Is it "configuration"? |
-|---|---|---|---|
-| React + TypeScript | ✅ React 18, TS strict | none | — |
-| Monorepo, packages | ✅ pnpm workspaces | none | — |
-| Next.js / App Router / RSC | Vite + react-router | **framework swap** | ❌ rewrite |
-| Tailwind CSS | 513 lines hand CSS | not installed | ❌ restyle |
-| shadcn/ui | 17 hand-built components | not installed | ❌ rebuild |
-| Lucide Icons | **no icon library at all** | not installed | ✅ mostly config |
-| Design tokens | 20 colours, 2 radii, 2 shadows | **358 hex literals vs 16 `var(--)` uses** | ❌ tokenize |
-| Dark theme | none | no `prefers-color-scheme`, no `data-theme` | ❌ build |
-| Supabase Auth | Express JWT + bcrypt | **identity model mismatch — see §11** | ❌ data migration |
-| RBAC in Express | ✅ `requireAuth` / `requireRole` | none | — |
-| Chart wrapper package | one component in `apps/web` | extract to `packages/charts` | ✅ move |
-| Maps package | GeoJSON in legacy JS only | build `packages/maps` | ❌ build |
-| Feature-first folders | role-first `pages/{agent,consumer,farmer}` | partial | ✅ move |
-| Mobile-ready packages | `lib`/`api-client`/`tokens`/`i18n` are DOM-free | `ui` is web-only | partial |
+| Target requirement         | Today                                           | Gap                                        | Is it "configuration"? |
+| -------------------------- | ----------------------------------------------- | ------------------------------------------ | ---------------------- |
+| React + TypeScript         | ✅ React 18, TS strict                          | none                                       | —                      |
+| Monorepo, packages         | ✅ pnpm workspaces                              | none                                       | —                      |
+| Next.js / App Router / RSC | Vite + react-router                             | **framework swap**                         | ❌ rewrite             |
+| Tailwind CSS               | 513 lines hand CSS                              | not installed                              | ❌ restyle             |
+| shadcn/ui                  | 17 hand-built components                        | not installed                              | ❌ rebuild             |
+| Lucide Icons               | **no icon library at all**                      | not installed                              | ✅ mostly config       |
+| Design tokens              | 20 colours, 2 radii, 2 shadows                  | **358 hex literals vs 16 `var(--)` uses**  | ❌ tokenize            |
+| Dark theme                 | none                                            | no `prefers-color-scheme`, no `data-theme` | ❌ build               |
+| Supabase Auth              | Express JWT + bcrypt                            | **identity model mismatch — see §11**      | ❌ data migration      |
+| RBAC in Express            | ✅ `requireAuth` / `requireRole`                | none                                       | —                      |
+| Chart wrapper package      | one component in `apps/web`                     | extract to `packages/charts`               | ✅ move                |
+| Maps package               | GeoJSON in legacy JS only                       | build `packages/maps`                      | ❌ build               |
+| Feature-first folders      | role-first `pages/{agent,consumer,farmer}`      | partial                                    | ✅ move                |
+| Mobile-ready packages      | `lib`/`api-client`/`tokens`/`i18n` are DOM-free | `ui` is web-only                           | partial                |
 
 **The headline correction to the brief.** Of the twelve gaps, three are genuinely
 configuration (Lucide, chart extraction, folder moves). The rest are engineering
@@ -87,20 +87,20 @@ first, or the theming is cosmetic.
 
 ## 3. Current vs Target Stack
 
-| Layer | Current | Target (brief) | Recommended | Why |
-|---|---|---|---|---|
-| Framework | React + Vite | Next.js App Router | **React + Vite** | §13 |
-| Language | TypeScript | TypeScript | TypeScript | — |
-| Routing | react-router 6 | App Router | react-router 6 | authed SPA, no SEO surface |
-| Styling | hand CSS | Tailwind | **Tailwind v4** | CSS-first `@theme` matches existing token file |
-| Components | 17 hand-built | shadcn/ui | shadcn/ui in `packages/ui` | single source, as briefed |
-| Icons | none | Lucide | Lucide | — |
-| Backend | Express 4 | Express 4 | Express 4 | — |
-| AuthN | Express JWT + bcrypt | Supabase Auth | **decision required** | §11 |
-| AuthZ | Express RBAC | Express RBAC | Express RBAC | — |
-| DB / Storage | Supabase | Supabase | Supabase | — |
-| Charts | ECharts | ECharts | `packages/charts` | — |
-| Maps | ECharts + GeoJSON | ECharts + GeoJSON | `packages/maps`, config-driven | — |
+| Layer        | Current              | Target (brief)     | Recommended                    | Why                                            |
+| ------------ | -------------------- | ------------------ | ------------------------------ | ---------------------------------------------- |
+| Framework    | React + Vite         | Next.js App Router | **React + Vite**               | §13                                            |
+| Language     | TypeScript           | TypeScript         | TypeScript                     | —                                              |
+| Routing      | react-router 6       | App Router         | react-router 6                 | authed SPA, no SEO surface                     |
+| Styling      | hand CSS             | Tailwind           | **Tailwind v4**                | CSS-first `@theme` matches existing token file |
+| Components   | 17 hand-built        | shadcn/ui          | shadcn/ui in `packages/ui`     | single source, as briefed                      |
+| Icons        | none                 | Lucide             | Lucide                         | —                                              |
+| Backend      | Express 4            | Express 4          | Express 4                      | —                                              |
+| AuthN        | Express JWT + bcrypt | Supabase Auth      | **decision required**          | §11                                            |
+| AuthZ        | Express RBAC         | Express RBAC       | Express RBAC                   | —                                              |
+| DB / Storage | Supabase             | Supabase           | Supabase                       | —                                              |
+| Charts       | ECharts              | ECharts            | `packages/charts`              | —                                              |
+| Maps         | ECharts + GeoJSON    | ECharts + GeoJSON  | `packages/maps`, config-driven | —                                              |
 
 ---
 
@@ -121,7 +121,7 @@ resolve to the same values the CSS variables already carry. Both systems coexist
 `ui.css` is migrated last.
 
 **Phase 2C — shadcn/ui into `packages/ui`**
-Rebuild the 17 components behind their *existing exported API* so `apps/web` does not
+Rebuild the 17 components behind their _existing exported API_ so `apps/web` does not
 change. Add Lucide. shadcn's default look is deliberately generic — the brief rejects
 generic — so the Marutham theme is applied through tokens at this step, not later.
 
@@ -136,7 +136,7 @@ component library.
 Consumer 2C → Farmer 3C → **Admin** (the 4,852-line page) → folder restructure to
 feature-first.
 
-Folders move *last*, once nothing else is in flight. Restructuring while three
+Folders move _last_, once nothing else is in flight. Restructuring while three
 modules are half-migrated maximizes conflict for zero user-visible gain.
 
 **Freeze rule.** Phases 2A–2C touch every component in the app. Feature work should
@@ -149,22 +149,22 @@ runs typecheck + test + build on every push; that is the regression net.
 
 One engineer, working days. Ranges are ±40% — treat as sizing, not commitment.
 
-| Phase | Work | Days |
-|---|---|---|
-| 2A | Tokenize; generate `tokens.css` from `tokens.ts`; retire 358 literals | 3–5 |
-| 2B | Tailwind v4 + `@theme` projection | 2–3 |
-| 2C | shadcn/ui rebuild of 17 components + Lucide | 8–12 |
-| 2D | `packages/charts`, `packages/maps` | 3–4 |
-| — | Dark theme + accessibility pass | 3–5 |
-| 3 | Shared shell (header/sidebar/nav/login/dashboard) | 5–8 |
-| 4 | Consumer 2C | 3–5 |
-| 4 | Farmer 3C | 3–5 |
-| 4 | **Admin module** | 20–30 |
-| 4 | Feature-first restructure | 3–5 |
-| | **Subtotal** | **53–82** |
-| opt | Auth capabilities on Express (reset, verify, MFA) | 6–10 |
-| opt | Supabase Auth migration, *if approved* | +10–15 |
-| opt | Next.js migration, *if approved* | +15–25 |
+| Phase | Work                                                                  | Days      |
+| ----- | --------------------------------------------------------------------- | --------- |
+| 2A    | Tokenize; generate `tokens.css` from `tokens.ts`; retire 358 literals | 3–5       |
+| 2B    | Tailwind v4 + `@theme` projection                                     | 2–3       |
+| 2C    | shadcn/ui rebuild of 17 components + Lucide                           | 8–12      |
+| 2D    | `packages/charts`, `packages/maps`                                    | 3–4       |
+| —     | Dark theme + accessibility pass                                       | 3–5       |
+| 3     | Shared shell (header/sidebar/nav/login/dashboard)                     | 5–8       |
+| 4     | Consumer 2C                                                           | 3–5       |
+| 4     | Farmer 3C                                                             | 3–5       |
+| 4     | **Admin module**                                                      | 20–30     |
+| 4     | Feature-first restructure                                             | 3–5       |
+|       | **Subtotal**                                                          | **53–82** |
+| opt   | Auth capabilities on Express (reset, verify, MFA)                     | 6–10      |
+| opt   | Supabase Auth migration, _if approved_                                | +10–15    |
+| opt   | Next.js migration, _if approved_                                      | +15–25    |
 
 Admin alone is a third of the total. It is the schedule.
 
@@ -172,16 +172,16 @@ Admin alone is a third of the total. It is the schedule.
 
 ## 6. Risk Assessment
 
-| # | Risk | Severity | Mitigation |
-|---|---|---|---|
-| 1 | shadcn rebuild regresses working Agent/Consumer/Farmer flows | **High** | Swap components behind unchanged `packages/ui` exports; feature freeze; CI typecheck+test+build; manual pass per role |
-| 2 | Three styling systems coexist mid-migration (`app.css`, `ui.css`, Tailwind) → specificity fights | High | Tokenize first; migrate `ui.css` last; scope Tailwind preflight |
-| 3 | Legacy `frontend/css/app.css` duplicates the palette and will drift | Medium | Generate it from `tokens.ts`, or freeze legacy styling entirely |
-| 4 | Single Supabase project, no production, **no rebuild path from repo** | **High** | Verify migrations 001–024 actually reproduce the schema (`db:check`) *before* any auth work; snapshot first |
-| 5 | Supabase Auth cannot represent `login_id` identities (§11) | **High** | Decision gate before any code |
-| 6 | Next.js migration forks routing *and* the auth model for no user-visible gain | Medium | Recommend declining; see §13 |
-| 7 | Admin is 4,852 lines of untyped HTML/JS with no tests | High | Migrate after the component library is stable; port role dashboards first (they already have JS modules) |
-| 8 | `tokens.ts` / `tokens.css` sync is manual and already documented as a hazard | Medium | Phase 2A generates one from the other |
+| #   | Risk                                                                                             | Severity | Mitigation                                                                                                            |
+| --- | ------------------------------------------------------------------------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| 1   | shadcn rebuild regresses working Agent/Consumer/Farmer flows                                     | **High** | Swap components behind unchanged `packages/ui` exports; feature freeze; CI typecheck+test+build; manual pass per role |
+| 2   | Three styling systems coexist mid-migration (`app.css`, `ui.css`, Tailwind) → specificity fights | High     | Tokenize first; migrate `ui.css` last; scope Tailwind preflight                                                       |
+| 3   | Legacy `frontend/css/app.css` duplicates the palette and will drift                              | Medium   | Generate it from `tokens.ts`, or freeze legacy styling entirely                                                       |
+| 4   | Single Supabase project, no production, **no rebuild path from repo**                            | **High** | Verify migrations 001–024 actually reproduce the schema (`db:check`) _before_ any auth work; snapshot first           |
+| 5   | Supabase Auth cannot represent `login_id` identities (§11)                                       | **High** | Decision gate before any code                                                                                         |
+| 6   | Next.js migration forks routing _and_ the auth model for no user-visible gain                    | Medium   | Recommend declining; see §13                                                                                          |
+| 7   | Admin is 4,852 lines of untyped HTML/JS with no tests                                            | High     | Migrate after the component library is stable; port role dashboards first (they already have JS modules)              |
+| 8   | `tokens.ts` / `tokens.css` sync is manual and already documented as a hazard                     | Medium   | Phase 2A generates one from the other                                                                                 |
 
 ---
 
@@ -248,16 +248,16 @@ generated from it. Scales to add: typography, spacing, elevation, motion, dark p
 The brief's palette maps cleanly onto what already exists — this is a renaming and an
 extension, not a rebrand:
 
-| Brief | Existing token | Value |
-|---|---|---|
-| Marutham Blossom Pink | `--bloom` | `#CB4E86` |
-| Fresh Leaf Green | `--leaf` | `#4E9F3D` |
-| Harvest Gold | `--gold` | `#d4a843` |
-| Warm White | `--cream` | `#f7f3ee` |
-| Soft Grey | `--gray` | `#5a6472` |
-| Charcoal | `--text` | `#1c2820` |
+| Brief                 | Existing token | Value     |
+| --------------------- | -------------- | --------- |
+| Marutham Blossom Pink | `--bloom`      | `#CB4E86` |
+| Fresh Leaf Green      | `--leaf`       | `#4E9F3D` |
+| Harvest Gold          | `--gold`       | `#d4a843` |
+| Warm White            | `--cream`      | `#f7f3ee` |
+| Soft Grey             | `--gray`       | `#5a6472` |
+| Charcoal              | `--text`       | `#1c2820` |
 
-Two things the brief leaves implicit and should not: pink is currently used *sparingly*
+Two things the brief leaves implicit and should not: pink is currently used _sparingly_
 as an accent (offers, farmer's choice) and the comment in `tokens.css` says so. Promoting
 it to "signature accent" is a real visual change to shipped screens — worth confirming.
 And there is no dark palette at all today; it must be authored, not derived, if contrast
@@ -346,18 +346,18 @@ tested migration with a rollback path, not as part of a frontend restyle.
 Better than the brief assumes. Four of five packages are already DOM-free and would port
 to React Native today:
 
-| Package | RN-portable | Note |
-|---|---|---|
-| `lib` | ✅ | pure TS, tested |
-| `api-client` | ⚠️ | pure except `localStorage` in `session.ts` — inject storage |
-| `tokens` | ✅ | `tokens.ts` is plain objects |
-| `i18n` | ✅ | i18next runs on RN |
-| `ui` | ❌ | DOM + CSS; shadcn/ui is Radix, web-only |
+| Package      | RN-portable | Note                                                        |
+| ------------ | ----------- | ----------------------------------------------------------- |
+| `lib`        | ✅          | pure TS, tested                                             |
+| `api-client` | ⚠️          | pure except `localStorage` in `session.ts` — inject storage |
+| `tokens`     | ✅          | `tokens.ts` is plain objects                                |
+| `i18n`       | ✅          | i18next runs on RN                                          |
+| `ui`         | ❌          | DOM + CSS; shadcn/ui is Radix, web-only                     |
 
 Three consequences worth stating plainly. `session.ts` hard-codes `localStorage` — swap it
 for an injected storage adapter and `api-client` becomes portable for the cost of an hour.
 shadcn/ui will **not** run on React Native, so what mobile shares is design tokens, the API
-layer, business logic, and component *patterns* — never component code. That is what the
+layer, business logic, and component _patterns_ — never component code. That is what the
 brief asks for, so this is fine, but it should be said out loud rather than discovered.
 And ECharts is web-only; `packages/charts` should therefore keep its prop contract in a
 separate types module so an RN chart library can implement the same interface.
@@ -386,7 +386,7 @@ here it is:
   packages honest.
 
 If the public marketing site (`home.html`, `marutham_homepage_sample.html`) ever needs SEO,
-put *that* on Next.js as a separate app. It has no authentication and no shared state — the
+put _that_ on Next.js as a separate app. It has no authentication and no shared state — the
 one place where the framework earns its cost.
 
 **Accept from the brief, in order:** Tailwind v4, shadcn/ui in `packages/ui`, Lucide, the

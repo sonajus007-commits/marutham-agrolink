@@ -26,12 +26,20 @@ export function Login() {
 
   function switchMode(next: Mode) {
     setMode(next);
-    setError(''); setOk(''); setSent(false); setDevOtp(null);
-    setOtp(''); setPassword(''); setNewPassword(''); setConfirm('');
+    setError('');
+    setOk('');
+    setSent(false);
+    setDevOtp(null);
+    setOtp('');
+    setPassword('');
+    setNewPassword('');
+    setConfirm('');
   }
 
   async function guard(fn: () => Promise<void>) {
-    setError(''); setOk(''); setBusy(true);
+    setError('');
+    setOk('');
+    setBusy(true);
     try {
       await fn();
     } catch (err) {
@@ -41,32 +49,58 @@ export function Login() {
     }
   }
 
-  const onPasswordLogin = (e: FormEvent) => { e.preventDefault(); void guard(async () => {
-    await login(phone.trim(), password);
-    navigate('/', { replace: true });
-  }); };
+  const onPasswordLogin = (e: FormEvent) => {
+    e.preventDefault();
+    void guard(async () => {
+      await login(phone.trim(), password);
+      navigate('/', { replace: true });
+    });
+  };
 
-  const onSendOtp = (e: FormEvent) => { e.preventDefault(); void guard(async () => {
-    if (!phone.trim()) { setError(t('login.needPhone')); return; }
-    const res = await api.sendOtp(phone.trim());
-    setSent(true);
-    setDevOtp(res.otp || null);
-  }); };
+  const onSendOtp = (e: FormEvent) => {
+    e.preventDefault();
+    void guard(async () => {
+      if (!phone.trim()) {
+        setError(t('login.needPhone'));
+        return;
+      }
+      const res = await api.sendOtp(phone.trim());
+      setSent(true);
+      setDevOtp(res.otp || null);
+    });
+  };
 
-  const onVerifyOtp = (e: FormEvent) => { e.preventDefault(); void guard(async () => {
-    await loginWithOtp(phone.trim(), otp.trim());
-    navigate('/', { replace: true });
-  }); };
+  const onVerifyOtp = (e: FormEvent) => {
+    e.preventDefault();
+    void guard(async () => {
+      await loginWithOtp(phone.trim(), otp.trim());
+      navigate('/', { replace: true });
+    });
+  };
 
-  const onReset = (e: FormEvent) => { e.preventDefault(); void guard(async () => {
-    if (newPassword.length < 6) { setError(t('login.pwShort')); return; }
-    if (newPassword !== confirm) { setError(t('login.pwMismatch')); return; }
-    await api.resetPassword(phone.trim(), otp.trim(), newPassword);
-    switchMode('password');
-    setOk(t('login.resetOk'));
-  }); };
+  const onReset = (e: FormEvent) => {
+    e.preventDefault();
+    void guard(async () => {
+      if (newPassword.length < 6) {
+        setError(t('login.pwShort'));
+        return;
+      }
+      if (newPassword !== confirm) {
+        setError(t('login.pwMismatch'));
+        return;
+      }
+      await api.resetPassword(phone.trim(), otp.trim(), newPassword);
+      switchMode('password');
+      setOk(t('login.resetOk'));
+    });
+  };
 
-  const title = mode === 'forgot' ? t('login.forgotTitle') : mode === 'otp' ? t('login.otpTitle') : t('login.title');
+  const title =
+    mode === 'forgot'
+      ? t('login.forgotTitle')
+      : mode === 'otp'
+        ? t('login.otpTitle')
+        : t('login.title');
 
   /* The tab strip is a real ARIA tablist, so it owes the pattern its keyboard
    * contract: Left/Right (and Home/End) move between tabs. Tab-key focus alone
@@ -97,11 +131,14 @@ export function Login() {
     className: `auth-tab ${mode === m ? 'active' : ''}`,
     onClick: () => switchMode(m),
   });
-  const panelProps = mode === 'forgot' ? {} : {
-    id: panelId,
-    role: 'tabpanel',
-    'aria-labelledby': `auth-tab-${mode}`,
-  };
+  const panelProps =
+    mode === 'forgot'
+      ? {}
+      : {
+          id: panelId,
+          role: 'tabpanel',
+          'aria-labelledby': `auth-tab-${mode}`,
+        };
 
   return (
     <main className="login-wrap">
@@ -110,30 +147,58 @@ export function Login() {
         <p className="sub">{t('brand')}</p>
 
         {mode !== 'forgot' ? (
-          <div className="auth-tabs" role="tablist" aria-label={t('login.title')} onKeyDown={onTabKey}>
+          <div
+            className="auth-tabs"
+            role="tablist"
+            aria-label={t('login.title')}
+            onKeyDown={onTabKey}
+          >
             <button {...tabProps('password')}>{t('login.passwordTab')}</button>
             <button {...tabProps('otp')}>{t('login.otpTab')}</button>
           </div>
         ) : null}
 
-        {error ? <div className="form-error" role="alert">{error}</div> : null}
-        {ok ? <div className="auth-ok" role="status">{ok}</div> : null}
-        {sent && devOtp ? <div className="auth-hint">{t('login.sandboxOtp')}: <b>{devOtp}</b></div> : null}
+        {error ? (
+          <div className="form-error" role="alert">
+            {error}
+          </div>
+        ) : null}
+        {ok ? (
+          <div className="auth-ok" role="status">
+            {ok}
+          </div>
+        ) : null}
+        {sent && devOtp ? (
+          <div className="auth-hint">
+            {t('login.sandboxOtp')}: <b>{devOtp}</b>
+          </div>
+        ) : null}
 
         {/* ── Password login ── */}
         {mode === 'password' ? (
           <div {...panelProps}>
-          <form onSubmit={onPasswordLogin}>
-            <Phone value={phone} onChange={setPhone} label={t('login.phone')} />
-            <div className="field">
-              <label htmlFor="password">{t('login.password')}</label>
-              <input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            </div>
-            <Button type="submit" block disabled={busy}>{busy ? t('login.loading') : t('login.submit')}</Button>
-            <div className="auth-links">
-              <button type="button" className="auth-link" onClick={() => switchMode('forgot')}>{t('login.forgot')}</button>
-            </div>
-          </form>
+            <form onSubmit={onPasswordLogin}>
+              <Phone value={phone} onChange={setPhone} label={t('login.phone')} />
+              <div className="field">
+                <label htmlFor="password">{t('login.password')}</label>
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" block disabled={busy}>
+                {busy ? t('login.loading') : t('login.submit')}
+              </Button>
+              <div className="auth-links">
+                <button type="button" className="auth-link" onClick={() => switchMode('forgot')}>
+                  {t('login.forgot')}
+                </button>
+              </div>
+            </form>
           </div>
         ) : null}
 
@@ -141,22 +206,36 @@ export function Login() {
         {mode === 'otp' ? (
           !sent ? (
             <div {...panelProps}>
-            <form onSubmit={onSendOtp}>
-              <p className="auth-sub-step">{t('login.otpIntro')}</p>
-              <Phone value={phone} onChange={setPhone} label={t('login.phone')} />
-              <Button type="submit" block disabled={busy}>{busy ? t('login.sending') : t('login.sendOtp')}</Button>
-            </form>
+              <form onSubmit={onSendOtp}>
+                <p className="auth-sub-step">{t('login.otpIntro')}</p>
+                <Phone value={phone} onChange={setPhone} label={t('login.phone')} />
+                <Button type="submit" block disabled={busy}>
+                  {busy ? t('login.sending') : t('login.sendOtp')}
+                </Button>
+              </form>
             </div>
           ) : (
             <div {...panelProps}>
-            <form onSubmit={onVerifyOtp}>
-              <p className="auth-sub-step">{t('login.otpSent', { phone })}</p>
-              <Code value={otp} onChange={setOtp} label={t('login.otpLabel')} />
-              <Button type="submit" block disabled={busy}>{busy ? t('login.verifying') : t('login.verify')}</Button>
-              <div className="auth-links">
-                <button type="button" className="auth-link muted" onClick={() => { setSent(false); setOtp(''); setDevOtp(null); }}>{t('login.resend')}</button>
-              </div>
-            </form>
+              <form onSubmit={onVerifyOtp}>
+                <p className="auth-sub-step">{t('login.otpSent', { phone })}</p>
+                <Code value={otp} onChange={setOtp} label={t('login.otpLabel')} />
+                <Button type="submit" block disabled={busy}>
+                  {busy ? t('login.verifying') : t('login.verify')}
+                </Button>
+                <div className="auth-links">
+                  <button
+                    type="button"
+                    className="auth-link muted"
+                    onClick={() => {
+                      setSent(false);
+                      setOtp('');
+                      setDevOtp(null);
+                    }}
+                  >
+                    {t('login.resend')}
+                  </button>
+                </div>
+              </form>
             </div>
           )
         ) : null}
@@ -167,9 +246,17 @@ export function Login() {
             <form onSubmit={onSendOtp}>
               <p className="auth-sub-step">{t('login.forgotIntro')}</p>
               <Phone value={phone} onChange={setPhone} label={t('login.phone')} />
-              <Button type="submit" block disabled={busy}>{busy ? t('login.sending') : t('login.sendOtp')}</Button>
+              <Button type="submit" block disabled={busy}>
+                {busy ? t('login.sending') : t('login.sendOtp')}
+              </Button>
               <div className="auth-links">
-                <button type="button" className="auth-link muted" onClick={() => switchMode('password')}>{t('login.backToLogin')}</button>
+                <button
+                  type="button"
+                  className="auth-link muted"
+                  onClick={() => switchMode('password')}
+                >
+                  {t('login.backToLogin')}
+                </button>
               </div>
             </form>
           ) : (
@@ -178,16 +265,48 @@ export function Login() {
               <Code value={otp} onChange={setOtp} label={t('login.otpLabel')} />
               <div className="field">
                 <label htmlFor="np">{t('login.newPassword')}</label>
-                <input id="np" type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+                <input
+                  id="np"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                />
               </div>
               <div className="field">
                 <label htmlFor="cp">{t('login.confirmPassword')}</label>
-                <input id="cp" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+                <input
+                  id="cp"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  required
+                />
               </div>
-              <Button type="submit" block disabled={busy}>{busy ? t('login.resetting') : t('login.reset')}</Button>
+              <Button type="submit" block disabled={busy}>
+                {busy ? t('login.resetting') : t('login.reset')}
+              </Button>
               <div className="auth-links">
-                <button type="button" className="auth-link muted" onClick={() => { setSent(false); setOtp(''); setDevOtp(null); }}>{t('login.resend')}</button>
-                <button type="button" className="auth-link muted" onClick={() => switchMode('password')}>{t('login.backToLogin')}</button>
+                <button
+                  type="button"
+                  className="auth-link muted"
+                  onClick={() => {
+                    setSent(false);
+                    setOtp('');
+                    setDevOtp(null);
+                  }}
+                >
+                  {t('login.resend')}
+                </button>
+                <button
+                  type="button"
+                  className="auth-link muted"
+                  onClick={() => switchMode('password')}
+                >
+                  {t('login.backToLogin')}
+                </button>
               </div>
             </form>
           )
@@ -196,7 +315,10 @@ export function Login() {
         {/* Sign-up — hidden mid-reset, where the only sane next step is back to sign-in. */}
         {mode !== 'forgot' ? (
           <p className="auth-footer">
-            {t('login.noAccount')} <Link className="auth-link" to="/register">{t('login.createAccount')}</Link>
+            {t('login.noAccount')}{' '}
+            <Link className="auth-link" to="/register">
+              {t('login.createAccount')}
+            </Link>
           </p>
         ) : null}
       </div>
@@ -204,22 +326,53 @@ export function Login() {
   );
 }
 
-function Phone({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+function Phone({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+}) {
   return (
     <div className="field">
       <label htmlFor="phone">{label}</label>
-      <input id="phone" type="tel" inputMode="numeric" autoComplete="username" value={value}
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 10))} required />
+      <input
+        id="phone"
+        type="tel"
+        inputMode="numeric"
+        autoComplete="username"
+        value={value}
+        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 10))}
+        required
+      />
     </div>
   );
 }
 
-function Code({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+function Code({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+}) {
   return (
     <div className="field">
       <label htmlFor="otp">{label}</label>
-      <input id="otp" type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={value}
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))} required />
+      <input
+        id="otp"
+        type="text"
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        maxLength={6}
+        value={value}
+        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
+        required
+      />
     </div>
   );
 }

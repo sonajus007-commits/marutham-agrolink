@@ -2,10 +2,19 @@ import { useEffect, useState } from 'react';
 import { Button, Field, Input, Select, Sheet, FIELD_ERR_CLASS } from '@marutham/ui';
 import { api, type ListingPayload } from '@marutham/api-client';
 import {
-  CUTOFF_OPTIONS, DEFAULT_CUTOFF, cutoffTimestamp, cutoffLabel,
-  projectBulkPrice, projectConsumerPrice,
-  validateListing, listingPriceRs, fmtMoney,
-  type FarmerListing, type ListingDraft, type Product, type SellerType,
+  CUTOFF_OPTIONS,
+  DEFAULT_CUTOFF,
+  cutoffTimestamp,
+  cutoffLabel,
+  projectBulkPrice,
+  projectConsumerPrice,
+  validateListing,
+  listingPriceRs,
+  fmtMoney,
+  type FarmerListing,
+  type ListingDraft,
+  type Product,
+  type SellerType,
 } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
 import { ImagePicker } from '../../components/ImagePicker';
@@ -63,13 +72,22 @@ export function ListingFormSheet({
     setDraft((d) => ({ ...d, [k]: v }));
 
   const unit = product?.unit || listing.product?.unit || 'unit';
-  const handling = product?.district_price ? parseFloat(String(product.district_price.handling)) || 0 : 0;
+  const handling = product?.district_price
+    ? parseFloat(String(product.district_price.handling)) || 0
+    : 0;
 
   const price = Number(draft.farmer_price);
   const preview = price > 0 ? projectConsumerPrice(price, sellerType, handling) : null;
-  const bulk = price > 0
-    ? projectBulkPrice(price, sellerType, Number(draft.bulk_qty || 0), Number(draft.bulk_disc_pct || 0), handling)
-    : null;
+  const bulk =
+    price > 0
+      ? projectBulkPrice(
+          price,
+          sellerType,
+          Number(draft.bulk_qty || 0),
+          Number(draft.bulk_disc_pct || 0),
+          handling,
+        )
+      : null;
 
   async function save() {
     const problem = validateListing(draft);
@@ -118,8 +136,14 @@ export function ListingFormSheet({
 
       <Field label={`Your selling price (₹ per ${unit})`} required>
         {(p) => (
-          <Input {...p} type="text" inputMode="decimal" placeholder="30"
-            value={draft.farmer_price} onChange={(e) => set('farmer_price', numeric(e.target.value))} />
+          <Input
+            {...p}
+            type="text"
+            inputMode="decimal"
+            placeholder="30"
+            value={draft.farmer_price}
+            onChange={(e) => set('farmer_price', numeric(e.target.value))}
+          />
         )}
       </Field>
 
@@ -132,7 +156,8 @@ export function ListingFormSheet({
           </span>
           {bulk ? (
             <span className="price-preview__bulk">
-              Bulk {bulk.bulkQty}+ {unit}: you get {fmtMoney(bulk.farmerPrice)} → customer pays {fmtMoney(bulk.consumerPrice)}
+              Bulk {bulk.bulkQty}+ {unit}: you get {fmtMoney(bulk.farmerPrice)} → customer pays{' '}
+              {fmtMoney(bulk.consumerPrice)}
             </span>
           ) : null}
         </div>
@@ -140,18 +165,34 @@ export function ListingFormSheet({
 
       <Field label={`Quantity available (${unit})`} required>
         {(p) => (
-          <Input {...p} type="text" inputMode="decimal" placeholder="10"
-            value={draft.qty_available} onChange={(e) => set('qty_available', numeric(e.target.value))} />
+          <Input
+            {...p}
+            type="text"
+            inputMode="decimal"
+            placeholder="10"
+            value={draft.qty_available}
+            onChange={(e) => set('qty_available', numeric(e.target.value))}
+          />
         )}
       </Field>
 
-      <Field label="Stop taking orders at" required hint="Orders close at this time; you re-list the next day.">
+      <Field
+        label="Stop taking orders at"
+        required
+        hint="Orders close at this time; you re-list the next day."
+      >
         {(p) => (
-          <Select {...p} value={draft.time_available} onChange={(e) => set('time_available', e.target.value)}>
+          <Select
+            {...p}
+            value={draft.time_available}
+            onChange={(e) => set('time_available', e.target.value)}
+          >
             {(['Previous Evening', 'Current Day'] as const).map((group) => (
               <optgroup key={group} label={group}>
                 {CUTOFF_OPTIONS.filter((o) => o.group === group).map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
                 ))}
               </optgroup>
             ))}
@@ -165,29 +206,47 @@ export function ListingFormSheet({
       </Field>
 
       <fieldset className="lf-group">
-        <legend>Bulk offer <span className="lf-optional">(optional)</span></legend>
+        <legend>
+          Bulk offer <span className="lf-optional">(optional)</span>
+        </legend>
         <div className="lf-row">
           <Field label={`Buy at least (${unit})`}>
             {(p) => (
-              <Input {...p} type="text" inputMode="decimal"
-                value={draft.bulk_qty} onChange={(e) => set('bulk_qty', numeric(e.target.value))} />
+              <Input
+                {...p}
+                type="text"
+                inputMode="decimal"
+                value={draft.bulk_qty}
+                onChange={(e) => set('bulk_qty', numeric(e.target.value))}
+              />
             )}
           </Field>
           <Field label="Discount (%)">
             {(p) => (
-              <Input {...p} type="text" inputMode="decimal"
-                value={draft.bulk_disc_pct} onChange={(e) => set('bulk_disc_pct', numeric(e.target.value))} />
+              <Input
+                {...p}
+                type="text"
+                inputMode="decimal"
+                value={draft.bulk_disc_pct}
+                onChange={(e) => set('bulk_disc_pct', numeric(e.target.value))}
+              />
             )}
           </Field>
         </div>
       </fieldset>
 
       <fieldset className="lf-group">
-        <legend>Order rule <span className="lf-optional">(optional)</span></legend>
+        <legend>
+          Order rule <span className="lf-optional">(optional)</span>
+        </legend>
         <div className="lf-row">
           <Field label="Type">
             {(p) => (
-              <Select {...p} value={draft.qty_type || ''} onChange={(e) => set('qty_type', e.target.value as 'MOQ' | 'SPQ' | '')}>
+              <Select
+                {...p}
+                value={draft.qty_type || ''}
+                onChange={(e) => set('qty_type', e.target.value as 'MOQ' | 'SPQ' | '')}
+              >
                 <option value="">— None —</option>
                 <option value="MOQ">Minimum order</option>
                 <option value="SPQ">Fixed pack size</option>
@@ -196,8 +255,13 @@ export function ListingFormSheet({
           </Field>
           <Field label={`Amount (${unit})`}>
             {(p) => (
-              <Input {...p} type="text" inputMode="decimal"
-                value={draft.qty_value} onChange={(e) => set('qty_value', numeric(e.target.value))} />
+              <Input
+                {...p}
+                type="text"
+                inputMode="decimal"
+                value={draft.qty_value}
+                onChange={(e) => set('qty_value', numeric(e.target.value))}
+              />
             )}
           </Field>
         </div>
@@ -212,11 +276,19 @@ export function ListingFormSheet({
         {() => <ImagePicker images={images} onChange={setImages} onError={(m) => toast(m, 'er')} />}
       </Field>
 
-      {error ? <div className={FIELD_ERR_CLASS} role="alert" style={{ marginBottom: 8 }}>{error}</div> : null}
+      {error ? (
+        <div className={FIELD_ERR_CLASS} role="alert" style={{ marginBottom: 8 }}>
+          {error}
+        </div>
+      ) : null}
 
       <div className="prof-actions">
-        <Button onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save & list'}</Button>
-        <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
+        <Button onClick={save} disabled={busy}>
+          {busy ? 'Saving…' : 'Save & list'}
+        </Button>
+        <Button variant="ghost" onClick={onClose} disabled={busy}>
+          Cancel
+        </Button>
       </div>
     </Sheet>
   );

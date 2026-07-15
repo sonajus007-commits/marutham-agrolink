@@ -41,14 +41,14 @@ export interface StaffDept {
 export function rankedStaffRoles(rows: StaffRole[] | null | undefined): StaffRole[] {
   return [...(rows || [])]
     .map((r) => ({ role: r.role || 'Unassigned', count: Number(r.count || 0) }))
-    .sort((a, b) => (b.count - a.count) || a.role.localeCompare(b.role));
+    .sort((a, b) => b.count - a.count || a.role.localeCompare(b.role));
 }
 
 /** Departments, biggest first. Same reasoning and same stable tie-break. */
 export function rankedDepartments(rows: StaffDept[] | null | undefined): StaffDept[] {
   return [...(rows || [])]
     .map((r) => ({ dept: r.dept || 'Unassigned', count: Number(r.count || 0) }))
-    .sort((a, b) => (b.count - a.count) || a.dept.localeCompare(b.dept));
+    .sort((a, b) => b.count - a.count || a.dept.localeCompare(b.dept));
 }
 
 /** Total staff across every role — the whole that the ranked bars are parts of.
@@ -92,7 +92,9 @@ export interface ApprovalQueueItem {
  * noise. (Contrast the quick-action BADGES on operations, which hide their zero:
  * there the number is decoration on a link, not the point of the row.)
  */
-export function approvalQueue(approvals: AdminHeadApprovals | null | undefined): ApprovalQueueItem[] {
+export function approvalQueue(
+  approvals: AdminHeadApprovals | null | undefined,
+): ApprovalQueueItem[] {
   const a = approvals || {};
   const items: ApprovalQueueItem[] = [
     { key: 'employees', count: Number(a.employees_pending || 0), to: '/admin/employees' },

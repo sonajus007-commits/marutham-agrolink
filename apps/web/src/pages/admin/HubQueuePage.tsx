@@ -40,7 +40,9 @@ export function HubQueuePage() {
     }
   }, [t]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const { arriving, ready } = groupHubQueue(orders);
 
@@ -62,7 +64,9 @@ export function HubQueuePage() {
     <>
       <h1 className="mb-1 text-xl font-bold text-primary">🏭 {t('admin.hub.title')}</h1>
       <p className="mb-4 text-2xs text-fg-muted">
-        {user?.district ? t('admin.hub.subDistrict', { district: user.district }) : t('admin.hub.sub')}
+        {user?.district
+          ? t('admin.hub.subDistrict', { district: user.district })
+          : t('admin.hub.sub')}
       </p>
 
       <div className="mb-4 grid grid-cols-2 gap-3">
@@ -70,7 +74,11 @@ export function HubQueuePage() {
         <StatTile label={t('admin.hub.ready')} value={String(ready.length)} icon="🏭" />
       </div>
 
-      {error ? <p className="mb-3 text-sm text-danger" role="alert">{error}</p> : null}
+      {error ? (
+        <p className="mb-3 text-sm text-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
 
       {loading ? (
         <Spinner />
@@ -81,7 +89,10 @@ export function HubQueuePage() {
               <EmptyState icon="🚚">{t('admin.hub.noArriving')}</EmptyState>
             ) : (
               arriving.map((o) => (
-                <HubCard key={o.id} order={o} tone="arriving"
+                <HubCard
+                  key={o.id}
+                  order={o}
+                  tone="arriving"
                   toneLabel={t('admin.hub.awaitingCheckin')}
                   action={
                     <Button block disabled={busyId === o.id} onClick={() => void checkIn(o)}>
@@ -98,7 +109,10 @@ export function HubQueuePage() {
               <EmptyState icon="🏭">{t('admin.hub.noReady')}</EmptyState>
             ) : (
               ready.map((o) => (
-                <HubCard key={o.id} order={o} tone="ready"
+                <HubCard
+                  key={o.id}
+                  order={o}
+                  tone="ready"
                   toneLabel={t('admin.hub.readyToDispatch')}
                   action={
                     <Button block onClick={() => setDispatching(o)}>
@@ -115,7 +129,10 @@ export function HubQueuePage() {
       <DispatchModal
         order={dispatching}
         onClose={() => setDispatching(null)}
-        onDone={() => { setDispatching(null); void load(); }}
+        onDone={() => {
+          setDispatching(null);
+          void load();
+        }}
       />
     </>
   );
@@ -130,8 +147,16 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function HubCard({ order, tone, toneLabel, action }: {
-  order: Order; tone: 'arriving' | 'ready'; toneLabel: string; action: React.ReactNode;
+function HubCard({
+  order,
+  tone,
+  toneLabel,
+  action,
+}: {
+  order: Order;
+  tone: 'arriving' | 'ready';
+  toneLabel: string;
+  action: React.ReactNode;
 }) {
   const { t } = useTranslation();
   const bg = tone === 'arriving' ? 'var(--warning-bg)' : 'var(--success-bg)';
@@ -155,16 +180,18 @@ function HubCard({ order, tone, toneLabel, action }: {
         </div>
       </div>
 
-      <span className="mb-3 inline-block rounded-sm px-2 py-1 text-2xs font-semibold"
-        style={{ background: bg, color: fg }}>
+      <span
+        className="mb-3 inline-block rounded-sm px-2 py-1 text-2xs font-semibold"
+        style={{ background: bg, color: fg }}
+      >
         {toneLabel}
       </span>
 
-      {order.village ? (
-        <div className="mb-3 text-2xs text-fg-muted">📍 {order.village}</div>
-      ) : null}
+      {order.village ? <div className="mb-3 text-2xs text-fg-muted">📍 {order.village}</div> : null}
       {typeof order.item_count === 'number' ? (
-        <div className="mb-3 text-2xs text-fg-muted">{t('admin.hub.items', { count: order.item_count })}</div>
+        <div className="mb-3 text-2xs text-fg-muted">
+          {t('admin.hub.items', { count: order.item_count })}
+        </div>
       ) : null}
 
       {action}
@@ -175,8 +202,14 @@ function HubCard({ order, tone, toneLabel, action }: {
 /* Last-mile assignment. The server matches delivery agents to the consumer's
  * village and we preselect the first match — but "Assign later" stays a real
  * option, because a hub cannot hold an order hostage for want of an agent. */
-function DispatchModal({ order, onClose, onDone }: {
-  order: Order | null; onClose: () => void; onDone: () => void;
+function DispatchModal({
+  order,
+  onClose,
+  onDone,
+}: {
+  order: Order | null;
+  onClose: () => void;
+  onDone: () => void;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -193,7 +226,8 @@ function DispatchModal({ order, onClose, onDone }: {
     let active = true;
     setLoading(true);
     setAgentId('');
-    api.getEligibleAgents(order.id, 'delivery')
+    api
+      .getEligibleAgents(order.id, 'delivery')
       .then((res) => {
         if (!active) return;
         const m = res.matched || [];
@@ -205,7 +239,9 @@ function DispatchModal({ order, onClose, onDone }: {
       })
       .catch(() => active && toast(t('admin.hub.agentsFailed'), 'er'))
       .finally(() => active && setLoading(false));
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [order, toast, t]);
 
   async function confirm() {
@@ -230,7 +266,9 @@ function DispatchModal({ order, onClose, onDone }: {
       onClose={onClose}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={busy}>{t('admin.hub.cancel')}</Button>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            {t('admin.hub.cancel')}
+          </Button>
           <Button onClick={() => void confirm()} disabled={busy || loading}>
             {busy ? '…' : `🚀 ${t('admin.hub.dispatch')}`}
           </Button>
@@ -245,18 +283,23 @@ function DispatchModal({ order, onClose, onDone }: {
             {t('admin.hub.deliveryVillage')}: <b className="text-primary">{village || '—'}</b>
           </p>
 
-          <p className="mb-3 rounded-sm p-2 text-2xs"
+          <p
+            className="mb-3 rounded-sm p-2 text-2xs"
             style={
               matched.length
                 ? { background: 'var(--success-bg)', color: 'var(--success-fg)' }
                 : { background: 'var(--warning-bg)', color: 'var(--warning-fg)' }
-            }>
+            }
+          >
             {matched.length
               ? t('admin.hub.matched', { count: matched.length })
               : t('admin.hub.noMatch')}
           </p>
 
-          <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-fg-muted" htmlFor="hub-agent">
+          <label
+            className="mb-1 block text-2xs font-bold uppercase tracking-wide text-fg-muted"
+            htmlFor="hub-agent"
+          >
             {t('admin.hub.agent')}
           </label>
           <Select id="hub-agent" value={agentId} onChange={(e) => setAgentId(e.target.value)}>
@@ -264,14 +307,20 @@ function DispatchModal({ order, onClose, onDone }: {
             {matched.length ? (
               <optgroup label={t('admin.hub.covers', { village: village || '' })}>
                 {matched.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}{a.vehicle ? ` · ${a.vehicle}` : ''}</option>
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                    {a.vehicle ? ` · ${a.vehicle}` : ''}
+                  </option>
                 ))}
               </optgroup>
             ) : null}
             {others.length ? (
               <optgroup label={t('admin.hub.otherAgents')}>
                 {others.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}{a.vehicle ? ` · ${a.vehicle}` : ''}</option>
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                    {a.vehicle ? ` · ${a.vehicle}` : ''}
+                  </option>
                 ))}
               </optgroup>
             ) : null}

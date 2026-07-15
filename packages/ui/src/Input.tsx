@@ -26,6 +26,9 @@ export const INPUT_CLASS = CONTROL_CLASS + ' appearance-none px-3 py-2.5 text-sm
 
 export type InputProps = InputHTMLAttributes<HTMLInputElement>;
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ className, ...rest }, ref) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  { className, ...rest },
+  ref,
+) {
   return <input ref={ref} className={cn(INPUT_CLASS, className)} {...rest} />;
 });

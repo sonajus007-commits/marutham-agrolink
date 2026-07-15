@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, ChartContainer, StatTile } from '@marutham/ui';
-import { api, type ExecutiveDashboardResponse, type ExecutiveTrendMode } from '@marutham/api-client';
+import {
+  api,
+  type ExecutiveDashboardResponse,
+  type ExecutiveTrendMode,
+} from '@marutham/api-client';
 import { semantic, colors } from '@marutham/tokens';
 import {
-  TREND_MODES, rankedDistricts, findDistrict, districtTone, alertTone,
-  formatGrowth, growthDirection, fmtMoney,
+  TREND_MODES,
+  rankedDistricts,
+  findDistrict,
+  districtTone,
+  alertTone,
+  formatGrowth,
+  growthDirection,
+  fmtMoney,
   type DistrictPerf,
 } from '@marutham/lib';
 import type { EChartsOption } from 'echarts';
@@ -37,17 +47,20 @@ export function ExecutivePage() {
   const [mapState, setMapState] = useState<MapState>('loading');
   const [drill, setDrill] = useState<DistrictPerf | null>(null);
 
-  const load = useCallback(async (mode: ExecutiveTrendMode) => {
-    setLoading(true);
-    setError(null);
-    try {
-      setData(await api.getExecutiveDashboard(mode));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('admin.exec.error'));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
+  const load = useCallback(
+    async (mode: ExecutiveTrendMode) => {
+      setLoading(true);
+      setError(null);
+      try {
+        setData(await api.getExecutiveDashboard(mode));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t('admin.exec.error'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t],
+  );
 
   useEffect(() => {
     void load(trend);
@@ -104,10 +117,26 @@ export function ExecutivePage() {
   const ordersOption = useMemo<EChartsOption>(() => {
     const o = data?.orders;
     const slices = [
-      { name: t('admin.exec.orders.delivered'), value: o?.delivered ?? 0, color: semantic.light.success },
-      { name: t('admin.exec.orders.pending'), value: o?.pending ?? 0, color: semantic.light.warning },
-      { name: t('admin.exec.orders.cancelled'), value: o?.cancelled ?? 0, color: semantic.light.danger },
-      { name: t('admin.exec.orders.refunded'), value: o?.refunded ?? 0, color: semantic.light.accent },
+      {
+        name: t('admin.exec.orders.delivered'),
+        value: o?.delivered ?? 0,
+        color: semantic.light.success,
+      },
+      {
+        name: t('admin.exec.orders.pending'),
+        value: o?.pending ?? 0,
+        color: semantic.light.warning,
+      },
+      {
+        name: t('admin.exec.orders.cancelled'),
+        value: o?.cancelled ?? 0,
+        color: semantic.light.danger,
+      },
+      {
+        name: t('admin.exec.orders.refunded'),
+        value: o?.refunded ?? 0,
+        color: semantic.light.accent,
+      },
     ].filter((s) => s.value > 0);
 
     return {
@@ -121,7 +150,11 @@ export function ExecutivePage() {
           label: { show: false },
           // A 2px surface gap between fills, not a border around each slice.
           itemStyle: { borderColor: colors.white, borderWidth: 2 },
-          data: slices.map((s) => ({ name: s.name, value: s.value, itemStyle: { color: s.color } })),
+          data: slices.map((s) => ({
+            name: s.name,
+            value: s.value,
+            itemStyle: { color: s.color },
+          })),
         },
       ],
     };
@@ -136,7 +169,11 @@ export function ExecutivePage() {
     return {
       grid: { left: 8, right: 72, top: 8, bottom: 8, containLabel: true },
       tooltip: { trigger: 'item', valueFormatter: (v) => fmtMoney(Number(v)) },
-      xAxis: { type: 'value', splitLine: { lineStyle: { color: colors.muted } }, axisLabel: { show: false } },
+      xAxis: {
+        type: 'value',
+        splitLine: { lineStyle: { color: colors.muted } },
+        axisLabel: { show: false },
+      },
       yAxis: {
         type: 'category',
         data: cats.map((c) => c.name).reverse(),
@@ -164,7 +201,10 @@ export function ExecutivePage() {
 
   const s = data?.summary;
   const updated = data?.generated_at
-    ? new Date(data.generated_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    ? new Date(data.generated_at).toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
     : '';
 
   return (
@@ -183,7 +223,10 @@ export function ExecutivePage() {
       </header>
 
       {error ? (
-        <div role="alert" className="rounded-lg border border-danger bg-danger-bg p-4 text-sm text-danger-fg">
+        <div
+          role="alert"
+          className="rounded-lg border border-danger bg-danger-bg p-4 text-sm text-danger-fg"
+        >
           {/* A 403 here means the signed-in admin is not an executive role. */}
           {/403|restricted/i.test(error) ? t('admin.exec.denied') : error}
         </div>
@@ -191,12 +234,28 @@ export function ExecutivePage() {
 
       {/* ── Headline ─────────────────────────────────────────────────────── */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <StatTile icon="💰" label={t('admin.exec.kpi.revenueToday')} value={fmtMoney(s?.revenue_today ?? 0)} />
-        <StatTile icon="📅" label={t('admin.exec.kpi.revenueMtd')} value={fmtMoney(s?.revenue_mtd ?? 0)} />
-        <StatTile icon="📈" label={t('admin.exec.kpi.revenueYtd')} value={fmtMoney(s?.revenue_ytd ?? 0)} />
+        <StatTile
+          icon="💰"
+          label={t('admin.exec.kpi.revenueToday')}
+          value={fmtMoney(s?.revenue_today ?? 0)}
+        />
+        <StatTile
+          icon="📅"
+          label={t('admin.exec.kpi.revenueMtd')}
+          value={fmtMoney(s?.revenue_mtd ?? 0)}
+        />
+        <StatTile
+          icon="📈"
+          label={t('admin.exec.kpi.revenueYtd')}
+          value={fmtMoney(s?.revenue_ytd ?? 0)}
+        />
         <StatTile icon="🛒" label={t('admin.exec.kpi.gmv')} value={fmtMoney(s?.gmv ?? 0)} />
         <StatTile icon="📦" label={t('admin.exec.kpi.totalOrders')} value={s?.total_orders ?? 0} />
-        <StatTile icon="🗺️" label={t('admin.exec.kpi.activeDistricts')} value={s?.active_districts ?? 0} />
+        <StatTile
+          icon="🗺️"
+          label={t('admin.exec.kpi.activeDistricts')}
+          value={s?.active_districts ?? 0}
+        />
         <GrowthTile label={t('admin.exec.kpi.orderGrowth')} pct={s?.order_growth_pct} />
         <GrowthTile label={t('admin.exec.kpi.customerGrowth')} pct={s?.customer_growth_pct} />
         <GrowthTile label={t('admin.exec.kpi.farmerGrowth')} pct={s?.farmer_growth_pct} />
@@ -228,7 +287,8 @@ export function ExecutivePage() {
             {drill ? (
               <p className="mt-3 rounded-lg bg-surface-muted p-3 text-sm">
                 <strong className="text-primary">{drill.district}</strong> ·{' '}
-                {fmtMoney(drill.revenue)} · {drill.orders} {t('admin.exec.orders.title').toLowerCase()}
+                {fmtMoney(drill.revenue)} · {drill.orders}{' '}
+                {t('admin.exec.orders.title').toLowerCase()}
               </p>
             ) : null}
           </div>
@@ -246,7 +306,9 @@ export function ExecutivePage() {
                     onClick={() => setDrill(d)}
                     className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-muted"
                   >
-                    <span className="w-5 text-xs font-bold text-fg-muted tabular-nums">{i + 1}</span>
+                    <span className="w-5 text-xs font-bold text-fg-muted tabular-nums">
+                      {i + 1}
+                    </span>
                     <ToneDot tone={districtTone(d.status)} />
                     <span className="flex-1 truncate text-fg">{d.district}</span>
                     <span className="tabular-nums text-fg-muted">{fmtMoney(d.revenue)}</span>
@@ -296,32 +358,71 @@ export function ExecutivePage() {
         >
           <div className="mb-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
             <StatTile label={t('admin.exec.orders.today')} value={data?.orders.today ?? 0} />
-            <StatTile label={t('admin.exec.orders.delivered')} value={data?.orders.delivered ?? 0} />
+            <StatTile
+              label={t('admin.exec.orders.delivered')}
+              value={data?.orders.delivered ?? 0}
+            />
             <StatTile label={t('admin.exec.orders.pending')} value={data?.orders.pending ?? 0} />
-            <StatTile label={t('admin.exec.orders.cancelled')} value={data?.orders.cancelled ?? 0} />
+            <StatTile
+              label={t('admin.exec.orders.cancelled')}
+              value={data?.orders.cancelled ?? 0}
+            />
             <StatTile label={t('admin.exec.orders.refunded')} value={data?.orders.refunded ?? 0} />
           </div>
           <EChart option={ordersOption} height={260} />
         </ChartContainer>
 
-        <ChartContainer title={t('admin.exec.customers.title')} loading={loading && !data} height="auto">
+        <ChartContainer
+          title={t('admin.exec.customers.title')}
+          loading={loading && !data}
+          height="auto"
+        >
           <div className="grid grid-cols-2 gap-3">
-            <StatTile icon="🆕" label={t('admin.exec.customers.new')} value={data?.customers.new ?? 0} />
-            <StatTile icon="🔁" label={t('admin.exec.customers.repeat')} value={data?.customers.repeat ?? 0} />
-            <StatTile icon="💚" label={t('admin.exec.customers.retention')} value={`${data?.customers.retention_pct ?? 0}%`} />
-            <StatTile icon="🧺" label={t('admin.exec.customers.avgBasket')} value={fmtMoney(data?.customers.avg_basket ?? 0)} />
+            <StatTile
+              icon="🆕"
+              label={t('admin.exec.customers.new')}
+              value={data?.customers.new ?? 0}
+            />
+            <StatTile
+              icon="🔁"
+              label={t('admin.exec.customers.repeat')}
+              value={data?.customers.repeat ?? 0}
+            />
+            <StatTile
+              icon="💚"
+              label={t('admin.exec.customers.retention')}
+              value={`${data?.customers.retention_pct ?? 0}%`}
+            />
+            <StatTile
+              icon="🧺"
+              label={t('admin.exec.customers.avgBasket')}
+              value={fmtMoney(data?.customers.avg_basket ?? 0)}
+            />
           </div>
         </ChartContainer>
       </div>
 
       {/* ── Farmers + Categories ─────────────────────────────────────────── */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <ChartContainer title={t('admin.exec.farmers.title')} loading={loading && !data} height="auto">
+        <ChartContainer
+          title={t('admin.exec.farmers.title')}
+          loading={loading && !data}
+          height="auto"
+        >
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatTile label={t('admin.exec.farmers.registered')} value={data?.farmers.registered ?? 0} />
+            <StatTile
+              label={t('admin.exec.farmers.registered')}
+              value={data?.farmers.registered ?? 0}
+            />
             <StatTile label={t('admin.exec.farmers.active')} value={data?.farmers.active ?? 0} />
-            <StatTile label={t('admin.exec.farmers.inactive')} value={data?.farmers.inactive ?? 0} />
-            <StatTile label={t('admin.exec.farmers.avgRating')} value={data?.farmers.avg_rating ?? '—'} />
+            <StatTile
+              label={t('admin.exec.farmers.inactive')}
+              value={data?.farmers.inactive ?? 0}
+            />
+            <StatTile
+              label={t('admin.exec.farmers.avgRating')}
+              value={data?.farmers.avg_rating ?? '—'}
+            />
           </div>
           {(data?.farmers.top ?? []).length ? (
             <div className="mt-4">
@@ -329,7 +430,9 @@ export function ExecutivePage() {
               <ol className="list-none space-y-1">
                 {data!.farmers.top.map((f, i) => (
                   <li key={f.farmer_id} className="flex items-center gap-3 text-sm">
-                    <span className="w-5 text-xs font-bold text-fg-muted tabular-nums">{i + 1}</span>
+                    <span className="w-5 text-xs font-bold text-fg-muted tabular-nums">
+                      {i + 1}
+                    </span>
                     <span className="flex-1 truncate text-fg">{f.name}</span>
                     <span className="tabular-nums text-fg-muted">{fmtMoney(f.revenue)}</span>
                   </li>
@@ -345,19 +448,33 @@ export function ExecutivePage() {
           empty={!loading && (data?.categories.length ?? 0) === 0}
           height="auto"
         >
-          <EChart option={categoryOption} height={Math.max(160, (data?.categories.length ?? 1) * 56)} />
+          <EChart
+            option={categoryOption}
+            height={Math.max(160, (data?.categories.length ?? 1) * 56)}
+          />
         </ChartContainer>
       </div>
 
       {/* ── Logistics + Financial ────────────────────────────────────────── */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <ChartContainer title={t('admin.exec.logistics.title')} loading={loading && !data} height="auto">
+        <ChartContainer
+          title={t('admin.exec.logistics.title')}
+          loading={loading && !data}
+          height="auto"
+        >
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <StatTile
               label={t('admin.exec.logistics.avgDelivery')}
-              value={data?.logistics.avg_delivery_mins != null ? `${data.logistics.avg_delivery_mins} min` : '—'}
+              value={
+                data?.logistics.avg_delivery_mins != null
+                  ? `${data.logistics.avg_delivery_mins} min`
+                  : '—'
+              }
             />
-            <StatTile label={t('admin.exec.logistics.late')} value={data?.logistics.late_deliveries ?? 0} />
+            <StatTile
+              label={t('admin.exec.logistics.late')}
+              value={data?.logistics.late_deliveries ?? 0}
+            />
             <StatTile
               label={t('admin.exec.logistics.sla')}
               value={data?.logistics.sla_pct != null ? `${data.logistics.sla_pct}%` : '—'}
@@ -365,13 +482,32 @@ export function ExecutivePage() {
           </div>
         </ChartContainer>
 
-        <ChartContainer title={t('admin.exec.financial.title')} loading={loading && !data} height="auto">
+        <ChartContainer
+          title={t('admin.exec.financial.title')}
+          loading={loading && !data}
+          height="auto"
+        >
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <StatTile label={t('admin.exec.financial.commission')} value={fmtMoney(data?.financial.platform_commission ?? 0)} />
-            <StatTile label={t('admin.exec.financial.deliveryIncome')} value={fmtMoney(data?.financial.delivery_income ?? 0)} />
-            <StatTile label={t('admin.exec.financial.subscriptionIncome')} value={fmtMoney(data?.financial.subscription_income ?? 0)} />
-            <StatTile label={t('admin.exec.financial.payoutsPending')} value={fmtMoney(data?.financial.payouts_pending ?? 0)} />
-            <StatTile label={t('admin.exec.financial.payoutsPaid')} value={fmtMoney(data?.financial.payouts_paid ?? 0)} />
+            <StatTile
+              label={t('admin.exec.financial.commission')}
+              value={fmtMoney(data?.financial.platform_commission ?? 0)}
+            />
+            <StatTile
+              label={t('admin.exec.financial.deliveryIncome')}
+              value={fmtMoney(data?.financial.delivery_income ?? 0)}
+            />
+            <StatTile
+              label={t('admin.exec.financial.subscriptionIncome')}
+              value={fmtMoney(data?.financial.subscription_income ?? 0)}
+            />
+            <StatTile
+              label={t('admin.exec.financial.payoutsPending')}
+              value={fmtMoney(data?.financial.payouts_pending ?? 0)}
+            />
+            <StatTile
+              label={t('admin.exec.financial.payoutsPaid')}
+              value={fmtMoney(data?.financial.payouts_paid ?? 0)}
+            />
           </div>
         </ChartContainer>
       </div>
@@ -383,7 +519,10 @@ export function ExecutivePage() {
         ) : (
           <ul className="space-y-2">
             {data!.alerts.map((a, i) => (
-              <li key={`${a.type}-${i}`} className="flex items-start gap-2 rounded-lg bg-surface-muted p-3 text-sm">
+              <li
+                key={`${a.type}-${i}`}
+                className="flex items-start gap-2 rounded-lg bg-surface-muted p-3 text-sm"
+              >
                 {/* Severity carries an icon + the message, never colour alone. */}
                 <ToneDot tone={alertTone(a.severity)} />
                 <span className="text-fg">{a.message}</span>

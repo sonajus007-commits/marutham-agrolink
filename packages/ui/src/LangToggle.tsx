@@ -32,7 +32,11 @@ export function LangToggle({ value, options, onChange, ...rest }: LangToggleProp
         <button
           key={o.value}
           type="button"
-          className={cn(LANG_BTN, o.className, o.value === value && 'border-leaf bg-success-bg text-forest')}
+          className={cn(
+            LANG_BTN,
+            o.className,
+            o.value === value && 'border-leaf bg-success-bg text-forest',
+          )}
           aria-pressed={o.value === value}
           onClick={() => onChange(o.value)}
         >

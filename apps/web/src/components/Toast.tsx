@@ -1,7 +1,10 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 
 type ToastType = 'ok' | 'er' | 'nfo';
-interface ToastState { msg: string; type: ToastType }
+interface ToastState {
+  msg: string;
+  type: ToastType;
+}
 
 const ToastContext = createContext<(msg: string, type?: ToastType) => void>(() => {});
 

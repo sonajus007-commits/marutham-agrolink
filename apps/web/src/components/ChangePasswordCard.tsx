@@ -47,32 +47,52 @@ export function ChangePasswordCard() {
     <Card>
       <h3 className="mb-3 text-md font-bold text-primary">🔒 Change Password</h3>
       {!open ? (
-        <Button variant="ghost" onClick={() => setOpen(true)}>🔒 Change Password</Button>
+        <Button variant="ghost" onClick={() => setOpen(true)}>
+          🔒 Change Password
+        </Button>
       ) : (
         <div className="flex flex-col gap-3">
           <Field label="Current Password">
             {(p) => (
-              <PasswordInput {...p} value={current} onChange={setCurrent}
-                placeholder="Your current password" autoComplete="current-password" />
+              <PasswordInput
+                {...p}
+                value={current}
+                onChange={setCurrent}
+                placeholder="Your current password"
+                autoComplete="current-password"
+              />
             )}
           </Field>
 
           <Field label="New Password">
             {(p) => (
               <>
-                <PasswordInput {...p} value={next} onChange={setNext}
-                  placeholder="New strong password" autoComplete="new-password" />
+                <PasswordInput
+                  {...p}
+                  value={next}
+                  onChange={setNext}
+                  placeholder="New strong password"
+                  autoComplete="new-password"
+                />
                 <PasswordRules value={next} />
               </>
             )}
           </Field>
 
           {/* Form-level: the fault may be the current password, the new one, or the server. */}
-          {error ? <div className={FIELD_ERR_CLASS} role="alert">{error}</div> : null}
+          {error ? (
+            <div className={FIELD_ERR_CLASS} role="alert">
+              {error}
+            </div>
+          ) : null}
 
           <div className="flex gap-2">
-            <Button onClick={submit} disabled={busy}>{busy ? 'Updating…' : 'Update Password'}</Button>
-            <Button variant="ghost" onClick={close} disabled={busy}>Cancel</Button>
+            <Button onClick={submit} disabled={busy}>
+              {busy ? 'Updating…' : 'Update Password'}
+            </Button>
+            <Button variant="ghost" onClick={close} disabled={busy}>
+              Cancel
+            </Button>
           </div>
         </div>
       )}

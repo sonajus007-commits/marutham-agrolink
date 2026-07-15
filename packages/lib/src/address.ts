@@ -43,12 +43,19 @@ export function normalizeDefaults(list: SavedAddress[]): SavedAddress[] {
   if (list.length === 0) return [];
   const firstDefault = list.findIndex((a) => a.is_default);
   const winner = firstDefault >= 0 ? firstDefault : 0;
-  return list.map((a, i) => (a.is_default === (i === winner) ? a : { ...a, is_default: i === winner }));
+  return list.map((a, i) =>
+    a.is_default === (i === winner) ? a : { ...a, is_default: i === winner },
+  );
 }
 
 /** Add a new address, or replace the one at `index`. Preserves default-ness. */
-export function upsertAddress(list: SavedAddress[], addr: SavedAddress, index: number | null): SavedAddress[] {
-  if (index === null) return normalizeDefaults([...list, { ...addr, is_default: list.length === 0 }]);
+export function upsertAddress(
+  list: SavedAddress[],
+  addr: SavedAddress,
+  index: number | null,
+): SavedAddress[] {
+  if (index === null)
+    return normalizeDefaults([...list, { ...addr, is_default: list.length === 0 }]);
   const next = list.slice();
   next[index] = { ...addr, is_default: list[index]?.is_default ?? false };
   return normalizeDefaults(next);

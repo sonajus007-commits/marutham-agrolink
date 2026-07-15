@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { emptyRegisterForm, validateRegistration, hasErrors, type RegisterForm } from './register';
 import {
-  emptyRegisterForm, validateRegistration, hasErrors,
-  type RegisterForm,
-} from './register';
-import {
-  quoteRegistration, concessionFor, getSubscriptionPlan,
-  REGISTRATION_CHARGE_RS, SUBSCRIPTION_PLANS,
+  quoteRegistration,
+  concessionFor,
+  getSubscriptionPlan,
+  REGISTRATION_CHARGE_RS,
+  SUBSCRIPTION_PLANS,
 } from './subscription';
 
 /** A form that passes every rule — each test breaks exactly one thing. */
@@ -17,9 +17,14 @@ function validConsumer(): RegisterForm {
     phone: '9876543210',
     email: 'kavitha@example.com',
     address: {
-      house_no: '12', street1: 'Bazaar Street', village_town: 'Alangudi',
-      city: 'Pudukkottai', taluk: 'Alangudi', district: 'Pudukkottai',
-      state: 'Tamil Nadu', pincode: '622301',
+      house_no: '12',
+      street1: 'Bazaar Street',
+      village_town: 'Alangudi',
+      city: 'Pudukkottai',
+      taluk: 'Alangudi',
+      district: 'Pudukkottai',
+      state: 'Tamil Nadu',
+      pincode: '622301',
     },
     password: 'Strong@1234',
     confirm_password: 'Strong@1234',
@@ -61,9 +66,21 @@ describe('validateRegistration — shared rules', () => {
 
   it('requires name, gender, phone, street, city, state, district and pincode', () => {
     // No district picked yet, so the tree offers no taluks to require.
-    const errors = validateRegistration(emptyRegisterForm('consumer'), { districtHasTaluks: false });
+    const errors = validateRegistration(emptyRegisterForm('consumer'), {
+      districtHasTaluks: false,
+    });
     expect(Object.keys(errors).sort()).toEqual(
-      ['city', 'district', 'fname', 'gender', 'password', 'phone', 'pincode', 'state', 'street1'].sort(),
+      [
+        'city',
+        'district',
+        'fname',
+        'gender',
+        'password',
+        'phone',
+        'pincode',
+        'state',
+        'street1',
+      ].sort(),
     );
     // An empty password fails the strength rules but MATCHES the empty confirm.
     expect(errors.confirm_password).toBeUndefined();
@@ -100,11 +117,16 @@ describe('validateRegistration — shared rules', () => {
     expect(validateRegistration(weak, withTaluks).password).toBe('Does not meet requirements');
 
     const mismatch = { ...validConsumer(), confirm_password: 'Strong@12345' };
-    expect(validateRegistration(mismatch, withTaluks).confirm_password).toBe('Passwords do not match');
+    expect(validateRegistration(mismatch, withTaluks).confirm_password).toBe(
+      'Passwords do not match',
+    );
   });
 
   it('does not ask a consumer for KYC, a village or a plan', () => {
-    const errors = validateRegistration({ ...validConsumer(), address: { ...validConsumer().address, village_town: '' } }, withTaluks);
+    const errors = validateRegistration(
+      { ...validConsumer(), address: { ...validConsumer().address, village_town: '' } },
+      withTaluks,
+    );
     expect(errors.village_town).toBeUndefined();
     expect(errors.aadhar).toBeUndefined();
     expect(errors.subscription_plan).toBeUndefined();
@@ -134,7 +156,9 @@ describe('validateRegistration — Farmer seller', () => {
     expect(validateRegistration(short, withTaluks).bank_account).toBeTruthy();
 
     const typo = { ...validFarmer(), confirm_bank_account: '30123456780' };
-    expect(validateRegistration(typo, withTaluks).confirm_bank_account).toBe('Account numbers do not match');
+    expect(validateRegistration(typo, withTaluks).confirm_bank_account).toBe(
+      'Account numbers do not match',
+    );
   });
 
   it('lets IFSC be blank but validates its shape when given', () => {
@@ -151,7 +175,9 @@ describe('validateRegistration — Farmer seller', () => {
 
   it('requires a subscription plan', () => {
     const f = { ...validFarmer(), subscription_plan: '' };
-    expect(validateRegistration(f, withTaluks).subscription_plan).toBe('Please select a subscription plan');
+    expect(validateRegistration(f, withTaluks).subscription_plan).toBe(
+      'Please select a subscription plan',
+    );
   });
 
   it('does not ask a Farmer for business details', () => {
@@ -176,7 +202,9 @@ describe('validateRegistration — Retailer seller', () => {
     expect(validateRegistration(blank, withTaluks).gst_number).toBeUndefined();
 
     const bad = { ...validRetailer(), gst_number: '33AABCU9603R1Z' };
-    expect(validateRegistration(bad, withTaluks).gst_number).toBe('Enter a valid 15-character GSTIN');
+    expect(validateRegistration(bad, withTaluks).gst_number).toBe(
+      'Enter a valid 15-character GSTIN',
+    );
   });
 
   it('does not ask a Retailer for Aadhaar, bank details or a village', () => {

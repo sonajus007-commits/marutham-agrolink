@@ -1,8 +1,16 @@
 import { QtyStepper } from '@marutham/ui';
 import {
-  bestOffer, offerConsumerPrice, getProductEmoji, unitStep, unitAllowsDecimal,
-  orderingWindowStatus, fmtMoney,
-  type Product, type Offer, type Rating, type SellerFilter,
+  bestOffer,
+  offerConsumerPrice,
+  getProductEmoji,
+  unitStep,
+  unitAllowsDecimal,
+  orderingWindowStatus,
+  fmtMoney,
+  type Product,
+  type Offer,
+  type Rating,
+  type SellerFilter,
 } from '@marutham/lib';
 import { Stars } from './Stars';
 
@@ -31,7 +39,8 @@ export function ProductCard({
   const hasStock = !!(best && (best.qty_available ?? 0) > 0);
   const image = best?.images?.[0];
   const f = best?.farmer;
-  const availLeft = best?.qty_available != null ? Math.max(0, Number(best.qty_available) - cartQty) : null;
+  const availLeft =
+    best?.qty_available != null ? Math.max(0, Number(best.qty_available) - cartQty) : null;
   const ws = orderingWindowStatus();
 
   return (
@@ -42,17 +51,44 @@ export function ProductCard({
         </div>
         <div style={{ flex: 1 }}>
           <div className="prod-name">{product.name}</div>
-          {product.regional_name ? <div style={{ fontSize: 11, color: 'var(--leaf)' }}>{product.regional_name}</div> : null}
+          {product.regional_name ? (
+            <div style={{ fontSize: 11, color: 'var(--leaf)' }}>{product.regional_name}</div>
+          ) : null}
           <div className="prod-path">
-            {product.product_group ? <span className="prod-chip">{product.product_group}</span> : null}
-            {product.category ? <span className="prod-chip" style={{ background: 'var(--warning-bg)', color: 'var(--warning-fg)' }}>{product.category}</span> : null}
-            {product.sub_type ? <span style={{ fontSize: 9, color: 'var(--gray)' }}>{product.sub_type}</span> : null}
+            {product.product_group ? (
+              <span className="prod-chip">{product.product_group}</span>
+            ) : null}
+            {product.category ? (
+              <span
+                className="prod-chip"
+                style={{ background: 'var(--warning-bg)', color: 'var(--warning-fg)' }}
+              >
+                {product.category}
+              </span>
+            ) : null}
+            {product.sub_type ? (
+              <span style={{ fontSize: 9, color: 'var(--gray)' }}>{product.sub_type}</span>
+            ) : null}
           </div>
-          {rating ? <div style={{ marginTop: 3 }}><Stars value={rating.avg_rating} count={rating.num_ratings} /></div> : null}
+          {rating ? (
+            <div style={{ marginTop: 3 }}>
+              <Stars value={rating.avg_rating} count={rating.num_ratings} />
+            </div>
+          ) : null}
           {f ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                marginTop: 5,
+                flexWrap: 'wrap',
+              }}
+            >
               <span style={{ fontSize: 10, color: 'var(--gray)' }}>
-                {f.fname}{f.lname ? ` ${f.lname}` : ''}{f.village_town ? `, ${f.village_town}` : ''}
+                {f.fname}
+                {f.lname ? ` ${f.lname}` : ''}
+                {f.village_town ? `, ${f.village_town}` : ''}
               </span>
               <SellerBadge type={f.seller_type} />
             </div>
@@ -62,31 +98,52 @@ export function ProductCard({
           {custPrice != null ? (
             <>
               <div className="prod-price">{fmtMoney(custPrice)}</div>
-              <div style={{ fontSize: 9, color: 'var(--gray)' }}>seller {fmtMoney(farmerPrice!)}</div>
-              {handling > 0 ? <div style={{ fontSize: 9, color: 'var(--gray)' }}>+{fmtMoney(handling)} hdl</div> : null}
+              <div style={{ fontSize: 9, color: 'var(--gray)' }}>
+                seller {fmtMoney(farmerPrice!)}
+              </div>
+              {handling > 0 ? (
+                <div style={{ fontSize: 9, color: 'var(--gray)' }}>+{fmtMoney(handling)} hdl</div>
+              ) : null}
             </>
           ) : dp ? (
             <>
-              <div className="prod-price" style={{ fontSize: 12, color: 'var(--gray)' }}>Mkt {fmtMoney(dp.market_price)}</div>
+              <div className="prod-price" style={{ fontSize: 12, color: 'var(--gray)' }}>
+                Mkt {fmtMoney(dp.market_price)}
+              </div>
               <div style={{ fontSize: 9, color: 'var(--red)' }}>No offers</div>
             </>
           ) : (
-            <div className="prod-price" style={{ fontSize: 12, color: 'var(--gray)' }}>Price TBD</div>
+            <div className="prod-price" style={{ fontSize: 12, color: 'var(--gray)' }}>
+              Price TBD
+            </div>
           )}
           <div className="prod-unit">/ {product.unit || 'unit'}</div>
         </div>
       </div>
 
       <div className="prod-meta-row">
-        {product.exotic ? <span className="prod-chip" style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}>🌶 Perishable</span> : null}
-        {best?.time_available ? <span style={{ fontSize: 10, color: 'var(--schedule)' }}>Order by {best.time_available}</span> : null}
+        {product.exotic ? (
+          <span
+            className="prod-chip"
+            style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}
+          >
+            🌶 Perishable
+          </span>
+        ) : null}
+        {best?.time_available ? (
+          <span style={{ fontSize: 10, color: 'var(--schedule)' }}>
+            Order by {best.time_available}
+          </span>
+        ) : null}
         {availLeft != null ? (
           <span style={{ fontSize: 10, color: availLeft <= 0 ? 'var(--red)' : 'var(--gray)' }}>
             {availLeft} {product.unit || ''} avail{cartQty > 0 ? ` (${cartQty} in cart)` : ''}
           </span>
         ) : null}
         {best?.bulk_qty && best?.bulk_disc_pct ? (
-          <span style={{ fontSize: 10, color: 'var(--leaf)', fontWeight: 700 }}>Bulk {best.bulk_qty}+ → {best.bulk_disc_pct}% off</span>
+          <span style={{ fontSize: 10, color: 'var(--leaf)', fontWeight: 700 }}>
+            Bulk {best.bulk_qty}+ → {best.bulk_disc_pct}% off
+          </span>
         ) : null}
 
         <div className="prod-actions">
@@ -99,7 +156,9 @@ export function ProductCard({
               <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--red)' }}>🔒 Closed</div>
             </div>
           ) : cartQty === 0 ? (
-            <button className="cons-btn-sm" onClick={() => onOpenDetail(product.id)}>View →</button>
+            <button className="cons-btn-sm" onClick={() => onOpenDetail(product.id)}>
+              View →
+            </button>
           ) : (
             <QtyStepper
               value={cartQty}
@@ -118,7 +177,16 @@ export function ProductCard({
 function SellerBadge({ type }: { type?: string }) {
   const retailer = type === 'Retailer';
   return (
-    <span style={{ fontSize: 9, fontWeight: 700, borderRadius: 4, padding: '2px 6px', background: retailer ? 'var(--info-bg)' : 'var(--success-bg)', color: retailer ? 'var(--info)' : 'var(--success)' }}>
+    <span
+      style={{
+        fontSize: 9,
+        fontWeight: 700,
+        borderRadius: 4,
+        padding: '2px 6px',
+        background: retailer ? 'var(--info-bg)' : 'var(--success-bg)',
+        color: retailer ? 'var(--info)' : 'var(--success)',
+      }}
+    >
       {retailer ? '🏪 Retailer' : '🌱 Direct from Farmer'}
     </span>
   );

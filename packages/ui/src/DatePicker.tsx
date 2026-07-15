@@ -2,9 +2,20 @@ import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
-  type CivilDate, type YearMonth, type Weekday, type DisabledSpec,
-  toISO, fromISO, monthGrid, weekdayOrder, weekdayOf, addDays, addMonths,
-  isSameDate, isDisabled, isMonthReachable,
+  type CivilDate,
+  type YearMonth,
+  type Weekday,
+  type DisabledSpec,
+  toISO,
+  fromISO,
+  monthGrid,
+  weekdayOrder,
+  weekdayOf,
+  addDays,
+  addMonths,
+  isSameDate,
+  isDisabled,
+  isMonthReachable,
 } from '@marutham/lib';
 import { cn } from './lib/cn';
 
@@ -117,11 +128,16 @@ export function DatePicker({
    * one. This bug is invisible under a UTC/east-of-UTC test machine and only
    * shows for a user in the Americas. */
   const monthLabel = new Intl.DateTimeFormat(locale, {
-    month: 'long', year: 'numeric', timeZone: 'UTC',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
   }).format(new Date(Date.UTC(view.year, view.month - 1, 1)));
   const triggerLabel = selected
     ? new Intl.DateTimeFormat(locale, {
-        day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'UTC',
       }).format(new Date(Date.UTC(selected.year, selected.month - 1, selected.day)))
     : placeholder;
 
@@ -149,7 +165,10 @@ export function DatePicker({
     const nextView = addMonths(view, delta);
     setView(nextView);
     // Keep the focused day in the visible month, clamped to its length.
-    const clampedDay = Math.min(focusDate.day, new Date(Date.UTC(nextView.year, nextView.month, 0)).getUTCDate());
+    const clampedDay = Math.min(
+      focusDate.day,
+      new Date(Date.UTC(nextView.year, nextView.month, 0)).getUTCDate(),
+    );
     setFocusDate({ year: nextView.year, month: nextView.month, day: clampedDay });
   };
 
@@ -168,8 +187,10 @@ export function DatePicker({
     else if (key === 'ArrowRight') next = addDays(focusDate, 1);
     else if (key === 'ArrowUp') next = addDays(focusDate, -7);
     else if (key === 'ArrowDown') next = addDays(focusDate, 7);
-    else if (key === 'Home') next = addDays(focusDate, -((weekdayOf(focusDate) - weekStartsOn + 7) % 7));
-    else if (key === 'End') next = addDays(focusDate, 6 - ((weekdayOf(focusDate) - weekStartsOn + 7) % 7));
+    else if (key === 'Home')
+      next = addDays(focusDate, -((weekdayOf(focusDate) - weekStartsOn + 7) % 7));
+    else if (key === 'End')
+      next = addDays(focusDate, 6 - ((weekdayOf(focusDate) - weekStartsOn + 7) % 7));
     else if (key === 'PageUp') next = shiftMonthKeepingDay(focusDate, -1);
     else if (key === 'PageDown') next = shiftMonthKeepingDay(focusDate, 1);
     else if (key === 'Enter' || key === ' ') {
@@ -232,12 +253,7 @@ export function DatePicker({
             </button>
           </div>
 
-          <div
-            ref={gridRef}
-            role="grid"
-            aria-label={monthLabel}
-            onKeyDown={onGridKeyDown}
-          >
+          <div ref={gridRef} role="grid" aria-label={monthLabel} onKeyDown={onGridKeyDown}>
             <div role="row" className="flex">
               {dayNames.map((name, i) => (
                 <span
@@ -265,9 +281,7 @@ export function DatePicker({
                         tabIndex={isFocus ? 0 : -1}
                         disabled={off}
                         aria-selected={isSel}
-                        aria-current={
-                          isSameDate(cell.date, todayCivil()) ? 'date' : undefined
-                        }
+                        aria-current={isSameDate(cell.date, todayCivil()) ? 'date' : undefined}
                         className={cn(DAY, !cell.inCurrentMonth && !isSel && 'text-fg-muted')}
                         onClick={() => pick(cell.date)}
                         onFocus={() => setFocusDate(cell.date)}

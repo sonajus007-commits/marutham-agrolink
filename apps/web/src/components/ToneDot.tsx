@@ -14,10 +14,13 @@ import type { StatusTone } from '@marutham/lib';
  */
 export function ToneDot({ tone }: { tone: StatusTone }) {
   const fill =
-    tone === 'success' ? semantic.light.success
-    : tone === 'warning' ? semantic.light.warning
-    : tone === 'danger' ? semantic.light.danger
-    : colors.gray;
+    tone === 'success'
+      ? semantic.light.success
+      : tone === 'warning'
+        ? semantic.light.warning
+        : tone === 'danger'
+          ? semantic.light.danger
+          : colors.gray;
   return (
     <span
       aria-hidden="true"

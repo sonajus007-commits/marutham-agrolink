@@ -55,7 +55,10 @@ export interface RegistrationQuote {
  * registration charge plus their chosen plan, less any concession.
  * Returns null for an unknown/unselected plan.
  */
-export function quoteRegistration(planName: string, gender?: string | null): RegistrationQuote | null {
+export function quoteRegistration(
+  planName: string,
+  gender?: string | null,
+): RegistrationQuote | null {
   const plan = getSubscriptionPlan(planName);
   if (!plan) return null;
 

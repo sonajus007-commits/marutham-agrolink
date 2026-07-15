@@ -21,7 +21,11 @@ export function FarmerOrderRow({ order, onOpen }: { order: Order; onOpen: (o: Or
       onClick={() => onOpen(order)}
       className="flex w-full items-stretch gap-3 rounded-base border border-border-subtle bg-surface p-3 text-left transition-colors hover:bg-surface-muted"
     >
-      <span className="w-1 shrink-0 rounded-full" style={{ background: statusColor(label) }} aria-hidden="true" />
+      <span
+        className="w-1 shrink-0 rounded-full"
+        style={{ background: statusColor(label) }}
+        aria-hidden="true"
+      />
       <span className="flex min-w-0 flex-1 flex-col justify-center">
         <span className="text-sm font-bold text-primary">{orderLabel(order)}</span>
         <span className="text-2xs text-fg-muted">
@@ -30,7 +34,9 @@ export function FarmerOrderRow({ order, onOpen }: { order: Order; onOpen: (o: Or
         </span>
       </span>
       <span className="flex flex-col items-end justify-center">
-        <span className="text-2xs uppercase tracking-wide text-fg-muted">{t('farmer.orders.youEarn')}</span>
+        <span className="text-2xs uppercase tracking-wide text-fg-muted">
+          {t('farmer.orders.youEarn')}
+        </span>
         <span className="text-sm font-bold">{fmtMoney(order.farmer_payout)}</span>
       </span>
     </button>

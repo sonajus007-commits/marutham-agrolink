@@ -1,12 +1,21 @@
 import { describe, it, expect } from 'vitest';
 import {
-  homepagePrice, productEmoji, HOME_DISTRICT, HOME_PRODUCT_LIMIT,
-  offerPrice, offerInStock, sortedOffers, districtPriceRows, productJsonLd,
+  homepagePrice,
+  productEmoji,
+  HOME_DISTRICT,
+  HOME_PRODUCT_LIMIT,
+  offerPrice,
+  offerInStock,
+  sortedOffers,
+  districtPriceRows,
+  productJsonLd,
   type PublicListing,
 } from './shop';
 
-const product = (prices: Array<{ district?: string; market_price?: string | number }>, unit = 'kg') =>
-  ({ unit, product_district_prices: prices } as Parameters<typeof homepagePrice>[0]);
+const product = (
+  prices: Array<{ district?: string; market_price?: string | number }>,
+  unit = 'kg',
+) => ({ unit, product_district_prices: prices }) as Parameters<typeof homepagePrice>[0];
 
 describe('homepagePrice', () => {
   it('quotes the home district when it is priced there', () => {
@@ -19,7 +28,9 @@ describe('homepagePrice', () => {
 
   it('matches the district loosely, as the legacy page did', () => {
     // "Pudukkottai District" / "pudukkottai" both hit.
-    expect(homepagePrice(product([{ district: 'PUDUKKOTTAI District', market_price: '35' }]))?.amount).toBe(35);
+    expect(
+      homepagePrice(product([{ district: 'PUDUKKOTTAI District', market_price: '35' }]))?.amount,
+    ).toBe(35);
   });
 
   it('falls back to any price rather than showing a product with none', () => {
@@ -39,7 +50,9 @@ describe('homepagePrice', () => {
 
   it('reads market_price as RUPEES — it is a money-middleware field, not paise', () => {
     // A ₹40/kg tomato must not render as ₹0.40 (the paise trap that bites elsewhere).
-    expect(homepagePrice(product([{ district: 'Pudukkottai', market_price: '40.00' }]))?.amount).toBe(40);
+    expect(
+      homepagePrice(product([{ district: 'Pudukkottai', market_price: '40.00' }]))?.amount,
+    ).toBe(40);
   });
 
   it('defaults the unit when the product has none', () => {
@@ -173,11 +186,19 @@ describe('districtPriceRows', () => {
 });
 
 describe('productJsonLd', () => {
-  const product = { name: 'Tomatoes', unit: 'kg', regional_name: 'தக்காளி', category: 'Vegetables' };
+  const product = {
+    name: 'Tomatoes',
+    unit: 'kg',
+    regional_name: 'தக்காளி',
+    category: 'Vegetables',
+  };
 
   it('marks the product in stock when someone is actually selling it', () => {
     const ld = productJsonLd({
-      product, price: 40, listings: [offer({})], url: 'https://x/products/1',
+      product,
+      price: 40,
+      listings: [offer({})],
+      url: 'https://x/products/1',
     }) as any;
     expect(ld.offers.availability).toBe('https://schema.org/InStock');
     expect(ld.offers.price).toBe('40.00');
@@ -187,7 +208,10 @@ describe('productJsonLd', () => {
 
   it('marks it out of stock when every offer is sold out — the page must not lie', () => {
     const ld = productJsonLd({
-      product, price: 40, listings: [offer({ qty_available: 0 })], url: 'https://x/products/1',
+      product,
+      price: 40,
+      listings: [offer({ qty_available: 0 })],
+      url: 'https://x/products/1',
     }) as any;
     expect(ld.offers.availability).toBe('https://schema.org/OutOfStock');
   });
@@ -198,7 +222,10 @@ describe('productJsonLd', () => {
 
   it('only claims a rating when there is one', () => {
     const withRating = productJsonLd({
-      product: { ...product, avg_rating: '4.0' }, price: 40, listings: [], url: 'https://x',
+      product: { ...product, avg_rating: '4.0' },
+      price: 40,
+      listings: [],
+      url: 'https://x',
     }) as any;
     expect(withRating.aggregateRating.ratingValue).toBe('4.0');
 

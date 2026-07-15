@@ -67,7 +67,9 @@ describe('password rules — the client is stricter than the server', () => {
 
 describe('formatters', () => {
   it('joins an address, skipping blanks and nulls', () => {
-    expect(buildAddress({ house_no: '12', street1: null, city: 'Pudukkottai' })).toBe('12, Pudukkottai');
+    expect(buildAddress({ house_no: '12', street1: null, city: 'Pudukkottai' })).toBe(
+      '12, Pudukkottai',
+    );
   });
 
   it('resolves an address that is already a string', () => {

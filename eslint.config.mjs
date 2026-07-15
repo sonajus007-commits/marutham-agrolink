@@ -55,7 +55,10 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       // Allow intentionally-unused args/vars when prefixed with _ (matches the
       // codebase's existing `_next`, `_opts` convention in the backend/tests).
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
       // Advisory during adoption — `any` is a smell, not a correctness bug; surfacing
       // it as a warning keeps the error list to things that are actually broken.
       '@typescript-eslint/no-explicit-any': 'warn',

@@ -34,8 +34,13 @@ export interface HeaderProps {
 }
 
 export function Header({
-  onMenuClick, brand, breadcrumbs, search, actions,
-  'aria-label': ariaLabel = 'Top bar', className,
+  onMenuClick,
+  brand,
+  breadcrumbs,
+  search,
+  actions,
+  'aria-label': ariaLabel = 'Top bar',
+  className,
 }: HeaderProps) {
   return (
     <header
@@ -66,9 +71,7 @@ export function Header({
 
       {breadcrumbs ? <div className="hidden min-w-0 md:block">{breadcrumbs}</div> : null}
 
-      {search ? (
-        <div className="hidden max-w-md flex-1 md:block">{search}</div>
-      ) : null}
+      {search ? <div className="hidden max-w-md flex-1 md:block">{search}</div> : null}
 
       {/* ml-auto pins the actions right whether or not the search grows the middle. */}
       <div className="ml-auto flex shrink-0 items-center gap-1">{actions}</div>

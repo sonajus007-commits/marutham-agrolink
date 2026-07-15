@@ -29,34 +29,34 @@ cp backend/.env.example backend/.env
 
 Required for the app to boot:
 
-| Key | What it is |
-|-----|-----------|
-| `SUPABASE_URL` | Supabase project URL |
+| Key                    | What it is                                                      |
+| ---------------------- | --------------------------------------------------------------- |
+| `SUPABASE_URL`         | Supabase project URL                                            |
 | `SUPABASE_SERVICE_KEY` | Service-role key (server-side only — never ship to the browser) |
-| `JWT_SECRET` | Long random string; signs auth tokens |
-| `PORT` | API port (default 3000) |
+| `JWT_SECRET`           | Long random string; signs auth tokens                           |
+| `PORT`                 | API port (default 3000)                                         |
 
 Required for **migrations** (the server never uses it, the migration runner does):
 
-| Key | What it is |
-|-----|-----------|
+| Key            | What it is                                                                                                                                      |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL` | Direct Postgres URI. Use the **session pooler** string, **port 5432**. See the notes in `.env.example` — the password in the string is literal. |
 
 Security (set before any non-local deploy):
 
-| Key | What it is |
-|-----|-----------|
-| `CORS_ORIGINS` | Comma-separated browser origins allowed to call the API. Blank = open (same-origin only). |
+| Key                | What it is                                                                                               |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `CORS_ORIGINS`     | Comma-separated browser origins allowed to call the API. Blank = open (same-origin only).                |
 | `TRUST_PROXY_HOPS` | Number of reverse proxies in front of the server (default 1). The rate limiter needs the real client IP. |
 
 Optional (features degrade gracefully if unset):
 
-| Key | Effect if unset |
-|-----|-----------------|
-| `SMTP_*` | Email (approvals, OTP) disabled — logged to console instead |
-| `MSG91_*` | SMS disabled — OTP logged to console |
-| `SHOP_URL` | Public shop proxy off — static `home.html` served instead |
-| `DATA_GOV_API_KEY` | Daily mandi price sync skipped |
+| Key                | Effect if unset                                             |
+| ------------------ | ----------------------------------------------------------- |
+| `SMTP_*`           | Email (approvals, OTP) disabled — logged to console instead |
+| `MSG91_*`          | SMS disabled — OTP logged to console                        |
+| `SHOP_URL`         | Public shop proxy off — static `home.html` served instead   |
+| `DATA_GOV_API_KEY` | Daily mandi price sync skipped                              |
 
 ## 3. Build the database from empty
 

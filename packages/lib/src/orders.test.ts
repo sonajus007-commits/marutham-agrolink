@@ -1,8 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import {
-  isOrderCancelled, isOrderActive, canCancelOrder, canRequestReturn,
-  returnWindowHoursLeft, groupConsumerOrders, deriveOrderCharges, itemLineTotal,
-  CANCELLABLE_STATUSES, RETURN_WINDOW_HOURS, type Order,
+  isOrderCancelled,
+  isOrderActive,
+  canCancelOrder,
+  canRequestReturn,
+  returnWindowHoursLeft,
+  groupConsumerOrders,
+  deriveOrderCharges,
+  itemLineTotal,
+  CANCELLABLE_STATUSES,
+  RETURN_WINDOW_HOURS,
+  type Order,
 } from './orders';
 
 const order = (o: Partial<Order>): Order => ({ id: 'o1', status: 'Order Placed', ...o }) as Order;
@@ -45,7 +53,8 @@ describe('canCancelOrder', () => {
   });
 
   it.each(['VCO Verified', 'Picked Up', 'In Transit', 'At Hub', 'Out for Delivery', 'Delivered'])(
-    'refuses once the order has moved to "%s"', (status) => {
+    'refuses once the order has moved to "%s"',
+    (status) => {
       expect(canCancelOrder(order({ status }))).toBe(false);
     },
   );
@@ -59,7 +68,11 @@ describe('canCancelOrder', () => {
 describe('canRequestReturn', () => {
   const now = Date.parse('2026-07-09T12:00:00Z');
   const delivered = (hoursAgo: number, extra: Partial<Order> = {}) =>
-    order({ status: 'Delivered', delivered_at: new Date(now - hoursAgo * HOUR).toISOString(), ...extra });
+    order({
+      status: 'Delivered',
+      delivered_at: new Date(now - hoursAgo * HOUR).toISOString(),
+      ...extra,
+    });
 
   it('allows a return inside the window', () => {
     expect(canRequestReturn(delivered(2), now)).toBe(true);
@@ -117,11 +130,22 @@ describe('groupConsumerOrders', () => {
 
 describe('deriveOrderCharges', () => {
   // Postgres numerics arrive as strings.
-  const o = order({ item_total: '88.20', handling: '0.00', delivery: '30.00', total: '118.20', saved: '16.80' });
+  const o = order({
+    item_total: '88.20',
+    handling: '0.00',
+    delivery: '30.00',
+    total: '118.20',
+    saved: '16.80',
+  });
 
   it('splits a persisted order back into its charge lines', () => {
     expect(deriveOrderCharges(o)).toEqual({
-      itemTotal: 88.2, handling: 0, marketFee: 0, delivery: 30, total: 118.2, saved: 16.8,
+      itemTotal: 88.2,
+      handling: 0,
+      marketFee: 0,
+      delivery: 30,
+      total: 118.2,
+      saved: 16.8,
     });
   });
 
@@ -131,24 +155,42 @@ describe('deriveOrderCharges', () => {
   });
 
   it('floors float noise so a fee-free order shows no market fee', () => {
-    const noisy = order({ item_total: '88.20', handling: '0', delivery: '30', total: '118.2000001' });
+    const noisy = order({
+      item_total: '88.20',
+      handling: '0',
+      delivery: '30',
+      total: '118.2000001',
+    });
     expect(deriveOrderCharges(noisy).marketFee).toBe(0);
   });
 
   it('ignores the market_fee column, which is platform margin, not a customer charge', () => {
     // Real row: market_fee = 4.20 while the consumer-facing fee is 0.
-    const withColumn = order({ item_total: '88.20', handling: '0', delivery: '30', total: '118.20', market_fee: '4.20' });
+    const withColumn = order({
+      item_total: '88.20',
+      handling: '0',
+      delivery: '30',
+      total: '118.20',
+      market_fee: '4.20',
+    });
     expect(deriveOrderCharges(withColumn).marketFee).toBe(0);
   });
 
   it('charge lines add up to the total', () => {
-    const c = deriveOrderCharges(order({ item_total: '100', handling: '5', delivery: '25', total: '140' }));
+    const c = deriveOrderCharges(
+      order({ item_total: '100', handling: '5', delivery: '25', total: '140' }),
+    );
     expect(c.itemTotal + c.handling + c.marketFee + c.delivery).toBeCloseTo(c.total);
   });
 
   it('treats missing money fields as zero', () => {
     expect(deriveOrderCharges(order({}))).toEqual({
-      itemTotal: 0, handling: 0, marketFee: 0, delivery: 0, total: 0, saved: 0,
+      itemTotal: 0,
+      handling: 0,
+      marketFee: 0,
+      delivery: 0,
+      total: 0,
+      saved: 0,
     });
   });
 });

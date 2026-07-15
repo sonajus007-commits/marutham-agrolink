@@ -53,7 +53,10 @@ function Hero({ t }: { t: Dict }) {
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base text-fg-muted sm:text-lg">{t.hero.sub}</p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <a href="#shop" className="rounded-full bg-primary px-7 py-3 text-sm font-bold text-primary-on no-underline hover:bg-primary-hover">
+          <a
+            href="#shop"
+            className="rounded-full bg-primary px-7 py-3 text-sm font-bold text-primary-on no-underline hover:bg-primary-hover"
+          >
             {t.hero.ctaShop}
           </a>
           <a
@@ -101,7 +104,13 @@ function FreshToday({ t, products, hasMore }: { t: Dict; products: Product[]; ha
   );
 }
 
-function Achievements({ t, stats }: { t: Dict; stats: Awaited<ReturnType<typeof getPublicStats>> }) {
+function Achievements({
+  t,
+  stats,
+}: {
+  t: Dict;
+  stats: Awaited<ReturnType<typeof getPublicStats>>;
+}) {
   const tiles = [
     { value: stats.activeSellers, label: t.stats.sellers },
     { value: stats.happyCustomers, label: t.stats.customers },
@@ -113,7 +122,9 @@ function Achievements({ t, stats }: { t: Dict; stats: Awaited<ReturnType<typeof 
       <ul className="mx-auto grid max-w-5xl list-none grid-cols-2 gap-8 p-0 text-center sm:grid-cols-4">
         {tiles.map((tile) => (
           <li key={tile.label}>
-            <div className="font-display text-4xl font-bold text-gold">{tile.value.toLocaleString('en-IN')}</div>
+            <div className="font-display text-4xl font-bold text-gold">
+              {tile.value.toLocaleString('en-IN')}
+            </div>
             <div className="mt-1 text-xs font-semibold opacity-80">{tile.label}</div>
           </li>
         ))}
@@ -128,7 +139,9 @@ function Founder({ t }: { t: Dict }) {
       <h2 className="font-display text-3xl font-bold text-forest">{t.founder.title}</h2>
       <figure className="mt-6 rounded-2xl border border-border bg-muted p-8">
         <h3 className="text-lg font-bold text-forest">{t.founder.heading}</h3>
-        <blockquote className="mt-3 text-base leading-relaxed text-fg-muted">{t.founder.body}</blockquote>
+        <blockquote className="mt-3 text-base leading-relaxed text-fg-muted">
+          {t.founder.body}
+        </blockquote>
         <figcaption className="mt-4 text-xs font-bold text-forest">{t.founder.role}</figcaption>
       </figure>
     </section>

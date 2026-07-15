@@ -14,7 +14,11 @@ const AA_LARGE = 3;
 
 function parseHex(hex) {
   let h = hex.replace('#', '');
-  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (h.length === 3)
+    h = h
+      .split('')
+      .map((c) => c + c)
+      .join('');
   return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
 }
 
@@ -81,9 +85,7 @@ for (const theme of ['light', 'dark']) {
     const ok = r >= min;
     if (!ok) failed++;
     const mark = ok ? 'PASS' : 'FAIL';
-    console.log(
-      `  ${mark}  ${r.toFixed(2).padStart(5)}:1  (min ${min})  ${label}  ${fg} on ${bg}`,
-    );
+    console.log(`  ${mark}  ${r.toFixed(2).padStart(5)}:1  (min ${min})  ${label}  ${fg} on ${bg}`);
   }
 }
 

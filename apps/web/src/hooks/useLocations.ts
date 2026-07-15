@@ -45,6 +45,7 @@ export function useLocations(): LocationsApi {
     tree,
     states: Object.keys(tree).sort(),
     districtsOf: (state) => (tree[state] ? Object.keys(tree[state]).sort() : []),
-    taluksOf: (state, district) => (tree[state]?.[district] ? [...tree[state][district]].sort() : []),
+    taluksOf: (state, district) =>
+      tree[state]?.[district] ? [...tree[state][district]].sort() : [],
   };
 }

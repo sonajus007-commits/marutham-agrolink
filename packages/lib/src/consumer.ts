@@ -82,13 +82,35 @@ export const FREE_DELIVERY_MIN = 150; // ₹ — free delivery at/above this ite
 export const DELIVERY_FLAT = 25; // ₹ — charged below the threshold
 
 const PRODUCT_EMOJI: Record<string, string> = {
-  Tomatoes: '🍅', Brinjal: '🍆', 'Green Chilli': '🌶️', Onion: '🧅', Potato: '🥔',
-  Carrot: '🥕', Banana: '🍌', Mango: '🥭', Guava: '🍐', 'Raw Rice': '🌾',
-  'Toor Dal': '🫘', 'Country Chicken': '🐓', 'Broiler Chicken': '🍗', 'Goat Mutton': '🍖',
-  Catfish: '🐟', Prawn: '🦐', 'Fresh Milk': '🥛', Curd: '🥣',
-  'Coriander Leaves': '🌿', 'Curry Leaves': '🍃',
+  Tomatoes: '🍅',
+  Brinjal: '🍆',
+  'Green Chilli': '🌶️',
+  Onion: '🧅',
+  Potato: '🥔',
+  Carrot: '🥕',
+  Banana: '🍌',
+  Mango: '🥭',
+  Guava: '🍐',
+  'Raw Rice': '🌾',
+  'Toor Dal': '🫘',
+  'Country Chicken': '🐓',
+  'Broiler Chicken': '🍗',
+  'Goat Mutton': '🍖',
+  Catfish: '🐟',
+  Prawn: '🦐',
+  'Fresh Milk': '🥛',
+  Curd: '🥣',
+  'Coriander Leaves': '🌿',
+  'Curry Leaves': '🍃',
 };
-const DECIMAL_UNITS: Record<string, boolean> = { kg: true, g: true, litre: true, ml: true, quintal: true, ton: true };
+const DECIMAL_UNITS: Record<string, boolean> = {
+  kg: true,
+  g: true,
+  litre: true,
+  ml: true,
+  quintal: true,
+  ton: true,
+};
 
 export function getProductEmoji(name: string): string {
   return PRODUCT_EMOJI[name] || '🌿';
@@ -165,7 +187,10 @@ export function filterProducts(
     const offers = offersByProduct[p.id] || [];
     if (f.seller === 'Farmer' && offersForSeller(offers, 'Farmer').length === 0) return false;
     if (f.seller === 'Retailer' && offersForSeller(offers, 'Retailer').length === 0) return false;
-    if (city && offers.filter((o) => (o.farmer?.village_town || '').toLowerCase().includes(city)).length === 0)
+    if (
+      city &&
+      offers.filter((o) => (o.farmer?.village_town || '').toLowerCase().includes(city)).length === 0
+    )
       return false;
     return true;
   });
@@ -187,10 +212,15 @@ export function cartBill(cart: CartItem[], productById: Record<string, Product>)
     const dp = prodOf(i).district_price;
     return dp ? parseFloat(String(dp.handling)) || 0 : 0;
   };
-  const itemSubtotal = cart.reduce((s, i) => s + Math.max(0, parseFloat(String(i.price || 0)) - hdlOf(i)) * i.qty, 0);
+  const itemSubtotal = cart.reduce(
+    (s, i) => s + Math.max(0, parseFloat(String(i.price || 0)) - hdlOf(i)) * i.qty,
+    0,
+  );
   const handling = cart.reduce((mx, i) => (prodOf(i).exotic ? Math.max(mx, hdlOf(i)) : mx), 0);
   const farmers: Record<string, 1> = {};
-  cart.forEach((i) => { if (i.farmer_id) farmers[i.farmer_id] = 1; });
+  cart.forEach((i) => {
+    if (i.farmer_id) farmers[i.farmer_id] = 1;
+  });
   const marketFee = Object.keys(farmers).length >= 2 ? 10 : 0;
   const delivery = itemSubtotal <= 0 ? 0 : itemSubtotal >= FREE_DELIVERY_MIN ? 0 : DELIVERY_FLAT;
   const savings = cart.reduce((s, i) => {
@@ -199,7 +229,14 @@ export function cartBill(cart: CartItem[], productById: Record<string, Product>)
     const paidNoHdl = parseFloat(String(i.price)) - hdlOf(i);
     return s + Math.max(0, parseFloat(String(dp.market_price)) - paidNoHdl) * i.qty;
   }, 0);
-  return { itemSubtotal, handling, marketFee, delivery, savings, total: itemSubtotal + handling + marketFee + delivery };
+  return {
+    itemSubtotal,
+    handling,
+    marketFee,
+    delivery,
+    savings,
+    total: itemSubtotal + handling + marketFee + delivery,
+  };
 }
 
 export interface OrderingWindowStatus {

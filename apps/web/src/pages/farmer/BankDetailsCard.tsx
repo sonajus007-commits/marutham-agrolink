@@ -99,7 +99,9 @@ export function BankDetailsCard() {
 
       {pending ? (
         <div className="rounded-sm border border-warning-bg bg-warning-bg p-3">
-          <div className="text-sm font-bold text-warning-fg">⏳ Change request pending approval</div>
+          <div className="text-sm font-bold text-warning-fg">
+            ⏳ Change request pending approval
+          </div>
           <p className="mt-1 text-2xs text-warning-fg">
             The admin team has been notified by email and will review your request shortly.
           </p>
@@ -116,27 +118,47 @@ export function BankDetailsCard() {
         <>
           <dl className="flex flex-col">
             {FIELDS.map(({ key, label }) => (
-              <div key={key} className="flex justify-between gap-3 border-b border-border-subtle py-1.5 last:border-b-0">
+              <div
+                key={key}
+                className="flex justify-between gap-3 border-b border-border-subtle py-1.5 last:border-b-0"
+              >
                 <dt className="text-2xs uppercase tracking-wide text-fg-muted">{label}</dt>
                 <dd className="text-sm font-semibold text-fg">{current[key] || '—'}</dd>
               </div>
             ))}
           </dl>
-          <Button variant="ghost" className="mt-3" onClick={openEdit}>✏️ Request Change</Button>
+          <Button variant="ghost" className="mt-3" onClick={openEdit}>
+            ✏️ Request Change
+          </Button>
         </>
       ) : (
         <div className="flex flex-col gap-3">
           {FIELDS.map(({ key, label }) => (
             <Field key={key} label={label}>
-              {(p) => <Input {...p} type="text" value={draft[key]} onChange={(e) => set(key, e.target.value)} />}
+              {(p) => (
+                <Input
+                  {...p}
+                  type="text"
+                  value={draft[key]}
+                  onChange={(e) => set(key, e.target.value)}
+                />
+              )}
             </Field>
           ))}
 
-          {error ? <div className={FIELD_ERR_CLASS} role="alert">{error}</div> : null}
+          {error ? (
+            <div className={FIELD_ERR_CLASS} role="alert">
+              {error}
+            </div>
+          ) : null}
 
           <div className="flex gap-2">
-            <Button onClick={submit} disabled={busy}>{busy ? 'Submitting…' : 'Submit for Approval'}</Button>
-            <Button variant="ghost" onClick={() => setEditing(false)} disabled={busy}>Cancel</Button>
+            <Button onClick={submit} disabled={busy}>
+              {busy ? 'Submitting…' : 'Submit for Approval'}
+            </Button>
+            <Button variant="ghost" onClick={() => setEditing(false)} disabled={busy}>
+              Cancel
+            </Button>
           </div>
         </div>
       )}

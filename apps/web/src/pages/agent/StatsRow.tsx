@@ -7,7 +7,10 @@ export function StatsRow({ stats, isVCO }: { stats: AgentStats | null; isVCO: bo
   const dash = '—';
   return (
     <div className="agent-stats">
-      <StatTile label={isVCO ? t('agent.stat.toVerify') : t('agent.stat.inQueue')} value={stats ? stats.queue : dash} />
+      <StatTile
+        label={isVCO ? t('agent.stat.toVerify') : t('agent.stat.inQueue')}
+        value={stats ? stats.queue : dash}
+      />
       <StatTile
         label={isVCO ? t('agent.stat.verified') : t('agent.stat.delivered')}
         value={stats ? stats.completed : dash}

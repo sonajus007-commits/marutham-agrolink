@@ -22,16 +22,26 @@ export const APP_BASE = '/app';
  * Rule: if a backend dashboard guard admits an admin_role, that role belongs
  * here. */
 export const MANAGEMENT_ADMIN_ROLES = [
-  'Head Office', 'State Head', 'Regional Manager', 'District Manager',
-  'Hub Incharge', 'Board of Director', 'Zonal Manager',
-  'CEO', 'Managing Director', 'CFO', 'CTO',
+  'Head Office',
+  'State Head',
+  'Regional Manager',
+  'District Manager',
+  'Hub Incharge',
+  'Board of Director',
+  'Zonal Manager',
+  'CEO',
+  'Managing Director',
+  'CFO',
+  'CTO',
   // Technical Admin, HR Admin and HR Manager were the next casualties of the same
   // bug: the backend's ADMINHEAD_ROLES has always served them a dashboard, but
   // they were absent here — so they could sign in and were bounced straight back
   // to /login, locked out of the console entirely. They are not a hypothetical
   // like Zonal Manager was: HR Admin/Manager are the roles the whole employee
   // onboarding workflow is built around.
-  'Technical Admin', 'HR Admin', 'HR Manager',
+  'Technical Admin',
+  'HR Admin',
+  'HR Manager',
 ] as const;
 
 /* Who may read a record's audit trail and login history. Mirrors the backend's
@@ -52,7 +62,12 @@ export function canSeeAudit(adminRole?: string | null): boolean {
  * run the company and legacy let them look. The pure executive roles below are
  * the ones the dashboard is FOR, and the ones roleHome() lands there. */
 export const EXECUTIVE_ADMIN_ROLES = [
-  'Board of Director', 'CEO', 'Managing Director', 'CFO', 'CTO', 'Head Office',
+  'Board of Director',
+  'CEO',
+  'Managing Director',
+  'CFO',
+  'CTO',
+  'Head Office',
 ] as const;
 
 export function canSeeExecutive(adminRole?: string | null): boolean {
@@ -65,7 +80,11 @@ export function canSeeExecutive(adminRole?: string | null): boolean {
  * and keeps the operational Overview as their home; they reach this one from the
  * sidebar. */
 export const EXECUTIVE_HOME_ROLES = [
-  'Board of Director', 'CEO', 'Managing Director', 'CFO', 'CTO',
+  'Board of Director',
+  'CEO',
+  'Managing Director',
+  'CFO',
+  'CTO',
 ] as const;
 
 export function homesOnExecutive(adminRole?: string | null): boolean {
@@ -78,8 +97,11 @@ export function homesOnExecutive(adminRole?: string | null): boolean {
  * Regional/State/Zonal their state, Head Office everything — so the client never
  * passes a scope and cannot widen its own. */
 export const OPERATIONS_ADMIN_ROLES = [
-  'District Manager', 'Hub Incharge',
-  'Regional Manager', 'State Head', 'Zonal Manager',
+  'District Manager',
+  'Hub Incharge',
+  'Regional Manager',
+  'State Head',
+  'Zonal Manager',
   'Head Office',
 ] as const;
 
@@ -96,7 +118,10 @@ export function canSeeOperations(adminRole?: string | null): boolean {
  * generic Overview — they run every section and reach this from the sidebar,
  * exactly as with the executive dashboard. */
 export const OPERATIONS_HOME_ROLES = [
-  'District Manager', 'Regional Manager', 'State Head', 'Zonal Manager',
+  'District Manager',
+  'Regional Manager',
+  'State Head',
+  'Zonal Manager',
 ] as const;
 
 export function homesOnOperations(adminRole?: string | null): boolean {
@@ -107,7 +132,10 @@ export function homesOnOperations(adminRole?: string | null): boolean {
  * (routes/dashboard.js) exactly. The Head Office control panel: employees,
  * org-wide approvals, staff by role, audit + login activity. */
 export const ADMINHEAD_ADMIN_ROLES = [
-  'Head Office', 'Technical Admin', 'HR Admin', 'HR Manager',
+  'Head Office',
+  'Technical Admin',
+  'HR Admin',
+  'HR Manager',
 ] as const;
 
 export function canSeeAdminHead(adminRole?: string | null): boolean {
@@ -124,9 +152,7 @@ export function canSeeAdminHead(adminRole?: string | null): boolean {
  * For the other three it is not a preference but the only dashboard they can read
  * — an HR Admin has no business on the executive or operations screens, and the
  * backend would 403 them there. */
-export const ADMINHEAD_HOME_ROLES = [
-  'Technical Admin', 'HR Admin', 'HR Manager',
-] as const;
+export const ADMINHEAD_HOME_ROLES = ['Technical Admin', 'HR Admin', 'HR Manager'] as const;
 
 export function homesOnAdminHead(adminRole?: string | null): boolean {
   return ADMINHEAD_HOME_ROLES.includes(adminRole as (typeof ADMINHEAD_HOME_ROLES)[number]);
@@ -155,23 +181,38 @@ export const ADMIN_NAV: AdminNavSection[] = [
       // The board's dashboard. Existed only in legacy admin.html until now, so
       // every admin_role — the Board included — was landing on Overview instead.
       {
-        id: 'executive', labelKey: 'admin.nav.executive', icon: '🏛️',
-        to: '/admin/executive', roles: [...EXECUTIVE_ADMIN_ROLES],
+        id: 'executive',
+        labelKey: 'admin.nav.executive',
+        icon: '🏛️',
+        to: '/admin/executive',
+        roles: [...EXECUTIVE_ADMIN_ROLES],
       },
       // The operational managers' dashboard — district/region scoped by the server.
       {
-        id: 'operations', labelKey: 'admin.nav.operations', icon: '🚚',
-        to: '/admin/operations', roles: [...OPERATIONS_ADMIN_ROLES],
+        id: 'operations',
+        labelKey: 'admin.nav.operations',
+        icon: '🚚',
+        to: '/admin/operations',
+        roles: [...OPERATIONS_ADMIN_ROLES],
       },
       // The Head Office control panel — the last dashboard to leave legacy.
       {
-        id: 'adminhead', labelKey: 'admin.nav.adminhead', icon: '🏢',
-        to: '/admin/adminhead', roles: [...ADMINHEAD_ADMIN_ROLES],
+        id: 'adminhead',
+        labelKey: 'admin.nav.adminhead',
+        icon: '🏢',
+        to: '/admin/adminhead',
+        roles: [...ADMINHEAD_ADMIN_ROLES],
       },
       { id: 'orders', labelKey: 'admin.nav.orders', icon: '📦', to: '/admin/orders' },
       // Hub floor work. Board of Director is management, not operations — and the
       // /scan endpoint would refuse them, so they do not get the item.
-      { id: 'hub', labelKey: 'admin.nav.hub', icon: '🏭', to: '/admin/hub', roles: [...HUB_STAFF_ROLES] },
+      {
+        id: 'hub',
+        labelKey: 'admin.nav.hub',
+        icon: '🏭',
+        to: '/admin/hub',
+        roles: [...HUB_STAFF_ROLES],
+      },
       { id: 'returns', labelKey: 'admin.nav.returns', icon: '↩️', to: '/admin/returns' },
       { id: 'payouts', labelKey: 'admin.nav.payouts', icon: '💸', to: '/admin/payouts' },
       { id: 'users', labelKey: 'admin.nav.users', icon: '👥', to: '/admin/users' },
@@ -181,14 +222,25 @@ export const ADMIN_NAV: AdminNavSection[] = [
     id: 'approvals',
     labelKey: 'admin.nav.approvals',
     items: [
-      { id: 'registrations', labelKey: 'admin.nav.registrations', icon: '📋', to: '/admin/registrations' },
+      {
+        id: 'registrations',
+        labelKey: 'admin.nav.registrations',
+        icon: '📋',
+        to: '/admin/registrations',
+      },
       // Seller product requests. No `roles` — the backend guards these endpoints on
       // role === 'admin' alone (no admin_role check), so every management role that
       // can reach this console can already review a listing.
       { id: 'listings', labelKey: 'admin.nav.listings', icon: '🌾', to: '/admin/listings' },
       // Approving a change request writes bank/GST fields, so it is Head Office only
       // — matching backend isHeadOffice on POST /users/change-requests/:id/approve.
-      { id: 'change-requests', labelKey: 'admin.nav.changeRequests', icon: '📝', to: '/admin/change-requests', roles: ['Head Office'] },
+      {
+        id: 'change-requests',
+        labelKey: 'admin.nav.changeRequests',
+        icon: '📝',
+        to: '/admin/change-requests',
+        roles: ['Head Office'],
+      },
     ],
   },
   {
@@ -198,14 +250,18 @@ export const ADMIN_NAV: AdminNavSection[] = [
       // The employee tracker is HR-owned. Head Office / State Head always have it;
       // a Board of Director does too. HR-Admin-flagged staff with another role reach
       // it by deep link (the page and backend both enforce the real authority).
-      { id: 'employees', labelKey: 'admin.nav.employees', icon: '🧑‍💼', to: '/admin/employees', roles: ['Head Office', 'State Head', 'Board of Director'] },
+      {
+        id: 'employees',
+        labelKey: 'admin.nav.employees',
+        icon: '🧑‍💼',
+        to: '/admin/employees',
+        roles: ['Head Office', 'State Head', 'Board of Director'],
+      },
     ],
   },
   {
     id: 'catalog',
     labelKey: 'admin.nav.catalog',
-    items: [
-      { id: 'products', labelKey: 'admin.nav.products', icon: '🌾', to: '/admin/products' },
-    ],
+    items: [{ id: 'products', labelKey: 'admin.nav.products', icon: '🌾', to: '/admin/products' }],
   },
 ];

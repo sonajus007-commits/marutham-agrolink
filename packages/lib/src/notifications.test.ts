@@ -1,14 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import {
-  unreadCount, markRead, markAllRead, relativeTime, groupByRecency,
+  unreadCount,
+  markRead,
+  markAllRead,
+  relativeTime,
+  groupByRecency,
   type NotificationItem,
 } from './notifications';
 
-const n = (id: string, time: string, read = false): NotificationItem => ({ id, title: id, time, read });
+const n = (id: string, time: string, read = false): NotificationItem => ({
+  id,
+  title: id,
+  time,
+  read,
+});
 
 describe('unreadCount', () => {
   it('counts the unread', () => {
-    expect(unreadCount([n('a', '2026-07-10'), n('b', '2026-07-10', true), n('c', '2026-07-10')])).toBe(2);
+    expect(
+      unreadCount([n('a', '2026-07-10'), n('b', '2026-07-10', true), n('c', '2026-07-10')]),
+    ).toBe(2);
     expect(unreadCount([])).toBe(0);
   });
 });
@@ -45,7 +56,10 @@ describe('markAllRead', () => {
 describe('relativeTime', () => {
   const now = new Date('2026-07-10T12:00:00Z').getTime();
   const ago = (ms: number) => new Date(now - ms).toISOString();
-  const S = 1000, M = 60 * S, H = 60 * M, DAY = 24 * H;
+  const S = 1000,
+    M = 60 * S,
+    H = 60 * M,
+    DAY = 24 * H;
 
   it('says just now under 45s', () => {
     expect(relativeTime(ago(10 * S), now)).toBe('just now');

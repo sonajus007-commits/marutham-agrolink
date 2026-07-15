@@ -31,16 +31,16 @@ that duplicates the Express RBAC.
 
 **That objection was wrong, and I want to be explicit about why**, because it was the load-
 bearing argument. The pages that need server rendering — homepage, category, product detail,
-search — are *anonymous*. They need no JWT. The pages that need the JWT — cart, checkout,
+search — are _anonymous_. They need no JWT. The pages that need the JWT — cart, checkout,
 seller console, dashboards — need no server rendering. The split is clean, and it falls
 exactly along the line the business already draws. There is no BFF, and no cookie session.
 
-What I got right, and what still holds, is that migrating the *working portals* to the App
+What I got right, and what still holds, is that migrating the _working portals_ to the App
 Router buys nothing. That part of the recommendation is unchanged.
 
 The reason my earlier analysis reached the wrong conclusion is that I reviewed the repository,
 and the repository has no public marketplace. Every route in `apps/web/src/App.tsx` is behind
-`ProtectedRoute`. I concluded there was no SEO surface. In fact there is no SEO surface *yet* —
+`ProtectedRoute`. I concluded there was no SEO surface. In fact there is no SEO surface _yet_ —
 which is a statement about the schedule, not the architecture.
 
 ### 2.2 The catalogue is already SSR-ready
@@ -95,21 +95,21 @@ and is not a bet on a framework.
 
 ## 3. Comparison Against Your Stated Criteria
 
-| Criterion | React + Vite | Next.js | Recommendation |
-|---|---|---|---|
-| Public marketplace performance | CSR: blank HTML → JS → fetch → paint | SSR/ISR: HTML on first byte, cached at edge | **Next.js** — decisive |
-| Product catalogue pages | Client-fetched, unindexable | Server-rendered, ISR-cacheable | **Next.js** — decisive |
-| SEO | No crawlable HTML, no metadata, no structured data | `generateMetadata`, schema.org, sitemap, hreflang en/ta | **Next.js** — decisive |
-| Consumer shopping experience | Fine once loaded | Faster first load; identical afterwards | Next.js, modestly |
-| Seller portal | Works today, tested | Same code as client components | **Vite** — no gain from switching |
-| Admin dashboards | Works; ECharts is client-only | Must be `'use client'` + `ssr:false` anyway | **Vite** — Next.js adds only friction |
-| Mobile app compatibility | Shared packages are DOM-free and port to RN | Identical; RSC has no RN story | **Tie** (packages carry it, not the app) |
-| Express REST integration | Vite dev proxy → Express | Next `rewrites` → Express. API routes *not* used, per your constraint | Tie |
-| Maintainability | One framework, one router | Two frameworks if split; one if full migration | **Vite** for portals |
-| 5–10 year scalability | Vite/react-router are stable, slow-moving | Next.js gives SSR headroom; App Router churn is a real cost | Next.js for public, with eyes open |
-| Development complexity | Lower | Server/client component boundary is a genuine ongoing tax | **Vite** for portals |
-| Deployment | Express serves static `/app` | Adds a Node process + reverse proxy | **Vite** simpler; cost is small and bounded |
-| Long-term maintenance cost | Lowest | Higher, but paid only on the surface that earns it | Split contains the cost |
+| Criterion                      | React + Vite                                       | Next.js                                                               | Recommendation                              |
+| ------------------------------ | -------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------- |
+| Public marketplace performance | CSR: blank HTML → JS → fetch → paint               | SSR/ISR: HTML on first byte, cached at edge                           | **Next.js** — decisive                      |
+| Product catalogue pages        | Client-fetched, unindexable                        | Server-rendered, ISR-cacheable                                        | **Next.js** — decisive                      |
+| SEO                            | No crawlable HTML, no metadata, no structured data | `generateMetadata`, schema.org, sitemap, hreflang en/ta               | **Next.js** — decisive                      |
+| Consumer shopping experience   | Fine once loaded                                   | Faster first load; identical afterwards                               | Next.js, modestly                           |
+| Seller portal                  | Works today, tested                                | Same code as client components                                        | **Vite** — no gain from switching           |
+| Admin dashboards               | Works; ECharts is client-only                      | Must be `'use client'` + `ssr:false` anyway                           | **Vite** — Next.js adds only friction       |
+| Mobile app compatibility       | Shared packages are DOM-free and port to RN        | Identical; RSC has no RN story                                        | **Tie** (packages carry it, not the app)    |
+| Express REST integration       | Vite dev proxy → Express                           | Next `rewrites` → Express. API routes _not_ used, per your constraint | Tie                                         |
+| Maintainability                | One framework, one router                          | Two frameworks if split; one if full migration                        | **Vite** for portals                        |
+| 5–10 year scalability          | Vite/react-router are stable, slow-moving          | Next.js gives SSR headroom; App Router churn is a real cost           | Next.js for public, with eyes open          |
+| Development complexity         | Lower                                              | Server/client component boundary is a genuine ongoing tax             | **Vite** for portals                        |
+| Deployment                     | Express serves static `/app`                       | Adds a Node process + reverse proxy                                   | **Vite** simpler; cost is small and bounded |
+| Long-term maintenance cost     | Lowest                                             | Higher, but paid only on the surface that earns it                    | Split contains the cost                     |
 
 Read down that table and the shape of the answer is visible: **Next.js wins the first three
 rows decisively and loses or ties almost everything else.** The first three rows are the public
@@ -138,7 +138,7 @@ right call — first-byte performance on the public storefront justifies it inde
 
 ### The third door, briefly
 
-React Router v7 framework mode (formerly Remix) offers SSR as an *incremental upgrade* from
+React Router v7 framework mode (formerly Remix) offers SSR as an _incremental upgrade_ from
 react-router 6, which `apps/web` already uses. It would deliver server rendering without a
 second framework. I am not recommending it: your team has stated a Next.js preference, shadcn/ui
 is Next-first, and the hiring pool over a 5–10 year horizon is deeper. But it is the option with
@@ -158,7 +158,7 @@ the lowest migration cost, and you should know it exists before committing.
 - Next.js enters the stack on a low-stakes surface. If the App Router proves painful, the blast
   radius is one app that has no authenticated state.
 - Express, Supabase, RBAC, and the REST contract are untouched, as you required.
-- The Admin build — a third of remaining effort — chooses its framework *later*, with months of
+- The Admin build — a third of remaining effort — chooses its framework _later_, with months of
   real Next.js experience informing the choice.
 
 **Drawbacks — stated plainly**
@@ -181,23 +181,23 @@ the lowest migration cost, and you should know it exists before committing.
 
 One engineer, working days. ±40%. Sizing, not commitment.
 
-| Work | Days | Depends on |
-|---|---|---|
-| **Phase 0 — Design system** (framework-independent) | | |
-| Tokenize: `tokens.ts` → generated `tokens.css`, retire 358 hex literals | 3–5 | — |
-| Tailwind v4 + `@theme` projection | 2–3 | tokenize |
-| shadcn/ui rebuild of 17 components + Lucide | 8–12 | Tailwind |
-| **Phase 1 — Public marketplace** | | |
-| `apps/shop` scaffold: Next.js, TS, Tailwind, shared packages | 2–3 | Phase 0 |
-| Home, category browse, product detail (SSR + ISR) | 6–9 | scaffold |
-| Search UI + backend search/pagination endpoints | 4–6 | — |
-| **Phase 2 — SEO & performance** | | |
-| Metadata, schema.org `Product`/`Offer`, sitemap, robots, `hreflang` en/ta | 4–6 | Phase 1 |
-| Core Web Vitals, image pipeline (Supabase Storage → `next/image`) | 3–4 | Phase 1 |
-| **Phase 3 — Integration** | | |
-| Reverse proxy, single origin, cart + session handoff, E2E | 2–3 | Phase 1 |
-| **Subtotal to a live public marketplace** | **34–51** | |
-| *Portals continue on Vite in parallel: Consumer 2C, Farmer 3C, Admin* | *26–40* | Phase 0 |
+| Work                                                                      | Days      | Depends on |
+| ------------------------------------------------------------------------- | --------- | ---------- |
+| **Phase 0 — Design system** (framework-independent)                       |           |            |
+| Tokenize: `tokens.ts` → generated `tokens.css`, retire 358 hex literals   | 3–5       | —          |
+| Tailwind v4 + `@theme` projection                                         | 2–3       | tokenize   |
+| shadcn/ui rebuild of 17 components + Lucide                               | 8–12      | Tailwind   |
+| **Phase 1 — Public marketplace**                                          |           |            |
+| `apps/shop` scaffold: Next.js, TS, Tailwind, shared packages              | 2–3       | Phase 0    |
+| Home, category browse, product detail (SSR + ISR)                         | 6–9       | scaffold   |
+| Search UI + backend search/pagination endpoints                           | 4–6       | —          |
+| **Phase 2 — SEO & performance**                                           |           |            |
+| Metadata, schema.org `Product`/`Offer`, sitemap, robots, `hreflang` en/ta | 4–6       | Phase 1    |
+| Core Web Vitals, image pipeline (Supabase Storage → `next/image`)         | 3–4       | Phase 1    |
+| **Phase 3 — Integration**                                                 |           |            |
+| Reverse proxy, single origin, cart + session handoff, E2E                 | 2–3       | Phase 1    |
+| **Subtotal to a live public marketplace**                                 | **34–51** |            |
+| _Portals continue on Vite in parallel: Consumer 2C, Farmer 3C, Admin_     | _26–40_   | Phase 0    |
 
 The framework decision itself contributes **zero** days. Everything above is work you would do
 under either choice, except the ~2–3 day Next.js scaffold and the ~2–3 day proxy.
@@ -209,17 +209,17 @@ user-visible change. That is the option I am recommending against.
 
 ## 6. Risks
 
-| # | Risk | Severity | Mitigation |
-|---|---|---|---|
-| 1 | Two frameworks drift — divergent patterns, duplicated components | **High** | Absolute boundary: Next.js = anonymous only. All UI in `packages/ui`. Shared ESLint/TS config. Revisit at Admin. |
-| 2 | Split origin breaks the free cart/session handoff | **High** | Single origin via reverse proxy is a **requirement**. If the shop must live on Vercel, budget 3–5 days for an explicit token/cart handoff. |
-| 3 | `GET /products/:id` publicly returns farmer `fname`, `lname`, `village_town` | **High** | Today this is unindexed. SSR puts grower names and villages into Google. Decide *before* launch whether that is intended transparency or a privacy exposure. It is currently neither documented nor consented. |
-| 4 | `GET /products` has no pagination and joins prices + ratings for every row | Medium | Fine at hundreds of products; will not hold at thousands. Add pagination + a search endpoint in Phase 1. |
-| 5 | Prices vary by district → the ISR cache key is (product × district) | Medium | SSG the product shell; hydrate district price client-side. Or ISR only the top N districts. Decide before building. |
-| 6 | Next.js App Router churn over a 5–10 year horizon | Medium | Real, and a genuine argument for Vite. Contained by keeping Next.js on one stateless app. |
-| 7 | SEO returns underperform expectations for quick-commerce | Medium | Justify Next.js on first-byte performance, which is certain; treat organic traffic as upside. Invest in category + Tamil content, not thin product pages. |
-| 8 | Team learns server/client component boundaries on a live surface | Low | The public app has no authenticated state — the hardest RSC problems never arise. |
-| 9 | Supabase Auth decision still open (`architecture-review.md` §11) | **High** | Independent of this ADR. Public marketplace is anonymous and unblocked either way. |
+| #   | Risk                                                                         | Severity | Mitigation                                                                                                                                                                                                     |
+| --- | ---------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Two frameworks drift — divergent patterns, duplicated components             | **High** | Absolute boundary: Next.js = anonymous only. All UI in `packages/ui`. Shared ESLint/TS config. Revisit at Admin.                                                                                               |
+| 2   | Split origin breaks the free cart/session handoff                            | **High** | Single origin via reverse proxy is a **requirement**. If the shop must live on Vercel, budget 3–5 days for an explicit token/cart handoff.                                                                     |
+| 3   | `GET /products/:id` publicly returns farmer `fname`, `lname`, `village_town` | **High** | Today this is unindexed. SSR puts grower names and villages into Google. Decide _before_ launch whether that is intended transparency or a privacy exposure. It is currently neither documented nor consented. |
+| 4   | `GET /products` has no pagination and joins prices + ratings for every row   | Medium   | Fine at hundreds of products; will not hold at thousands. Add pagination + a search endpoint in Phase 1.                                                                                                       |
+| 5   | Prices vary by district → the ISR cache key is (product × district)          | Medium   | SSG the product shell; hydrate district price client-side. Or ISR only the top N districts. Decide before building.                                                                                            |
+| 6   | Next.js App Router churn over a 5–10 year horizon                            | Medium   | Real, and a genuine argument for Vite. Contained by keeping Next.js on one stateless app.                                                                                                                      |
+| 7   | SEO returns underperform expectations for quick-commerce                     | Medium   | Justify Next.js on first-byte performance, which is certain; treat organic traffic as upside. Invest in category + Tamil content, not thin product pages.                                                      |
+| 8   | Team learns server/client component boundaries on a live surface             | Low      | The public app has no authenticated state — the hardest RSC problems never arise.                                                                                                                              |
+| 9   | Supabase Auth decision still open (`architecture-review.md` §11)             | **High** | Independent of this ADR. Public marketplace is anonymous and unblocked either way.                                                                                                                             |
 
 Risk 3 is the one I would raise first in a review. It exists today, in production code, and this
 plan amplifies it from "reachable via API" to "indexed by Google."
@@ -232,7 +232,7 @@ Each stage is independently shippable and independently revertible.
 
 **Stage 0 — Design system.** `packages/tokens` and `packages/ui`. Nothing else moves. Feature
 freeze, per your instruction. Output: shadcn/ui + Lucide + Marutham theme, consumed by the
-existing Vite portals with no visual regression. *Framework decision not yet exercised.*
+existing Vite portals with no visual regression. _Framework decision not yet exercised._
 
 **Stage 1 — `apps/shop` skeleton.** Next.js App Router, TypeScript, Tailwind, importing
 `@marutham/ui` and `@marutham/api-client`. One route: `/` rendering the homepage against the
@@ -264,15 +264,15 @@ costs more than it returns — but the decision should be made then, not now.
 
 One engineer. Calendar weeks, assuming the feature freeze holds through Stage 0.
 
-| Weeks | Stage | Milestone |
-|---|---|---|
-| 1–3 | Stage 0 | Design system live; portals restyled, no regressions |
-| 4 | Stage 1 | **Go/no-go**: Next.js homepage in production behind the proxy |
-| 5–7 | Stage 2 | Public catalogue: categories, product pages, search |
-| 8–9 | Stage 3 | SEO complete; Lighthouse/CWV measured; Risk 3 resolved |
-| 9 | Stage 4 | Single origin; cart survives the login boundary |
-| 10+ | Stage 5 | Portals resume on Vite (Consumer 2C → Farmer 3C → Admin) |
-| ~Week 16 | Stage 6 | Framework decision for Admin, made with production evidence |
+| Weeks    | Stage   | Milestone                                                     |
+| -------- | ------- | ------------------------------------------------------------- |
+| 1–3      | Stage 0 | Design system live; portals restyled, no regressions          |
+| 4        | Stage 1 | **Go/no-go**: Next.js homepage in production behind the proxy |
+| 5–7      | Stage 2 | Public catalogue: categories, product pages, search           |
+| 8–9      | Stage 3 | SEO complete; Lighthouse/CWV measured; Risk 3 resolved        |
+| 9        | Stage 4 | Single origin; cart survives the login boundary               |
+| 10+      | Stage 5 | Portals resume on Vite (Consumer 2C → Farmer 3C → Admin)      |
+| ~Week 16 | Stage 6 | Framework decision for Admin, made with production evidence   |
 
 **Public marketplace live: roughly week 9**, or week 6 if Stage 0 runs in parallel with a second
 engineer. Two engineers do not compress Stage 0 — it is a serial refactor of shared components.

@@ -14,7 +14,13 @@ const badge = cva('inline-block text-xs font-bold px-[9px] py-[3px] rounded-pill
   defaultVariants: { variant: 'neutral' },
 });
 
-export function Badge({ variant = 'neutral', children }: { variant?: BadgeVariant; children: ReactNode }) {
+export function Badge({
+  variant = 'neutral',
+  children,
+}: {
+  variant?: BadgeVariant;
+  children: ReactNode;
+}) {
   return <span className={badge({ variant })}>{children}</span>;
 }
 

@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  formatBytes, matchesAccept, fileKey, validateFiles, type FileLike,
-} from './upload';
+import { formatBytes, matchesAccept, fileKey, validateFiles, type FileLike } from './upload';
 
 const f = (name: string, size: number, type: string): FileLike => ({ name, size, type });
 
@@ -59,7 +57,9 @@ describe('validateFiles', () => {
   });
 
   it('rejects the wrong type', () => {
-    const r = validateFiles([f('a.exe', 10, 'application/x-msdownload')], [], { accept: 'image/*' });
+    const r = validateFiles([f('a.exe', 10, 'application/x-msdownload')], [], {
+      accept: 'image/*',
+    });
     expect(r.accepted).toHaveLength(0);
     expect(r.rejected[0]).toMatchObject({ reason: 'type' });
   });
@@ -68,16 +68,16 @@ describe('validateFiles', () => {
     const r = validateFiles([f('big.png', 5_000, 'image/png')], [], { maxSize: 1_000 });
     expect(r.rejected[0]).toMatchObject({ reason: 'size' });
     // On the boundary is fine.
-    expect(validateFiles([f('ok.png', 1_000, 'image/png')], [], { maxSize: 1_000 }).accepted).toHaveLength(1);
+    expect(
+      validateFiles([f('ok.png', 1_000, 'image/png')], [], { maxSize: 1_000 }).accepted,
+    ).toHaveLength(1);
   });
 
   it('caps the total against the existing selection', () => {
     const existing = [f('a.png', 1, 'image/png')];
-    const r = validateFiles(
-      [f('b.png', 2, 'image/png'), f('c.png', 3, 'image/png')],
-      existing,
-      { maxFiles: 2 },
-    );
+    const r = validateFiles([f('b.png', 2, 'image/png'), f('c.png', 3, 'image/png')], existing, {
+      maxFiles: 2,
+    });
     expect(r.accepted).toHaveLength(1); // one slot left
     expect(r.rejected).toHaveLength(1);
     expect(r.rejected[0]).toMatchObject({ reason: 'count' });

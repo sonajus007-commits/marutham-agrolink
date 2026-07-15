@@ -28,7 +28,9 @@ export function LangToggle({ current }: { current: Lang }) {
           onClick={() => pick(lang)}
           aria-pressed={current === lang}
           className={`cursor-pointer rounded-full border-0 px-3 py-1 text-xs font-bold transition-colors ${
-            current === lang ? 'bg-forest text-white' : 'bg-transparent text-fg-muted hover:text-forest'
+            current === lang
+              ? 'bg-forest text-white'
+              : 'bg-transparent text-fg-muted hover:text-forest'
           } ${lang === 'ta' ? 'font-[Noto_Serif_Tamil]' : ''}`}
         >
           {lang === 'en' ? 'EN' : 'த'}

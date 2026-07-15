@@ -7,11 +7,22 @@ import { useToast } from '../../components/Toast';
 const METHODS = [
   { id: 'UPI', label: 'UPI', desc: 'GPay, PhonePe, Paytm', icon: '📱' },
   { id: 'Card', label: 'Credit / Debit Card', desc: 'Visa, Mastercard, RuPay', icon: '💳' },
-  { id: 'Cash on Delivery', label: 'Cash on Delivery', desc: 'Pay when your order arrives', icon: '💵' },
+  {
+    id: 'Cash on Delivery',
+    label: 'Cash on Delivery',
+    desc: 'Pay when your order arrives',
+    icon: '💵',
+  },
 ];
 
 export function PaymentSheet({
-  open, amount, items, address, deliveryFee, onClose, onPlaced,
+  open,
+  amount,
+  items,
+  address,
+  deliveryFee,
+  onClose,
+  onPlaced,
 }: {
   open: boolean;
   amount: number;
@@ -30,7 +41,12 @@ export function PaymentSheet({
     setBusy(true);
     setError('');
     try {
-      const res = await api.placeOrder({ items, pay_method: method, delivery_fee: deliveryFee, delivery_address: address });
+      const res = await api.placeOrder({
+        items,
+        pay_method: method,
+        delivery_fee: deliveryFee,
+        delivery_address: address,
+      });
       toast(`Order placed! ${res.order.code || ''}`, 'ok');
       onPlaced();
     } catch (e) {
@@ -43,28 +59,73 @@ export function PaymentSheet({
     <Sheet open={open} title="Payment" onClose={onClose}>
       <div style={{ textAlign: 'center', marginBottom: 16 }}>
         <div style={{ fontSize: 11, color: 'var(--gray)' }}>Amount payable</div>
-        <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--forest-soft)' }}>{fmtMoney(amount)}</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--forest-soft)' }}>
+          {fmtMoney(amount)}
+        </div>
       </div>
 
       {METHODS.map((m) => {
         const on = method === m.id;
         return (
-          <button key={m.id} type="button" className={`pay-method ${on ? 'on' : ''}`} onClick={() => setMethod(m.id)}>
+          <button
+            key={m.id}
+            type="button"
+            className={`pay-method ${on ? 'on' : ''}`}
+            onClick={() => setMethod(m.id)}
+          >
             <div style={{ fontSize: 22 }}>{m.icon}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)' }}>{m.label}</div>
               <div style={{ fontSize: 10, color: 'var(--gray)' }}>{m.desc}</div>
             </div>
-            <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${on ? 'var(--forest-soft)' : 'var(--tint-300)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {on ? <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--forest-soft)' }} /> : null}
+            <div
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                border: `2px solid ${on ? 'var(--forest-soft)' : 'var(--tint-300)'}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {on ? (
+                <div
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    background: 'var(--forest-soft)',
+                  }}
+                />
+              ) : null}
             </div>
           </button>
         );
       })}
 
-      {error ? <div style={{ background: 'var(--redbg)', color: 'var(--red)', fontSize: 12, fontWeight: 600, padding: '9px 12px', borderRadius: 8, margin: '10px 0' }}>{error}</div> : null}
+      {error ? (
+        <div
+          style={{
+            background: 'var(--redbg)',
+            color: 'var(--red)',
+            fontSize: 12,
+            fontWeight: 600,
+            padding: '9px 12px',
+            borderRadius: 8,
+            margin: '10px 0',
+          }}
+        >
+          {error}
+        </div>
+      ) : null}
 
-      <button className="cons-btn-primary" style={{ marginTop: 12 }} onClick={confirm} disabled={busy}>
+      <button
+        className="cons-btn-primary"
+        style={{ marginTop: 12 }}
+        onClick={confirm}
+        disabled={busy}
+      >
         {busy ? 'Placing order…' : method === 'Cash on Delivery' ? 'Place Order (COD)' : 'Pay Now'}
       </button>
     </Sheet>

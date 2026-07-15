@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
-  rankedStaffRoles, rankedDepartments, staffTotal, approvalQueue,
+  rankedStaffRoles,
+  rankedDepartments,
+  staffTotal,
+  approvalQueue,
   type StaffRole,
 } from './adminhead';
 
@@ -12,7 +15,9 @@ describe('rankedStaffRoles', () => {
       { role: 'Delivery Agent', count: 7 },
     ];
     expect(rankedStaffRoles(rows).map((r) => r.role)).toEqual([
-      'VCO', 'Delivery Agent', 'District Manager',
+      'VCO',
+      'Delivery Agent',
+      'District Manager',
     ]);
   });
 
@@ -25,7 +30,9 @@ describe('rankedStaffRoles', () => {
     // Without the tie-break these three would sit in whatever order PostgREST
     // happened to return, and the chart would appear to change on every refresh.
     expect(rankedStaffRoles(rows).map((r) => r.role)).toEqual([
-      'CFO', 'Hub Incharge', 'Zonal Manager',
+      'CFO',
+      'Hub Incharge',
+      'Zonal Manager',
     ]);
   });
 
@@ -40,7 +47,10 @@ describe('rankedStaffRoles', () => {
   });
 
   it('does not mutate the input, and survives none', () => {
-    const rows: StaffRole[] = [{ role: 'A', count: 1 }, { role: 'B', count: 5 }];
+    const rows: StaffRole[] = [
+      { role: 'A', count: 1 },
+      { role: 'B', count: 5 },
+    ];
     rankedStaffRoles(rows);
     expect(rows.map((r) => r.role)).toEqual(['A', 'B']);
     expect(rankedStaffRoles(undefined)).toEqual([]);
@@ -64,10 +74,12 @@ describe('rankedDepartments', () => {
 
 describe('staffTotal', () => {
   it('sums the whole that the ranked bars are parts of', () => {
-    expect(staffTotal([
-      { role: 'VCO', count: 11 },
-      { role: 'Delivery Agent', count: 7 },
-    ])).toBe(18);
+    expect(
+      staffTotal([
+        { role: 'VCO', count: 11 },
+        { role: 'Delivery Agent', count: 7 },
+      ]),
+    ).toBe(18);
   });
 
   it('is 0, not NaN, when there is no staff', () => {

@@ -3,8 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { OrderPipeline, OrderTimeline, Sheet, Spinner } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import {
-  buildPipeline, fmtDate, fmtMoney, getProductEmoji, isOrderCancelled, statusColor,
-  type Order, type OrderHistoryEntry, type OrderItem,
+  buildPipeline,
+  fmtDate,
+  fmtMoney,
+  getProductEmoji,
+  isOrderCancelled,
+  statusColor,
+  type Order,
+  type OrderHistoryEntry,
+  type OrderItem,
 } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 
@@ -79,18 +86,28 @@ export function FarmerOrderSheet({
             <h3 className="mb-2 text-sm font-bold text-primary">📋 {t('farmer.orders.info')}</h3>
             <InfoRow label={t('farmer.orders.code')} value={order.code || '—'} />
             <InfoRow label={t('farmer.orders.placedOn')} value={fmtDate(order.created_at)} />
-            <InfoRow label={t('farmer.orders.payment')} value={`${order.pay_method || '—'} · ${order.pay_status || ''}`} />
-            {order.village ? <InfoRow label={t('farmer.orders.deliveryArea')} value={order.village} /> : null}
+            <InfoRow
+              label={t('farmer.orders.payment')}
+              value={`${order.pay_method || '—'} · ${order.pay_status || ''}`}
+            />
+            {order.village ? (
+              <InfoRow label={t('farmer.orders.deliveryArea')} value={order.village} />
+            ) : null}
           </section>
 
           <section className="rounded-base border border-border-subtle bg-surface p-4">
-            <h3 className="mb-2 text-sm font-bold text-primary">🌿 {t('farmer.orders.yourItems')}</h3>
+            <h3 className="mb-2 text-sm font-bold text-primary">
+              🌿 {t('farmer.orders.yourItems')}
+            </h3>
             {items.length === 0 ? (
               <p className="text-xs text-fg-muted">{t('farmer.orders.noItems')}</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {items.map((item, idx) => (
-                  <li key={item.id || idx} className="flex items-center justify-between gap-2 text-sm">
+                  <li
+                    key={item.id || idx}
+                    className="flex items-center justify-between gap-2 text-sm"
+                  >
                     <span className="font-semibold text-fg">
                       {getProductEmoji(item.name)} {item.name}
                     </span>
@@ -110,7 +127,9 @@ export function FarmerOrderSheet({
 
           {history.length ? (
             <section className="rounded-base border border-border-subtle bg-surface p-4">
-              <h3 className="mb-2 text-sm font-bold text-primary">📍 {t('farmer.orders.timeline')}</h3>
+              <h3 className="mb-2 text-sm font-bold text-primary">
+                📍 {t('farmer.orders.timeline')}
+              </h3>
               <OrderTimeline entries={history} />
             </section>
           ) : null}

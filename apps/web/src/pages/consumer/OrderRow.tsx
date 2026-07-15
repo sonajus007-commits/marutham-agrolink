@@ -14,10 +14,16 @@ export function OrderRow({ order, onOpen }: { order: Order; onOpen: (id: string)
   const label = isOrderCancelled(order) ? 'Cancelled' : order.status;
   return (
     <button type="button" className="ord-item" onClick={() => onOpen(order.id)}>
-      <span className="ord-item__bar" style={{ background: statusColor(label) }} aria-hidden="true" />
+      <span
+        className="ord-item__bar"
+        style={{ background: statusColor(label) }}
+        aria-hidden="true"
+      />
       <span className="ord-item__main">
         <span className="ord-id">{orderLabel(order)}</span>
-        <span className="ord-loc">{label} · {fmtDateShort(order.created_at)}</span>
+        <span className="ord-loc">
+          {label} · {fmtDateShort(order.created_at)}
+        </span>
       </span>
       <span className="ord-item__right">
         <span className="ord-amt">{fmtMoney(order.total)}</span>

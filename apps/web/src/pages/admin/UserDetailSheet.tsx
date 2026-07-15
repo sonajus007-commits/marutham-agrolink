@@ -3,8 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Button, INPUT_CLASS, Modal, Sheet, Spinner, Tabs } from '@marutham/ui';
 import {
   api,
-  type AccountStatus, type LoginHistoryEntry, type User,
-  type UserAuditEntry, type UserStatusHistoryEntry,
+  type AccountStatus,
+  type LoginHistoryEntry,
+  type User,
+  type UserAuditEntry,
+  type UserStatusHistoryEntry,
 } from '@marutham/api-client';
 import { buildAddress, fmtDate } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
@@ -50,8 +53,12 @@ export function UserDetailSheet({
     let active = true;
     setUser(null);
     setHistory([]);
-    reload(userId).catch((e) => active && setError(e instanceof Error ? e.message : 'Could not load user'));
-    return () => { active = false; };
+    reload(userId).catch(
+      (e) => active && setError(e instanceof Error ? e.message : 'Could not load user'),
+    );
+    return () => {
+      active = false;
+    };
   }, [open, userId, reload]);
 
   return (
@@ -64,14 +71,25 @@ export function UserDetailSheet({
         <Body
           user={user}
           history={history}
-          onChanged={() => { onChanged(); if (userId) void reload(userId); }}
+          onChanged={() => {
+            onChanged();
+            if (userId) void reload(userId);
+          }}
         />
       )}
     </Sheet>
   );
 }
 
-function Body({ user, history, onChanged }: { user: User; history: UserStatusHistoryEntry[]; onChanged: () => void }) {
+function Body({
+  user,
+  history,
+  onChanged,
+}: {
+  user: User;
+  history: UserStatusHistoryEntry[];
+  onChanged: () => void;
+}) {
   const { t } = useTranslation();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -103,7 +121,10 @@ function Body({ user, history, onChanged }: { user: User; history: UserStatusHis
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="rounded-pill px-3 py-1 text-xs font-bold text-white" style={{ background: USER_STATUS_TONE[status] || 'var(--fg-muted)' }}>
+        <span
+          className="rounded-pill px-3 py-1 text-xs font-bold text-white"
+          style={{ background: USER_STATUS_TONE[status] || 'var(--fg-muted)' }}
+        >
           {status}
         </span>
         <span className="text-2xs uppercase tracking-wide text-fg-muted">{roleLabel}</span>
@@ -112,13 +133,19 @@ function Body({ user, history, onChanged }: { user: User; history: UserStatusHis
       {/* Status control */}
       <section className="flex flex-wrap gap-2 rounded-base border border-border-subtle bg-surface-muted p-3">
         {status !== 'active' ? (
-          <Button onClick={() => change('active')} disabled={busy}>{t('admin.users.activate')}</Button>
+          <Button onClick={() => change('active')} disabled={busy}>
+            {t('admin.users.activate')}
+          </Button>
         ) : null}
         {status === 'active' ? (
-          <Button variant="ghost" onClick={() => change('suspended')} disabled={busy}>{t('admin.users.suspend')}</Button>
+          <Button variant="ghost" onClick={() => change('suspended')} disabled={busy}>
+            {t('admin.users.suspend')}
+          </Button>
         ) : null}
         {status !== 'blocked' ? (
-          <Button variant="danger" onClick={() => setShowBlock(true)} disabled={busy}>{t('admin.users.block')}</Button>
+          <Button variant="danger" onClick={() => setShowBlock(true)} disabled={busy}>
+            {t('admin.users.block')}
+          </Button>
         ) : null}
       </section>
 
@@ -126,19 +153,38 @@ function Body({ user, history, onChanged }: { user: User; history: UserStatusHis
         <Row label={t('admin.users.loginId')} value={user.login_id || '—'} mono />
         <Row label={t('admin.users.name')} value={fullName} />
         <Row label={t('admin.users.role')} value={roleLabel} />
-        <Row label={t('admin.users.phone')} value={`${(user.country_code as string) || '+91'} ${user.phone}`} mono />
+        <Row
+          label={t('admin.users.phone')}
+          value={`${(user.country_code as string) || '+91'} ${user.phone}`}
+          mono
+        />
         {user.email ? <Row label={t('admin.users.email')} value={String(user.email)} /> : null}
-        {user.district ? <Row label={t('admin.users.district')} value={String(user.district)} /> : null}
+        {user.district ? (
+          <Row label={t('admin.users.district')} value={String(user.district)} />
+        ) : null}
         {address ? <div className="pt-1.5 text-2xs text-fg-muted">{address}</div> : null}
       </Section>
 
       {isSeller ? (
         <Section title={`🏦 ${t('admin.users.seller')}`}>
-          {user.seller_type ? <Row label={t('admin.users.sellerType')} value={String(user.seller_type)} /> : null}
-          {user.business_name ? <Row label={t('admin.users.business')} value={String(user.business_name)} /> : null}
-          {user.bank_name ? <Row label={t('admin.users.bank')} value={String(user.bank_name)} /> : null}
-          {user.subscription_plan ? <Row label={t('admin.users.plan')} value={String(user.subscription_plan)} /> : null}
-          {user.subscription_expires_at ? <Row label={t('admin.users.subUntil')} value={fmtDate(String(user.subscription_expires_at))} /> : null}
+          {user.seller_type ? (
+            <Row label={t('admin.users.sellerType')} value={String(user.seller_type)} />
+          ) : null}
+          {user.business_name ? (
+            <Row label={t('admin.users.business')} value={String(user.business_name)} />
+          ) : null}
+          {user.bank_name ? (
+            <Row label={t('admin.users.bank')} value={String(user.bank_name)} />
+          ) : null}
+          {user.subscription_plan ? (
+            <Row label={t('admin.users.plan')} value={String(user.subscription_plan)} />
+          ) : null}
+          {user.subscription_expires_at ? (
+            <Row
+              label={t('admin.users.subUntil')}
+              value={fmtDate(String(user.subscription_expires_at))}
+            />
+          ) : null}
         </Section>
       ) : null}
 
@@ -151,8 +197,14 @@ function Body({ user, history, onChanged }: { user: User; history: UserStatusHis
         onClose={() => setShowBlock(false)}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setShowBlock(false)} disabled={busy}>{t('admin.users.cancel')}</Button>
-            <Button variant="danger" onClick={() => change('blocked', reason)} disabled={busy || !reason.trim()}>
+            <Button variant="ghost" onClick={() => setShowBlock(false)} disabled={busy}>
+              {t('admin.users.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => change('blocked', reason)}
+              disabled={busy || !reason.trim()}
+            >
               {busy ? '…' : t('admin.users.block')}
             </Button>
           </>
@@ -218,9 +270,13 @@ function HistorySection({ userId, status }: { userId: string; status: UserStatus
       <ul className="flex list-none flex-col gap-2 p-0">
         {status.map((h) => (
           <li key={h.id} className="border-b border-border-subtle pb-2 text-2xs last:border-b-0">
-            <span className="font-semibold text-fg">{h.old_status} → {h.new_status}</span>
+            <span className="font-semibold text-fg">
+              {h.old_status} → {h.new_status}
+            </span>
             <span className="text-fg-muted"> · {fmtDate(h.created_at)}</span>
-            {h.changer ? <span className="text-fg-muted"> · {h.changer.fname || h.changer.login_id}</span> : null}
+            {h.changer ? (
+              <span className="text-fg-muted"> · {h.changer.fname || h.changer.login_id}</span>
+            ) : null}
             {h.reason ? <div className="text-fg-muted italic">“{h.reason}”</div> : null}
           </li>
         ))}

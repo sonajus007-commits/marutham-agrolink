@@ -39,15 +39,28 @@ export function Field({ label, required = false, error, hint, children }: FieldP
     <div className="mb-3">
       <label className={FIELD_LABEL_CLASS} htmlFor={id}>
         {label}
-        {required ? <span className="text-danger" aria-hidden="true"> *</span> : null}
+        {required ? (
+          <span className="text-danger" aria-hidden="true">
+            {' '}
+            *
+          </span>
+        ) : null}
       </label>
       {children({
         id,
         ...(error ? { 'aria-invalid': true } : {}),
         ...(describedBy ? { 'aria-describedby': describedBy } : {}),
       })}
-      {hint ? <div id={hintId} className={FIELD_HINT_CLASS}>{hint}</div> : null}
-      {error ? <div id={errId} className={FIELD_ERR_CLASS} role="alert">{error}</div> : null}
+      {hint ? (
+        <div id={hintId} className={FIELD_HINT_CLASS}>
+          {hint}
+        </div>
+      ) : null}
+      {error ? (
+        <div id={errId} className={FIELD_ERR_CLASS} role="alert">
+          {error}
+        </div>
+      ) : null}
     </div>
   );
 }

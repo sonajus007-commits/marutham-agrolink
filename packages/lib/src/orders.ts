@@ -66,12 +66,12 @@ export interface OrderDetail {
 }
 
 export interface OrderQueues {
-  toVerify: Order[];   // Packaged — VCO to verify
-  toPickUp: Order[];   // VCO Verified — agent to pick up
-  inTransit: Order[];  // Picked Up — agent to advance to Out for Delivery
-  toDeliver: Order[];  // Out for Delivery — agent to deliver
+  toVerify: Order[]; // Packaged — VCO to verify
+  toPickUp: Order[]; // VCO Verified — agent to pick up
+  inTransit: Order[]; // Picked Up — agent to advance to Out for Delivery
+  toDeliver: Order[]; // Out for Delivery — agent to deliver
   inProgress: Order[]; // Order Placed / In Transit / At Hub — view only
-  delivered: Order[];  // Delivered
+  delivered: Order[]; // Delivered
 }
 
 const IN_PROGRESS_STATUSES = ['Order Placed', 'In Transit', 'At Hub'];
@@ -98,7 +98,8 @@ export interface AgentStats {
 
 /** Derive the 3 header stats, role-aware (VCO vs Delivery Agent). */
 export function deriveAgentStats(q: OrderQueues, isVCO: boolean): AgentStats {
-  const queue = (isVCO ? q.toVerify.length : 0) + q.toPickUp.length + q.inTransit.length + q.toDeliver.length;
+  const queue =
+    (isVCO ? q.toVerify.length : 0) + q.toPickUp.length + q.inTransit.length + q.toDeliver.length;
   if (isVCO) {
     const pipeline = q.toPickUp.length + q.inTransit.length + q.toDeliver.length;
     return {
@@ -162,7 +163,8 @@ export function returnWindowHoursLeft(o: Order, now: number = Date.now()): numbe
  * always false for an order taken straight from the list.
  */
 export function canRequestReturn(o: Order, now: number = Date.now()): boolean {
-  if (o.status !== 'Delivered' || isOrderCancelled(o) || o.return_id || !o.delivered_at) return false;
+  if (o.status !== 'Delivered' || isOrderCancelled(o) || o.return_id || !o.delivered_at)
+    return false;
   return returnWindowHoursLeft(o, now) > 0;
 }
 

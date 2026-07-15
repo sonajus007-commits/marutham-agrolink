@@ -103,9 +103,11 @@ export const resources = {
       'reg.creating': 'Creating account…',
       'reg.failed': 'Could not create your account. Please try again.',
       'reg.pendingTitle': 'Application received',
-      'reg.pendingBody': 'Your application is under review by our team. You’ll be notified once it is approved.',
+      'reg.pendingBody':
+        'Your application is under review by our team. You’ll be notified once it is approved.',
       'reg.yourLoginId': 'Your Login ID',
-      'reg.pendingNext': 'After approval, sign in and pay your registration charge and plan fee to start selling.',
+      'reg.pendingNext':
+        'After approval, sign in and pay your registration charge and plan fee to start selling.',
       'reg.goToLogin': 'Go to sign in',
       'nav.dashboard': 'Dashboard',
       'nav.logout': 'Logout',
@@ -224,9 +226,11 @@ export const resources = {
       'farmer.earn.inFlight': 'In Flight',
       'farmer.earn.inFlightHint': 'Orders on the way',
       'farmer.earn.lifetime': 'Lifetime Earnings',
-      'farmer.earn.lifetimeNote': 'Paid + pending + awaiting settlement. In-flight orders are excluded until delivered.',
+      'farmer.earn.lifetimeNote':
+        'Paid + pending + awaiting settlement. In-flight orders are excluded until delivered.',
       'farmer.earn.payouts': 'Payout History',
-      'farmer.earn.noPayouts': 'No payouts yet. They appear once your delivered orders are settled.',
+      'farmer.earn.noPayouts':
+        'No payouts yet. They appear once your delivered orders are settled.',
       'farmer.sub.title': 'Subscription',
       'farmer.sub.active': 'Active',
       'farmer.sub.expired': 'Expired',
@@ -235,7 +239,8 @@ export const resources = {
       'farmer.sub.validUntil': 'Valid until',
       'farmer.sub.renew': 'Renew',
       'farmer.prod.request': 'Request new product',
-      'farmer.prod.empty': 'No products yet. Request a product to get started — an admin approves it, then you set your price.',
+      'farmer.prod.empty':
+        'No products yet. Request a product to get started — an admin approves it, then you set your price.',
 
       // ── Admin / management console ──
       'admin.comingSoon': 'This section is coming in a later update.',
@@ -273,7 +278,8 @@ export const resources = {
       'admin.exec.subtitle': 'Company-wide · live from the database',
       'admin.exec.updated': 'Updated {{time}}',
       'admin.exec.refresh': 'Refresh',
-      'admin.exec.denied': 'The executive dashboard is restricted to the Board, CEO and Managing Director.',
+      'admin.exec.denied':
+        'The executive dashboard is restricted to the Board, CEO and Managing Director.',
       'admin.exec.error': 'Could not load the executive dashboard.',
       // The backend admits it has no source for these. We grey them out rather
       // than invent a number — a fabricated figure on a board dashboard is worse
@@ -293,7 +299,8 @@ export const resources = {
        * metric keys (EXEC_PLACEHOLDERS), so a new placeholder there needs only a
        * line here. */
       'admin.exec.ph.title': 'Not Yet Integrated',
-      'admin.exec.ph.sub': 'The board asked for these. No system feeds them yet — so they show a dash, never a zero.',
+      'admin.exec.ph.sub':
+        'The board asked for these. No system feeds them yet — so they show a dash, never a zero.',
       'admin.ph.group.finance': 'Finance',
       'admin.ph.group.cost': 'Cost',
       'admin.ph.group.inventory': 'Inventory',
@@ -389,7 +396,8 @@ export const resources = {
       'admin.ops.alerts.title': 'Action Items',
       'admin.ops.alerts.none': 'Nothing needs attention right now.',
       'admin.ops.ph.title': 'Not Yet Integrated',
-      'admin.ops.ph.sub': 'Operational metrics with no data source yet — so they show a dash, never a zero.',
+      'admin.ops.ph.sub':
+        'Operational metrics with no data source yet — so they show a dash, never a zero.',
 
       // ── Listing approvals (seller product requests) ──
       'admin.nav.listings': 'Listing Approvals',
@@ -427,7 +435,8 @@ export const resources = {
       'admin.lst.daysLeft_other': '{{count}} days left',
       // A lapsed seller is not entitled to sell — approving their produce onto the
       // storefront should be a knowing decision, not an accident.
-      'admin.lst.expiredWarning': "This seller's subscription has expired. Approving puts their produce on the storefront while they are not paying to sell.",
+      'admin.lst.expiredWarning':
+        "This seller's subscription has expired. Approving puts their produce on the storefront while they are not paying to sell.",
       'admin.lst.waiting': 'waiting {{count}} day',
       'admin.lst.waiting_other': 'waiting {{count}} days',
       'admin.lst.staleWarning': '{{count}} request has been waiting over 10 days',
@@ -438,16 +447,25 @@ export const resources = {
       'admin.lst.action.reject': 'Reject',
       'admin.lst.action.deactivate': 'Deactivate',
       'admin.lst.rejectedReason': 'Reason given',
-      'admin.lst.noReasonOnRecord': 'No reason on record — this listing was rejected before reasons were stored.',
+      'admin.lst.noReasonOnRecord':
+        'No reason on record — this listing was rejected before reasons were stored.',
       'admin.lst.reasonLabel': 'Reason for rejection (required)',
-      'admin.lst.reasonPlaceholder': 'e.g. Photos show produce past its best — please re-request with fresh stock.',
-      'admin.lst.reasonHint': 'Emailed and texted to the seller word for word. It is the only part of a rejection they can act on.',
-      'admin.lst.hint.pending': 'Approving lets the seller price this product and puts it in front of customers. The seller is emailed either way.',
-      'admin.lst.hint.active': 'Deactivate pulls this off the storefront and back into the review queue. Reject tells the seller no.',
-      'admin.lst.hint.rejected': 'You can undo a rejection — approving lets the seller price this product after all.',
-      'admin.lst.confirm.approve': 'Approve {{product}} for {{seller}}? It goes on the storefront and the seller is emailed.',
-      'admin.lst.confirm.reject': 'Reject {{product}} for {{seller}}? They will not be able to sell it.',
-      'admin.lst.confirm.deactivate': 'Deactivate {{product}}? It is hidden from customers and returns to the pending queue.',
+      'admin.lst.reasonPlaceholder':
+        'e.g. Photos show produce past its best — please re-request with fresh stock.',
+      'admin.lst.reasonHint':
+        'Emailed and texted to the seller word for word. It is the only part of a rejection they can act on.',
+      'admin.lst.hint.pending':
+        'Approving lets the seller price this product and puts it in front of customers. The seller is emailed either way.',
+      'admin.lst.hint.active':
+        'Deactivate pulls this off the storefront and back into the review queue. Reject tells the seller no.',
+      'admin.lst.hint.rejected':
+        'You can undo a rejection — approving lets the seller price this product after all.',
+      'admin.lst.confirm.approve':
+        'Approve {{product}} for {{seller}}? It goes on the storefront and the seller is emailed.',
+      'admin.lst.confirm.reject':
+        'Reject {{product}} for {{seller}}? They will not be able to sell it.',
+      'admin.lst.confirm.deactivate':
+        'Deactivate {{product}}? It is hidden from customers and returns to the pending queue.',
 
       // ── Admin Head dashboard (Head Office / Technical Admin / HR) ──
       'admin.nav.adminhead': 'Admin Head',
@@ -456,7 +474,8 @@ export const resources = {
       'admin.head.updated': 'Updated {{time}}',
       'admin.head.refresh': 'Refresh',
       'admin.head.error': 'Could not load the admin dashboard.',
-      'admin.head.denied': 'The Head Office control panel is restricted to Head Office and Admin staff.',
+      'admin.head.denied':
+        'The Head Office control panel is restricted to Head Office and Admin staff.',
       'admin.head.kpi.employees': 'Active Employees',
       'admin.head.kpi.staffLogins': 'Staff Logins',
       'admin.head.kpi.districts': 'Districts Active',
@@ -487,7 +506,8 @@ export const resources = {
       'admin.head.alerts.title': 'Action Items',
       'admin.head.alerts.none': 'Nothing needs attention right now.',
       'admin.head.ph.title': 'Not Yet Integrated',
-      'admin.head.ph.sub': 'Administrative metrics with no data source yet — so they show a dash, never a zero.',
+      'admin.head.ph.sub':
+        'Administrative metrics with no data source yet — so they show a dash, never a zero.',
 
       // ── Field dashboard (VCO / Delivery Agent, in the /agent console) ──
       'agent.field.vco.title': 'My Village — {{village}}',
@@ -518,7 +538,8 @@ export const resources = {
       'admin.exec.districts.sub': 'Select a district to drill in',
       'admin.exec.districts.rank': 'District Ranking',
       // The map covers Tamil Nadu only; the business runs in six states.
-      'admin.exec.districts.tnOnly': 'The map covers Tamil Nadu. The ranking lists every district we sell in.',
+      'admin.exec.districts.tnOnly':
+        'The map covers Tamil Nadu. The ranking lists every district we sell in.',
       'admin.exec.districts.mapUnavailable': 'Map unavailable — see the district ranking.',
       'admin.exec.districts.none': 'No district has sales yet.',
       'admin.exec.legend.performing': 'Performing',
@@ -627,7 +648,8 @@ export const resources = {
       'admin.nav.hub': 'Hub Queue',
       'admin.hub.title': 'Hub Incharge Queue',
       'admin.hub.sub': 'Check in arrivals, then dispatch them on the last mile.',
-      'admin.hub.subDistrict': '{{district}} Hub — check in arrivals, then dispatch them on the last mile.',
+      'admin.hub.subDistrict':
+        '{{district}} Hub — check in arrivals, then dispatch them on the last mile.',
       'admin.hub.arriving': 'Arriving',
       'admin.hub.ready': 'Ready to dispatch',
       'admin.hub.arrivingSection': 'Arriving at hub ({{count}})',
@@ -673,7 +695,8 @@ export const resources = {
       'admin.profile.saved': 'Profile updated.',
       'admin.profile.saveFailed': 'Could not update your profile.',
       'admin.profile.employee': 'Employee Details',
-      'admin.profile.employeeNote': 'Maintained by Head Office. Read-only — contact HO for any correction.',
+      'admin.profile.employeeNote':
+        'Maintained by Head Office. Read-only — contact HO for any correction.',
       'admin.profile.employeePartial': 'A full employee record applies to permanent employees.',
       'admin.profile.empNo': 'Employee No',
       'admin.profile.employmentType': 'Employment type',
@@ -715,10 +738,12 @@ export const resources = {
       'admin.reg.applicant': 'Applicant',
       'admin.reg.email': 'Email',
       'admin.reg.done': 'Done.',
-      'admin.reg.approveHint': 'On approval, the applicant’s login is activated and they are notified to log in and pay (plan fee + a one-time ₹100 registration charge) to go live.',
+      'admin.reg.approveHint':
+        'On approval, the applicant’s login is activated and they are notified to log in and pay (plan fee + a one-time ₹100 registration charge) to go live.',
       'admin.reg.approve': 'Approve',
       'admin.reg.reject': 'Reject',
-      'admin.reg.confirmHint': 'Confirm only after you have verified the payment in the bank statement. This activates the account.',
+      'admin.reg.confirmHint':
+        'Confirm only after you have verified the payment in the bank statement. This activates the account.',
       'admin.reg.paymentRef': 'Payment Ref',
       'admin.reg.confirmPayment': 'Confirm Payment',
       'admin.reg.rejectionReason': 'Rejection Reason',
@@ -763,7 +788,8 @@ export const resources = {
       'admin.cr.requestedRenewal': 'Requested Renewal',
       'admin.cr.newPlan': 'New Plan',
       'admin.cr.requestedChanges': 'Requested Changes',
-      'admin.cr.confirmHint': 'Confirm once you have verified the payment. This extends the subscription and reactivates the account.',
+      'admin.cr.confirmHint':
+        'Confirm once you have verified the payment. This extends the subscription and reactivates the account.',
       'admin.cr.paymentRef': 'Payment Ref',
       'admin.cr.amount': 'Amount',
       'admin.cr.notes': 'Notes',
@@ -819,7 +845,8 @@ export const resources = {
       'admin.prod.cancel': 'Cancel',
       'admin.prod.delete': 'Delete',
       'admin.prod.deleteConfirm': 'Delete this product?',
-      'admin.prod.deleteConfirmBody': 'This removes the product from the catalog. Farmer listings and orders referencing it may be affected.',
+      'admin.prod.deleteConfirmBody':
+        'This removes the product from the catalog. Farmer listings and orders referencing it may be affected.',
       'admin.prod.created': 'Product created.',
       'admin.prod.updated': 'Product updated.',
       'admin.prod.deleted': 'Product deleted.',
@@ -852,13 +879,15 @@ export const resources = {
       'admin.ret.status.accepted': 'Accepted',
       'admin.ret.status.rejected': 'Rejected',
       'admin.ret.status.collected': 'Collected',
-      'admin.ret.decideHint': 'Accept to authorise the refund (paid out once goods are collected), or reject to close the request.',
+      'admin.ret.decideHint':
+        'Accept to authorise the refund (paid out once goods are collected), or reject to close the request.',
       'admin.ret.accept': 'Accept',
       'admin.ret.reject': 'Reject',
       'admin.ret.collectHint': 'Mark the goods collected to trigger the refund.',
       'admin.ret.collect': 'Mark Collected',
       'admin.ret.collectConfirm': 'Mark collected & refund?',
-      'admin.ret.collectConfirmBody': 'This confirms the goods are back and triggers a {{amount}} refund to {{to}}. This cannot be undone.',
+      'admin.ret.collectConfirmBody':
+        'This confirms the goods are back and triggers a {{amount}} refund to {{to}}. This cannot be undone.',
       'admin.ret.cancel': 'Cancel',
       'admin.ret.refunded': 'Refund of {{amount}} triggered.',
       'admin.ret.wasRejected': 'This return was rejected and is closed.',
@@ -894,7 +923,8 @@ export const resources = {
       'admin.pay.method': 'Method',
       'admin.pay.reference': 'Reference',
       'admin.pay.runConfirm': 'Run settlement batch?',
-      'admin.pay.runConfirmBody': 'This creates pending payout records for every delivered order that is not already settled, across all districts. Orders already settled are skipped.',
+      'admin.pay.runConfirmBody':
+        'This creates pending payout records for every delivered order that is not already settled, across all districts. Orders already settled are skipped.',
       'admin.pay.cancel': 'Cancel',
       // Employees (HR tracker)
       'admin.emp.title': 'Employees',
@@ -936,7 +966,8 @@ export const resources = {
       'admin.emp.approvedOn': 'Approved On',
       'admin.emp.history': 'Change History',
       'admin.emp.noHistory': 'No changes recorded.',
-      'admin.emp.approveHint': 'Approving issues the Employee ID (MA…/CE…) and marks the record active.',
+      'admin.emp.approveHint':
+        'Approving issues the Employee ID (MA…/CE…) and marks the record active.',
       'admin.emp.approve': 'Approve',
       'admin.emp.reject': 'Reject',
       'admin.emp.rejectionReason': 'Rejection Reason',
@@ -950,8 +981,10 @@ export const resources = {
       'admin.emp.remove': 'Remove',
       'admin.emp.restore': 'Restore',
       'admin.emp.removeConfirm': 'Remove this employee?',
-      'admin.emp.removeLoginWarning': 'Their login will be revoked immediately. They are signed out on their next action and cannot sign in again.',
-      'admin.emp.removeKeepsRecord': 'Their record, Employee ID and history are KEPT — nothing is erased, and an HR Admin can restore them.',
+      'admin.emp.removeLoginWarning':
+        'Their login will be revoked immediately. They are signed out on their next action and cannot sign in again.',
+      'admin.emp.removeKeepsRecord':
+        'Their record, Employee ID and history are KEPT — nothing is erased, and an HR Admin can restore them.',
       'admin.emp.removeNoLogin': 'This employee has no login, so there is nothing to revoke.',
       'admin.emp.removing': 'Removing…',
       'admin.emp.removedBanner': 'This employee has been removed.',
@@ -986,7 +1019,8 @@ export const resources = {
       'admin.emp.pincode': 'Pincode',
       'admin.emp.city': 'City',
       'admin.emp.village': 'Village / Town',
-      'admin.emp.typeHint': 'Permanent → ID starts MA (e.g. MATN00001) · Contract → CE (e.g. CETN00001).',
+      'admin.emp.typeHint':
+        'Permanent → ID starts MA (e.g. MATN00001) · Contract → CE (e.g. CETN00001).',
       'admin.emp.isManager': 'This employee is a Manager (can be a Reporting Manager for others)',
       'admin.emp.noManager': 'No manager selected',
       'admin.emp.selectMgr': 'Select…',
@@ -994,7 +1028,8 @@ export const resources = {
       'admin.emp.trustTitle': 'Approval Authority (Bootstrap)',
       'admin.emp.bodFull': 'Board of Director — root of trust; approves HR Admins',
       'admin.emp.hrFull': 'HR Admin — can approve all other employee requests',
-      'admin.emp.trustNote': 'These roles are auto-approved — the Employee ID is issued immediately. Everyone else needs HR Admin approval first.',
+      'admin.emp.trustNote':
+        'These roles are auto-approved — the Employee ID is issued immediately. Everyone else needs HR Admin approval first.',
       'admin.emp.statusField': 'Status',
       'admin.emp.st.active': 'Active',
       'admin.emp.st.inactive': 'Inactive',
@@ -1002,7 +1037,8 @@ export const resources = {
       'admin.emp.mgrPicker': 'Select Reporting Manager',
       'admin.emp.mgrNeedUnit': 'Pick from Managers in the same Work District & Department.',
       'admin.emp.mgrSearch': 'Search managers…',
-      'admin.emp.mgrNone': 'No Managers in this district & department. Mark an employee as a Manager (with a Work District + Department) to list them here.',
+      'admin.emp.mgrNone':
+        'No Managers in this district & department. Mark an employee as a Manager (with a Work District + Department) to list them here.',
       'admin.emp.mgrSelect': 'Select',
     },
   },
@@ -1107,9 +1143,11 @@ export const resources = {
       'reg.creating': 'கணக்கை உருவாக்குகிறது…',
       'reg.failed': 'கணக்கை உருவாக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.',
       'reg.pendingTitle': 'விண்ணப்பம் பெறப்பட்டது',
-      'reg.pendingBody': 'உங்கள் விண்ணப்பம் எங்கள் குழுவால் பரிசீலிக்கப்படுகிறது. அங்கீகரிக்கப்பட்டதும் உங்களுக்குத் தெரிவிக்கப்படும்.',
+      'reg.pendingBody':
+        'உங்கள் விண்ணப்பம் எங்கள் குழுவால் பரிசீலிக்கப்படுகிறது. அங்கீகரிக்கப்பட்டதும் உங்களுக்குத் தெரிவிக்கப்படும்.',
       'reg.yourLoginId': 'உங்கள் உள்நுழைவு ஐடி',
-      'reg.pendingNext': 'அங்கீகாரத்திற்குப் பிறகு உள்நுழைந்து, பதிவுக் கட்டணம் மற்றும் திட்டக் கட்டணத்தைச் செலுத்தி விற்பனையைத் தொடங்கலாம்.',
+      'reg.pendingNext':
+        'அங்கீகாரத்திற்குப் பிறகு உள்நுழைந்து, பதிவுக் கட்டணம் மற்றும் திட்டக் கட்டணத்தைச் செலுத்தி விற்பனையைத் தொடங்கலாம்.',
       'reg.goToLogin': 'உள்நுழைவுக்குச் செல்',
       'nav.dashboard': 'டாஷ்போர்டு',
       'nav.logout': 'வெளியேறு',
@@ -1172,7 +1210,8 @@ export const resources = {
       'consumer.home.completed': 'நிறைவடைந்தது',
       'consumer.home.delivered': 'வழங்கப்பட்டது',
       'consumer.home.pastOrders': 'முந்தைய ஆர்டர்கள்',
-      'consumer.home.noOrders': 'இதுவரை ஆர்டர்கள் இல்லை. கடையைப் பார்வையிட்டு முதல் ஆர்டரைச் செய்யுங்கள்!',
+      'consumer.home.noOrders':
+        'இதுவரை ஆர்டர்கள் இல்லை. கடையைப் பார்வையிட்டு முதல் ஆர்டரைச் செய்யுங்கள்!',
       'consumer.home.shopNow': 'இப்போது வாங்க',
       'consumer.home.track': 'ஆர்டரைக் கண்காணி',
       'consumer.orders.empty': 'இதுவரை ஆர்டர்கள் இல்லை.',
@@ -1228,7 +1267,8 @@ export const resources = {
       'farmer.earn.inFlight': 'பயணத்தில்',
       'farmer.earn.inFlightHint': 'வழியில் உள்ள ஆர்டர்கள்',
       'farmer.earn.lifetime': 'மொத்த வருவாய்',
-      'farmer.earn.lifetimeNote': 'வழங்கியது + நிலுவை + தீர்வுக்குக் காத்திருப்பது. பயணத்தில் உள்ளவை சேர்க்கப்படவில்லை.',
+      'farmer.earn.lifetimeNote':
+        'வழங்கியது + நிலுவை + தீர்வுக்குக் காத்திருப்பது. பயணத்தில் உள்ளவை சேர்க்கப்படவில்லை.',
       'farmer.earn.payouts': 'பணப் பரிமாற்ற வரலாறு',
       'farmer.earn.noPayouts': 'இதுவரை பணப் பரிமாற்றம் இல்லை.',
       'farmer.sub.title': 'சந்தா',
@@ -1239,7 +1279,8 @@ export const resources = {
       'farmer.sub.validUntil': 'செல்லுபடியாகும் வரை',
       'farmer.sub.renew': 'புதுப்பி',
       'farmer.prod.request': 'புதிய பொருள் கோரிக்கை',
-      'farmer.prod.empty': 'இதுவரை பொருட்கள் இல்லை. ஒரு பொருளைக் கோரி தொடங்குங்கள் — நிர்வாகி அனுமதித்த பிறகு விலையை நிர்ணயிக்கலாம்.',
+      'farmer.prod.empty':
+        'இதுவரை பொருட்கள் இல்லை. ஒரு பொருளைக் கோரி தொடங்குங்கள் — நிர்வாகி அனுமதித்த பிறகு விலையை நிர்ணயிக்கலாம்.',
 
       // ── Admin / management console ──
       'admin.comingSoon': 'இந்தப் பிரிவு அடுத்த புதுப்பிப்பில் வரும்.',
@@ -1277,7 +1318,8 @@ export const resources = {
       'admin.exec.subtitle': 'நிறுவனம் முழுவதும் · நேரடித் தரவு',
       'admin.exec.updated': '{{time}} மேம்படுத்தப்பட்டது',
       'admin.exec.refresh': 'புதுப்பிக்க',
-      'admin.exec.denied': 'நிர்வாகக் கண்ணோட்டம் இயக்குநர் குழு, தலைமை நிர்வாக அதிகாரி மற்றும் நிர்வாக இயக்குநருக்கு மட்டுமே.',
+      'admin.exec.denied':
+        'நிர்வாகக் கண்ணோட்டம் இயக்குநர் குழு, தலைமை நிர்வாக அதிகாரி மற்றும் நிர்வாக இயக்குநருக்கு மட்டுமே.',
       'admin.exec.error': 'நிர்வாகக் கண்ணோட்டத்தை ஏற்ற முடியவில்லை.',
       'admin.ph.needsIntegration': 'இணைப்பு தேவை',
       'admin.exec.kpi.revenueToday': 'இன்றைய வருவாய்',
@@ -1291,7 +1333,8 @@ export const resources = {
       'admin.exec.kpi.activeDistricts': 'செயலில் உள்ள மாவட்டங்கள்',
 
       'admin.exec.ph.title': 'இன்னும் இணைக்கப்படவில்லை',
-      'admin.exec.ph.sub': 'இயக்குநர் குழு கேட்டவை. இவற்றுக்கு இன்னும் தரவு ஆதாரம் இல்லை — எனவே பூஜ்ஜியம் அல்ல, கோடு காட்டப்படுகிறது.',
+      'admin.exec.ph.sub':
+        'இயக்குநர் குழு கேட்டவை. இவற்றுக்கு இன்னும் தரவு ஆதாரம் இல்லை — எனவே பூஜ்ஜியம் அல்ல, கோடு காட்டப்படுகிறது.',
       'admin.ph.group.finance': 'நிதி',
       'admin.ph.group.cost': 'செலவு',
       'admin.ph.group.inventory': 'சரக்கு',
@@ -1387,7 +1430,8 @@ export const resources = {
       'admin.ops.alerts.title': 'நடவடிக்கை பட்டியல்',
       'admin.ops.alerts.none': 'இப்போது கவனம் தேவைப்படுவது எதுவும் இல்லை.',
       'admin.ops.ph.title': 'இன்னும் இணைக்கப்படவில்லை',
-      'admin.ops.ph.sub': 'தரவு ஆதாரம் இல்லாத செயல்பாட்டு அளவீடுகள் — பூஜ்ஜியம் அல்ல, கோடு காட்டப்படுகிறது.',
+      'admin.ops.ph.sub':
+        'தரவு ஆதாரம் இல்லாத செயல்பாட்டு அளவீடுகள் — பூஜ்ஜியம் அல்ல, கோடு காட்டப்படுகிறது.',
 
       // ── Listing approvals ──
       'admin.nav.listings': 'பட்டியல் ஒப்புதல்கள்',
@@ -1423,7 +1467,8 @@ export const resources = {
       'admin.lst.sub.none': 'திட்டம் இல்லை',
       'admin.lst.daysLeft': '{{count}} நாள் மீதம்',
       'admin.lst.daysLeft_other': '{{count}} நாட்கள் மீதம்',
-      'admin.lst.expiredWarning': 'இந்த விற்பனையாளரின் சந்தா காலாவதியாகிவிட்டது. ஒப்புதல் அளித்தால், கட்டணம் செலுத்தாமலேயே அவர்களின் விளைபொருள் கடையில் இடம்பெறும்.',
+      'admin.lst.expiredWarning':
+        'இந்த விற்பனையாளரின் சந்தா காலாவதியாகிவிட்டது. ஒப்புதல் அளித்தால், கட்டணம் செலுத்தாமலேயே அவர்களின் விளைபொருள் கடையில் இடம்பெறும்.',
       'admin.lst.waiting': '{{count}} நாள் காத்திருக்கிறது',
       'admin.lst.waiting_other': '{{count}} நாட்கள் காத்திருக்கிறது',
       'admin.lst.staleWarning': '{{count}} கோரிக்கை 10 நாட்களுக்கு மேல் காத்திருக்கிறது',
@@ -1434,16 +1479,25 @@ export const resources = {
       'admin.lst.action.reject': 'நிராகரி',
       'admin.lst.action.deactivate': 'செயலிழக்கச் செய்',
       'admin.lst.rejectedReason': 'அளிக்கப்பட்ட காரணம்',
-      'admin.lst.noReasonOnRecord': 'காரணம் பதிவில் இல்லை — காரணங்கள் சேமிக்கப்படுவதற்கு முன்பு இது நிராகரிக்கப்பட்டது.',
+      'admin.lst.noReasonOnRecord':
+        'காரணம் பதிவில் இல்லை — காரணங்கள் சேமிக்கப்படுவதற்கு முன்பு இது நிராகரிக்கப்பட்டது.',
       'admin.lst.reasonLabel': 'நிராகரிப்புக் காரணம் (கட்டாயம்)',
-      'admin.lst.reasonPlaceholder': 'எ.கா. படங்களில் விளைபொருள் தரம் குறைவாக உள்ளது — புதிய இருப்புடன் மீண்டும் கோரவும்.',
-      'admin.lst.reasonHint': 'விற்பனையாளருக்கு அப்படியே மின்னஞ்சல் மற்றும் SMS அனுப்பப்படும். நிராகரிப்பில் அவர்கள் செயல்படக்கூடிய ஒரே பகுதி இதுதான்.',
-      'admin.lst.hint.pending': 'ஒப்புதல் அளித்தால் விற்பனையாளர் விலை நிர்ணயித்து வாடிக்கையாளர்களுக்குக் காட்டலாம். இரு நிலையிலும் விற்பனையாளருக்கு மின்னஞ்சல் அனுப்பப்படும்.',
-      'admin.lst.hint.active': 'செயலிழக்கச் செய்தால் கடையிலிருந்து நீக்கி மீண்டும் பரிசீலனை வரிசைக்கு வரும். நிராகரிப்பு என்பது வேறு.',
-      'admin.lst.hint.rejected': 'நிராகரிப்பை மாற்றலாம் — ஒப்புதல் அளித்தால் விற்பனையாளர் விலை நிர்ணயிக்கலாம்.',
-      'admin.lst.confirm.approve': '{{seller}} அவர்களின் {{product}} ஒப்புதல் அளிக்கவா? கடையில் இடம்பெறும், விற்பனையாளருக்கு மின்னஞ்சல் செல்லும்.',
-      'admin.lst.confirm.reject': '{{seller}} அவர்களின் {{product}} நிராகரிக்கவா? அவர்களால் விற்க முடியாது.',
-      'admin.lst.confirm.deactivate': '{{product}} செயலிழக்கச் செய்யவா? வாடிக்கையாளர்களிடமிருந்து மறைக்கப்பட்டு நிலுவை வரிசைக்குத் திரும்பும்.',
+      'admin.lst.reasonPlaceholder':
+        'எ.கா. படங்களில் விளைபொருள் தரம் குறைவாக உள்ளது — புதிய இருப்புடன் மீண்டும் கோரவும்.',
+      'admin.lst.reasonHint':
+        'விற்பனையாளருக்கு அப்படியே மின்னஞ்சல் மற்றும் SMS அனுப்பப்படும். நிராகரிப்பில் அவர்கள் செயல்படக்கூடிய ஒரே பகுதி இதுதான்.',
+      'admin.lst.hint.pending':
+        'ஒப்புதல் அளித்தால் விற்பனையாளர் விலை நிர்ணயித்து வாடிக்கையாளர்களுக்குக் காட்டலாம். இரு நிலையிலும் விற்பனையாளருக்கு மின்னஞ்சல் அனுப்பப்படும்.',
+      'admin.lst.hint.active':
+        'செயலிழக்கச் செய்தால் கடையிலிருந்து நீக்கி மீண்டும் பரிசீலனை வரிசைக்கு வரும். நிராகரிப்பு என்பது வேறு.',
+      'admin.lst.hint.rejected':
+        'நிராகரிப்பை மாற்றலாம் — ஒப்புதல் அளித்தால் விற்பனையாளர் விலை நிர்ணயிக்கலாம்.',
+      'admin.lst.confirm.approve':
+        '{{seller}} அவர்களின் {{product}} ஒப்புதல் அளிக்கவா? கடையில் இடம்பெறும், விற்பனையாளருக்கு மின்னஞ்சல் செல்லும்.',
+      'admin.lst.confirm.reject':
+        '{{seller}} அவர்களின் {{product}} நிராகரிக்கவா? அவர்களால் விற்க முடியாது.',
+      'admin.lst.confirm.deactivate':
+        '{{product}} செயலிழக்கச் செய்யவா? வாடிக்கையாளர்களிடமிருந்து மறைக்கப்பட்டு நிலுவை வரிசைக்குத் திரும்பும்.',
 
       // ── Admin Head dashboard ──
       'admin.nav.adminhead': 'நிர்வாகத் தலைமை',
@@ -1452,7 +1506,8 @@ export const resources = {
       'admin.head.updated': '{{time}} புதுப்பிக்கப்பட்டது',
       'admin.head.refresh': 'புதுப்பி',
       'admin.head.error': 'நிர்வாக டாஷ்போர்டை ஏற்ற முடியவில்லை.',
-      'admin.head.denied': 'தலைமை அலுவலக கட்டுப்பாட்டு மையம் தலைமை அலுவலகம் மற்றும் நிர்வாக ஊழியர்களுக்கு மட்டுமே.',
+      'admin.head.denied':
+        'தலைமை அலுவலக கட்டுப்பாட்டு மையம் தலைமை அலுவலகம் மற்றும் நிர்வாக ஊழியர்களுக்கு மட்டுமே.',
       'admin.head.kpi.employees': 'செயலில் உள்ள ஊழியர்கள்',
       'admin.head.kpi.staffLogins': 'ஊழியர் உள்நுழைவுகள்',
       'admin.head.kpi.districts': 'செயலில் உள்ள மாவட்டங்கள்',
@@ -1481,7 +1536,8 @@ export const resources = {
       'admin.head.alerts.title': 'நடவடிக்கை பட்டியல்',
       'admin.head.alerts.none': 'இப்போது கவனம் தேவைப்படுவது எதுவும் இல்லை.',
       'admin.head.ph.title': 'இன்னும் இணைக்கப்படவில்லை',
-      'admin.head.ph.sub': 'தரவு ஆதாரம் இல்லாத நிர்வாக அளவீடுகள் — பூஜ்ஜியம் அல்ல, கோடு காட்டப்படுகிறது.',
+      'admin.head.ph.sub':
+        'தரவு ஆதாரம் இல்லாத நிர்வாக அளவீடுகள் — பூஜ்ஜியம் அல்ல, கோடு காட்டப்படுகிறது.',
 
       // ── Field dashboard (VCO / விநியோக முகவர்) ──
       'agent.field.vco.title': 'என் கிராமம் — {{village}}',
@@ -1511,8 +1567,10 @@ export const resources = {
       'admin.exec.districts.title': 'மாவட்ட செயல்திறன் — தமிழ்நாடு',
       'admin.exec.districts.sub': 'விவரங்களைக் காண ஒரு மாவட்டத்தைத் தேர்ந்தெடுக்கவும்',
       'admin.exec.districts.rank': 'மாவட்ட தரவரிசை',
-      'admin.exec.districts.tnOnly': 'வரைபடம் தமிழ்நாட்டை மட்டும் காட்டுகிறது. தரவரிசை நாங்கள் விற்கும் அனைத்து மாவட்டங்களையும் பட்டியலிடுகிறது.',
-      'admin.exec.districts.mapUnavailable': 'வரைபடம் கிடைக்கவில்லை — மாவட்ட தரவரிசையைப் பாருங்கள்.',
+      'admin.exec.districts.tnOnly':
+        'வரைபடம் தமிழ்நாட்டை மட்டும் காட்டுகிறது. தரவரிசை நாங்கள் விற்கும் அனைத்து மாவட்டங்களையும் பட்டியலிடுகிறது.',
+      'admin.exec.districts.mapUnavailable':
+        'வரைபடம் கிடைக்கவில்லை — மாவட்ட தரவரிசையைப் பாருங்கள்.',
       'admin.exec.districts.none': 'இதுவரை எந்த மாவட்டத்திலும் விற்பனை இல்லை.',
       'admin.exec.legend.performing': 'சிறப்பாக',
       'admin.exec.legend.moderate': 'மிதமாக',
@@ -1619,7 +1677,8 @@ export const resources = {
       'admin.nav.hub': 'மையப் பட்டியல்',
       'admin.hub.title': 'மைய பொறுப்பாளர் பட்டியல்',
       'admin.hub.sub': 'வரும் ஆர்டர்களைப் பதிவு செய்து, பின்னர் இறுதி விநியோகத்திற்கு அனுப்பவும்.',
-      'admin.hub.subDistrict': '{{district}} மையம் — வருகைகளைப் பதிவு செய்து, இறுதி விநியோகத்திற்கு அனுப்பவும்.',
+      'admin.hub.subDistrict':
+        '{{district}} மையம் — வருகைகளைப் பதிவு செய்து, இறுதி விநியோகத்திற்கு அனுப்பவும்.',
       'admin.hub.arriving': 'வந்து கொண்டிருக்கிறது',
       'admin.hub.ready': 'அனுப்பத் தயார்',
       'admin.hub.arrivingSection': 'மையத்திற்கு வருபவை ({{count}})',
@@ -1633,8 +1692,10 @@ export const resources = {
       'admin.hub.noReady': 'மையத்தில் காத்திருக்கும் ஆர்டர்கள் இல்லை.',
       'admin.hub.items': '{{count}} பொருள்(கள்)',
       'admin.hub.deliveryVillage': 'விநியோக கிராமம்',
-      'admin.hub.matched': '{{count}} விநியோக முகவர்(கள்) இந்தக் கிராமத்தைக் கவனிக்கிறார்கள் — தானாகத் தேர்ந்தெடுக்கப்பட்டது.',
-      'admin.hub.noMatch': 'இந்தக் கிராமத்திற்கு முகவர் யாரும் இல்லை. கைமுறையாகத் தேர்ந்தெடுக்கவும்.',
+      'admin.hub.matched':
+        '{{count}} விநியோக முகவர்(கள்) இந்தக் கிராமத்தைக் கவனிக்கிறார்கள் — தானாகத் தேர்ந்தெடுக்கப்பட்டது.',
+      'admin.hub.noMatch':
+        'இந்தக் கிராமத்திற்கு முகவர் யாரும் இல்லை. கைமுறையாகத் தேர்ந்தெடுக்கவும்.',
       'admin.hub.agent': 'விநியோக முகவர்',
       'admin.hub.assignLater': '— பின்னர் ஒதுக்கு —',
       'admin.hub.covers': '{{village}}-ஐக் கவனிக்கிறார்',
@@ -1658,15 +1719,18 @@ export const resources = {
       'admin.profile.role': 'நிர்வாகப் பொறுப்பு',
       'admin.profile.district': 'மாவட்டம்',
       'admin.profile.edit': 'சுயவிவரத்தைத் திருத்து',
-      'admin.profile.editNote': 'பெயர், முகவரி மற்றும் பணி விவரங்கள் தலைமை அலுவலகத்தால் பராமரிக்கப்படுகின்றன.',
+      'admin.profile.editNote':
+        'பெயர், முகவரி மற்றும் பணி விவரங்கள் தலைமை அலுவலகத்தால் பராமரிக்கப்படுகின்றன.',
       'admin.profile.save': 'மாற்றங்களைச் சேமி',
       'admin.profile.saving': 'சேமிக்கிறது…',
       'admin.profile.cancel': 'ரத்து',
       'admin.profile.saved': 'சுயவிவரம் புதுப்பிக்கப்பட்டது.',
       'admin.profile.saveFailed': 'சுயவிவரத்தைப் புதுப்பிக்க முடியவில்லை.',
       'admin.profile.employee': 'ஊழியர் விவரங்கள்',
-      'admin.profile.employeeNote': 'தலைமை அலுவலகத்தால் பராமரிக்கப்படுகிறது. படிக்க மட்டும் — திருத்தங்களுக்கு HO-ஐத் தொடர்பு கொள்ளவும்.',
-      'admin.profile.employeePartial': 'முழு ஊழியர் பதிவு நிரந்தர ஊழியர்களுக்கு மட்டும் பொருந்தும்.',
+      'admin.profile.employeeNote':
+        'தலைமை அலுவலகத்தால் பராமரிக்கப்படுகிறது. படிக்க மட்டும் — திருத்தங்களுக்கு HO-ஐத் தொடர்பு கொள்ளவும்.',
+      'admin.profile.employeePartial':
+        'முழு ஊழியர் பதிவு நிரந்தர ஊழியர்களுக்கு மட்டும் பொருந்தும்.',
       'admin.profile.empNo': 'ஊழியர் எண்',
       'admin.profile.employmentType': 'பணி வகை',
       'admin.users.history': 'வரலாறு',
@@ -1707,10 +1771,12 @@ export const resources = {
       'admin.reg.applicant': 'விண்ணப்பதாரர்',
       'admin.reg.email': 'மின்னஞ்சல்',
       'admin.reg.done': 'முடிந்தது.',
-      'admin.reg.approveHint': 'அங்கீகரித்தவுடன், விண்ணப்பதாரரின் உள்நுழைவு செயல்படுத்தப்படும்; உள்நுழைந்து கட்டணம் (திட்டக் கட்டணம் + ஒருமுறை ₹100 பதிவுக் கட்டணம்) செலுத்த அவர்களுக்கு அறிவிப்பு அனுப்பப்படும்.',
+      'admin.reg.approveHint':
+        'அங்கீகரித்தவுடன், விண்ணப்பதாரரின் உள்நுழைவு செயல்படுத்தப்படும்; உள்நுழைந்து கட்டணம் (திட்டக் கட்டணம் + ஒருமுறை ₹100 பதிவுக் கட்டணம்) செலுத்த அவர்களுக்கு அறிவிப்பு அனுப்பப்படும்.',
       'admin.reg.approve': 'அங்கீகரி',
       'admin.reg.reject': 'நிராகரி',
-      'admin.reg.confirmHint': 'வங்கிக் கூற்றில் கட்டணத்தைச் சரிபார்த்த பின்னரே உறுதிப்படுத்தவும். இது கணக்கைச் செயல்படுத்தும்.',
+      'admin.reg.confirmHint':
+        'வங்கிக் கூற்றில் கட்டணத்தைச் சரிபார்த்த பின்னரே உறுதிப்படுத்தவும். இது கணக்கைச் செயல்படுத்தும்.',
       'admin.reg.paymentRef': 'கட்டண குறிப்பு',
       'admin.reg.confirmPayment': 'கட்டணத்தை உறுதிப்படுத்து',
       'admin.reg.rejectionReason': 'நிராகரிப்புக் காரணம்',
@@ -1755,7 +1821,8 @@ export const resources = {
       'admin.cr.requestedRenewal': 'கோரிய புதுப்பிப்பு',
       'admin.cr.newPlan': 'புதிய திட்டம்',
       'admin.cr.requestedChanges': 'கோரிய மாற்றங்கள்',
-      'admin.cr.confirmHint': 'கட்டணத்தைச் சரிபார்த்த பின் உறுதிப்படுத்தவும். இது சந்தாவை நீட்டித்து கணக்கை மீண்டும் செயல்படுத்தும்.',
+      'admin.cr.confirmHint':
+        'கட்டணத்தைச் சரிபார்த்த பின் உறுதிப்படுத்தவும். இது சந்தாவை நீட்டித்து கணக்கை மீண்டும் செயல்படுத்தும்.',
       'admin.cr.paymentRef': 'கட்டண குறிப்பு',
       'admin.cr.amount': 'தொகை',
       'admin.cr.notes': 'குறிப்புகள்',
@@ -1811,7 +1878,8 @@ export const resources = {
       'admin.prod.cancel': 'ரத்து',
       'admin.prod.delete': 'நீக்கு',
       'admin.prod.deleteConfirm': 'இந்தப் பொருளை நீக்கவா?',
-      'admin.prod.deleteConfirmBody': 'இது பொருளைப் பட்டியலிலிருந்து நீக்கும். அதைக் குறிக்கும் விவசாயி பட்டியல்கள் மற்றும் ஆர்டர்கள் பாதிக்கப்படலாம்.',
+      'admin.prod.deleteConfirmBody':
+        'இது பொருளைப் பட்டியலிலிருந்து நீக்கும். அதைக் குறிக்கும் விவசாயி பட்டியல்கள் மற்றும் ஆர்டர்கள் பாதிக்கப்படலாம்.',
       'admin.prod.created': 'பொருள் உருவாக்கப்பட்டது.',
       'admin.prod.updated': 'பொருள் புதுப்பிக்கப்பட்டது.',
       'admin.prod.deleted': 'பொருள் நீக்கப்பட்டது.',
@@ -1844,13 +1912,15 @@ export const resources = {
       'admin.ret.status.accepted': 'ஏற்கப்பட்டது',
       'admin.ret.status.rejected': 'நிராகரிக்கப்பட்டது',
       'admin.ret.status.collected': 'சேகரிக்கப்பட்டது',
-      'admin.ret.decideHint': 'பணத்திரும்பத்தை அங்கீகரிக்க ஏற்கவும் (பொருட்கள் சேகரிக்கப்பட்டவுடன் வழங்கப்படும்), அல்லது கோரிக்கையை மூட நிராகரிக்கவும்.',
+      'admin.ret.decideHint':
+        'பணத்திரும்பத்தை அங்கீகரிக்க ஏற்கவும் (பொருட்கள் சேகரிக்கப்பட்டவுடன் வழங்கப்படும்), அல்லது கோரிக்கையை மூட நிராகரிக்கவும்.',
       'admin.ret.accept': 'ஏற்று',
       'admin.ret.reject': 'நிராகரி',
       'admin.ret.collectHint': 'பணத்திரும்பத்தைத் தூண்ட பொருட்கள் சேகரிக்கப்பட்டதாகக் குறிக்கவும்.',
       'admin.ret.collect': 'சேகரித்ததாகக் குறி',
       'admin.ret.collectConfirm': 'சேகரித்து பணம் திருப்பவா?',
-      'admin.ret.collectConfirmBody': 'இது பொருட்கள் திரும்பியதை உறுதிசெய்து {{to}}-க்கு {{amount}} பணத்திரும்பத்தைத் தூண்டும். இதை மாற்ற முடியாது.',
+      'admin.ret.collectConfirmBody':
+        'இது பொருட்கள் திரும்பியதை உறுதிசெய்து {{to}}-க்கு {{amount}} பணத்திரும்பத்தைத் தூண்டும். இதை மாற்ற முடியாது.',
       'admin.ret.cancel': 'ரத்து',
       'admin.ret.refunded': '{{amount}} பணத்திரும்பம் தூண்டப்பட்டது.',
       'admin.ret.wasRejected': 'இந்த திருப்பி நிராகரிக்கப்பட்டு மூடப்பட்டது.',
@@ -1863,7 +1933,8 @@ export const resources = {
       'admin.pay.view': 'பார்',
       'admin.pay.run': 'தீர்வை இயக்கு',
       'admin.pay.running': 'இயங்குகிறது…',
-      'admin.pay.settled': 'தீர்வைத் தொகுப்பு உருவாக்கப்பட்டது — {{count}} கொடுப்பனவு(கள்) வரிசையில்.',
+      'admin.pay.settled':
+        'தீர்வைத் தொகுப்பு உருவாக்கப்பட்டது — {{count}} கொடுப்பனவு(கள்) வரிசையில்.',
       'admin.pay.farmer': 'விவசாயி',
       'admin.pay.name': 'பெயர்',
       'admin.pay.phone': 'தொலைபேசி',
@@ -1886,7 +1957,8 @@ export const resources = {
       'admin.pay.method': 'முறை',
       'admin.pay.reference': 'குறிப்பு',
       'admin.pay.runConfirm': 'தீர்வைத் தொகுப்பை இயக்கவா?',
-      'admin.pay.runConfirmBody': 'இது அனைத்து மாவட்டங்களிலும் இன்னும் தீர்க்கப்படாத, வழங்கப்பட்ட ஒவ்வொரு ஆர்டருக்கும் நிலுவை கொடுப்பனவு பதிவுகளை உருவாக்கும். ஏற்கனவே தீர்க்கப்பட்டவை தவிர்க்கப்படும்.',
+      'admin.pay.runConfirmBody':
+        'இது அனைத்து மாவட்டங்களிலும் இன்னும் தீர்க்கப்படாத, வழங்கப்பட்ட ஒவ்வொரு ஆர்டருக்கும் நிலுவை கொடுப்பனவு பதிவுகளை உருவாக்கும். ஏற்கனவே தீர்க்கப்பட்டவை தவிர்க்கப்படும்.',
       'admin.pay.cancel': 'ரத்து',
       // Employees (HR tracker)
       'admin.emp.title': 'ஊழியர்கள்',
@@ -1928,7 +2000,8 @@ export const resources = {
       'admin.emp.approvedOn': 'அங்கீகரித்த நாள்',
       'admin.emp.history': 'மாற்ற வரலாறு',
       'admin.emp.noHistory': 'மாற்றங்கள் இல்லை.',
-      'admin.emp.approveHint': 'அங்கீகரித்தால் ஊழியர் ஐடி (MA…/CE…) வழங்கப்பட்டு பதிவு செயலில் இருக்கும்.',
+      'admin.emp.approveHint':
+        'அங்கீகரித்தால் ஊழியர் ஐடி (MA…/CE…) வழங்கப்பட்டு பதிவு செயலில் இருக்கும்.',
       'admin.emp.approve': 'அங்கீகரி',
       'admin.emp.reject': 'நிராகரி',
       'admin.emp.rejectionReason': 'நிராகரிப்புக் காரணம்',
@@ -1941,8 +2014,10 @@ export const resources = {
       'admin.emp.remove': 'நீக்கு',
       'admin.emp.restore': 'மீட்டெடு',
       'admin.emp.removeConfirm': 'இந்த ஊழியரை நீக்கவா?',
-      'admin.emp.removeLoginWarning': 'இவரது உள்நுழைவு உடனடியாக ரத்து செய்யப்படும். அடுத்த செயலிலேயே வெளியேற்றப்படுவார்; மீண்டும் உள்நுழைய முடியாது.',
-      'admin.emp.removeKeepsRecord': 'இவரது பதிவு, ஊழியர் ஐடி மற்றும் வரலாறு பாதுகாக்கப்படும் — எதுவும் அழிக்கப்படாது; HR நிர்வாகி மீட்டெடுக்கலாம்.',
+      'admin.emp.removeLoginWarning':
+        'இவரது உள்நுழைவு உடனடியாக ரத்து செய்யப்படும். அடுத்த செயலிலேயே வெளியேற்றப்படுவார்; மீண்டும் உள்நுழைய முடியாது.',
+      'admin.emp.removeKeepsRecord':
+        'இவரது பதிவு, ஊழியர் ஐடி மற்றும் வரலாறு பாதுகாக்கப்படும் — எதுவும் அழிக்கப்படாது; HR நிர்வாகி மீட்டெடுக்கலாம்.',
       'admin.emp.removeNoLogin': 'இந்த ஊழியருக்கு உள்நுழைவு இல்லை, எனவே ரத்து செய்ய எதுவும் இல்லை.',
       'admin.emp.removing': 'நீக்குகிறது…',
       'admin.emp.removedBanner': 'இந்த ஊழியர் நீக்கப்பட்டுள்ளார்.',
@@ -1977,23 +2052,28 @@ export const resources = {
       'admin.emp.pincode': 'அஞ்சல் குறியீடு',
       'admin.emp.city': 'நகரம்',
       'admin.emp.village': 'கிராமம் / டவுன்',
-      'admin.emp.typeHint': 'நிரந்தரம் → ஐடி MA-ல் தொடங்கும் (எ.கா. MATN00001) · ஒப்பந்தம் → CE (எ.கா. CETN00001).',
+      'admin.emp.typeHint':
+        'நிரந்தரம் → ஐடி MA-ல் தொடங்கும் (எ.கா. MATN00001) · ஒப்பந்தம் → CE (எ.கா. CETN00001).',
       'admin.emp.isManager': 'இந்த ஊழியர் ஒரு மேலாளர் (மற்றவர்களுக்கு அறிக்கை மேலாளராக இருக்கலாம்)',
       'admin.emp.noManager': 'மேலாளர் தேர்ந்தெடுக்கப்படவில்லை',
       'admin.emp.selectMgr': 'தேர்ந்தெடு…',
       'admin.emp.clear': 'அழி',
       'admin.emp.trustTitle': 'ஒப்புதல் அதிகாரம் (துவக்கம்)',
-      'admin.emp.bodFull': 'இயக்குநர் குழு — நம்பிக்கையின் மூலம்; எச்.ஆர் நிர்வாகிகளை அங்கீகரிக்கிறார்',
+      'admin.emp.bodFull':
+        'இயக்குநர் குழு — நம்பிக்கையின் மூலம்; எச்.ஆர் நிர்வாகிகளை அங்கீகரிக்கிறார்',
       'admin.emp.hrFull': 'எச்.ஆர் நிர்வாகி — மற்ற அனைத்து ஊழியர் கோரிக்கைகளையும் அங்கீகரிக்கலாம்',
-      'admin.emp.trustNote': 'இந்தப் பங்குகள் தானாக அங்கீகரிக்கப்படும் — ஊழியர் ஐடி உடனடியாக வழங்கப்படும். மற்றவர்களுக்கு எச்.ஆர் ஒப்புதல் தேவை.',
+      'admin.emp.trustNote':
+        'இந்தப் பங்குகள் தானாக அங்கீகரிக்கப்படும் — ஊழியர் ஐடி உடனடியாக வழங்கப்படும். மற்றவர்களுக்கு எச்.ஆர் ஒப்புதல் தேவை.',
       'admin.emp.statusField': 'நிலை',
       'admin.emp.st.active': 'செயலில்',
       'admin.emp.st.inactive': 'செயலற்றது',
       'admin.emp.notes': 'குறிப்புகள்',
       'admin.emp.mgrPicker': 'அறிக்கை மேலாளரைத் தேர்ந்தெடு',
-      'admin.emp.mgrNeedUnit': 'அதே பணி மாவட்டம் & துறையில் உள்ள மேலாளர்களில் இருந்து தேர்ந்தெடுக்கவும்.',
+      'admin.emp.mgrNeedUnit':
+        'அதே பணி மாவட்டம் & துறையில் உள்ள மேலாளர்களில் இருந்து தேர்ந்தெடுக்கவும்.',
       'admin.emp.mgrSearch': 'மேலாளர்களைத் தேடு…',
-      'admin.emp.mgrNone': 'இந்த மாவட்டம் & துறையில் மேலாளர்கள் இல்லை. ஒரு ஊழியரை மேலாளராகக் குறிக்கவும் (பணி மாவட்டம் + துறையுடன்).',
+      'admin.emp.mgrNone':
+        'இந்த மாவட்டம் & துறையில் மேலாளர்கள் இல்லை. ஒரு ஊழியரை மேலாளராகக் குறிக்கவும் (பணி மாவட்டம் + துறையுடன்).',
       'admin.emp.mgrSelect': 'தேர்',
     },
   },

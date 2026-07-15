@@ -55,10 +55,16 @@ export function PasswordRules({ value }: { value: string }) {
       {passwordRuleResults(value).map((r) => (
         <li
           key={r.id}
-          className={cn('flex items-center gap-[7px] py-0.5 text-2xs', r.met ? 'text-success' : 'text-fg-muted')}
+          className={cn(
+            'flex items-center gap-[7px] py-0.5 text-2xs',
+            r.met ? 'text-success' : 'text-fg-muted',
+          )}
         >
           <span
-            className={cn('h-1.5 w-1.5 shrink-0 rounded-full', r.met ? 'bg-success' : 'bg-neutral-300')}
+            className={cn(
+              'h-1.5 w-1.5 shrink-0 rounded-full',
+              r.met ? 'bg-success' : 'bg-neutral-300',
+            )}
             aria-hidden="true"
           />
           <span>{r.label}</span>

@@ -85,7 +85,9 @@ export function SubscriptionGate({
         data ? (
           <>
             {!blocking ? (
-              <Button variant="ghost" onClick={onClose} disabled={busy}>Later</Button>
+              <Button variant="ghost" onClick={onClose} disabled={busy}>
+                Later
+              </Button>
             ) : null}
             <Button onClick={pay} disabled={!plan || busy}>
               {busy ? 'Processing…' : plan ? `Pay ${fmtMoney(total)} & Activate` : 'Select a plan'}
@@ -95,54 +97,79 @@ export function SubscriptionGate({
       }
     >
       {error && !data ? (
-        <p className={FIELD_ERR_CLASS} role="alert">{error}</p>
+        <p className={FIELD_ERR_CLASS} role="alert">
+          {error}
+        </p>
       ) : !data ? (
         <Spinner />
       ) : (
         <>
           {data.concession_pct > 0 ? (
             <p className="sub-concession">
-              🌸 <strong>Women &amp; Transgender concession:</strong> {data.concession_pct}% off the plan fee,
-              already applied below.
+              🌸 <strong>Women &amp; Transgender concession:</strong> {data.concession_pct}% off the
+              plan fee, already applied below.
             </p>
           ) : null}
 
           <fieldset className="sub-plans">
             <legend className={FIELD_LABEL_CLASS}>Choose a plan</legend>
             {data.plans.map((p) => (
-              <PlanOption key={p.name} plan={p} checked={selected === p.name} onSelect={() => setSelected(p.name)} />
+              <PlanOption
+                key={p.name}
+                plan={p}
+                checked={selected === p.name}
+                onSelect={() => setSelected(p.name)}
+              />
             ))}
           </fieldset>
 
           {plan ? (
             <div className="sub-summary">
               <div className="sub-summary__row">
-                <span>Plan fee</span><span>{fmtMoney(plan.amount)}</span>
+                <span>Plan fee</span>
+                <span>{fmtMoney(plan.amount)}</span>
               </div>
               {regCharge > 0 ? (
                 <div className="sub-summary__row">
-                  <span>Registration charge <small>(one-time)</small></span>
+                  <span>
+                    Registration charge <small>(one-time)</small>
+                  </span>
                   <span>{fmtMoney(data.registration_charge)}</span>
                 </div>
               ) : null}
               <div className="sub-summary__row sub-summary__row--total">
-                <span>Total payable</span><span>{fmtMoney(total)}</span>
+                <span>Total payable</span>
+                <span>{fmtMoney(total)}</span>
               </div>
             </div>
           ) : null}
 
           {!data.registration_charge_applies ? (
-            <p className="sub-note">✓ Your one-time registration charge is already paid — renewals are plan fee only.</p>
+            <p className="sub-note">
+              ✓ Your one-time registration charge is already paid — renewals are plan fee only.
+            </p>
           ) : null}
 
-          {error ? <p className={FIELD_ERR_CLASS} role="alert" style={{ marginTop: 8 }}>{error}</p> : null}
+          {error ? (
+            <p className={FIELD_ERR_CLASS} role="alert" style={{ marginTop: 8 }}>
+              {error}
+            </p>
+          ) : null}
         </>
       )}
     </Modal>
   );
 }
 
-function PlanOption({ plan, checked, onSelect }: { plan: SubscriptionPlan; checked: boolean; onSelect: () => void }) {
+function PlanOption({
+  plan,
+  checked,
+  onSelect,
+}: {
+  plan: SubscriptionPlan;
+  checked: boolean;
+  onSelect: () => void;
+}) {
   // Both are rupee strings, so a plain !== is a string compare — equal means no
   // concession. The legacy page compared 20000 with "200.00" and always struck through.
   const discounted = plan.base_amount !== plan.amount;

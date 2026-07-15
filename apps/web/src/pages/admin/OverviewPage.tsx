@@ -154,13 +154,26 @@ export function OverviewPage() {
     <>
       <h1 className="mb-1 text-xl font-bold text-primary">{t('admin.overview.title')}</h1>
       <p className="mb-4 text-sm text-fg-muted">
-        {t('admin.overview.scope')}: <span className="font-semibold text-fg">{data?.scope || '—'}</span>
+        {t('admin.overview.scope')}:{' '}
+        <span className="font-semibold text-fg">{data?.scope || '—'}</span>
       </p>
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatTile label={t('admin.overview.kpi.orders')} value={k?.total_orders ?? '—'} hint={t('admin.overview.kpi.ordersHint')} />
-        <StatTile label={t('admin.overview.kpi.gmv')} value={k ? fmtMoney(k.gmv_rupees) : '—'} accent="var(--success)" />
-        <StatTile label={t('admin.overview.kpi.active')} value={k?.active_orders ?? '—'} accent="var(--info)" />
+        <StatTile
+          label={t('admin.overview.kpi.orders')}
+          value={k?.total_orders ?? '—'}
+          hint={t('admin.overview.kpi.ordersHint')}
+        />
+        <StatTile
+          label={t('admin.overview.kpi.gmv')}
+          value={k ? fmtMoney(k.gmv_rupees) : '—'}
+          accent="var(--success)"
+        />
+        <StatTile
+          label={t('admin.overview.kpi.active')}
+          value={k?.active_orders ?? '—'}
+          accent="var(--info)"
+        />
         <StatTile label={t('admin.overview.kpi.farmers')} value={k?.total_farmers ?? '—'} />
         <StatTile label={t('admin.overview.kpi.consumers')} value={k?.total_consumers ?? '—'} />
       </div>

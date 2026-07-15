@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
-  listingActions, listingActionStatus, listingWaitDays, isListingStale,
+  listingActions,
+  listingActionStatus,
+  listingWaitDays,
+  isListingStale,
   LISTING_STALE_DAYS,
 } from './listings';
 

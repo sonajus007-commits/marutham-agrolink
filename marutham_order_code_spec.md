@@ -7,6 +7,7 @@ This document defines the human-readable codes for orders and returns, and conta
 ## The format
 
 **Order code:**
+
 ```
 ORD + <districtCode> + YYMMDD + <6-digit daily sequence>
 Example:  ORDPDK250626000001
@@ -18,6 +19,7 @@ Example:  ORDPDK250626000001
 ```
 
 **Return code:**
+
 ```
 RET + <districtCode> + YYMMDD + <6-digit daily sequence>
 Example:  RETPDK250626000001
@@ -77,11 +79,13 @@ AFTER BUILDING:
 ## WHEN to add this into the code
 
 **Add it now / early — before real orders exist.** Reasons:
+
 - Your backend is freshly built and the `orders`/`returns` tables are essentially empty (only test rows).
 - Changing the code format is **easy now** and **painful later** (after thousands of real orders carry the old format).
 - The delivery, returns, and reporting features all reference these codes — better they use the final format from the start.
 
 **Suggested moment in your build sequence:**
+
 1. First, next session, **verify the existing backend** (delivery + payment) works in Supabase — finish confirming what's built.
 2. **Then apply this code logic** (paste the instruction above into Claude Code) and verify the codes in Supabase.
 3. **Then** move on to the frontend (web app).
@@ -91,6 +95,7 @@ So: verify backend → apply this code format → build frontend. Slot it in rig
 ---
 
 ## How to verify it worked (your eyes, in Supabase)
+
 - Two PDK orders same day → codes end in `000001`, `000002`.
 - A return on one order → proper `RETPDK...` code, linked to the right order.
 - Ask Claude Code to explain how it guarantees no duplicates (should mention atomic counter / row lock / DB sequence).

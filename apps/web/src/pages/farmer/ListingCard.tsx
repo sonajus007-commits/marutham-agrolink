@@ -1,7 +1,11 @@
 import { Button } from '@marutham/ui';
 import {
-  getProductEmoji, listingPriceRs, listingState, fmtMoney,
-  type FarmerListing, type ListingState,
+  getProductEmoji,
+  listingPriceRs,
+  listingState,
+  fmtMoney,
+  type FarmerListing,
+  type ListingState,
 } from '@marutham/lib';
 
 const STATE_BADGE: Record<ListingState, { text: string; cls: string }> = {
@@ -39,7 +43,11 @@ export function ListingCard({
     <article className="listing">
       <div className="listing__top">
         <div className="listing__thumb" aria-hidden="true">
-          {listing.images?.[0] ? <img src={listing.images[0]} alt="" /> : getProductEmoji(p?.name || '')}
+          {listing.images?.[0] ? (
+            <img src={listing.images[0]} alt="" />
+          ) : (
+            getProductEmoji(p?.name || '')
+          )}
         </div>
         <div className="listing__id">
           <div className="listing__name">{p?.name || '—'}</div>
@@ -57,18 +65,26 @@ export function ListingCard({
       <div className="listing__badges">
         <span className={`listing__badge ${badge.cls}`}>{badge.text}</span>
         {priced && listing.qty_available != null ? (
-          <span className="listing__tag">{listing.qty_available} {unit} available</span>
+          <span className="listing__tag">
+            {listing.qty_available} {unit} available
+          </span>
         ) : null}
         {priced && listing.time_available ? (
-          <span className="listing__tag listing__tag--cutoff">Order by {listing.time_available}</span>
+          <span className="listing__tag listing__tag--cutoff">
+            Order by {listing.time_available}
+          </span>
         ) : null}
         {priced && listing.bulk_qty && listing.bulk_disc_pct ? (
           <span className="listing__tag listing__tag--bulk">
             Bulk {listing.bulk_qty}+ → {listing.bulk_disc_pct}% off
           </span>
         ) : null}
-        {state === 'confirmed' ? <span className="listing__tag listing__tag--ok">Confirmed for delivery</span> : null}
-        {state === 'cutoff_passed' ? <span className="listing__tag listing__tag--warn">Cutoff passed</span> : null}
+        {state === 'confirmed' ? (
+          <span className="listing__tag listing__tag--ok">Confirmed for delivery</span>
+        ) : null}
+        {state === 'cutoff_passed' ? (
+          <span className="listing__tag listing__tag--warn">Cutoff passed</span>
+        ) : null}
       </div>
 
       <div className="listing__actions">
@@ -87,7 +103,13 @@ export function ListingCard({
 }
 
 function Actions({
-  state, reason, busy, onEdit, onConfirm, onUnconfirm, onDelete,
+  state,
+  reason,
+  busy,
+  onEdit,
+  onConfirm,
+  onUnconfirm,
+  onDelete,
 }: {
   state: ListingState;
   /** The admin's reason for declining, shown to the seller verbatim. Populated for
@@ -130,7 +152,9 @@ function Actions({
     case 'needs_price':
       return (
         <>
-          <Button onClick={onEdit} disabled={busy} style={{ padding: '6px 12px', fontSize: 11 }}>💰 Set selling price</Button>
+          <Button onClick={onEdit} disabled={busy} style={{ padding: '6px 12px', fontSize: 11 }}>
+            💰 Set selling price
+          </Button>
           {remove}
         </>
       );
@@ -138,7 +162,12 @@ function Actions({
     case 'cutoff_passed':
       return (
         <>
-          <Button onClick={onEdit} disabled={busy} className="listing__btn--warn" style={{ padding: '6px 12px', fontSize: 11 }}>
+          <Button
+            onClick={onEdit}
+            disabled={busy}
+            className="listing__btn--warn"
+            style={{ padding: '6px 12px', fontSize: 11 }}
+          >
             Update price &amp; re-list
           </Button>
           {remove}
@@ -148,8 +177,12 @@ function Actions({
     case 'listed':
       return (
         <>
-          <Button onClick={onConfirm} disabled={busy} style={{ padding: '6px 12px', fontSize: 11 }}>Confirm for tomorrow</Button>
-          <button className="listing__link" onClick={onEdit} disabled={busy}>Edit</button>
+          <Button onClick={onConfirm} disabled={busy} style={{ padding: '6px 12px', fontSize: 11 }}>
+            Confirm for tomorrow
+          </Button>
+          <button className="listing__link" onClick={onEdit} disabled={busy}>
+            Edit
+          </button>
           {remove}
         </>
       );
@@ -157,8 +190,12 @@ function Actions({
     case 'confirmed':
       return (
         <>
-          <button className="listing__link" onClick={onEdit} disabled={busy}>Edit</button>
-          <button className="listing__link" onClick={onUnconfirm} disabled={busy}>Undo confirm</button>
+          <button className="listing__link" onClick={onEdit} disabled={busy}>
+            Edit
+          </button>
+          <button className="listing__link" onClick={onUnconfirm} disabled={busy}>
+            Undo confirm
+          </button>
           {remove}
         </>
       );

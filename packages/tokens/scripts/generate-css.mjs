@@ -12,8 +12,18 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 import {
-  colors, tint, neutral, statusPalette, statusFallback, semantic,
-  typography, space, radius, shadow, motion, zIndex,
+  colors,
+  tint,
+  neutral,
+  statusPalette,
+  statusFallback,
+  semantic,
+  typography,
+  space,
+  radius,
+  shadow,
+  motion,
+  zIndex,
 } from '../src/tokens.ts';
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../src/tokens.css');
@@ -22,7 +32,11 @@ const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../src/tokens.css'
 const kebab = (s) => s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 
 /** 'Order Placed' → order-placed */
-const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const slug = (s) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 
 /** Numeric scale keys: 0.5 → 0-5 (a dot is illegal in a custom property name). */
 const numKey = (k) => String(k).replace('.', '-');
@@ -50,43 +64,64 @@ function scale(prefix, obj, keyFn = kebab) {
 function render() {
   const root = [];
 
-  root.push(block('Brand primitives', Object.entries(colors).map(([k, v]) => decl(`--${kebab(k)}`, v))));
+  root.push(
+    block(
+      'Brand primitives',
+      Object.entries(colors).map(([k, v]) => decl(`--${kebab(k)}`, v)),
+    ),
+  );
 
   root.push(block('Tint ramp (pale greens)', scale('tint', tint, numKey)));
   root.push(block('Neutral ramp (cool greys)', scale('neutral', neutral, numKey)));
 
-  root.push(block('Order status', [
-    ...Object.entries(statusPalette).map(([k, v]) => decl(`--status-${slug(k)}`, v)),
-    decl('--status-fallback', statusFallback),
-  ]));
+  root.push(
+    block('Order status', [
+      ...Object.entries(statusPalette).map(([k, v]) => decl(`--status-${slug(k)}`, v)),
+      decl('--status-fallback', statusFallback),
+    ]),
+  );
 
-  root.push(block('Semantic roles (light)',
-    Object.entries(semantic.light).map(([k, v]) => decl(`--${kebab(k)}`, v))));
+  root.push(
+    block(
+      'Semantic roles (light)',
+      Object.entries(semantic.light).map(([k, v]) => decl(`--${kebab(k)}`, v)),
+    ),
+  );
 
-  root.push(block('Typography', [
-    ...Object.entries(typography.fontFamily).map(([k, v]) => decl(`--font-${kebab(k)}`, v)),
-    ...Object.entries(typography.fontSize).map(([k, v]) => decl(`--fs-${k}`, v)),
-    ...Object.entries(typography.fontWeight).map(([k, v]) => decl(`--fw-${kebab(k)}`, v)),
-    ...Object.entries(typography.lineHeight).map(([k, v]) => decl(`--lh-${kebab(k)}`, v)),
-    ...Object.entries(typography.letterSpacing).map(([k, v]) => decl(`--ls-${kebab(k)}`, v)),
-  ]));
+  root.push(
+    block('Typography', [
+      ...Object.entries(typography.fontFamily).map(([k, v]) => decl(`--font-${kebab(k)}`, v)),
+      ...Object.entries(typography.fontSize).map(([k, v]) => decl(`--fs-${k}`, v)),
+      ...Object.entries(typography.fontWeight).map(([k, v]) => decl(`--fw-${kebab(k)}`, v)),
+      ...Object.entries(typography.lineHeight).map(([k, v]) => decl(`--lh-${kebab(k)}`, v)),
+      ...Object.entries(typography.letterSpacing).map(([k, v]) => decl(`--ls-${kebab(k)}`, v)),
+    ]),
+  );
 
   root.push(block('Spacing', scale('space', space, numKey)));
 
-  root.push(block('Radius', [
-    ...Object.entries(radius).map(([k, v]) =>
-      decl(LEGACY_NAMES[`radius.${k}`] ?? `--radius-${kebab(k)}`, v)),
-  ]));
+  root.push(
+    block('Radius', [
+      ...Object.entries(radius).map(([k, v]) =>
+        decl(LEGACY_NAMES[`radius.${k}`] ?? `--radius-${kebab(k)}`, v),
+      ),
+    ]),
+  );
 
-  root.push(block('Elevation', [
-    ...Object.entries(shadow).map(([k, v]) =>
-      decl(LEGACY_NAMES[`shadow.${k}`] ?? `--shadow-${kebab(k)}`, v)),
-  ]));
+  root.push(
+    block('Elevation', [
+      ...Object.entries(shadow).map(([k, v]) =>
+        decl(LEGACY_NAMES[`shadow.${k}`] ?? `--shadow-${kebab(k)}`, v),
+      ),
+    ]),
+  );
 
-  root.push(block('Motion', [
-    ...Object.entries(motion.duration).map(([k, v]) => decl(`--duration-${kebab(k)}`, v)),
-    ...Object.entries(motion.easing).map(([k, v]) => decl(`--ease-${kebab(k)}`, v)),
-  ]));
+  root.push(
+    block('Motion', [
+      ...Object.entries(motion.duration).map(([k, v]) => decl(`--duration-${kebab(k)}`, v)),
+      ...Object.entries(motion.easing).map(([k, v]) => decl(`--ease-${kebab(k)}`, v)),
+    ]),
+  );
 
   root.push(block('Stacking', scale('z', zIndex)));
 

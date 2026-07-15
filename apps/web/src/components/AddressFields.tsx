@@ -15,8 +15,16 @@ import { useLocations } from '../hooks/useLocations';
  * village, a delivery address does neither. */
 
 export type AddressFieldKey =
-  | 'house_no' | 'street1' | 'street2' | 'landmark'
-  | 'state' | 'district' | 'taluk' | 'village_town' | 'city' | 'pincode';
+  | 'house_no'
+  | 'street1'
+  | 'street2'
+  | 'landmark'
+  | 'state'
+  | 'district'
+  | 'taluk'
+  | 'village_town'
+  | 'city'
+  | 'pincode';
 
 type AddressFieldMap<T> = Partial<Record<AddressFieldKey, T>>;
 
@@ -58,9 +66,15 @@ const DEFAULT_LABELS: Record<AddressFieldKey, string> = {
 };
 
 export function AddressFields({
-  value, onChange,
-  showLabel = false, showPhone = false, showStreet2 = false,
-  error, errors = {}, required = {}, labels = {},
+  value,
+  onChange,
+  showLabel = false,
+  showPhone = false,
+  showStreet2 = false,
+  error,
+  errors = {},
+  required = {},
+  labels = {},
 }: AddressFieldsProps) {
   const { states, districtsOf, taluksOf } = useLocations();
   const set = (patch: Partial<SavedAddress>) => onChange({ ...value, ...patch });
@@ -77,106 +91,180 @@ export function AddressFields({
       {showLabel ? (
         <Field label="Label (e.g. Home, Work)">
           {(p) => (
-            <Input {...p} type="text" placeholder="Home"
-              value={value.label || ''} onChange={(e) => set({ label: e.target.value })} />
+            <Input
+              {...p}
+              type="text"
+              placeholder="Home"
+              value={value.label || ''}
+              onChange={(e) => set({ label: e.target.value })}
+            />
           )}
         </Field>
       ) : null}
 
       <Field {...field('house_no')}>
         {(p) => (
-          <Input {...p} type="text" autoComplete="address-line1"
-            value={value.house_no || ''} onChange={(e) => set({ house_no: e.target.value })} />
+          <Input
+            {...p}
+            type="text"
+            autoComplete="address-line1"
+            value={value.house_no || ''}
+            onChange={(e) => set({ house_no: e.target.value })}
+          />
         )}
       </Field>
 
       <Field {...field('street1')}>
         {(p) => (
-          <Input {...p} type="text" autoComplete="address-line2"
-            value={value.street1 || ''} onChange={(e) => set({ street1: e.target.value })} />
+          <Input
+            {...p}
+            type="text"
+            autoComplete="address-line2"
+            value={value.street1 || ''}
+            onChange={(e) => set({ street1: e.target.value })}
+          />
         )}
       </Field>
 
       {showStreet2 ? (
         <Field {...field('street2')}>
           {(p) => (
-            <Input {...p} type="text" placeholder="Area, Colony"
-              value={value.street2 || ''} onChange={(e) => set({ street2: e.target.value })} />
+            <Input
+              {...p}
+              type="text"
+              placeholder="Area, Colony"
+              value={value.street2 || ''}
+              onChange={(e) => set({ street2: e.target.value })}
+            />
           )}
         </Field>
       ) : null}
 
       <Field {...field('landmark')}>
         {(p) => (
-          <Input {...p} type="text" placeholder="Near school, temple…"
-            value={value.landmark || ''} onChange={(e) => set({ landmark: e.target.value })} />
+          <Input
+            {...p}
+            type="text"
+            placeholder="Near school, temple…"
+            value={value.landmark || ''}
+            onChange={(e) => set({ landmark: e.target.value })}
+          />
         )}
       </Field>
 
       <Field {...field('state', true)}>
         {(p) => (
-          <Select {...p} autoComplete="address-level1" value={value.state || ''}
+          <Select
+            {...p}
+            autoComplete="address-level1"
+            value={value.state || ''}
             /* A new state invalidates the district and taluk below it. */
-            onChange={(e) => set({ state: e.target.value, district: '', taluk: '' })}>
+            onChange={(e) => set({ state: e.target.value, district: '', taluk: '' })}
+          >
             <option value="">— Select State —</option>
-            {states.map((s) => <option key={s} value={s}>{s}</option>)}
+            {states.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
           </Select>
         )}
       </Field>
 
       <Field {...field('district', true)}>
         {(p) => (
-          <Select {...p} autoComplete="address-level2" value={value.district || ''}
+          <Select
+            {...p}
+            autoComplete="address-level2"
+            value={value.district || ''}
             disabled={!value.state}
-            onChange={(e) => set({ district: e.target.value, taluk: '' })}>
+            onChange={(e) => set({ district: e.target.value, taluk: '' })}
+          >
             <option value="">— Select District —</option>
-            {districtsOf(value.state || '').map((d) => <option key={d} value={d}>{d}</option>)}
+            {districtsOf(value.state || '').map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
           </Select>
         )}
       </Field>
 
       <Field {...field('taluk')}>
         {(p) => (
-          <Select {...p} value={value.taluk || ''} disabled={!value.district}
-            onChange={(e) => set({ taluk: e.target.value })}>
+          <Select
+            {...p}
+            value={value.taluk || ''}
+            disabled={!value.district}
+            onChange={(e) => set({ taluk: e.target.value })}
+          >
             <option value="">— Select Taluk —</option>
-            {taluksOf(value.state || '', value.district || '').map((t) => <option key={t} value={t}>{t}</option>)}
+            {taluksOf(value.state || '', value.district || '').map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
           </Select>
         )}
       </Field>
 
       <Field {...field('village_town')}>
         {(p) => (
-          <Input {...p} type="text"
-            value={value.village_town || ''} onChange={(e) => set({ village_town: e.target.value })} />
+          <Input
+            {...p}
+            type="text"
+            value={value.village_town || ''}
+            onChange={(e) => set({ village_town: e.target.value })}
+          />
         )}
       </Field>
 
       <Field {...field('city')}>
         {(p) => (
-          <Input {...p} type="text" autoComplete="address-level2"
-            value={value.city || ''} onChange={(e) => set({ city: e.target.value })} />
+          <Input
+            {...p}
+            type="text"
+            autoComplete="address-level2"
+            value={value.city || ''}
+            onChange={(e) => set({ city: e.target.value })}
+          />
         )}
       </Field>
 
       {showPhone ? (
         <Field label="Contact phone">
           {(p) => (
-            <Input {...p} type="tel" inputMode="numeric" autoComplete="tel"
-              value={value.phone || ''} onChange={(e) => set({ phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} />
+            <Input
+              {...p}
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              value={value.phone || ''}
+              onChange={(e) => set({ phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+            />
           )}
         </Field>
       ) : null}
 
       <Field {...field('pincode', true)}>
         {(p) => (
-          <Input {...p} type="text" inputMode="numeric" autoComplete="postal-code"
-            value={value.pincode || ''} onChange={(e) => set({ pincode: pincodeOnly(e.target.value) })} />
+          <Input
+            {...p}
+            type="text"
+            inputMode="numeric"
+            autoComplete="postal-code"
+            value={value.pincode || ''}
+            onChange={(e) => set({ pincode: pincodeOnly(e.target.value) })}
+          />
         )}
       </Field>
 
       {/* Form-level: validateAddress() may fault the street, the state, or the pincode. */}
-      {error ? <div className={FIELD_ERR_CLASS} role="alert" style={{ marginBottom: 8 }}>{error}</div> : null}
+      {error ? (
+        <div className={FIELD_ERR_CLASS} role="alert" style={{ marginBottom: 8 }}>
+          {error}
+        </div>
+      ) : null}
     </>
   );
 }

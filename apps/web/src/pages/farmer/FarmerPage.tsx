@@ -67,8 +67,12 @@ function FarmerInner() {
         <a href="/app/farmer" className="fm-hdr__brand">
           <img className="fm-hdr__logo" src="/img/logo-sm.jpg" alt="Marutham Agrolink" />
           <div>
-            <div className="fm-hdr__name">Marutham <span>Agrolink</span></div>
-            <div className="fm-hdr__tag">{t(user.seller_type === 'Retailer' ? 'farmer.tagRetailer' : 'farmer.tag')}</div>
+            <div className="fm-hdr__name">
+              Marutham <span>Agrolink</span>
+            </div>
+            <div className="fm-hdr__tag">
+              {t(user.seller_type === 'Retailer' ? 'farmer.tagRetailer' : 'farmer.tag')}
+            </div>
           </div>
         </a>
         <div className="fm-hdr__right">
@@ -80,14 +84,20 @@ function FarmerInner() {
               { value: 'ta', label: 'த', className: 'tamil' },
             ]}
           />
-          <IconButton onClick={logout} aria-label={t('farmer.logout')}>⎋</IconButton>
+          <IconButton onClick={logout} aria-label={t('farmer.logout')}>
+            ⎋
+          </IconButton>
         </div>
       </header>
 
       <div className="fm-hero">
-        <div className="fm-hero__icon" aria-hidden="true">🌾</div>
+        <div className="fm-hero__icon" aria-hidden="true">
+          🌾
+        </div>
         <div>
-          <h2>{t('farmer.welcome')}, {user.fname}!</h2>
+          <h2>
+            {t('farmer.welcome')}, {user.fname}!
+          </h2>
           <p>{t('farmer.heroSub')}</p>
         </div>
       </div>

@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
-  groupHubQueue, canCheckInAtHub, canDispatchFromHub, isHubStaff,
+  groupHubQueue,
+  canCheckInAtHub,
+  canDispatchFromHub,
+  isHubStaff,
   HUB_STAFF_ROLES,
 } from './hub';
 import type { Order } from './orders';

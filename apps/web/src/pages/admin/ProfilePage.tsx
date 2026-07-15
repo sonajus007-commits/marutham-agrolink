@@ -49,7 +49,8 @@ export function ProfilePage() {
 
   useEffect(() => {
     let active = true;
-    api.getMyEmployeeRecord()
+    api
+      .getMyEmployeeRecord()
       // A staff account with no employee row is normal (and a 403/404 here must
       // not take the whole profile down) — the card simply does not render.
       .catch(() => ({ employee: null }))
@@ -58,7 +59,9 @@ export function ProfilePage() {
         setEmployee((res.employee as EmployeeRecord) || null);
         setEmpLoading(false);
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   if (!user) return null;
@@ -112,7 +115,9 @@ export function ProfilePage() {
             <div className="text-2xs font-bold uppercase tracking-wide text-fg-muted">
               {t('admin.profile.loginId')}
             </div>
-            <div className="text-md font-bold tracking-wider text-primary">{user.login_id || '—'}</div>
+            <div className="text-md font-bold tracking-wider text-primary">
+              {user.login_id || '—'}
+            </div>
             <div className="mt-0.5 text-2xs text-fg-muted">{t('admin.profile.loginIdNote')}</div>
           </div>
 
@@ -120,13 +125,19 @@ export function ProfilePage() {
             <>
               <Row label={t('admin.profile.name')} value={fullName} />
               <Row label={t('admin.profile.gender')} value={String(user.gender || '—')} />
-              <Row label={t('admin.profile.phone')} value={`${String(user.country_code || '+91')} ${user.phone}`} mono />
+              <Row
+                label={t('admin.profile.phone')}
+                value={`${String(user.country_code || '+91')} ${user.phone}`}
+                mono
+              />
               <Row label={t('admin.profile.altPhone')} value={String(user.alt_phone || '—')} mono />
               <Row label={t('admin.profile.email')} value={String(user.email || '—')} />
               <Row label={t('admin.profile.role')} value={String(user.admin_role || 'Admin')} />
               <Row label={t('admin.profile.district')} value={String(user.district || '—')} />
               <div className="mt-3">
-                <Button variant="ghost" onClick={startEdit}>✏️ {t('admin.profile.edit')}</Button>
+                <Button variant="ghost" onClick={startEdit}>
+                  ✏️ {t('admin.profile.edit')}
+                </Button>
               </div>
             </>
           ) : (
@@ -135,28 +146,55 @@ export function ProfilePage() {
 
               <Field label={t('admin.profile.gender')}>
                 {(p) => (
-                  <Select {...p} value={draft.gender} onChange={(e) => setDraft({ ...draft, gender: e.target.value })}>
+                  <Select
+                    {...p}
+                    value={draft.gender}
+                    onChange={(e) => setDraft({ ...draft, gender: e.target.value })}
+                  >
                     <option value="">{t('admin.profile.selectGender')}</option>
-                    {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
+                    {GENDERS.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
                   </Select>
                 )}
               </Field>
 
               <Field label={t('admin.profile.email')}>
                 {(p) => (
-                  <Input {...p} type="email" placeholder="your@email.com" value={draft.email}
-                    onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
+                  <Input
+                    {...p}
+                    type="email"
+                    placeholder="your@email.com"
+                    value={draft.email}
+                    onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+                  />
                 )}
               </Field>
 
               <Field label={t('admin.profile.altPhone')}>
                 {(p) => (
-                  <Input {...p} type="tel" inputMode="numeric" value={draft.alt_phone}
-                    onChange={(e) => setDraft({ ...draft, alt_phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} />
+                  <Input
+                    {...p}
+                    type="tel"
+                    inputMode="numeric"
+                    value={draft.alt_phone}
+                    onChange={(e) =>
+                      setDraft({
+                        ...draft,
+                        alt_phone: e.target.value.replace(/\D/g, '').slice(0, 10),
+                      })
+                    }
+                  />
                 )}
               </Field>
 
-              {error ? <p className="mb-2 text-2xs text-danger" role="alert">{error}</p> : null}
+              {error ? (
+                <p className="mb-2 text-2xs text-danger" role="alert">
+                  {error}
+                </p>
+              ) : null}
 
               <div className="flex gap-2">
                 <Button onClick={() => void save()} disabled={busy}>
@@ -172,19 +210,30 @@ export function ProfilePage() {
 
         {/* Employee master — HO's record, shown as-is. */}
         {empLoading ? (
-          <Card><Spinner /></Card>
+          <Card>
+            <Spinner />
+          </Card>
         ) : pairs ? (
           <Card>
-            <h2 className="mb-1 text-sm font-bold text-primary">🧑‍💼 {t('admin.profile.employee')}</h2>
+            <h2 className="mb-1 text-sm font-bold text-primary">
+              🧑‍💼 {t('admin.profile.employee')}
+            </h2>
             <p className="mb-3 text-2xs text-fg-muted">{t('admin.profile.employeeNote')}</p>
-            {pairs.map(([label, value]) => <Row key={label} label={label} value={value} />)}
+            {pairs.map(([label, value]) => (
+              <Row key={label} label={label} value={value} />
+            ))}
           </Card>
         ) : thinEmployee ? (
           <Card>
-            <h2 className="mb-1 text-sm font-bold text-primary">🧑‍💼 {t('admin.profile.employee')}</h2>
+            <h2 className="mb-1 text-sm font-bold text-primary">
+              🧑‍💼 {t('admin.profile.employee')}
+            </h2>
             <p className="mb-3 text-2xs text-fg-muted">{t('admin.profile.employeeNote')}</p>
             <Row label={t('admin.profile.empNo')} value={String(user.emp_id || '—')} mono />
-            <Row label={t('admin.profile.employmentType')} value={String(user.employment_type || '—')} />
+            <Row
+              label={t('admin.profile.employmentType')}
+              value={String(user.employment_type || '—')}
+            />
             <p className="mt-2 text-2xs text-fg-muted">{t('admin.profile.employeePartial')}</p>
           </Card>
         ) : null}

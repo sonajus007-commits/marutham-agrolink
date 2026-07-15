@@ -17,7 +17,8 @@ export const metadata: Metadata = {
     'Fair prices for farmers, fresh produce for families.',
   openGraph: {
     title: 'Marutham AgroLink',
-    description: 'Fresh produce direct from Tamil Nadu farmers. Fair prices for farmers, fresh food for families.',
+    description:
+      'Fresh produce direct from Tamil Nadu farmers. Fair prices for farmers, fresh food for families.',
     type: 'website',
   },
   robots: { index: true, follow: true },

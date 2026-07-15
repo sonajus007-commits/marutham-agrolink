@@ -32,7 +32,15 @@ export interface ModalProps {
  * Content sits inside Overlay so a dialog taller than the viewport scrolls the
  * scrim with it, rather than being clipped by a fixed, centred panel.
  */
-export function Modal({ open, title, onClose, children, footer, dismissible = true, subtitle }: ModalProps) {
+export function Modal({
+  open,
+  title,
+  onClose,
+  children,
+  footer,
+  dismissible = true,
+  subtitle,
+}: ModalProps) {
   const returnFocus = useReturnFocus(open);
 
   /** Cancel the event when the dialog must not be escaped. */
@@ -72,7 +80,9 @@ export function Modal({ open, title, onClose, children, footer, dismissible = tr
               ) : null}
             </div>
             <div className="flex-1 overflow-y-auto px-4">{children}</div>
-            {footer ? <div className="flex gap-2 px-4 pt-3.5 pb-4 [&>*]:flex-1">{footer}</div> : null}
+            {footer ? (
+              <div className="flex gap-2 px-4 pt-3.5 pb-4 [&>*]:flex-1">{footer}</div>
+            ) : null}
           </Dialog.Content>
         </Dialog.Overlay>
       </Dialog.Portal>

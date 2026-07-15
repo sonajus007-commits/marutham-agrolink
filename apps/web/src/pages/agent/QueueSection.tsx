@@ -48,8 +48,15 @@ function OrderCard({
   }
 
   return (
-    <div className="delv-card" role="button" tabIndex={0} onClick={() => onOpenView(order.id)}
-      onKeyDown={(e) => { if (e.key === 'Enter') onOpenView(order.id); }}>
+    <div
+      className="delv-card"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenView(order.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onOpenView(order.id);
+      }}
+    >
       <div className="delv-card__code">{code}</div>
       <div className="delv-card__name">{order.consumer_name || 'Consumer'}</div>
       {addr ? <div className="delv-card__addr">{addr}</div> : null}
@@ -59,11 +66,23 @@ function OrderCard({
         {action === 'view' ? (
           <span className="delv-card__view">View →</span>
         ) : action === 'deliver' ? (
-          <button className="delv-card__btn" onClick={(e) => { e.stopPropagation(); onOpenDeliver(order.id); }}>
+          <button
+            className="delv-card__btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenDeliver(order.id);
+            }}
+          >
             {btnLabel}
           </button>
         ) : action === 'verify' ? (
-          <button className="delv-card__btn" onClick={(e) => { e.stopPropagation(); onOpenVerify(order.id); }}>
+          <button
+            className="delv-card__btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenVerify(order.id);
+            }}
+          >
             {btnLabel}
           </button>
         ) : (

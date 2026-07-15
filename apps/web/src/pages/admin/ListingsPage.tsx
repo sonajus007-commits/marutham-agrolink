@@ -3,7 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Button, EmptyState, FilterChips, Spinner, Table, type TableColumn } from '@marutham/ui';
 import { api, type AdminListing } from '@marutham/api-client';
 import {
-  fmtDateShort, fmtMoney, subscriptionStatus, isListingStale, listingWaitDays,
+  fmtDateShort,
+  fmtMoney,
+  subscriptionStatus,
+  isListingStale,
+  listingWaitDays,
   type ListingReviewStatus,
 } from '@marutham/lib';
 import { ListingReviewSheet, LISTING_STATUS_TONE } from './ListingReviewSheet';
@@ -43,7 +47,9 @@ export function ListingsPage() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const statusOptions = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -60,9 +66,10 @@ export function ListingsPage() {
   }, [listings, t]);
 
   const rows = useMemo(
-    () => (status === 'all'
-      ? listings
-      : listings.filter((l) => String(l.listing_status || 'pending') === status)),
+    () =>
+      status === 'all'
+        ? listings
+        : listings.filter((l) => String(l.listing_status || 'pending') === status),
     [listings, status],
   );
 
@@ -74,105 +81,125 @@ export function ListingsPage() {
     [listings],
   );
 
-  const columns = useMemo<TableColumn<AdminListing>[]>(() => [
-    {
-      key: 'product',
-      header: t('admin.lst.product'),
-      value: (l) => l.product?.name || '',
-      render: (l) => (
-        <span className="font-bold text-fg">
-          {l.product?.name || '—'}{' '}
-          {l.product?.code ? <span className="text-2xs font-normal text-fg-muted">{l.product.code}</span> : null}
-        </span>
-      ),
-    },
-    {
-      key: 'seller',
-      header: t('admin.lst.seller'),
-      value: (l) => `${l.farmer?.fname || ''} ${l.farmer?.lname || ''}`.trim(),
-      render: (l) => {
-        const sub = subscriptionStatus({
-          subscription_plan: l.farmer?.subscription_plan,
-          subscription_expires_at: l.farmer?.subscription_expires_at,
-        });
-        return (
-          <span className="flex flex-col">
-            <span className="text-fg">{`${l.farmer?.fname || ''} ${l.farmer?.lname || ''}`.trim() || '—'}</span>
-            <span className="flex items-center gap-1.5">
-              <span className="text-2xs tabular-nums text-fg-muted">{l.farmer?.login_id || ''}</span>
-              {/* An expired seller must not be approved onto the storefront
-                  unnoticed — the row says so before the sheet is even opened. */}
-              {sub.level === 'expired' ? (
-                <span className="text-2xs font-bold text-danger">⚠ {t('admin.lst.sub.expired')}</span>
-              ) : null}
-            </span>
-          </span>
-        );
-      },
-    },
-    {
-      key: 'price',
-      header: t('admin.lst.price'),
-      // Money, already in rupees from the middleware.
-      value: (l) => fmtMoney(l.farmer_price),
-      render: (l) => (
-        <span className="tabular-nums text-fg">
-          {fmtMoney(l.farmer_price)}
-          <span className="text-2xs text-fg-muted"> / {l.product?.unit || t('admin.lst.unit')}</span>
-        </span>
-      ),
-    },
-    { key: 'qty', header: t('admin.lst.qty'), value: (l) => (l.qty_available != null ? String(l.qty_available) : '') },
-    { key: 'district', header: t('admin.lst.district'), value: (l) => l.farmer?.district || '' },
-    {
-      key: 'submitted',
-      header: t('admin.lst.submitted'),
-      value: (l) => l.created_at || '',
-      render: (l) => {
-        const stale = isListingStale(l.created_at, l.listing_status);
-        const waited = listingWaitDays(l.created_at);
-        return (
-          <span className="flex flex-col">
-            <span className="text-2xs text-fg">{fmtDateShort(l.created_at)}</span>
-            {stale && waited !== null ? (
-              <span className="text-2xs font-bold text-danger">{t('admin.lst.waiting', { count: waited })}</span>
+  const columns = useMemo<TableColumn<AdminListing>[]>(
+    () => [
+      {
+        key: 'product',
+        header: t('admin.lst.product'),
+        value: (l) => l.product?.name || '',
+        render: (l) => (
+          <span className="font-bold text-fg">
+            {l.product?.name || '—'}{' '}
+            {l.product?.code ? (
+              <span className="text-2xs font-normal text-fg-muted">{l.product.code}</span>
             ) : null}
           </span>
-        );
+        ),
       },
-    },
-    {
-      key: 'status',
-      header: t('admin.lst.statusCol'),
-      value: (l) => String(l.listing_status || 'pending'),
-      render: (l) => {
-        const s = String(l.listing_status || 'pending');
-        return (
-          <span
-            className="inline-block rounded-pill px-2 py-0.5 text-2xs font-bold text-white"
-            style={{ background: LISTING_STATUS_TONE[s] || 'var(--fg-muted)' }}
-          >
-            {t('admin.lst.status.' + s, s)}
+      {
+        key: 'seller',
+        header: t('admin.lst.seller'),
+        value: (l) => `${l.farmer?.fname || ''} ${l.farmer?.lname || ''}`.trim(),
+        render: (l) => {
+          const sub = subscriptionStatus({
+            subscription_plan: l.farmer?.subscription_plan,
+            subscription_expires_at: l.farmer?.subscription_expires_at,
+          });
+          return (
+            <span className="flex flex-col">
+              <span className="text-fg">
+                {`${l.farmer?.fname || ''} ${l.farmer?.lname || ''}`.trim() || '—'}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="text-2xs tabular-nums text-fg-muted">
+                  {l.farmer?.login_id || ''}
+                </span>
+                {/* An expired seller must not be approved onto the storefront
+                  unnoticed — the row says so before the sheet is even opened. */}
+                {sub.level === 'expired' ? (
+                  <span className="text-2xs font-bold text-danger">
+                    ⚠ {t('admin.lst.sub.expired')}
+                  </span>
+                ) : null}
+              </span>
+            </span>
+          );
+        },
+      },
+      {
+        key: 'price',
+        header: t('admin.lst.price'),
+        // Money, already in rupees from the middleware.
+        value: (l) => fmtMoney(l.farmer_price),
+        render: (l) => (
+          <span className="tabular-nums text-fg">
+            {fmtMoney(l.farmer_price)}
+            <span className="text-2xs text-fg-muted">
+              {' '}
+              / {l.product?.unit || t('admin.lst.unit')}
+            </span>
           </span>
-        );
+        ),
       },
-    },
-    {
-      key: 'actions',
-      header: '',
-      sortable: false,
-      exportable: false,
-      render: (l) => (
-        <button
-          type="button"
-          onClick={() => setOpen(l)}
-          className="cursor-pointer appearance-none rounded-sm border-0 bg-surface-muted px-2.5 py-1 text-2xs font-bold text-primary hover:bg-primary hover:text-primary-on focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
-        >
-          {t('admin.lst.review')}
-        </button>
-      ),
-    },
-  ], [t]);
+      {
+        key: 'qty',
+        header: t('admin.lst.qty'),
+        value: (l) => (l.qty_available != null ? String(l.qty_available) : ''),
+      },
+      { key: 'district', header: t('admin.lst.district'), value: (l) => l.farmer?.district || '' },
+      {
+        key: 'submitted',
+        header: t('admin.lst.submitted'),
+        value: (l) => l.created_at || '',
+        render: (l) => {
+          const stale = isListingStale(l.created_at, l.listing_status);
+          const waited = listingWaitDays(l.created_at);
+          return (
+            <span className="flex flex-col">
+              <span className="text-2xs text-fg">{fmtDateShort(l.created_at)}</span>
+              {stale && waited !== null ? (
+                <span className="text-2xs font-bold text-danger">
+                  {t('admin.lst.waiting', { count: waited })}
+                </span>
+              ) : null}
+            </span>
+          );
+        },
+      },
+      {
+        key: 'status',
+        header: t('admin.lst.statusCol'),
+        value: (l) => String(l.listing_status || 'pending'),
+        render: (l) => {
+          const s = String(l.listing_status || 'pending');
+          return (
+            <span
+              className="inline-block rounded-pill px-2 py-0.5 text-2xs font-bold text-white"
+              style={{ background: LISTING_STATUS_TONE[s] || 'var(--fg-muted)' }}
+            >
+              {t('admin.lst.status.' + s, s)}
+            </span>
+          );
+        },
+      },
+      {
+        key: 'actions',
+        header: '',
+        sortable: false,
+        exportable: false,
+        render: (l) => (
+          <button
+            type="button"
+            onClick={() => setOpen(l)}
+            className="cursor-pointer appearance-none rounded-sm border-0 bg-surface-muted px-2.5 py-1 text-2xs font-bold text-primary hover:bg-primary hover:text-primary-on focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
+          >
+            {t('admin.lst.review')}
+          </button>
+        ),
+      },
+    ],
+    [t],
+  );
 
   if (loading && listings.length === 0) return <Spinner />;
   if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
@@ -188,7 +215,9 @@ export function ListingsPage() {
             </p>
           ) : null}
         </div>
-        <Button variant="ghost" onClick={load} disabled={loading}>↻ {t('admin.lst.refresh')}</Button>
+        <Button variant="ghost" onClick={load} disabled={loading}>
+          ↻ {t('admin.lst.refresh')}
+        </Button>
       </div>
 
       <div className="mb-3">

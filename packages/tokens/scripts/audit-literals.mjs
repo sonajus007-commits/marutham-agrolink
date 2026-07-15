@@ -42,16 +42,28 @@ const ALPHA_RE = /\b(?:rgba?|hsla?)\([^)]*\)/gi;
 /* Every token a literal is allowed to collapse into, as `cssVar → hex`.
  * Semantic roles come first so the report prefers `--fg` over `--text`. */
 const TOKENS = {
-  ...Object.fromEntries(Object.entries(semantic.light).filter(([, v]) => v.startsWith('#'))
-    .map(([k, v]) => [`--${k.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`, v])),
-  ...Object.fromEntries(Object.entries(colors).map(([k, v]) => [`--${k.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`, v])),
+  ...Object.fromEntries(
+    Object.entries(semantic.light)
+      .filter(([, v]) => v.startsWith('#'))
+      .map(([k, v]) => [`--${k.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`, v]),
+  ),
+  ...Object.fromEntries(
+    Object.entries(colors).map(([k, v]) => [
+      `--${k.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`,
+      v,
+    ]),
+  ),
   ...Object.fromEntries(Object.entries(tint).map(([k, v]) => [`--tint-${k}`, v])),
   ...Object.fromEntries(Object.entries(neutral).map(([k, v]) => [`--neutral-${k}`, v])),
 };
 
 const expand = (hex) => {
   let h = hex.replace('#', '').toLowerCase();
-  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (h.length === 3)
+    h = h
+      .split('')
+      .map((c) => c + c)
+      .join('');
   if (h.length === 8) h = h.slice(0, 6); // ignore alpha for matching
   return h;
 };
@@ -153,11 +165,15 @@ if (process.argv.includes('--check')) {
   process.exit(0);
 }
 
-const rows = [...hits].map(([hex, h]) => ({ hex, ...h, ...nearest(hex) }))
+const rows = [...hits]
+  .map(([hex, h]) => ({ hex, ...h, ...nearest(hex) }))
   .sort((a, b) => a.d - b.d || b.count - a.count);
 
 const total = rows.reduce((s, r) => s + r.count, 0);
-let exact = 0, invisible = 0, jnd = 0, visible = 0;
+let exact = 0,
+  invisible = 0,
+  jnd = 0,
+  visible = 0;
 
 console.log(`\n  ${total} literals · ${rows.length} distinct\n`);
 console.log('  ΔE     ×    literal   → token');
@@ -168,7 +184,9 @@ for (const r of rows) {
   else if (r.d < 2.3) jnd += r.count;
   else visible += r.count;
   const flag = r.d === 0 ? ' ' : r.d < 1 ? '.' : r.d < 2.3 ? '~' : '!';
-  console.log(`${flag} ${r.d.toFixed(2).padStart(5)} ${String(r.count).padStart(4)}   ${r.hex}  → ${r.name} ${r.value}`);
+  console.log(
+    `${flag} ${r.d.toFixed(2).padStart(5)} ${String(r.count).padStart(4)}   ${r.hex}  → ${r.name} ${r.value}`,
+  );
 }
 
 console.log(`

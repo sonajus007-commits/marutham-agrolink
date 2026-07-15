@@ -20,7 +20,8 @@ export function ProtectedRoute({
   if (loading) return <div className="centered">Loading…</div>;
   if (!user) return <Navigate to="/login" replace />;
   if (role && user.role !== role) return <Navigate to="/login" replace />;
-  if (adminRoles && !adminRoles.includes(String(user.admin_role))) return <Navigate to="/login" replace />;
+  if (adminRoles && !adminRoles.includes(String(user.admin_role)))
+    return <Navigate to="/login" replace />;
 
   return <>{children}</>;
 }

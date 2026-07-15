@@ -47,8 +47,7 @@ function* walk(dir) {
 /** A string literal that could plausibly be a class list. Class lists never
  * contain uppercase letters, semicolons, braces or template holes — but code
  * captured by a stray apostrophe does. */
-const isClassList = (s) =>
-  s.trim().length > 0 && !/[A-Z;{}$`]/.test(s) && !/^\.{0,2}\//.test(s);
+const isClassList = (s) => s.trim().length > 0 && !/[A-Z;{}$`]/.test(s) && !/^\.{0,2}\//.test(s);
 
 /** A token worth checking: lowercase-initial, with a dash, variant colon or
  * arbitrary-value bracket. `var(--white)` is a CSS value, not a utility; a

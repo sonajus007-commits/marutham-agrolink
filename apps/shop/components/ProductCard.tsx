@@ -19,11 +19,15 @@ export function ProductCard({ t, product }: { t: Dict; product: Product }) {
       {/* One link wrapping picture + name: two adjacent links to the same place
           are a known screen-reader annoyance, and the emoji is decorative. */}
       <Link href={href} className="block no-underline">
-        <span className="block text-5xl" aria-hidden="true">{productEmoji(product.name)}</span>
+        <span className="block text-5xl" aria-hidden="true">
+          {productEmoji(product.name)}
+        </span>
         <span className="mt-2 inline-block rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-forest">
           {t.fresh.badge}
         </span>
-        <h3 className="mt-2 text-sm font-bold text-fg hover:text-forest hover:underline">{product.name}</h3>
+        <h3 className="mt-2 text-sm font-bold text-fg hover:text-forest hover:underline">
+          {product.name}
+        </h3>
       </Link>
 
       <p className="mt-1 text-lg font-extrabold text-forest">
