@@ -1,9 +1,16 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { distanceMeters } = require('../utils/geo');
 
 const router = express.Router();
 router.use(requireAuth);
+
+// A delivery whose captured location is more than this far from the consumer's
+// pinned address is flagged in the order timeline. Generous on purpose — GPS drift
+// and a pin dropped at the gate of a large plot are normal; this catches the
+// "delivered in the wrong village" case, not the wrong doorstep.
+const GEOFENCE_RADIUS_M = 500;
 
 // ── Stage maps ────────────────────────────────────────────────────────────────
 // Each route type has its own ordered list of statuses.
@@ -54,6 +61,18 @@ async function advanceStage(order, actorLabel, extraUpdates = {}, deliveryCoords
 
   const now = new Date().toISOString();
   const delivering = newStatus === 'Delivered';
+
+  // Geofence: distance (m) from the agent's captured fix to the consumer's pinned
+  // delivery address. Only on delivery, and only when BOTH points exist — a delivery
+  // with no fix, or an order whose address was never pinned, is not comparable (null).
+  let deliveryDistance = null;
+  if (delivering && deliveryCoords) {
+    const pin = order.delivery_address;
+    if (pin && typeof pin === 'object') {
+      deliveryDistance = distanceMeters(deliveryCoords.lat, deliveryCoords.lng, pin.lat, pin.lng);
+    }
+  }
+
   const updates = {
     stage: newStage,
     status: newStatus,
@@ -62,6 +81,7 @@ async function advanceStage(order, actorLabel, extraUpdates = {}, deliveryCoords
     ...(delivering && deliveryCoords
       ? { delivered_lat: deliveryCoords.lat, delivered_lng: deliveryCoords.lng }
       : {}),
+    ...(deliveryDistance !== null ? { delivery_distance_m: Math.round(deliveryDistance) } : {}),
     ...(newStatus === 'Picked Up'  ? { picked_up_at: now } : {}),
     // COD orders collect cash at doorstep — mark paid on delivery
     ...(delivering && order.pay_method === 'Cash on Delivery' ? { pay_status: 'paid' } : {}),
@@ -85,6 +105,18 @@ async function advanceStage(order, actorLabel, extraUpdates = {}, deliveryCoords
     note: `${newStatus} — by ${actorLabel}.`,
   });
   if (histErr) console.error(`Order ${order.id}: '${newStatus}' history entry failed:`, histErr.message);
+
+  // Geofence breach: surface an off-site delivery in the timeline so it is visible
+  // without anyone querying the distance column. Advisory — the delivery still stands.
+  if (deliveryDistance !== null && deliveryDistance > GEOFENCE_RADIUS_M) {
+    const meters = Math.round(deliveryDistance);
+    const { error: geoErr } = await supabase.from('order_history').insert({
+      order_id: order.id,
+      label: 'Off-site delivery',
+      note: `Delivered ~${meters} m from the pinned address (geofence ${GEOFENCE_RADIUS_M} m).`,
+    });
+    if (geoErr) console.error(`Order ${order.id}: geofence note failed:`, geoErr.message);
+  }
 
   return { updated, newStatus };
 }

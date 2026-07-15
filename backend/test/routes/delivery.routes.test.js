@@ -93,3 +93,44 @@ test('a consumer cannot scan', async () => {
   assert.equal(res.status, 403);
   assert.equal(db.callsTo('orders', 'update').length, 0);
 });
+
+// ── Geofencing ────────────────────────────────────────────────────────────────
+// The order carries a pinned delivery address; delivery compares the agent's fix
+// to it and stores the distance, flagging deliveries beyond the geofence radius.
+const PINNED = { delivery_address: { village_town: 'Illupur', lat: 10.5, lng: 78.8 } };
+
+test('a delivery near the pin stores a small distance and adds no off-site note', async () => {
+  const db = dbFor(outForDelivery(PINNED));
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  // ~110 m north of the pin — inside the 500 m geofence.
+  const res = await app.post('/o1/scan', { delivered_lat: 10.501, delivered_lng: 78.8 });
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.ok(update.delivery_distance_m < 500, `near delivery, got ${update.delivery_distance_m}`);
+  const notes = db.callsTo('order_history', 'insert').map((c) => c.payload.label);
+  assert.ok(!notes.includes('Off-site delivery'), 'no off-site note within the geofence');
+});
+
+test('a delivery far from the pin stores the distance and flags it off-site', async () => {
+  const db = dbFor(outForDelivery(PINNED));
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  // ~1.1 km north of the pin — outside the geofence.
+  const res = await app.post('/o1/scan', { delivered_lat: 10.51, delivered_lng: 78.8 });
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.ok(update.delivery_distance_m > 500, `far delivery, got ${update.delivery_distance_m}`);
+  const notes = db.callsTo('order_history', 'insert').map((c) => c.payload.label);
+  assert.ok(notes.includes('Off-site delivery'), 'an off-site note is added beyond the geofence');
+});
+
+test('a delivery on an order with no pinned address stores no distance', async () => {
+  const db = dbFor(outForDelivery()); // no delivery_address
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', { delivered_lat: 10.5, delivered_lng: 78.8 });
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.ok(!('delivery_distance_m' in update), 'nothing to compare against → no distance');
+});

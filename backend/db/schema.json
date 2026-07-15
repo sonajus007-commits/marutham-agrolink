@@ -566,6 +566,10 @@
           "type": "jsonb",
           "notNull": false
         },
+        "delivery_distance_m": {
+          "type": "double precision",
+          "notNull": false
+        },
         "delivery_village": {
           "type": "text",
           "notNull": false
