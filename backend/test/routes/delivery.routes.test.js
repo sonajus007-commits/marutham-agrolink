@@ -170,3 +170,40 @@ test('VCO verify without a location still succeeds and stores no coordinates', a
   const update = db.callsTo('orders', 'update')[0].payload;
   assert.ok(!('verified_lat' in update), 'no lat when none was sent');
 });
+
+// ── Hub dispatch location ───────────────────────────────────────────────────────
+// Dispatching an At-Hub order (hub route, stage 5 → Out for Delivery) stamps the
+// hub's location.
+const HUB = { id: 'h1', role: 'admin', admin_role: 'Hub Incharge', fname: 'Hub' };
+
+function atHub() {
+  return { id: 'o1', code: 'ORD1', stage: 5, status: 'At Hub', route: 'hub', cancelled: false, pay_method: 'UPI' };
+}
+
+test('hub dispatch stores the hub location as dispatched_lat/lng', async () => {
+  const db = fakeSupabase({
+    'orders:select': { data: [atHub()] },
+    'orders:update': { data: { id: 'o1', status: 'Out for Delivery' } },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: HUB });
+  const res = await app.post('/o1/scan', { lat: 10.5, lng: 78.8 });
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.equal(update.status, 'Out for Delivery');
+  assert.equal(update.dispatched_lat, 10.5);
+  assert.equal(update.dispatched_lng, 78.8);
+});
+
+test('hub dispatch without a location still succeeds and stores no coordinates', async () => {
+  const db = fakeSupabase({
+    'orders:select': { data: [atHub()] },
+    'orders:update': { data: { id: 'o1', status: 'Out for Delivery' } },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: HUB });
+  const res = await app.post('/o1/scan', {});
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.ok(!('dispatched_lat' in update), 'no lat when none was sent');
+});

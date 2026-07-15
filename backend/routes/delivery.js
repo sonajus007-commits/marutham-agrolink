@@ -299,6 +299,14 @@ router.post('/:id/scan', async (req, res) => {
 
     const { agent_id } = req.body;
     const extra = {};
+
+    // Where the hub dispatched from. This branch only ever produces 'Out for
+    // Delivery', so it is stored unconditionally (like the VCO verify branch).
+    if (coords.coords) {
+      extra.dispatched_lat = coords.coords.lat;
+      extra.dispatched_lng = coords.coords.lng;
+    }
+
     let assignedName = null;
     if (agent_id) {
       // maybeSingle + a read error check: unread, a database fault made `agent` null

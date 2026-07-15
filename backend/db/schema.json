@@ -574,6 +574,14 @@
           "type": "text",
           "notNull": false
         },
+        "dispatched_lat": {
+          "type": "double precision",
+          "notNull": false
+        },
+        "dispatched_lng": {
+          "type": "double precision",
+          "notNull": false
+        },
         "district": {
           "type": "text",
           "notNull": false

@@ -5,6 +5,7 @@ import { api, type EligibleAgent } from '@marutham/api-client';
 import { fmtDate, fmtMoney, groupHubQueue, type Order } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
+import { getCurrentPosition } from '../../native/geolocation';
 
 /* Hub Incharge queue — the last section the legacy console still owned.
  *
@@ -248,7 +249,9 @@ function DispatchModal({
     if (!order) return;
     setBusy(true);
     try {
-      const res = await api.dispatchFromHub(order.id, agentId || undefined);
+      // Best-effort hub location at dispatch; a declined permission never blocks it.
+      const coords = (await getCurrentPosition()) ?? undefined;
+      const res = await api.dispatchFromHub(order.id, agentId || undefined, coords);
       toast(res.message || t('admin.hub.dispatched'), 'ok');
       onDone();
     } catch (e) {
