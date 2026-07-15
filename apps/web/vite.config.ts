@@ -15,10 +15,16 @@ const API_PREFIXES = ['/api', '/health'];
 
 const BACKEND = process.env.BACKEND_URL || 'http://localhost:3000';
 
+// Capacitor loads the built bundle from the native webview's root, not from the
+// Express '/app' mount — so a mobile build (`CAPACITOR=1 pnpm build`) is served at
+// '/'. The router basename and admin APP_BASE both derive from this same base
+// (import.meta.env.BASE_URL), so one flag flips the whole app between the two.
+const isCapacitor = process.env.CAPACITOR === '1';
+
 export default defineConfig({
   // Built assets and routes live under /app so Express can serve the SPA there
-  // alongside the legacy HTML site at the root.
-  base: '/app/',
+  // alongside the legacy HTML site at the root — except in a native build (see above).
+  base: isCapacitor ? '/' : '/app/',
   plugins: [
     react(),
     tailwindcss(),
@@ -26,41 +32,44 @@ export default defineConfig({
     // The service worker's scope follows the base ('/app/'), so it only ever controls
     // the SPA — never the legacy site at '/' or the '/api' backend. autoUpdate ships a
     // new worker as soon as a deploy lands. Disabled in dev (devOptions.enabled:false).
-    VitePWA({
-      registerType: 'autoUpdate',
-      injectRegister: 'auto',
-      includeAssets: ['favicon-32.png', 'apple-touch-icon.png', 'icons/*.png'],
-      manifest: {
-        name: 'Marutham AgroLink',
-        short_name: 'AgroLink',
-        description:
-          'Marutham AgroLink — the farm-to-consumer portal for sellers, buyers and field staff.',
-        id: '/app/',
-        start_url: '/app/',
-        scope: '/app/',
-        display: 'standalone',
-        orientation: 'portrait',
-        theme_color: '#2E7D32',
-        background_color: '#ffffff',
-        icons: [
-          { src: 'icons/pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: 'icons/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          {
-            src: 'icons/maskable-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-        ],
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-        // The ECharts chunk is ~1 MB; lift the precache ceiling so it is cached too.
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
-        cleanupOutdatedCaches: true,
-      },
-      devOptions: { enabled: false },
-    }),
+    // Skipped for native builds: Capacitor already serves the bundle from a local
+    // webview, so a second service worker would only fight it for cache control.
+    !isCapacitor &&
+      VitePWA({
+        registerType: 'autoUpdate',
+        injectRegister: 'auto',
+        includeAssets: ['favicon-32.png', 'apple-touch-icon.png', 'icons/*.png'],
+        manifest: {
+          name: 'Marutham AgroLink',
+          short_name: 'AgroLink',
+          description:
+            'Marutham AgroLink — the farm-to-consumer portal for sellers, buyers and field staff.',
+          id: '/app/',
+          start_url: '/app/',
+          scope: '/app/',
+          display: 'standalone',
+          orientation: 'portrait',
+          theme_color: '#2E7D32',
+          background_color: '#ffffff',
+          icons: [
+            { src: 'icons/pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: 'icons/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+            {
+              src: 'icons/maskable-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+          ],
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+          // The ECharts chunk is ~1 MB; lift the precache ceiling so it is cached too.
+          maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+          cleanupOutdatedCaches: true,
+        },
+        devOptions: { enabled: false },
+      }),
   ],
   resolve: {
     // Ensure a single React instance across the app and the aliased UI package.

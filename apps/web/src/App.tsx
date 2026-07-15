@@ -67,8 +67,10 @@ function RoleHome() {
 export function App() {
   return (
     <AuthProvider>
-      {/* basename keeps client routing under the /app mount */}
-      <BrowserRouter basename="/app">
+      {/* basename keeps client routing under the /app mount on the web. A native
+          Capacitor build sets Vite base to '/', so BASE_URL is '/' and the app
+          mounts at the root instead. */}
+      <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/+$/, '') || '/'}>
         <Suspense fallback={<div className="centered">Loading…</div>}>
           <Routes>
             <Route path="/login" element={<Login />} />

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Marutham AgroLink</string>
+    <string name="title_activity_main">Marutham AgroLink</string>
+    <string name="package_name">com.marutham.agrolink</string>
+    <string name="custom_url_scheme">com.marutham.agrolink</string>
+</resources>

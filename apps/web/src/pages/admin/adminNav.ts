@@ -7,7 +7,9 @@
 
 import { HUB_STAFF_ROLES } from '@marutham/lib';
 
-export const APP_BASE = '/app';
+// Matches the router basename (Vite's base without its trailing slash): '/app' on
+// the web, '' in a native Capacitor build served from the webview root.
+export const APP_BASE = import.meta.env.BASE_URL.replace(/\/+$/, '');
 
 /** admin_role values that use THIS console. Delivery Agent + VCO have /agent.
  *

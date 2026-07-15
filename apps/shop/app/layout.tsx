@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang } from '@/lib/dict';
 import { SITE_URL } from '@/lib/site';
@@ -22,6 +22,14 @@ export const metadata: Metadata = {
     type: 'website',
   },
   robots: { index: true, follow: true },
+  // Makes the marketplace installable/standalone on iOS, where Apple ignores the
+  // web manifest and reads these tags instead.
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'AgroLink' },
+};
+
+// theme_color for the browser chrome; matches the manifest and the portal PWA.
+export const viewport: Viewport = {
+  themeColor: '#2E7D32',
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

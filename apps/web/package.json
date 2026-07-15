@@ -13,9 +13,21 @@
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "build:mobile": "CAPACITOR=1 vite build",
+    "cap:sync": "pnpm build:mobile && cap sync",
+    "cap:android": "cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^7",
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/camera": "^7.0.5",
+    "@capacitor/core": "^7.6.8",
+    "@capacitor/filesystem": "^7.1.8",
+    "@capacitor/geolocation": "^7.1.8",
+    "@capacitor/network": "^7.0.4",
+    "@capacitor/preferences": "^7.0.4",
+    "@capacitor/push-notifications": "^7.0.7",
     "@marutham/api-client": "workspace:*",
     "@marutham/i18n": "workspace:*",
     "@marutham/lib": "workspace:*",
@@ -40,6 +52,7 @@
   },
   "devDependencies": {
     "@axe-core/react": "^4.10.2",
+    "@capacitor/cli": "^7.6.8",
     "@playwright/test": "^1.49.0",
     "@storybook/addon-a11y": "^8.6.0",
     "@storybook/addon-essentials": "^8.6.0",
