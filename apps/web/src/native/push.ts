@@ -14,6 +14,7 @@
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications, type PushNotificationSchema } from '@capacitor/push-notifications';
 import { api } from '@marutham/api-client';
+import { getWebPushToken } from '../push/webPush';
 
 export type PushMessageHandler = (message: PushNotificationSchema) => void;
 
@@ -55,15 +56,17 @@ export async function unregisterPush(): Promise<void> {
 // right row. Held in-module because it is device state, not React state.
 let registeredToken: string | null = null;
 
-/* AuthContext calls these on every session start/end. Both are safe in the browser:
- * registerPush() returns null off-device, so enable* never hits the API from the web
- * portal — only the native app registers a token. That is deliberate; a signed-in
- * browser tab has no push token to store. */
+/* AuthContext calls these on every session start/end. Safe everywhere: on a device
+ * the token comes from Capacitor/FCM; in a browser it comes from Firebase web push
+ * — and BOTH sources no-op (return null) unless configured, so an unconfigured build
+ * never prompts for permission and never calls the API. */
 
-/** Obtain this device's push token and register it against the signed-in user.
- *  No-op (and no API call) in the browser. */
+/** Obtain this device's push token — native (Capacitor/FCM) or web (Firebase) — and
+ *  register it against the signed-in user. Returns without an API call when push is
+ *  unconfigured or the user declined permission. */
 export async function enablePushForSession(onMessage?: PushMessageHandler): Promise<void> {
-  const token = await registerPush(onMessage);
+  const native = Capacitor.isNativePlatform();
+  const token = native ? await registerPush(onMessage) : await getWebPushToken();
   if (!token) return;
   registeredToken = token;
   const platform = Capacitor.getPlatform() as 'android' | 'ios' | 'web';

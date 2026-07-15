@@ -64,6 +64,9 @@ export default defineConfig({
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+          // firebase-messaging-sw.js is itself a service worker (Firebase web push);
+          // the app-shell worker must not precache it or claim its scope.
+          globIgnores: ['**/firebase-messaging-sw.js'],
           // The ECharts chunk is ~1 MB; lift the precache ceiling so it is cached too.
           maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
           cleanupOutdatedCaches: true,
