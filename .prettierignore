@@ -1,0 +1,11 @@
+node_modules
+**/dist
+**/.next
+**/*.tsbuildinfo
+pnpm-lock.yaml
+# Generated from tokens.ts — never hand-format.
+packages/tokens/src/tokens.css
+# Legacy static site (huge, hand-authored HTML) — out of scope.
+frontend
+index.html
+*.html

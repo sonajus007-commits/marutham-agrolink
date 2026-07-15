@@ -2,13 +2,17 @@
   "name": "marutham-agrolink",
   "version": "1.0.0",
   "private": true,
-  "description": "Marutham AgroLink monorepo \u2014 legacy backend/frontend + new React app",
+  "description": "Marutham AgroLink monorepo — legacy backend/frontend + new React app",
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "pnpm --filter @marutham/web dev",
     "build": "pnpm --filter @marutham/web build",
     "preview": "pnpm --filter @marutham/web preview",
     "typecheck": "pnpm --filter @marutham/web typecheck && pnpm --filter @marutham/shop typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "pnpm --filter @marutham/lib test",
     "test:backend": "npm --prefix backend test",
     "tokens:build": "pnpm --filter @marutham/tokens tokens:build",
@@ -19,5 +23,14 @@
     "ui:classes": "pnpm --filter @marutham/ui check:classes",
     "build:shop": "pnpm --filter @marutham/shop build",
     "dev:shop": "pnpm --filter @marutham/shop dev"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.5",
+    "typescript-eslint": "^8.64.0"
   }
 }

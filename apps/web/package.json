@@ -15,13 +15,17 @@
     "@marutham/lib": "workspace:*",
     "@marutham/tokens": "workspace:*",
     "@marutham/ui": "workspace:*",
+    "@tanstack/react-query": "^5.101.2",
     "echarts": "^5.5.1",
     "echarts-for-react": "^3.0.2",
+    "framer-motion": "^12.42.2",
     "i18next": "^23.16.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-hook-form": "^7.81.0",
     "react-i18next": "^15.1.1",
-    "react-router-dom": "^6.28.0"
+    "react-router-dom": "^6.28.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4",
