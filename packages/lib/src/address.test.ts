@@ -102,6 +102,18 @@ describe('upsertAddress', () => {
     upsertAddress(original, addr('Work'), null);
     expect(original).toHaveLength(1);
   });
+
+  it('preserves a map pin (lat/lng) through add and edit', () => {
+    const pinned = { ...addr('Home'), lat: 10.5, lng: 78.8 };
+    const book = upsertAddress([], pinned, null);
+    expect(book[0].lat).toBe(10.5);
+    expect(book[0].lng).toBe(78.8);
+
+    // Editing a different field must not drop the pin the entry already carries.
+    const edited = upsertAddress(book, { ...book[0], label: 'House' }, 0);
+    expect(edited[0].lat).toBe(10.5);
+    expect(edited[0].lng).toBe(78.8);
+  });
 });
 
 describe('removeAddress', () => {

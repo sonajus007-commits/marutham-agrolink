@@ -65,6 +65,10 @@ export interface AddressObject {
   state?: string | null;
   /** Set on entries in a user's saved address book; exactly one is default. */
   is_default?: boolean;
+  /** Optional map pin for the delivery point, captured best-effort from the device
+   *  (geolocation phase 3). Stored inline in the delivery_addresses JSONB. */
+  lat?: number | null;
+  lng?: number | null;
 }
 
 /** Join a structured address object into a single line. */

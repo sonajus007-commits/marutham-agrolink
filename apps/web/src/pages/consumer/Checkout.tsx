@@ -145,7 +145,7 @@ export function Checkout({ bill, onOrderPlaced }: { bill: CartBill; onOrderPlace
               padding: 12,
             }}
           >
-            <AddressFields value={na} onChange={setNa} showPhone error={naError} />
+            <AddressFields value={na} onChange={setNa} showPhone showPin error={naError} />
           </div>
         )}
       </div>

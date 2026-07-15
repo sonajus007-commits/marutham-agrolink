@@ -157,7 +157,7 @@ export function AddressBook() {
           <h4 className="prof-form__title">
             {editing === -1 ? 'Add address' : `Edit ${addressTitle(addresses[editing], editing)}`}
           </h4>
-          <AddressFields value={draft} onChange={setDraft} showLabel error={error} />
+          <AddressFields value={draft} onChange={setDraft} showLabel showPin error={error} />
           <div className="prof-actions">
             <Button onClick={save} disabled={busy}>
               {busy ? 'Saving…' : 'Save Address'}

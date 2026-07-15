@@ -1,6 +1,7 @@
 import { Field, Input, Select, FIELD_ERR_CLASS } from '@marutham/ui';
 import type { SavedAddress } from '@marutham/lib';
 import { useLocations } from '../hooks/useLocations';
+import { LocationPinButton } from './LocationPinButton';
 
 /* The address form, shared by the consumer Address Book, the Checkout "deliver
  * somewhere else" panel, and the pre-login Registration form.
@@ -37,6 +38,9 @@ export interface AddressFieldsProps {
   showPhone?: boolean;
   /** Show the second street line (registration only). */
   showStreet2?: boolean;
+  /** Show a "pin current location" control that stamps lat/lng onto the address
+   *  (delivery-address contexts: the address book and checkout). */
+  showPin?: boolean;
   /** Form-level validation message from validateAddress(). */
   error?: string | null;
   /** Per-field validation messages (registration). */
@@ -71,6 +75,7 @@ export function AddressFields({
   showLabel = false,
   showPhone = false,
   showStreet2 = false,
+  showPin = false,
   error,
   errors = {},
   required = {},
@@ -258,6 +263,8 @@ export function AddressFields({
           />
         )}
       </Field>
+
+      {showPin ? <LocationPinButton value={value} onChange={onChange} /> : null}
 
       {/* Form-level: validateAddress() may fault the street, the state, or the pincode. */}
       {error ? (
