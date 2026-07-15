@@ -302,3 +302,42 @@ describe('login rejects identifiers that could inject the PostgREST filter', () 
     assert.equal(supa.callsTo('users', 'select').length, 1, 'a valid identifier DID reach the lookup');
   });
 });
+
+// PATCH /auth/me — farm location (phase 2 of the geolocation rollout).
+describe('PATCH /auth/me — farm location', () => {
+  const FARMER = { id: 'f1', role: 'farmer' };
+  let app = null;
+  afterEach(async () => { if (app) { await app.close(); app = null; } });
+
+  test('saves a valid farm_lat/farm_lng as numbers', async () => {
+    const supa = fakeSupabase({ 'users:update': { data: { id: 'f1', farm_lat: 10.12345, farm_lng: 78.98765 } } });
+    app = await mountRoute('auth', { supabase: supa, user: FARMER });
+
+    const res = await app.patch('/me', { farm_lat: 10.12345, farm_lng: 78.98765 });
+
+    assert.equal(res.status, 200);
+    const update = supa.callsTo('users', 'update')[0].payload;
+    assert.equal(update.farm_lat, 10.12345);
+    assert.equal(update.farm_lng, 78.98765);
+  });
+
+  test('rejects an out-of-range coordinate with a 400, writing nothing', async () => {
+    const supa = fakeSupabase();
+    app = await mountRoute('auth', { supabase: supa, user: FARMER });
+
+    const res = await app.patch('/me', { farm_lat: 200, farm_lng: 78 });
+
+    assert.equal(res.status, 400);
+    assert.equal(supa.callsTo('users', 'update').length, 0);
+  });
+
+  test('rejects a non-numeric coordinate with a 400', async () => {
+    const supa = fakeSupabase();
+    app = await mountRoute('auth', { supabase: supa, user: FARMER });
+
+    const res = await app.patch('/me', { farm_lat: 'here', farm_lng: 78 });
+
+    assert.equal(res.status, 400);
+    assert.equal(supa.callsTo('users', 'update').length, 0);
+  });
+});

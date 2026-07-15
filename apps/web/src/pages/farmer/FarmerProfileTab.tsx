@@ -7,6 +7,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
 import { ChangePasswordCard } from '../../components/ChangePasswordCard';
 import { BankDetailsCard } from './BankDetailsCard';
+import { FarmLocationCard } from './FarmLocationCard';
 
 /* Self-service fields a seller may edit directly (applied immediately via
  * PATCH /auth/me). District/state are support-gated and bank/business go through
@@ -213,6 +214,7 @@ export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
         </Card>
       ) : null}
 
+      <FarmLocationCard />
       <BankDetailsCard />
       <ChangePasswordCard />
     </>

@@ -731,11 +731,24 @@ router.patch('/me', requireAuth, async (req, res) => {
     'agent_vehicle',                                   // agent vehicle
     'service_villages',                                // Delivery Agent: villages they cover (text[])
     'delivery_addresses',                              // consumer address book (JSONB array)
+    'farm_lat', 'farm_lng',                            // seller farm coordinates (best-effort GPS)
   ];
 
   const updates = {};
   for (const key of ALLOWED) {
     if (req.body[key] !== undefined) updates[key] = req.body[key];
+  }
+
+  // Coordinates are the one whitelisted pair the DB stores as a number, so a bad
+  // value here would be a 500 from Postgres, not a clean 400. Validate + coerce.
+  // null is allowed (clearing the location); a present value must be in range.
+  for (const [key, min, max] of [['farm_lat', -90, 90], ['farm_lng', -180, 180]]) {
+    if (updates[key] === undefined || updates[key] === null) continue;
+    const n = Number(updates[key]);
+    if (!Number.isFinite(n) || n < min || n > max) {
+      return res.status(400).json({ error: 'Invalid farm location.' });
+    }
+    updates[key] = n;
   }
 
   if (Object.keys(updates).length === 0) {

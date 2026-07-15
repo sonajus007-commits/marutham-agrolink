@@ -1263,6 +1263,14 @@
           "type": "text",
           "notNull": false
         },
+        "farm_lat": {
+          "type": "double precision",
+          "notNull": false
+        },
+        "farm_lng": {
+          "type": "double precision",
+          "notNull": false
+        },
         "fname": {
           "type": "text",
           "notNull": true
