@@ -161,7 +161,9 @@ export function DatePicker({
 
   const onGridKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const key = e.key;
-    let next: CivilDate | null = null;
+    // No initializer: every branch below either assigns `next` or returns, so it
+    // is always set by the time it is read (the `= null` was dead).
+    let next: CivilDate | null;
     if (key === 'ArrowLeft') next = addDays(focusDate, -1);
     else if (key === 'ArrowRight') next = addDays(focusDate, 1);
     else if (key === 'ArrowUp') next = addDays(focusDate, -7);

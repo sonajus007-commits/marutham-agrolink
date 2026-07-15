@@ -41,6 +41,12 @@ function FarmerInner() {
       .catch(() => {
         /* requireAuth rejects blocked/rejected sellers — AuthContext ends the session. */
       });
+    // Guard against a late response landing after unmount — without this the
+    // `active` flag never flips and the updateUser() above could fire on a gone
+    // component.
+    return () => {
+      active = false;
+    };
   }, [updateUser]);
 
   const onPaid = useCallback(() => setRenewing(false), []);
