@@ -30,6 +30,21 @@ export interface Dict {
     unavailable: string;
   };
   stats: { sellers: string; customers: string; districts: string; states: string };
+  /* The mockup's trust strip. Static claims, not metrics — each one has to be
+   * something the platform actually does, so there is no "100% Safe" here. */
+  trust: {
+    directTitle: string;
+    directSub: string;
+    freshTitle: string;
+    freshSub: string;
+    priceTitle: string;
+    priceSub: string;
+    payTitle: string;
+    paySub: string;
+    deliverTitle: string;
+    deliverSub: string;
+  };
+  categories: { title: string; sub: string; count: (n: number) => string; all: string };
   founder: { title: string; heading: string; body: string; role: string };
   stories: { title: string; sub: string };
   footer: { tagline: string; rights: string };
@@ -97,6 +112,24 @@ const en: Dict = {
     customers: 'Happy Customers',
     districts: 'Active Districts',
     states: 'Active States',
+  },
+  trust: {
+    directTitle: 'Direct from Farmers',
+    directSub: 'No middlemen',
+    freshTitle: 'Fresh Every Day',
+    freshSub: 'Same morning harvest',
+    priceTitle: 'Fair Pricing',
+    priceSub: 'The grower sets their price',
+    payTitle: 'UPI & Cash on Delivery',
+    paySub: 'Pay the way you prefer',
+    deliverTitle: 'Tracked Delivery',
+    deliverSub: 'Scanned at every stage',
+  },
+  categories: {
+    title: 'Shop by Category',
+    sub: 'Every category the growers are listing in right now',
+    count: (n: number) => `${n} ${n === 1 ? 'product' : 'products'}`,
+    all: 'Browse everything',
   },
   founder: {
     title: 'A Message from Our Founder',
@@ -179,6 +212,24 @@ const ta: Dict = {
     customers: 'மகிழ்ச்சியான வாடிக்கையாளர்கள்',
     districts: 'செயலில் உள்ள மாவட்டங்கள்',
     states: 'செயலில் உள்ள மாநிலங்கள்',
+  },
+  trust: {
+    directTitle: 'நேரடியாக விவசாயிகளிடமிருந்து',
+    directSub: 'இடைத்தரகர்கள் இல்லை',
+    freshTitle: 'தினமும் புதியது',
+    freshSub: 'அன்று காலை அறுவடை',
+    priceTitle: 'நியாயமான விலை',
+    priceSub: 'விலையை விவசாயியே நிர்ணயிக்கிறார்',
+    payTitle: 'UPI மற்றும் பணம் செலுத்தல்',
+    paySub: 'உங்கள் விருப்பப்படி செலுத்துங்கள்',
+    deliverTitle: 'கண்காணிக்கப்படும் விநியோகம்',
+    deliverSub: 'ஒவ்வொரு நிலையிலும் ஸ்கேன் செய்யப்படுகிறது',
+  },
+  categories: {
+    title: 'வகை வாரியாக வாங்குங்கள்',
+    sub: 'விவசாயிகள் இப்போது பட்டியலிடும் அனைத்து வகைகளும்',
+    count: (n: number) => `${n} பொருட்கள்`,
+    all: 'அனைத்தையும் பார்க்க',
   },
   founder: {
     title: 'எங்கள் நிறுவனரின் செய்தி',

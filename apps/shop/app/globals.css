@@ -25,7 +25,12 @@
   --color-surface: var(--white);
   --color-muted: var(--muted);
   --color-fg: var(--text);
-  --color-fg-muted: var(--gray);
+  /* --fg-muted, not --gray. The named grey is AA on white (4.61:1) but only
+     4.14:1 on --muted, and this page puts muted text on muted panels — so the
+     grey failed the moment a section had a background. --fg-muted is the token
+     the design system nudged for exactly that, and clears both (4.55:1 on
+     --muted). Measured in the browser, not computed on paper. */
+  --color-fg-muted: var(--fg-muted);
   --color-border: var(--border);
   --font-display: 'Cormorant Garamond', Georgia, serif;
   --font-sans: 'Outfit', system-ui, sans-serif;

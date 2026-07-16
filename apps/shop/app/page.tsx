@@ -32,7 +32,9 @@ export default async function HomePage() {
 
       <main>
         <Hero t={t} />
+        <Trust t={t} />
         <FreshToday t={t} products={shown} hasMore={products.length > HOME_PRODUCT_LIMIT} />
+        <Categories t={t} products={products} />
         <Achievements t={t} stats={stats} />
         <Founder t={t} />
         <Stories t={t} />
@@ -70,6 +72,94 @@ function Hero({ t }: { t: Dict }) {
       </div>
     </section>
   );
+}
+
+/* The mockup's trust strip. Every claim here is something the platform provably
+ * does — the reference design's "Secure Payments · 100% Safe" is not among them,
+ * because that is a promise about someone else's payment rail, not a feature we
+ * can point at. "UPI & Cash on Delivery" is the same reassurance, and true. */
+function Trust({ t }: { t: Dict }) {
+  const items = [
+    { icon: '🌱', title: t.trust.directTitle, sub: t.trust.directSub },
+    { icon: '☀️', title: t.trust.freshTitle, sub: t.trust.freshSub },
+    { icon: '⚖️', title: t.trust.priceTitle, sub: t.trust.priceSub },
+    { icon: '₹', title: t.trust.payTitle, sub: t.trust.paySub },
+    { icon: '🚚', title: t.trust.deliverTitle, sub: t.trust.deliverSub },
+  ];
+  return (
+    <section className="border-y border-border bg-surface">
+      <ul className="mx-auto grid max-w-6xl list-none grid-cols-2 gap-px overflow-hidden p-0 sm:grid-cols-3 lg:grid-cols-5">
+        {items.map((it) => (
+          <li key={it.title} className="flex flex-col items-center gap-1 px-4 py-7 text-center">
+            <span aria-hidden="true" className="text-2xl leading-none">
+              {it.icon}
+            </span>
+            <span className="mt-1 text-sm font-bold text-forest">{it.title}</span>
+            <span className="text-xs text-fg-muted">{it.sub}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/* Shop by Category, derived from the catalogue rather than hard-coded.
+ *
+ * The mockup names six tidy tiles (Vegetables, Fruits, Grains, Dairy, Groceries,
+ * Meat & Fish). The real `category` column has ten values and they are messier
+ * than that — "Grains, Rice & Pasta", "Yogurt & Eggs", "Canned & Packaged Goods"
+ * — plus some products carry none at all. Hard-coding the mockup's six would
+ * quietly hide whatever does not match, so the tiles are whatever the growers
+ * are actually listing in. Fix the taxonomy in the data and this follows. */
+function Categories({ t, products }: { t: Dict; products: Product[] }) {
+  const counts = new Map<string, number>();
+  for (const p of products) {
+    const c = p.category?.trim();
+    if (c) counts.set(c, (counts.get(c) || 0) + 1);
+  }
+  const cats = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  if (cats.length === 0) return null;
+
+  return (
+    <section id="categories" className="bg-muted px-5 py-16">
+      <div className="mx-auto max-w-6xl">
+        <h2 className="font-display text-3xl font-bold text-forest">{t.categories.title}</h2>
+        <p className="mt-1 text-sm text-fg-muted">{t.categories.sub}</p>
+        <ul className="mt-8 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 lg:grid-cols-6">
+          {cats.map(([name, n]) => (
+            <li key={name}>
+              <a
+                href={`/products?category=${encodeURIComponent(name)}`}
+                className="flex h-full flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface px-3 py-6 text-center no-underline hover:border-forest hover:shadow-md"
+              >
+                <span aria-hidden="true" className="text-3xl leading-none">
+                  {categoryEmoji(name)}
+                </span>
+                <span className="text-sm font-bold text-forest">{name}</span>
+                <span className="text-xs text-fg-muted">{t.categories.count(n)}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+/* A category is free text from the admin catalogue, so this matches on what the
+ * value contains rather than switching on an enum that does not exist. */
+function categoryEmoji(category: string): string {
+  const c = category.toLowerCase();
+  if (c.includes('veg')) return '🥦';
+  if (c.includes('fruit')) return '🍎';
+  if (c.includes('grain') || c.includes('rice') || c.includes('pasta')) return '🌾';
+  if (c.includes('milk') || c.includes('cream') || c.includes('yogurt') || c.includes('egg'))
+    return '🥛';
+  if (c.includes('seafood') || c.includes('fish')) return '🐟';
+  if (c.includes('poultry')) return '🍗';
+  if (c.includes('meat')) return '🥩';
+  if (c.includes('canned') || c.includes('packaged')) return '🥫';
+  return '🧺';
 }
 
 function FreshToday({ t, products, hasMore }: { t: Dict; products: Product[]; hasMore: boolean }) {

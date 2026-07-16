@@ -34,18 +34,41 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function CataloguePage() {
+export default async function CataloguePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
   const l = await lang();
   const t = DICT[l];
-  const products = await getAllProducts();
+  const all = await getAllProducts();
+
+  /* ?category= is where the homepage's category tiles land. Matched
+   * case-insensitively against the free-text column, and an unknown value shows
+   * the empty state rather than the whole catalogue — a filter that silently
+   * ignores itself is worse than one that says it found nothing. */
+  const { category } = await searchParams;
+  const wanted = category?.trim().toLowerCase();
+  const products = wanted ? all.filter((p) => p.category?.trim().toLowerCase() === wanted) : all;
 
   return (
     <>
       <SiteHeader t={t} lang={l} />
 
       <main className="mx-auto max-w-6xl px-5 py-12">
-        <h1 className="font-display text-4xl font-bold text-forest">{t.catalogue.title}</h1>
+        <h1 className="font-display text-4xl font-bold text-forest">
+          {category?.trim() || t.catalogue.title}
+        </h1>
         <p className="mt-2 text-sm text-fg-muted">{t.catalogue.sub}</p>
+
+        {category ? (
+          <a
+            href="/products"
+            className="mt-4 inline-block rounded-full border border-border px-4 py-1.5 text-xs font-bold text-forest no-underline hover:border-forest"
+          >
+            ← {t.categories.all}
+          </a>
+        ) : null}
 
         {products.length === 0 ? (
           <p className="py-24 text-center text-fg-muted">{t.catalogue.empty}</p>
