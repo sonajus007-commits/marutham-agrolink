@@ -49,6 +49,30 @@ describe('queueWrite', () => {
     });
     expect(await getPendingCount()).toBe(1); // one write, not two
   });
+
+  it('replace:true keeps the LATEST same-key write (a re-pin supersedes the earlier one)', async () => {
+    await queueWrite({
+      method: 'PATCH',
+      path: '/auth/me',
+      body: { farm_lat: 1 },
+      key: 'farm-u1',
+      replace: true,
+    });
+    await queueWrite({
+      method: 'PATCH',
+      path: '/auth/me',
+      body: { farm_lat: 2 },
+      key: 'farm-u1',
+      replace: true,
+    });
+    expect(await getPendingCount()).toBe(1);
+    // the surviving entry carries the latest value, not the first
+    const summary = await flushQueue(async (e: QueuedRequest) => {
+      expect((e.body as { farm_lat: number }).farm_lat).toBe(2);
+      return 200;
+    });
+    expect(summary.flushed).toBe(1);
+  });
 });
 
 describe('subscribeOffline', () => {

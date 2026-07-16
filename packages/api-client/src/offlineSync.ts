@@ -66,16 +66,24 @@ function newId(): string {
   return `q-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** Park a mutation. A same-key enqueue that is already parked is collapsed (the
- *  existing entry is returned), so a double-tap cannot bank it twice. */
+/**
+ * Park a mutation. When a `key` is given, two behaviours are available for a write
+ * whose key is already parked:
+ *   - default (`replace` false): collapse — the existing entry is kept and returned,
+ *     so a double-tap on a create cannot bank it twice.
+ *   - `replace: true`: supersede — the stale same-key entry is evicted and this one
+ *     takes its place, so the LATEST value wins. Use this for set-a-value mutations
+ *     (a farm pin, an address edit) where only the final state matters.
+ */
 export async function queueWrite(req: {
   method: QueueMethod;
   path: string;
   body?: unknown;
   key?: string;
+  replace?: boolean;
 }): Promise<QueuedRequest> {
   const existing = await storeAll();
-  if (req.key) {
+  if (req.key && !req.replace) {
     const dup = existing.find((q) => q.key === req.key);
     if (dup) return dup;
   }
@@ -88,7 +96,12 @@ export async function queueWrite(req: {
     createdAt: Date.now(),
     attempts: 0,
   };
-  await storeAdd(entry);
+  if (req.key && req.replace) {
+    // keep-latest: drop any same-key entry, this write supersedes it
+    await storeReplace([...existing.filter((q) => q.key !== req.key), entry]);
+  } else {
+    await storeAdd(entry);
+  }
   void notify();
   return entry;
 }
@@ -154,19 +167,21 @@ export async function apiFetchOffline<T = unknown>(
   method: QueueMethod,
   path: string,
   body?: unknown,
-  opts: { key?: string } = {},
+  opts: { key?: string; replace?: boolean } = {},
 ): Promise<T> {
   if (!isQueueableMethod(method)) return apiFetch<T>(method, path, body);
 
+  const park = () => queueWrite({ method, path, body, key: opts.key, replace: opts.replace });
+
   const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
   if (offline) {
-    throw new OfflineQueuedError(await queueWrite({ method, path, body, key: opts.key }));
+    throw new OfflineQueuedError(await park());
   }
   try {
     return await apiFetch<T>(method, path, body);
   } catch (e) {
     if (e instanceof ApiError) throw e; // the server answered — not an offline case
-    throw new OfflineQueuedError(await queueWrite({ method, path, body, key: opts.key }));
+    throw new OfflineQueuedError(await park());
   }
 }
 
