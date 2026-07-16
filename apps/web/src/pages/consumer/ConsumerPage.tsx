@@ -13,11 +13,14 @@ import { HomeTab } from './HomeTab';
 import { OrdersTab } from './OrdersTab';
 import { OrderDetailSheet } from './OrderDetailSheet';
 import { ProfileTab } from './ProfileTab';
+import { AddressBook } from './AddressBook';
 import './consumer.css';
 
 /* 'profile' is reachable from the header 👤 button, not the nav bar — a fifth
- * nav tab does not fit a 420px phone. Matches the legacy consumer page. */
-type Tab = 'home' | 'shop' | 'cart' | 'orders' | 'profile';
+ * nav tab does not fit a 420px phone. Matches the legacy consumer page.
+ * 'addresses' is sidebar-only for the same reason: on a phone it stays where it
+ * has always been, inside ProfileTab. */
+type Tab = 'home' | 'shop' | 'cart' | 'orders' | 'addresses' | 'profile';
 
 export function ConsumerPage() {
   return (
@@ -57,6 +60,20 @@ function ConsumerInner() {
     { id: 'shop', label: t('consumer.tab.shop') },
     { id: 'cart', label: t('consumer.tab.cart'), badge: cart.count },
     { id: 'orders', label: t('consumer.tab.orders'), badge: activeCount },
+  ];
+
+  /* Sidebar (mockup panel 2). Only entries backed by a real feature are here:
+   * the mockup also lists Subscriptions (a seller-only feature), Wishlist,
+   * Wallet & Points, Notifications and Support, none of which exist yet — same
+   * reasoning as the KPI row in HomeTab, which omits them rather than inventing
+   * numbers. They arrive in Phase 2 with their backends. */
+  const navItems: { id: Tab; icon: string; label: string; badge?: number }[] = [
+    { id: 'home', icon: '🏠', label: t('consumer.nav.dashboard', 'Dashboard') },
+    { id: 'shop', icon: '🛒', label: t('consumer.nav.browse', 'Browse Products') },
+    { id: 'cart', icon: '🧺', label: t('consumer.nav.cart', 'My Cart'), badge: cart.count },
+    { id: 'orders', icon: '📦', label: t('consumer.nav.orders', 'My Orders'), badge: activeCount },
+    { id: 'addresses', icon: '📍', label: t('consumer.nav.addresses', 'My Addresses') },
+    { id: 'profile', icon: '⚙️', label: t('consumer.nav.account', 'Account Settings') },
   ];
 
   return (
@@ -101,30 +118,71 @@ function ConsumerInner() {
         </div>
       </header>
 
-      <div className="cons-hero">
-        <div className="cons-hero__icon">🌿</div>
-        <div>
-          <h2>
-            {t('consumer.welcome')}, {user.fname}!
-          </h2>
-          <p>Fresh vegetables · Same morning harvest</p>
+      <div className="cons-body">
+        <nav className="cons-side" aria-label={t('consumer.nav.label', 'Consumer sections')}>
+          <ul className="cons-side__list">
+            {navItems.map((it) => {
+              const on = tab === it.id;
+              return (
+                <li key={it.id}>
+                  <button
+                    type="button"
+                    className={`cons-side__item${on ? ' is-active' : ''}`}
+                    aria-current={on ? 'page' : undefined}
+                    onClick={() => setTab(it.id)}
+                  >
+                    <span className="cons-side__icon" aria-hidden="true">
+                      {it.icon}
+                    </span>
+                    <span className="cons-side__label">{it.label}</span>
+                    {it.badge ? <span className="cons-side__badge">{it.badge}</span> : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <button type="button" className="cons-side__item cons-side__logout" onClick={logout}>
+            <span className="cons-side__icon" aria-hidden="true">
+              ⎋
+            </span>
+            <span className="cons-side__label">{t('consumer.logout')}</span>
+          </button>
+        </nav>
+
+        <div className="cons-main">
+          <div className="cons-hero">
+            <div className="cons-hero__icon">🌿</div>
+            <div>
+              <h2>
+                {t('consumer.welcome')}, {user.fname}!
+              </h2>
+              <p>Fresh vegetables · Same morning harvest</p>
+            </div>
+          </div>
+
+          <TabBar
+            className="cons-tabbar"
+            items={tabs}
+            active={tab}
+            onSelect={(id) => setTab(id as Tab)}
+          />
+
+          <div className="flex flex-1 flex-col gap-3 p-3.5">
+            {tab === 'profile' ? (
+              <ProfileTab />
+            ) : tab === 'addresses' ? (
+              <AddressBook />
+            ) : tab === 'home' ? (
+              <HomeTab onOpenOrder={setOpenOrderId} onGoToShop={() => setTab('shop')} />
+            ) : tab === 'shop' ? (
+              <ShopTab onGoToCart={() => setTab('cart')} />
+            ) : tab === 'cart' ? (
+              <CartTab onOrderPlaced={onOrderPlaced} />
+            ) : (
+              <OrdersTab onOpenOrder={setOpenOrderId} />
+            )}
+          </div>
         </div>
-      </div>
-
-      <TabBar items={tabs} active={tab} onSelect={(id) => setTab(id as Tab)} />
-
-      <div className="flex flex-1 flex-col gap-3 p-3.5">
-        {tab === 'profile' ? (
-          <ProfileTab />
-        ) : tab === 'home' ? (
-          <HomeTab onOpenOrder={setOpenOrderId} onGoToShop={() => setTab('shop')} />
-        ) : tab === 'shop' ? (
-          <ShopTab onGoToCart={() => setTab('cart')} />
-        ) : tab === 'cart' ? (
-          <CartTab onOrderPlaced={onOrderPlaced} />
-        ) : (
-          <OrdersTab onOpenOrder={setOpenOrderId} />
-        )}
       </div>
 
       <OrderDetailSheet

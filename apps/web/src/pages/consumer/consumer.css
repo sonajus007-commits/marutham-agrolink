@@ -9,6 +9,106 @@
   flex-direction: column;
 }
 
+/* Body = sidebar + main (mockup panel 2, the consumer dashboard).
+ *
+ * The mockup is a DESKTOP design; this app is phone-first (see the Tab note in
+ * ConsumerPage). So the sidebar is a >=1024px enhancement and the tab bar stays
+ * on narrow screens — the phone layout is deliberately unchanged. Only one of
+ * the two navigations is ever visible, so there is no duplicate tab stop. */
+.cons-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.cons-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.cons-side {
+  display: none;
+}
+
+.cons-side__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cons-side__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  /* --fg-muted, NOT --gray: the named grey is only AA on white, and on the app
+   * background it lands just under 4.5:1. --fg-muted is the AA-safe one. */
+  color: var(--fg-muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.cons-side__item:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+}
+.cons-side__item.is-active {
+  /* Dark Green is the spec's stated "sidebar active" colour. */
+  background: var(--forest-dark);
+  color: var(--white);
+  font-weight: 600;
+}
+.cons-side__icon {
+  font-size: 15px;
+  line-height: 1;
+}
+.cons-side__label {
+  flex: 1;
+}
+.cons-side__badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.cons-side__item.is-active .cons-side__badge {
+  background: var(--white);
+  color: var(--forest-dark);
+}
+.cons-side__logout {
+  margin-top: auto;
+}
+
+@media (min-width: 1024px) {
+  .cons-side {
+    display: flex;
+    flex-direction: column;
+    width: 216px;
+    flex-shrink: 0;
+    padding: 14px 10px;
+    background: var(--surface);
+    border-right: 1px solid var(--border-subtle);
+  }
+  .cons-tabbar {
+    display: none;
+  }
+}
+
 /* App header */
 .cons-hdr {
   background: var(--surface);
