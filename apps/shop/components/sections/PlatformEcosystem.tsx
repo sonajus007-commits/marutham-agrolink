@@ -1,4 +1,5 @@
 import { Sprout, ShoppingBasket, Warehouse, BikeIcon, Building2, LineChart } from 'lucide-react';
+import type { LandingCopy } from '@/lib/landing';
 import { Section, SectionHeader } from '@/components/ui/Section';
 import { Reveal } from '@/components/ui/Reveal';
 
@@ -12,64 +13,36 @@ import { Reveal } from '@/components/ui/Reveal';
  * Gold is the brief's accent for this section. Gold is 2.19:1 on white so it
  * cannot be ink — it is used here as a FILL on the rule beneath each card. */
 
-const ROLES = [
-  {
-    icon: Sprout,
-    name: 'Farmers',
-    body: 'List produce, set a price, confirm what is available today, and see the payout for every order.',
-  },
-  {
-    icon: ShoppingBasket,
-    name: 'Consumers',
-    body: 'Browse what is fresh in your district, order, and follow it to your door.',
-  },
-  {
-    icon: Warehouse,
-    name: 'Village Collection',
-    body: 'Officers collect from farms on a route, weigh what arrives, and hand it to the hub.',
-  },
-  {
-    icon: BikeIcon,
-    name: 'Delivery Partners',
-    body: 'Take the day’s dispatch, scan each drop, and capture proof of delivery on the spot.',
-  },
-  {
-    icon: Building2,
-    name: 'Businesses',
-    body: 'Retailers and bulk buyers sell and source on the same rails, on their own fee terms.',
-  },
-  {
-    icon: LineChart,
-    name: 'Operations & Leadership',
-    body: 'Live dashboards for hubs, districts and the board — built on the same data, not a copy of it.',
-  },
-];
+const ICONS = [Sprout, ShoppingBasket, Warehouse, BikeIcon, Building2, LineChart];
 
-export function PlatformEcosystem() {
+export function PlatformEcosystem({ c }: { c: LandingCopy }) {
   return (
     <Section id="ecosystem" tone="surface" aria-labelledby="eco-h">
       <SectionHeader
         id="eco-h"
-        eyebrow="Platform ecosystem"
+        eyebrow={c.eco.eyebrow}
         accent="gold"
-        title="One platform, six kinds of people"
-        lede="Each role has its own surface and its own permissions — and all of them read from a single source of truth."
+        title={c.eco.title}
+        lede={c.eco.lede}
       />
 
       <ul className="mt-14 grid list-none grid-cols-1 gap-5 p-0 md:grid-cols-2 lg:grid-cols-3">
-        {ROLES.map((r, i) => (
-          <Reveal as="li" key={r.name} kind="fade-up" delay={i * 0.05}>
-            <div className="border-border bg-surface-raised group flex h-full flex-col gap-4 overflow-hidden rounded-2xl border p-7 transition-shadow duration-300 hover:shadow-[0_12px_32px_rgba(22,61,47,0.08)]">
-              <span className="text-forest-700 inline-flex">
-                <r.icon className="h-6 w-6" aria-hidden="true" />
-              </span>
-              <h3 className="text-forest-900 text-card font-semibold">{r.name}</h3>
-              <p className="text-fg-muted text-caption leading-relaxed">{r.body}</p>
-              {/* gold as a FILL — the one safe use for it */}
-              <span className="bg-gold-500 mt-auto h-1 w-10 rounded-full transition-all duration-300 group-hover:w-20" />
-            </div>
-          </Reveal>
-        ))}
+        {c.eco.items.map((r, i) => {
+          const Icon = ICONS[i];
+          return (
+            <Reveal as="li" key={r.t} kind="fade-up" delay={i * 0.05}>
+              <div className="border-border bg-surface-raised group flex h-full flex-col gap-4 overflow-hidden rounded-2xl border p-7 transition-shadow duration-300 hover:shadow-[0_12px_32px_rgba(22,61,47,0.08)]">
+                <span className="text-forest-700 inline-flex">
+                  <Icon className="h-6 w-6" aria-hidden="true" />
+                </span>
+                <h3 className="text-forest-900 text-card font-semibold">{r.t}</h3>
+                <p className="text-fg-muted text-caption leading-relaxed">{r.d}</p>
+                {/* gold as a FILL — the one safe use for it */}
+                <span className="bg-gold-500 mt-auto h-1 w-10 rounded-full transition-all duration-300 group-hover:w-20" />
+              </div>
+            </Reveal>
+          );
+        })}
       </ul>
     </Section>
   );

@@ -110,6 +110,14 @@ body {
 /* Tamil needs its own face — the Latin stack has no Tamil glyphs. */
 :lang(ta) {
   font-family: 'Noto Serif Tamil', var(--font-sans);
+
+  /* And it needs to be allowed to break. Tamil compounds run long with no space
+   * to break at: "விவசாயியிடமிருந்து" is a single word that measures 485px at
+   * hero size — wider than a 390px phone — so it pushed the whole page sideways
+   * and gave the Tamil site a horizontal scrollbar the English one never had.
+   * break-word only intervenes when a word genuinely cannot fit, so normal
+   * lines still break at spaces. */
+  overflow-wrap: break-word;
 }
 
 /* Every animation in this app is a Framer Motion entrance. Honour the OS

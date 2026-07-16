@@ -54,16 +54,26 @@ function Counter({ to }: { to: number }) {
   );
 }
 
-export function PlatformStatistics({ stats }: { stats: Stat[] }) {
+export function PlatformStatistics({
+  stats,
+  eyebrow,
+  title,
+  lede,
+}: {
+  stats: Stat[];
+  eyebrow: string;
+  title: string;
+  lede: string;
+}) {
   return (
     <Section id="stats" tone="surface" aria-labelledby="stats-h">
       <SectionHeader
         id="stats-h"
-        eyebrow="Where we are"
+        eyebrow={eyebrow}
         accent="gold"
         align="center"
-        title="Small numbers, honestly reported"
-        lede="These are live counts from the platform, not projections. They will grow, and this page will say so when they do."
+        title={title}
+        lede={lede}
       />
 
       <ul className="mt-14 grid list-none grid-cols-2 gap-5 p-0 lg:grid-cols-4">

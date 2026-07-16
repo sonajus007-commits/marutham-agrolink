@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { LangToggle } from '@/components/LangToggle';
 import { PORTAL_LOGIN } from '@/lib/portal';
 import type { Dict, Lang } from '@/lib/dict';
+import type { LandingCopy } from '@/lib/landing';
 
 /* Header and footer.
  *
@@ -31,9 +32,14 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
 
   return (
     <header className="border-border bg-surface/85 sticky top-0 z-50 border-b backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-[1440px] items-center gap-6 px-6 py-3.5 md:px-10">
-        <a href="/" className="no-underline" aria-label="Marutham AgroLink">
-          <MaruthamLogo />
+      {/* min-w-0 on the row and shrink on the brand: the Tamil sign-in label is
+          longer than the English one and pushed the header past 390px. */}
+      <div className="mx-auto flex w-full max-w-[1440px] min-w-0 items-center gap-4 px-6 py-3.5 md:gap-6 md:px-10">
+        {/* shrink-0, not shrink: a squeezed box does not squeeze the text inside
+            it, so the wordmark painted over the toggle. It drops to the mark
+            alone below sm instead. */}
+        <a href="/" className="shrink-0 no-underline" aria-label="Marutham AgroLink">
+          <MaruthamLogo compact />
         </a>
 
         <nav aria-label="Primary" className="ml-auto hidden lg:block">
@@ -51,9 +57,13 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
           </ul>
         </nav>
 
-        <div className="ml-auto flex items-center gap-3 lg:ml-0">
+        <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3 lg:ml-0">
           <LangToggle current={lang} />
-          <Button href={PORTAL_LOGIN} variant="primary" className="px-6 py-2.5 text-caption">
+          <Button
+            href={PORTAL_LOGIN}
+            variant="primary"
+            className="px-4 py-2.5 text-caption whitespace-nowrap md:px-6"
+          >
             {t.nav.login}
           </Button>
         </div>
@@ -62,30 +72,31 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
   );
 }
 
-export function SiteFooter({ t }: { t: Dict }) {
+export function SiteFooter({ t, c }: { t: Dict; c: LandingCopy }) {
+  const L = c.footer.links;
   const cols = [
     {
-      h: 'Marketplace',
+      h: c.footer.marketplace,
       links: [
-        { href: '/products', l: 'All produce' },
-        { href: '/#marketplace', l: 'How the market works' },
-        { href: '/#pricing', l: 'Pricing' },
+        { href: '/products', l: L.all },
+        { href: '/#marketplace', l: L.how },
+        { href: '/#pricing', l: L.pricing },
       ],
     },
     {
-      h: 'For farmers',
+      h: c.footer.farmers,
       links: [
-        { href: '/#farmers', l: 'Selling with us' },
-        { href: '/#business', l: 'For businesses' },
-        { href: '/#faq', l: 'Questions' },
+        { href: '/#farmers', l: L.selling },
+        { href: '/#business', l: L.business },
+        { href: '/#faq', l: L.questions },
       ],
     },
     {
-      h: 'Company',
+      h: c.footer.company,
       links: [
-        { href: '/#why', l: 'Why Marutham' },
-        { href: '/#sustainability', l: 'Sustainability' },
-        { href: '/#contact', l: 'Contact' },
+        { href: '/#why', l: L.why },
+        { href: '/#sustainability', l: L.sustainability },
+        { href: '/#contact', l: L.contact },
       ],
     },
   ];

@@ -48,14 +48,20 @@ export function Reveal({ children, kind = 'fade-up', delay = 0, className, as = 
   const reduced = useReducedMotion();
   const MotionTag = motion[as];
 
+  /* Reveal is almost always a grid or flex child, and such a child defaults to
+   * min-width:auto — it will not shrink below its longest word. That is
+   * invisible in English and breaks the page in Tamil, whose compounds run far
+   * longer. min-w-0 first so a caller's own class can still override it. */
+  const cls = `min-w-0 ${className ?? ''}`.trim();
+
   if (reduced) {
     const Tag = as;
-    return <Tag className={className}>{children}</Tag>;
+    return <Tag className={cls}>{children}</Tag>;
   }
 
   return (
     <MotionTag
-      className={className}
+      className={cls}
       initial="hidden"
       whileInView="show"
       viewport={{ once: true, margin: '-80px' }}

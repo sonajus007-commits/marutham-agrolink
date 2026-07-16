@@ -15,6 +15,7 @@ import {
 import { getProduct } from '@/lib/api';
 import { absoluteUrl } from '@/lib/site';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Dict, type Lang } from '@/lib/dict';
+import { LANDING } from '@/lib/landing';
 import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
 import { OrderButton } from '@/components/OrderButton';
 
@@ -155,7 +156,7 @@ export default async function ProductPage({ params }: Params) {
         <DistrictPrices t={t} rows={districts} unit={(product.unit as string) || ''} />
       </main>
 
-      <SiteFooter t={t} />
+      <SiteFooter t={t} c={LANDING[l]} />
     </>
   );
 }

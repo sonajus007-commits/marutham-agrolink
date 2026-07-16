@@ -27,6 +27,12 @@ interface Props {
   className?: string;
   /** Rendered as the accessible name. The mark alone still needs one. */
   label?: string;
+  /* Drop to the mark alone on narrow screens. The header needs this: the Tamil
+   * sign-in label is wider than the English one, and letting the brand shrink
+   * instead squeezed its box to 79px while the wordmark kept painting at full
+   * width — so it spilled under the language toggle. Hiding the words is honest;
+   * squeezing them is not. */
+  compact?: boolean;
 }
 
 export function MaruthamLogo({
@@ -34,6 +40,7 @@ export function MaruthamLogo({
   tone = 'onLight',
   className = '',
   label = 'Marutham AgroLink',
+  compact = false,
 }: Props) {
   const ink = tone === 'onDark' ? 'text-surface' : 'text-forest-700';
   const sub = tone === 'onDark' ? 'text-leaf-300' : 'text-forest-500';
@@ -42,7 +49,7 @@ export function MaruthamLogo({
     <span className={`inline-flex items-center gap-2.5 ${className}`} aria-label={label} role="img">
       <Mark tone={tone} />
       {variant === 'full' ? (
-        <span className="flex flex-col leading-none">
+        <span className={`${compact ? 'hidden sm:flex' : 'flex'} flex-col leading-none`}>
           <span className={`font-serif text-xl font-bold tracking-tight ${ink}`} aria-hidden="true">
             Marutham
           </span>

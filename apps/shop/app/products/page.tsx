@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { getAllProducts } from '@/lib/api';
 import { absoluteUrl } from '@/lib/site';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Lang } from '@/lib/dict';
+import { LANDING } from '@/lib/landing';
 import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
 import { ProductCard } from '@/components/ProductCard';
 
@@ -86,7 +87,7 @@ export default async function CataloguePage({
         )}
       </main>
 
-      <SiteFooter t={t} />
+      <SiteFooter t={t} c={LANDING[l]} />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Lang } from '@/lib/dict';
+import { LANDING } from '@/lib/landing';
 import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
 
 /* Served for a product id that does not exist — and ONLY for that.
@@ -31,7 +32,7 @@ export default async function NotFound() {
         </Link>
       </main>
 
-      <SiteFooter t={t} />
+      <SiteFooter t={t} c={LANDING[l]} />
     </>
   );
 }

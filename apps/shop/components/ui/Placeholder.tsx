@@ -16,12 +16,17 @@ import type { ReactNode } from 'react';
  * ───────────────────────────────────────────────────────────────────────────── */
 
 interface ImageSlotProps {
-  /** What the photograph should show. Shown on the slot; also the alt text later. */
+  /* What the photograph should show. This one stays in English on purpose: it is
+   * a brief for whoever takes the picture, not customer copy, and it disappears
+   * the moment the real asset lands. The label around it is translated because
+   * it is the part a visitor would actually read as a caption. */
   description: string;
   /** Tailwind aspect utility, e.g. "aspect-[4/3]". */
   aspect?: string;
   className?: string;
   tone?: 'light' | 'dark';
+  /** Translated caption, e.g. "Image placeholder" / "பட இடம்". */
+  slotLabel: string;
 }
 
 export function ImageSlot({
@@ -29,14 +34,18 @@ export function ImageSlot({
   aspect = 'aspect-[4/3]',
   className = '',
   tone = 'light',
+  slotLabel,
 }: ImageSlotProps) {
   const skin =
     tone === 'dark'
       ? 'border-forest-500/40 bg-forest-900/40 text-leaf-300'
       : 'border-border bg-bg text-fg-muted';
   return (
+    /* w-full + min-w-0: the slot is a grid item, and a grid item's min-width
+     * defaults to auto — so its longest word (the description) sets a floor it
+     * will not shrink past, and it widens the page instead of wrapping. */
     <div
-      className={`${aspect} ${skin} flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed p-6 text-center ${className}`}
+      className={`${aspect} ${skin} flex w-full min-w-0 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed p-6 text-center ${className}`}
     >
       <svg viewBox="0 0 24 24" className="h-7 w-7 opacity-50" aria-hidden="true" fill="none">
         <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
@@ -44,7 +53,7 @@ export function ImageSlot({
         <path d="m3 16 5-4 4 3 3-2 6 5" stroke="currentColor" strokeWidth="1.5" fill="none" />
       </svg>
       <p className="text-caption max-w-[34ch] font-medium">{description}</p>
-      <p className="text-[0.65rem] tracking-[0.14em] uppercase opacity-60">Image placeholder</p>
+      <p className="text-[0.65rem] tracking-[0.14em] uppercase opacity-60">{slotLabel}</p>
     </div>
   );
 }

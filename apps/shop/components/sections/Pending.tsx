@@ -1,3 +1,4 @@
+import type { LandingCopy } from '@/lib/landing';
 import { Section, SectionHeader } from '@/components/ui/Section';
 import { ContentPending } from '@/components/ui/Placeholder';
 import { Button } from '@/components/ui/Button';
@@ -23,49 +24,43 @@ import { Button } from '@/components/ui/Button';
  *                   download. A button here would point at nothing.
  *
  * Each becomes real by deleting the ContentPending and rendering the source
- * named in its `needs` line.
+ * named in its copy.
  * ───────────────────────────────────────────────────────────────────────────── */
 
-export function Testimonials() {
+export function Testimonials({ c }: { c: LandingCopy }) {
   return (
     <Section id="testimonials" tone="bg" aria-labelledby="testi-h">
       <SectionHeader
         id="testi-h"
-        eyebrow="Testimonials"
+        eyebrow={c.testimonials.eyebrow}
         accent="blossom"
         align="center"
-        title="What growers and families say"
-        lede="Real names, real districts, with permission — once we have collected them."
+        title={c.testimonials.title}
+        lede={c.testimonials.lede}
       />
       <div className="mt-12">
-        <ContentPending
-          title="No testimonials yet"
-          needs="This section stays empty until real customers and growers have given quotes we are allowed to publish. Writing placeholder testimonials would mean inventing people, so we have not."
-        />
+        <ContentPending title={c.testimonials.pendingT} needs={c.testimonials.pendingD} />
       </div>
     </Section>
   );
 }
 
-export function Pricing() {
+export function Pricing({ c }: { c: LandingCopy }) {
   return (
     <Section id="pricing" tone="bg" aria-labelledby="pricing-h">
       <SectionHeader
         id="pricing-h"
-        eyebrow="Pricing"
+        eyebrow={c.pricing.eyebrow}
         accent="blossom"
         align="center"
-        title="What it costs"
-        lede="Buying is free. Selling carries a platform fee that sits on top of the farmer’s price, never inside it."
+        title={c.pricing.title}
+        lede={c.pricing.lede}
       />
       <div className="mt-12">
-        <ContentPending
-          title="Seller plans are not published yet"
-          needs="The fee a seller pays depends on their seller type, and the subscription plans live behind the portal today. Once the public plan structure is agreed, it belongs here — as the real numbers, not example tiers."
-        >
+        <ContentPending title={c.pricing.pendingT} needs={c.pricing.pendingD}>
           <div className="mt-6 flex justify-center">
             <Button href="/#contact" variant="secondary">
-              Ask us about selling
+              {c.pricing.cta}
             </Button>
           </div>
         </ContentPending>
@@ -74,41 +69,38 @@ export function Pricing() {
   );
 }
 
-export function LatestUpdates() {
+export function LatestUpdates({ c }: { c: LandingCopy }) {
   return (
     <Section id="updates" tone="sky" aria-labelledby="updates-h">
       <SectionHeader
         id="updates-h"
-        eyebrow="Latest updates"
+        eyebrow={c.updates.eyebrow}
         accent="water"
-        title="News from the platform"
-        lede="Harvest notes, new districts, and what we shipped."
+        title={c.updates.title}
+        lede={c.updates.lede}
       />
       <div className="mt-12">
-        <ContentPending
-          title="Nothing published yet"
-          needs="There is no posts source behind this section — no CMS and no blog. It fills the day there is one. Until then it stays empty rather than showing sample articles."
-        />
+        <ContentPending title={c.updates.pendingT} needs={c.updates.pendingD} />
       </div>
     </Section>
   );
 }
 
-export function DownloadApp() {
+export function DownloadApp({ c }: { c: LandingCopy }) {
   return (
     <Section id="download" tone="forestDeep" aria-labelledby="dl-h">
       <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_1fr]">
         <SectionHeader
           id="dl-h"
-          eyebrow="Mobile"
+          eyebrow={c.download.eyebrow}
           tone="dark"
-          title="The app is being tested"
-          lede="The Android build is signed and running. It is not on the Play Store yet, so there is nothing honest to link to — you can install the site as an app in the meantime."
+          title={c.download.title}
+          lede={c.download.lede}
         />
         <ContentPending
           className="border-forest-500/40 bg-forest-700/40"
-          title="No store listing yet"
-          needs="The APK builds and passes signature verification, but it has no distribution channel. A download button would point at nothing, so this waits for a Play Store listing or a hosted release."
+          title={c.download.pendingT}
+          needs={c.download.pendingD}
         />
       </div>
     </Section>
