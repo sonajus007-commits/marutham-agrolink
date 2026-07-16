@@ -12,6 +12,7 @@ import { Network } from '@capacitor/network';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { setApiBase } from '@marutham/api-client';
+import { colors } from '@marutham/tokens';
 
 /** True inside the Android/iOS webview; false in any browser (incl. the PWA). */
 export const isNative = (): boolean => Capacitor.isNativePlatform();
@@ -34,7 +35,7 @@ export async function initNative(): Promise<void> {
   try {
     await StatusBar.setStyle({ style: Style.Dark }); // 'Dark' = light content on a dark bar
     if (Capacitor.getPlatform() === 'android') {
-      await StatusBar.setBackgroundColor({ color: '#2E7D32' });
+      await StatusBar.setBackgroundColor({ color: colors.forest });
     }
   } catch (err) {
     console.error('[native] status bar styling failed', err);
