@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sheet, Spinner } from '@marutham/ui';
-import { api, type EligibleAgent } from '@marutham/api-client';
+import { api, OfflineQueuedError, type EligibleAgent } from '@marutham/api-client';
 import type { Order } from '@marutham/lib';
 import { useToast } from '../../../components/Toast';
 import { getCurrentPosition } from '../../../native/geolocation';
@@ -32,6 +32,8 @@ export function VerifySheet({
     setError(null);
     setRoute('direct');
     setAgentId('');
+    setBusy(false); // the sheet stays mounted between orders — a finished verify
+    // would otherwise leave the next order's button stuck on "Verifying…"
     Promise.all([api.getOrder(orderId), api.getEligibleAgents(orderId, 'collection')])
       .then(([ord, elig]) => {
         if (!active) return;
@@ -47,15 +49,36 @@ export function VerifySheet({
   }, [open, orderId]);
 
   async function confirm() {
-    if (!orderId) return;
+    if (!orderId || !order) return;
+    const stage = order.stage;
+    // Every scan asserts the stage it saw, so without one there is nothing safe to
+    // send. GET /orders/:id selects *, so this cannot happen in practice — but a
+    // silent weaker request is worse than saying so.
+    if (typeof stage !== 'number') {
+      toast('Could not read this order’s stage. Reload and try again.', 'er');
+      return;
+    }
     setBusy(true);
     try {
       // Best-effort collection location; a declined permission never blocks verify.
       const coords = (await getCurrentPosition()) ?? undefined;
-      const res = await api.verifyOrder(orderId, { route, agent_id: agentId || undefined, coords });
+      // Collection points are rural and often have no signal, so this is queueable.
+      // The stage guard matters most here: replayed a stage late, this same body would
+      // land on the pick-up branch and make the VCO the delivery agent, silently
+      // discarding the route and agent they chose.
+      const res = await api.verifyOrderOffline(orderId, stage, {
+        route,
+        agent_id: agentId || undefined,
+        coords,
+      });
       toast(res.message || 'Order verified.', 'ok');
       onChanged();
     } catch (e) {
+      if (e instanceof OfflineQueuedError) {
+        toast('No signal — saved on your device. It will sync automatically.', 'ok');
+        onChanged();
+        return;
+      }
       toast(e instanceof Error ? e.message : 'Verify failed', 'er');
       setBusy(false);
     }

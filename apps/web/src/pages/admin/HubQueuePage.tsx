@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, EmptyState, Modal, Select, Spinner, StatTile } from '@marutham/ui';
-import { api, type EligibleAgent } from '@marutham/api-client';
+import { api, OfflineQueuedError, type EligibleAgent } from '@marutham/api-client';
 import { fmtDate, fmtMoney, groupHubQueue, type Order } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
@@ -247,14 +247,30 @@ function DispatchModal({
 
   async function confirm() {
     if (!order) return;
+    const stage = order.stage;
+    // The scan asserts the stage it saw, so without one there is nothing safe to
+    // send. The list endpoint selects stage explicitly, so this cannot happen in
+    // practice — but a silent weaker request is worse than saying so.
+    if (typeof stage !== 'number') {
+      toast(t('admin.hub.stageUnknown'), 'er');
+      return;
+    }
     setBusy(true);
     try {
       // Best-effort hub location at dispatch; a declined permission never blocks it.
       const coords = (await getCurrentPosition()) ?? undefined;
-      const res = await api.dispatchFromHub(order.id, agentId || undefined, coords);
+      // Queued if the hub's link is down. The stage guard earns its keep here: this
+      // same body replayed at stage 6 would miss the hub branch, fall through to the
+      // generic advance, and mark the order Delivered — banking COD cash nobody took.
+      const res = await api.dispatchFromHubOffline(order.id, stage, agentId || undefined, coords);
       toast(res.message || t('admin.hub.dispatched'), 'ok');
       onDone();
     } catch (e) {
+      if (e instanceof OfflineQueuedError) {
+        toast(t('admin.hub.queuedOffline'), 'ok');
+        onDone();
+        return;
+      }
       toast(e instanceof Error ? e.message : t('admin.hub.actionFailed'), 'er');
     } finally {
       setBusy(false);

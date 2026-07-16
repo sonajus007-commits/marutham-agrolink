@@ -675,6 +675,8 @@ export const resources = {
       'admin.hub.loadFailed': 'Could not load the hub queue.',
       'admin.hub.actionFailed': 'Could not complete that action.',
       'admin.hub.agentsFailed': 'Could not load delivery agents.',
+      'admin.hub.queuedOffline': 'No signal — saved on this device. It will sync automatically.',
+      'admin.hub.stageUnknown': 'Could not read this order’s stage. Reload and try again.',
       'admin.profile.title': 'My Profile',
       'admin.profile.account': 'Account',
       'admin.profile.loginId': 'Your Login ID',
@@ -1706,6 +1708,10 @@ export const resources = {
       'admin.hub.loadFailed': 'மையப் பட்டியலை ஏற்ற முடியவில்லை.',
       'admin.hub.actionFailed': 'இந்தச் செயலை முடிக்க முடியவில்லை.',
       'admin.hub.agentsFailed': 'விநியோக முகவர்களை ஏற்ற முடியவில்லை.',
+      'admin.hub.queuedOffline':
+        'சிக்னல் இல்லை — இந்தச் சாதனத்தில் சேமிக்கப்பட்டது. இணைப்பு கிடைத்ததும் தானாக ஒத்திசைக்கப்படும்.',
+      'admin.hub.stageUnknown':
+        'இந்த ஆர்டரின் நிலையைப் படிக்க முடியவில்லை. மீண்டும் ஏற்றி முயற்சிக்கவும்.',
       'admin.profile.title': 'எனது சுயவிவரம்',
       'admin.profile.account': 'கணக்கு',
       'admin.profile.loginId': 'உங்கள் உள்நுழைவு ஐடி',

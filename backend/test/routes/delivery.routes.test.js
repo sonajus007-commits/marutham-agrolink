@@ -207,3 +207,97 @@ test('hub dispatch without a location still succeeds and stores no coordinates',
   const update = db.callsTo('orders', 'update')[0].payload;
   assert.ok(!('dispatched_lat' in update), 'no lat when none was sent');
 });
+
+// ── from_stage: the guard that makes a DELAYED scan safe ────────────────────────
+// A scan means "advance one from wherever this order is now", so a write parked
+// offline and replayed later does not repeat the intended transition — it performs
+// whichever one the order happens to be sitting on. `from_stage` states the stage the
+// user was looking at, and the server refuses (409) if the order has moved. The
+// offline queue drops a 4xx rather than retrying, so a superseded write dies here.
+
+test('from_stage matching the order stage proceeds normally', async () => {
+  const db = dbFor(outForDelivery());
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', { from_stage: 4 });
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('orders', 'update')[0].payload.status, 'Delivered');
+});
+
+test('a scan with no from_stage still works — the guard is opt-in', async () => {
+  const db = dbFor(outForDelivery());
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', {});
+
+  assert.equal(res.status, 200);
+});
+
+test('a stale from_stage is refused with 409 and writes nothing', async () => {
+  // Queued while the order was Picked Up (3); by replay time it is Out for Delivery (4).
+  const db = dbFor(outForDelivery());
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', { from_stage: 3 });
+
+  assert.equal(res.status, 409);
+  assert.match(res.body.error, /already moved on/);
+  assert.equal(res.body.currentStatus, 'Out for Delivery');
+  assert.equal(db.callsTo('orders', 'update').length, 0, 'the order must not be touched');
+});
+
+test('a non-integer from_stage is rejected as a bad request', async () => {
+  const db = dbFor(outForDelivery());
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', { from_stage: 'four' });
+
+  assert.equal(res.status, 400);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+// THE ONE THAT MATTERS. A hub dispatch (stage 5) replayed after the order reached
+// Out for Delivery (6) misses the hub branch and falls through to `stage >= 3`,
+// which advances 6 → 7 = Delivered — and advanceStage marks a COD order PAID on
+// delivery. That is cash recorded as collected that nobody collected.
+test('a hub dispatch replayed one stage late cannot deliver a COD order', async () => {
+  const movedOn = {
+    id: 'o1', code: 'ORD1', stage: 6, status: 'Out for Delivery', route: 'hub',
+    cancelled: false, pay_method: 'Cash on Delivery',
+  };
+  const db = fakeSupabase({
+    'orders:select': { data: [movedOn] },
+    'orders:update': { data: { id: 'o1', status: 'Delivered' } },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: HUB });
+  const res = await app.post('/o1/scan', { from_stage: 5, agent_id: 'a1' });
+
+  assert.equal(res.status, 409);
+  assert.equal(db.callsTo('orders', 'update').length, 0, 'no delivery, and no cash marked paid');
+});
+
+// ── Compare-and-swap: the guard that makes a CONCURRENT scan safe ───────────────
+// from_stage closes the gap between the user looking and the request arriving. This
+// closes the gap between the route's own read and its write.
+
+test('the stage update is pinned to the stage that was read', async () => {
+  const db = dbFor(outForDelivery());
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  await app.post('/o1/scan', {});
+
+  const { filters } = db.callsTo('orders', 'update')[0];
+  assert.ok(
+    filters.some(([op, col, val]) => op === 'eq' && col === 'stage' && val === 4),
+    'the update must compare-and-swap on stage, or two scanners each advance it',
+  );
+});
+
+test('losing the compare-and-swap answers 409, not a false success', async () => {
+  // The update matches no row: someone else advanced the order in between.
+  const db = fakeSupabase({
+    'orders:select': { data: [outForDelivery()] },
+    'orders:update': { data: [] },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', {});
+
+  assert.equal(res.status, 409);
+  assert.match(res.body.error, /updated by someone else/);
+});

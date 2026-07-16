@@ -88,14 +88,21 @@ async function advanceStage(order, actorLabel, extraUpdates = {}, deliveryCoords
     ...extraUpdates,
   };
 
+  // Compare-and-swap on the stage we read. Advancing is a read-modify-write, so
+  // filtering only on id lets two writers each read stage N and each advance it —
+  // two steps for one real event. Pinning the update to the stage this request
+  // observed means the loser matches no row and is told, instead of double-advancing.
+  // maybeSingle, not single: no match is the CONFLICT answer here, not an error.
   const { data: updated, error } = await supabase
     .from('orders')
     .update(updates)
     .eq('id', order.id)
+    .eq('stage', order.stage)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) return { error: 'Could not advance order stage.' };
+  if (!updated) return { conflict: true };
 
   // The stage change above is committed. A failed timeline row must not report it
   // as a failure — but it must not vanish either.
@@ -119,6 +126,15 @@ async function advanceStage(order, actorLabel, extraUpdates = {}, deliveryCoords
   }
 
   return { updated, newStatus };
+}
+
+// The order moved between advanceStage's read and its write — another scanner got
+// there first. Refuse rather than guess: the caller was acting on a stage that no
+// longer exists. 409 so a queued replay drops instead of retrying (classifyReplay).
+function conflictResponse(res) {
+  return res.status(409).json({
+    error: 'This order was just updated by someone else. Reload and try again.',
+  });
 }
 
 // ── Helper: fetch order and guard against cancelled/delivered ─────────────────
@@ -181,10 +197,11 @@ router.post('/:id/pack', async (req, res) => {
     return res.status(403).json({ error: 'You have no items in this order.' });
   }
 
-  const { updated, error } = await advanceStage(
+  const { updated, error, conflict } = await advanceStage(
     order,
     `Farmer ${req.user.fname}`
   );
+  if (conflict) return conflictResponse(res);
   if (error) return res.status(500).json({ error });
 
   res.json({ ok: true, message: 'Order marked as Packaged.', newStatus: updated.status, order: updated });
@@ -201,6 +218,31 @@ router.post('/:id/scan', async (req, res) => {
 
   const order = await fetchActiveOrder(req.params.id, res);
   if (!order) return;
+
+  // A scan says "advance one stage from where this order is NOW" — the body never
+  // states which transition was intended. That is safe while the tap and the write
+  // are the same instant, and unsafe the moment they are not: a write parked offline
+  // and replayed one stage later performs a DIFFERENT transition. A hub dispatch
+  // (stage 5) replayed at stage 6 falls through to the `stage >= 3` branch and marks
+  // the order Delivered — collecting COD cash nobody collected.
+  //
+  // So a caller that may be delayed sends the stage it was looking at. If the order
+  // has moved, we refuse rather than act. 409 is deliberate: the offline queue drops
+  // a 4xx (see packages/lib offlineQueue classifyReplay) instead of retrying it, so a
+  // superseded write dies quietly here rather than corrupting the order.
+  const { from_stage: fromStage } = req.body || {};
+  if (fromStage !== undefined && fromStage !== null) {
+    if (!Number.isInteger(fromStage)) {
+      return res.status(400).json({ error: 'from_stage must be an integer.' });
+    }
+    if (fromStage !== order.stage) {
+      return res.status(409).json({
+        error: `This order has already moved on — it is now "${order.status}". Nothing was changed.`,
+        currentStage: order.stage,
+        currentStatus: order.status,
+      });
+    }
+  }
 
   // Where the scanner is, if the device shared it. Each branch below stamps it onto
   // the column for the stage it completes (VCO verify, hub dispatch, delivery).
@@ -354,6 +396,7 @@ router.post('/:id/scan', async (req, res) => {
     });
   }
 
+  if (result.conflict) return conflictResponse(res);
   if (result.error) return res.status(500).json({ error: result.error });
 
   res.json({ ok: true, message: `Order advanced to: ${result.newStatus}.`, newStatus: result.newStatus });
@@ -415,10 +458,11 @@ router.post('/:id/advance', async (req, res) => {
   const order = await fetchActiveOrder(req.params.id, res);
   if (!order) return;
 
-  const { updated, error } = await advanceStage(
+  const { updated, error, conflict } = await advanceStage(
     order,
     `Admin ${req.user.fname} (${req.user.admin_role}) — manual override`
   );
+  if (conflict) return conflictResponse(res);
   if (error) return res.status(400).json({ error });
 
   res.json({ ok: true, message: `Order advanced to: ${updated.status}.`, newStatus: updated.status, order: updated });

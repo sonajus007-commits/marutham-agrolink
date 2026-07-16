@@ -1,6 +1,7 @@
 /* Typed API surface — endpoint names mirror frontend/js/api.js for an easy
  * mental map. Grows per-role as each role migrates. */
 import { apiFetch } from './client';
+import { apiFetchOffline } from './offlineSync';
 import type {
   LoginResponse,
   MeResponse,
@@ -90,6 +91,56 @@ function toListingBody(draft: Partial<ListingPayload>): Record<string, unknown> 
   return body;
 }
 
+/* Every scan-to-advance action — VCO verify, hub dispatch, delivery — is the same
+ * POST /orders/:id/scan; only the body differs. */
+function scanBody(o: {
+  route?: string;
+  agentId?: string;
+  coords?: { lat: number; lng: number };
+  fromStage?: number;
+}): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  if (o.route) body.route = o.route;
+  if (o.agentId) body.agent_id = o.agentId;
+  if (o.coords) {
+    body.lat = o.coords.lat;
+    body.lng = o.coords.lng;
+  }
+  if (o.fromStage !== undefined) body.from_stage = o.fromStage;
+  return body;
+}
+
+/**
+ * A scan that survives a dead zone: sent now if there is signal, parked and replayed
+ * on reconnect if there is not.
+ *
+ * `fromStage` is REQUIRED here, unlike on the online-only scanOrder. A scan advances
+ * an order one step from wherever it currently is, so a write that sits in the queue
+ * and replays after the order has moved would perform a DIFFERENT transition than the
+ * one the user asked for. from_stage makes the server refuse that (409), and the
+ * queue drops a 4xx rather than retrying it.
+ *
+ * Dedup is keep-first on (order, stage): a double-tap while offline collapses to one
+ * write, while two genuinely different transitions queued offline — verify at stage 1,
+ * then pick-up at stage 2 — keep separate entries and replay oldest-first, each one
+ * asserting the stage the last left behind.
+ */
+function queuedScan(
+  id: string,
+  fromStage: number,
+  rest: { route?: string; agentId?: string; coords?: { lat: number; lng: number } } = {},
+): Promise<ScanResponse> {
+  // The body is built HERE rather than by the caller, so a queued scan cannot be
+  // keyed by a stage it forgot to actually assert — that would park an unguarded
+  // write and put the stale-replay bug straight back.
+  return apiFetchOffline<ScanResponse>(
+    'POST',
+    '/orders/' + id + '/scan',
+    scanBody({ ...rest, fromStage }),
+    { key: `scan-${id}-${fromStage}` },
+  );
+}
+
 export const api = {
   // ── Auth ──
   login(phone: string, password: string): Promise<LoginResponse> {
@@ -156,51 +207,54 @@ export const api = {
   },
   /** Advance an order one step (scan-to-advance). Accepts an id or an order code.
    *  `coords` is optional proof-of-delivery location, stored only when this scan
-   *  completes delivery (see backend/routes/delivery.js). */
+   *  completes delivery (see backend/routes/delivery.js).
+   *  `fromStage` is the stage the caller believes the order is at; the server refuses
+   *  (409) if it has moved. Optional because a QR scan knows only the code — the
+   *  scanner has not read the order and has no stage to assert. */
   scanOrder(
     idOrCode: string,
     routeHint?: string,
     coords?: { lat: number; lng: number },
+    fromStage?: number,
   ): Promise<ScanResponse> {
-    const body: Record<string, unknown> = {};
-    if (routeHint) body.route = routeHint;
-    if (coords) {
-      body.lat = coords.lat;
-      body.lng = coords.lng;
-    }
-    return apiFetch<ScanResponse>('POST', '/orders/' + idOrCode + '/scan', body);
+    return apiFetch<ScanResponse>(
+      'POST',
+      '/orders/' + idOrCode + '/scan',
+      scanBody({ route: routeHint, coords, fromStage }),
+    );
   },
   /** VCO verify: sets route + assigns collection agent (same /scan endpoint).
-   *  `coords` is the VCO's location at verification (stored as verified_lat/lng). */
-  verifyOrder(
+   *  `coords` is the VCO's location at verification (stored as verified_lat/lng).
+   *  Offline-capable — VCOs verify at collection points with no signal. */
+  verifyOrderOffline(
     id: string,
+    fromStage: number,
     data: { route?: string; agent_id?: string; coords?: { lat: number; lng: number } },
   ): Promise<ScanResponse> {
-    const { coords, ...rest } = data || {};
-    const body: Record<string, unknown> = { ...rest };
-    if (coords) {
-      body.lat = coords.lat;
-      body.lng = coords.lng;
-    }
-    return apiFetch<ScanResponse>('POST', '/orders/' + id + '/scan', body);
+    const { coords, route, agent_id } = data || {};
+    return queuedScan(id, fromStage, { route, agentId: agent_id, coords });
   },
   /* Hub dispatch: At Hub → Out for Delivery, assigning the last-mile agent.
    * Same /scan endpoint as every other advance — the stage decides what it means
-   * (backend/routes/delivery.js). `agent_id` is optional: "Assign later" is a
+   * (backend/routes/delivery.js). `agentId` is optional: "Assign later" is a
    * real choice the server accepts. `coords` is the hub's location at dispatch
    * (stored as dispatched_lat/lng). */
-  dispatchFromHub(
+  dispatchFromHubOffline(
     id: string,
+    fromStage: number,
     agentId?: string,
     coords?: { lat: number; lng: number },
   ): Promise<ScanResponse> {
-    const body: Record<string, unknown> = {};
-    if (agentId) body.agent_id = agentId;
-    if (coords) {
-      body.lat = coords.lat;
-      body.lng = coords.lng;
-    }
-    return apiFetch<ScanResponse>('POST', '/orders/' + id + '/scan', body);
+    return queuedScan(id, fromStage, { agentId, coords });
+  },
+  /** Proof-of-delivery scan, offline-capable: the agent is at a doorstep, which is
+   *  exactly where signal dies. `coords` is the delivery fix (geofenced server-side). */
+  deliverOffline(
+    id: string,
+    fromStage: number,
+    coords?: { lat: number; lng: number },
+  ): Promise<ScanResponse> {
+    return queuedScan(id, fromStage, { coords });
   },
   getEligibleAgents(id: string, leg?: string): Promise<EligibleAgentsResponse> {
     const qs = leg ? '?leg=' + encodeURIComponent(leg) : '';

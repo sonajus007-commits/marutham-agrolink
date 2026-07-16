@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sheet, Spinner } from '@marutham/ui';
-import { api } from '@marutham/api-client';
+import { api, OfflineQueuedError } from '@marutham/api-client';
 import {
   fmtMoney,
   fmtDate,
@@ -33,6 +33,8 @@ export function DeliverSheet({
     let active = true;
     setData(null);
     setError(null);
+    setBusy(false); // the sheet stays mounted between orders — a finished confirm
+    // would otherwise leave the next order's button stuck on "Confirming…"
     api
       .getOrder(orderId)
       .then((res) => {
@@ -58,17 +60,35 @@ export function DeliverSheet({
   }
 
   async function confirm() {
-    if (!orderId) return;
+    if (!orderId || !data) return;
+    const stage = data.order.stage;
+    // Every scan asserts the stage it saw, so without one there is nothing safe to
+    // send. GET /orders/:id selects *, so this cannot happen in practice — but a
+    // silent weaker request is worse than saying so.
+    if (typeof stage !== 'number') {
+      toast('Could not read this order’s stage. Reload and try again.', 'er');
+      return;
+    }
     setBusy(true);
     try {
       // Best-effort proof-of-delivery location. Never blocks the delivery: if the
       // agent declines permission or there is no fix, coords is null and we deliver
       // without it.
       const coords = (await getCurrentPosition()) ?? undefined;
-      await api.scanOrder(orderId, undefined, coords);
+      // A doorstep is exactly where signal dies, so this one is queueable. The stage
+      // we loaded rides along: if the order moved on meanwhile, the server refuses
+      // the replay rather than advancing it from somewhere else.
+      await api.deliverOffline(orderId, stage, coords);
       toast('Order delivered! 🎉', 'ok');
       onChanged();
     } catch (e) {
+      if (e instanceof OfflineQueuedError) {
+        // Parked, not lost. We do NOT fake the status: the list keeps showing what
+        // the server actually knows until the queue syncs.
+        toast('No signal — saved on your device. It will sync automatically.', 'ok');
+        onChanged();
+        return;
+      }
       toast(e instanceof Error ? e.message : 'Failed to confirm', 'er');
       setBusy(false);
     }

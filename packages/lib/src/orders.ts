@@ -29,6 +29,13 @@ export interface OrderHistoryEntry {
 export interface Order {
   id: string;
   status: string;
+  /**
+   * Index into the route's status list (backend STAGE_MAP) — `status` is derived
+   * from it. Returned by both GET /orders/:id and the list endpoint. Send it back as
+   * `from_stage` on a scan so the server can refuse the write if the order moved on:
+   * a scan advances from wherever the order IS, so a delayed one is a different act.
+   */
+  stage?: number;
   cancelled?: boolean;
   code?: string;
   consumer_name?: string;

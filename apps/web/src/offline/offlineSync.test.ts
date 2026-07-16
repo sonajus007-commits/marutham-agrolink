@@ -5,6 +5,7 @@
  * separately in packages/lib/src/offlineQueue.test.ts. */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
+  api,
   queueWrite,
   flushQueue,
   getPendingCount,
@@ -124,6 +125,96 @@ describe('flushQueue', () => {
     const second = await flushQueue(async () => 200);
     expect(second.flushed).toBe(1);
     expect(second.remaining).toBe(0);
+  });
+});
+
+/* Queued scans — the field actions (VCO verify, hub dispatch, delivery).
+ *
+ * A scan advances an order one step from wherever it currently is, so unlike the
+ * farm pin (an absolute "set lat to X") it is only safe to park if the write states
+ * which stage it was made at. These cover that contract end to end. */
+describe('queued scans', () => {
+  function bodies(sent: QueuedRequest[]): Record<string, unknown>[] {
+    return sent.map((e) => e.body as Record<string, unknown>);
+  }
+
+  it('parks a delivery scan carrying the stage it was made at', async () => {
+    setOnline(false);
+    await expect(api.deliverOffline('o1', 4, { lat: 10.5, lng: 78.8 })).rejects.toBeInstanceOf(
+      OfflineQueuedError,
+    );
+    expect(await getPendingCount()).toBe(1);
+
+    const sent: QueuedRequest[] = [];
+    await flushQueue(async (e) => {
+      sent.push(e);
+      return 200;
+    });
+    expect(sent[0].path).toBe('/orders/o1/scan');
+    expect(bodies(sent)[0]).toEqual({ lat: 10.5, lng: 78.8, from_stage: 4 });
+  });
+
+  it('carries the VCO’s route and agent choice into the parked write', async () => {
+    setOnline(false);
+    await expect(
+      api.verifyOrderOffline('o1', 1, { route: 'hub', agent_id: 'a9' }),
+    ).rejects.toBeInstanceOf(OfflineQueuedError);
+
+    const sent: QueuedRequest[] = [];
+    await flushQueue(async (e) => {
+      sent.push(e);
+      return 200;
+    });
+    expect(bodies(sent)[0]).toEqual({ route: 'hub', agent_id: 'a9', from_stage: 1 });
+  });
+
+  it('carries the hub’s last-mile agent into the parked write', async () => {
+    setOnline(false);
+    await expect(api.dispatchFromHubOffline('o1', 5, 'a9')).rejects.toBeInstanceOf(
+      OfflineQueuedError,
+    );
+
+    const sent: QueuedRequest[] = [];
+    await flushQueue(async (e) => {
+      sent.push(e);
+      return 200;
+    });
+    expect(bodies(sent)[0]).toEqual({ agent_id: 'a9', from_stage: 5 });
+  });
+
+  it('collapses a double-tap at the same stage into one write', async () => {
+    setOnline(false);
+    await expect(api.deliverOffline('o1', 4)).rejects.toBeInstanceOf(OfflineQueuedError);
+    await expect(api.deliverOffline('o1', 4)).rejects.toBeInstanceOf(OfflineQueuedError);
+    expect(await getPendingCount()).toBe(1); // one delivery, not two
+  });
+
+  it('keeps two different transitions on one order and replays them oldest first', async () => {
+    // A VCO with no signal verifies, then picks up: two real steps, both parked. Each
+    // asserts the stage the previous one leaves behind, so the chain lands in order.
+    setOnline(false);
+    await expect(api.verifyOrderOffline('o1', 1, { route: 'direct' })).rejects.toBeInstanceOf(
+      OfflineQueuedError,
+    );
+    await expect(api.deliverOffline('o1', 2)).rejects.toBeInstanceOf(OfflineQueuedError);
+    expect(await getPendingCount()).toBe(2);
+
+    const sent: QueuedRequest[] = [];
+    await flushQueue(async (e) => {
+      sent.push(e);
+      return 200;
+    });
+    expect(bodies(sent).map((b) => b.from_stage)).toEqual([1, 2]);
+  });
+
+  it('drops a scan the server refuses as stale (409) rather than retrying it', async () => {
+    // The order moved on while the write sat in the queue. 409 is final: replaying it
+    // would only advance the order from a stage the actor never saw.
+    setOnline(false);
+    await expect(api.deliverOffline('o1', 4)).rejects.toBeInstanceOf(OfflineQueuedError);
+    const summary = await flushQueue(async () => 409);
+    expect(summary.dropped).toBe(1);
+    expect(summary.remaining).toBe(0);
   });
 });
 
