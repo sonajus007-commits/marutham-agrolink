@@ -15,7 +15,7 @@ import {
 import { getProduct } from '@/lib/api';
 import { absoluteUrl } from '@/lib/site';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Dict, type Lang } from '@/lib/dict';
-import { SiteHeader, SiteFooter } from '@/components/SiteChrome';
+import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
 import { OrderButton } from '@/components/OrderButton';
 
 /* A public product page — the reason the API moved off the root.

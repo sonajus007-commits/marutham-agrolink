@@ -18,7 +18,17 @@ export function isLang(v: unknown): v is Lang {
 
 export interface Dict {
   htmlLang: string;
-  nav: { shop: string; about: string; stories: string; login: string; register: string };
+  nav: {
+    shop: string;
+    about: string;
+    stories: string;
+    login: string;
+    register: string;
+    why: string;
+    farmers: string;
+    faq: string;
+    contact: string;
+  };
   hero: { titleA: string; titleB: string; sub: string; ctaShop: string; ctaSell: string };
   fresh: {
     title: string;
@@ -88,8 +98,12 @@ const en: Dict = {
     shop: 'Shop',
     about: 'About',
     stories: 'Farmer Stories',
-    login: 'Login',
+    login: 'Sign in',
     register: 'Register',
+    why: 'Why Marutham',
+    farmers: 'For farmers',
+    faq: 'FAQ',
+    contact: 'Contact',
   },
   hero: {
     titleA: 'Fresh from our farms,',
@@ -190,6 +204,10 @@ const ta: Dict = {
     stories: 'விவசாயி கதைகள்',
     login: 'உள்நுழைய',
     register: 'பதிவு',
+    why: 'ஏன் மருதம்',
+    farmers: 'விவசாயிகளுக்கு',
+    faq: 'கேள்விகள்',
+    contact: 'தொடர்பு',
   },
   hero: {
     titleA: 'எங்கள் வயல்களில் இருந்து,',

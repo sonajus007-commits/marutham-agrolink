@@ -8,32 +8,97 @@
 @import 'tailwindcss';
 @import '@marutham/tokens/tokens.css';
 
+/* ── The public brand palette — SHOP-SCOPED ───────────────────────────────────
+ *
+ * These override @marutham/tokens for this app ONLY. The portal, admin console
+ * and packages/ui keep the audited token values until each screen is rolled over
+ * deliberately; a big-bang reskin would repaint 47 files and invalidate the
+ * contrast audit in one commit, with no screen-by-screen proof.
+ *
+ * Every value below was measured against --surface before it was written down.
+ * The three that cannot carry body text are marked, because that is the trap
+ * this codebase has already been caught by once (see the gold note below):
+ *
+ *   forest-700  #1E5B43  7.77:1  ink, anywhere
+ *   earth-500   #8B5E3C  5.43:1  ink, anywhere
+ *   muted       #6B7280  4.71:1  ink, anywhere
+ *   forest-500  #3E8E5A  3.92:1  LARGE display / fills only
+ *   blossom-500 #D95C8A  3.50:1  LARGE display / fills only
+ *   water-500   #3E92CC  3.30:1  LARGE display / fills only
+ *   gold-500    #D9A441  2.19:1  FILLS ONLY — never text, at any size
+ */
 @theme {
-  --color-forest: var(--forest);
-  --color-forest-deep: var(--forest-deep);
-  --color-leaf: var(--leaf);
-  /* The action pair the design system's WCAG audit signs off: forest + white.
-     --leaf carries only 3.31:1 against white — decoration, never a text surface. */
-  --color-primary: var(--primary);
-  --color-primary-on: var(--primary-on);
-  --color-primary-hover: var(--primary-hover);
-  /* Gold is a FILL, not an ink. It is 2.21:1 on white — it cannot carry text
-     there. The token set says as much (warning/warningOn: "gold takes dark
-     text"), so a gold thing is `bg-gold text-fg` (6.90:1), never `text-gold`
-     on a light surface. Same trap as --leaf above; axe caught both. */
-  --color-gold: var(--gold);
-  --color-surface: var(--white);
-  --color-muted: var(--muted);
-  --color-fg: var(--text);
-  /* --fg-muted, not --gray. The named grey is AA on white (4.61:1) but only
-     4.14:1 on --muted, and this page puts muted text on muted panels — so the
-     grey failed the moment a section had a background. --fg-muted is the token
-     the design system nudged for exactly that, and clears both (4.55:1 on
-     --muted). Measured in the browser, not computed on paper. */
-  --color-fg-muted: var(--fg-muted);
-  --color-border: var(--border);
-  --font-display: 'Cormorant Garamond', Georgia, serif;
+  /* Greens — the brand spine */
+  --color-forest-900: #163d2f;
+  --color-forest-700: #1e5b43;
+  --color-forest-500: #3e8e5a;
+  --color-leaf-300: #9fd3a5;
+
+  /* Accents. Each -500 is a FILL or a LARGE-display colour, never body ink. */
+  --color-blossom-500: #d95c8a;
+  --color-gold-500: #d9a441;
+  --color-earth-500: #8b5e3c;
+  --color-water-500: #3e92cc;
+
+  /* INK siblings. The brief's accents are chosen for fills and they are right
+   * for that — but an eyebrow is 11px text, and at 11px blossom-500 is 3.37:1 and
+   * forest-500 is 3.68:1 on their own grounds. Both fail AA. These are the same
+   * hues taken down to where they can be read, so a section keeps its accent
+   * identity without the small type becoming a wish.
+   *
+   * Worst ratio across EVERY light ground this palette uses (mist is the darkest
+   * at #EEF7F1, so it is the one that decides):
+   *   blossom-ink #AD1457  6.37:1
+   *   water-ink   #1F5F8B  6.26:1
+   *   leaf-ink    #2E7D4F  4.61:1
+   * Use the -500s for fills and display; use these the moment it is body text. */
+  --color-blossom-ink: #ad1457;
+  --color-water-ink: #1f5f8b;
+  --color-leaf-ink: #2e7d4f;
+
+  /* Section grounds, from the brief's per-section table */
+  --color-bg: #f7f8f5;
+  --color-surface: #fcfcfa;
+  --color-surface-raised: #ffffff;
+  --color-mist: #eef7f1; /* farmer journey */
+  --color-sand: #faf6f0; /* business features */
+  --color-sky: #dceef8; /* freshness */
+  --color-sky-tint: #f4f8fc; /* latest updates */
+
+  --color-border: #e4e7e2;
+  --color-fg: #202124;
+  /* The brief's --muted is #6B7280. That is 4.71:1 on white but 4.42:1 on the
+   * mist ground, so it failed the moment a section had a background — the same
+   * shape of bug the old theme had with --gray. Taken down to #656C79: 4.83:1 on
+   * the darkest ground, 5.2:1 on white. Measured, not estimated. */
+  --color-fg-muted: #656c79;
+
+  --color-success: #2e7d32;
+  --color-warning: #f59e0b;
+  --color-error: #d32f2f;
+
+  /* ── Type ──────────────────────────────────────────────────────────────────
+   * Outfit is the PRIMARY face: headings, display, numbers, buttons.
+   * Cormorant Garamond is SECONDARY — the wordmark and pull quotes only.
+   * packages/tokens/src/tokens.ts:250 is explicit that the serif is "wordmark
+   * only (part of the logo)"; the shop previously set it as --font-display and
+   * so rendered every h1/h2 in it, which is why this page read as a different
+   * design from the brand spec. */
   --font-sans: 'Outfit', system-ui, sans-serif;
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Type scale, from the brief. */
+  --text-hero: 4rem; /* 64 */
+  --text-hero--line-height: 1.05;
+  --text-section: 2.5rem; /* 40 */
+  --text-section--line-height: 1.15;
+  --text-card: 1.5rem; /* 24 */
+  --text-card--line-height: 1.3;
+  --text-body: 1.125rem; /* 18 */
+  --text-body--line-height: 1.7;
+  --text-caption: 0.875rem; /* 14 */
+  --text-caption--line-height: 1.5;
 }
 
 body {
@@ -45,4 +110,17 @@ body {
 /* Tamil needs its own face — the Latin stack has no Tamil glyphs. */
 :lang(ta) {
   font-family: 'Noto Serif Tamil', var(--font-sans);
+}
+
+/* Every animation in this app is a Framer Motion entrance. Honour the OS
+ * setting rather than shipping motion someone has asked not to receive. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { getAllProducts } from '@/lib/api';
 import { absoluteUrl } from '@/lib/site';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Lang } from '@/lib/dict';
-import { SiteHeader, SiteFooter } from '@/components/SiteChrome';
+import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
 import { ProductCard } from '@/components/ProductCard';
 
 /* The full catalogue — every product, browsable without an account.

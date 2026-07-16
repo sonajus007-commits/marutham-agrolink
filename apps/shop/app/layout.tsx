@@ -41,8 +41,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        {/* Outfit is the PRIMARY face and carries almost every glyph on the page,
+            so it is the one that gets weight 300–800. Cormorant Garamond is
+            SECONDARY — the wordmark and pull quotes only — so it only needs the
+            two weights the logo uses. Noto Serif Tamil covers :lang(ta).
+            JetBrains Mono is loaded for the one thing the brief asks it for:
+            code and data. Everything is display=swap so text paints on the first
+            frame in a fallback rather than blocking on the CDN. */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@400;600;700;800&family=Noto+Serif+Tamil:wght@400;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@600;700&family=Noto+Serif+Tamil:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
           rel="stylesheet"
         />
       </head>

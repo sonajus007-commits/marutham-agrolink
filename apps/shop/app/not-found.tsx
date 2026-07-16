@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Lang } from '@/lib/dict';
-import { SiteHeader, SiteFooter } from '@/components/SiteChrome';
+import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
 
 /* Served for a product id that does not exist — and ONLY for that.
  *
