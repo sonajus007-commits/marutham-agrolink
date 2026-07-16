@@ -9,7 +9,14 @@ import type { CapacitorConfig } from '@capacitor/cli';
  *
  * The native shell talks to the real backend over the network, not same-origin, so
  * set VITE_API_BASE_URL at build time (e.g. https://api.marutham.example/api) and
- * src/native/index.ts feeds it to the api-client. localhost will not reach a device. */
+ * src/native/index.ts feeds it to the api-client. localhost will not reach a device.
+ * (An Android emulator reaches a backend on the host at 10.0.2.2, not localhost.)
+ *
+ * ANDROID BUILD NEEDS JDK 21 — Capacitor 7 requires Java 21, and JDK 17 is not
+ * enough. The failure does not say so: AGP resolves a toolchain of
+ * languageVersion=21 while CREATING tasks, so with only 17 installed the build dies
+ * on `:capacitor-filesystem:compileDebugJavaWithJavac` — an error that names a
+ * plugin and never mentions your JDK. Set JAVA_HOME to a 21 before ./gradlew. */
 const config: CapacitorConfig = {
   appId: 'com.marutham.agrolink',
   appName: 'Marutham AgroLink',
