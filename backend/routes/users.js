@@ -179,6 +179,7 @@ router.post('/change-requests/:id/approve', requireRole('admin'), async (req, re
   if (crErr || !cr) return res.status(404).json({ error: 'Change request not found.' });
   if (cr.status !== 'pending') return res.status(409).json({ error: 'Request already reviewed.' });
 
+  const now = new Date();
   const PLAN_DAYS = { 'Monthly': 30, 'Quarterly': 90, 'Half Yearly': 180, 'Yearly': 365 };
 
   if (cr.requested_changes && cr.requested_changes.subscription_renewal) {
