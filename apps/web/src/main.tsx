@@ -5,6 +5,7 @@ import { initI18n } from '@marutham/i18n';
 import { initSentry, AppErrorBoundary } from './sentry';
 import { queryClient } from './lib/queryClient';
 import { initNative } from './native';
+import { startOfflineSync } from '@marutham/api-client';
 // tailwind.css imports @marutham/tokens/tokens.css itself — the theme mapping
 // is meaningless without it. Keep it first so the tokens land before styles.css.
 import './tailwind.css';
@@ -17,6 +18,10 @@ initI18n();
 // Native (Capacitor) setup — points the API at the real backend, wires the Android
 // back button. A no-op in the browser, so it costs the web build nothing.
 void initNative();
+// Offline write queue: replay any mutations parked while the device was offline,
+// and keep replaying whenever connectivity returns. A no-op with an empty queue,
+// and works in both the PWA and the Capacitor webview (no service worker needed).
+startOfflineSync();
 
 // Runtime accessibility audit — DEV ONLY. axe checks what static linting cannot:
 // computed colour contrast, ARIA that only resolves at render, focus order. The
