@@ -5,6 +5,7 @@ import { api, type AdminDistrictPrice } from '@marutham/api-client';
 import { fmtMoney, type Product } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { ProductEditSheet } from './ProductEditSheet';
+import { useTableLabels } from './useTableLabels';
 
 /** First district price (rupees) for the summary column, or null. */
 function firstPrice(p: Product): AdminDistrictPrice | null {
@@ -17,6 +18,7 @@ function priceCount(p: Product): number {
 
 export function ProductsPage() {
   const { t } = useTranslation();
+  const tableLabels = useTableLabels();
   const { user } = useAuth();
   const canEdit = user?.admin_role === 'Head Office';
 
@@ -180,6 +182,7 @@ export function ProductsPage() {
       </div>
 
       <Table
+        labels={tableLabels}
         rows={rows}
         columns={columns}
         rowId={(p) => p.id}

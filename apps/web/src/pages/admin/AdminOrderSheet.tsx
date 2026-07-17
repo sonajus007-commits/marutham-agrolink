@@ -22,6 +22,8 @@ import {
   resolveAddress,
   statusColor,
   type OrderDetail,
+  payMethodKey,
+  payStatusKey,
 } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
 
@@ -81,7 +83,7 @@ export function AdminOrderSheet({
 }
 
 function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const toast = useToast();
   const { order: o, items, history, qr_svg } = data;
   const [showCancel, setShowCancel] = useState(false);
@@ -127,13 +129,15 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
 
       <Section title={`📋 ${t('admin.orders.info')}`}>
         <Row label={t('admin.orders.code')} value={o.code || '—'} />
-        <Row label={t('admin.orders.placedOn')} value={fmtDate(o.created_at)} />
+        <Row label={t('admin.orders.placedOn')} value={fmtDate(o.created_at, i18n.language)} />
         <Row
           label={t('admin.orders.payment')}
-          value={`${o.pay_method || '—'} · ${o.pay_status || ''}`}
+          value={`${o.pay_method ? t(payMethodKey(o.pay_method), o.pay_method) : '—'} · ${
+            o.pay_status ? t(payStatusKey(o.pay_status), o.pay_status) : ''
+          }`}
         />
         {o.delivered_at ? (
-          <Row label={t('admin.orders.delivered')} value={fmtDate(o.delivered_at)} />
+          <Row label={t('admin.orders.delivered')} value={fmtDate(o.delivered_at, i18n.language)} />
         ) : null}
         {o.agent_name ? <Row label={t('admin.orders.agent')} value={o.agent_name} /> : null}
       </Section>

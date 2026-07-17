@@ -4,6 +4,7 @@ import { Button, EmptyState, FilterChips, Spinner, Table, type TableColumn } fro
 import { api, type ProfileChangeRequest } from '@marutham/api-client';
 import { fmtDateShort } from '@marutham/lib';
 import { ChangeRequestSheet, CR_STATUS_TONE, isRenewal } from './ChangeRequestSheet';
+import { useTableLabels } from './useTableLabels';
 
 /* The server filters change requests by a single status and has no "all" mode,
  * so we fetch each status in parallel and merge — that gives live chip counts and
@@ -11,7 +12,8 @@ import { ChangeRequestSheet, CR_STATUS_TONE, isRenewal } from './ChangeRequestSh
 const STATUSES = ['pending', 'payment_pending', 'approved', 'rejected'] as const;
 
 export function ChangeRequestsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const tableLabels = useTableLabels();
   const [requests, setRequests] = useState<ProfileChangeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +93,7 @@ export function ChangeRequestsPage() {
         key: 'requested',
         header: t('admin.cr.requestedOn'),
         value: (r) => r.requested_at || '',
-        render: (r) => fmtDateShort(r.requested_at),
+        render: (r) => fmtDateShort(r.requested_at, i18n.language),
       },
       {
         key: 'actions',
@@ -129,6 +131,7 @@ export function ChangeRequestsPage() {
       </div>
 
       <Table
+        labels={tableLabels}
         rows={rows}
         columns={columns}
         rowId={(r) => r.id}

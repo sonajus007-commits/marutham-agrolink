@@ -51,6 +51,7 @@ function PanelState({
 
 /** Record changes from the audit trigger: what changed, from what, to what. */
 export function AuditLogList({ rows, loading, error, emptyText }: HistoryPanelProps<AuditEntry>) {
+  const { i18n } = useTranslation();
   if (loading || error || rows.length === 0) {
     return (
       <PanelState loading={loading} error={error} empty={rows.length === 0} emptyText={emptyText} />
@@ -67,7 +68,9 @@ export function AuditLogList({ rows, loading, error, emptyText }: HistoryPanelPr
               <span className="text-2xs font-bold text-primary">
                 {auditActionLabel(entry.action)}
               </span>
-              <span className="text-2xs text-fg-muted">{fmtDate(entry.changed_at)}</span>
+              <span className="text-2xs text-fg-muted">
+                {fmtDate(entry.changed_at, i18n.language)}
+              </span>
             </div>
             {changes.map((c) => (
               <div key={c.field} className="mt-1 text-2xs">
@@ -91,7 +94,7 @@ export function LoginHistoryList({
   error,
   emptyText,
 }: HistoryPanelProps<LoginHistoryEntry>) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   if (loading || error || rows.length === 0) {
     return (
       <PanelState loading={loading} error={error} empty={rows.length === 0} emptyText={emptyText} />
@@ -115,7 +118,9 @@ export function LoginHistoryList({
               {l.method ? (
                 <span className="text-2xs uppercase tracking-wide text-fg-muted">{l.method}</span>
               ) : null}
-              <span className="ml-auto text-2xs text-fg-muted">{fmtDate(l.created_at)}</span>
+              <span className="ml-auto text-2xs text-fg-muted">
+                {fmtDate(l.created_at, i18n.language)}
+              </span>
             </div>
             <div className="mt-1 text-2xs text-fg-muted">
               {t('admin.users.ip')}: {l.ip_address || '—'}

@@ -197,6 +197,73 @@ export function payoutMethodKey(method: string): string {
   return PAYOUT_METHOD_KEYS[method] ?? method;
 }
 
+/* The account vocabularies the admin console lists people by. All three are
+ * stored VALUES the API filters and sorts on — only ever spoken, never replaced.
+ * An unlisted value renders as whatever the API called it. */
+const USER_ROLE_KEYS: Record<string, string> = {
+  consumer: 'user.role.consumer',
+  farmer: 'user.role.farmer',
+  admin: 'user.role.admin',
+};
+
+const USER_STATUS_KEYS: Record<string, string> = {
+  active: 'user.status.active',
+  suspended: 'user.status.suspended',
+  blocked: 'user.status.blocked',
+};
+
+const SELLER_TYPE_KEYS: Record<string, string> = {
+  Farmer: 'seller.farmer',
+  Retailer: 'seller.retailer',
+};
+
+/** admin_role, as stored. `MANAGEMENT_ADMIN_ROLES` is the door to /admin/*, so a
+ *  role missing here is spoken in English rather than hidden. */
+const ADMIN_ROLE_KEYS: Record<string, string> = {
+  'Head Office': 'adminRole.headOffice',
+  'Board of Director': 'adminRole.boardOfDirector',
+  'State Head': 'adminRole.stateHead',
+  'Regional Manager': 'adminRole.regionalManager',
+  'District Manager': 'adminRole.districtManager',
+  'Hub Incharge': 'adminRole.hubIncharge',
+  'Delivery Agent': 'adminRole.deliveryAgent',
+  VCO: 'adminRole.vco',
+};
+
+/** The i18n key for a user role, or the role itself when it has none. */
+export function userRoleKey(role: string): string {
+  return USER_ROLE_KEYS[role] ?? role;
+}
+
+/** The i18n key for an account status, or the status itself when it has none. */
+export function userStatusKey(status: string): string {
+  return USER_STATUS_KEYS[status] ?? status;
+}
+
+/** The i18n key for a seller type, or the type itself when it has none. */
+export function sellerTypeKey(type: string): string {
+  return SELLER_TYPE_KEYS[type] ?? type;
+}
+
+/** The i18n key for an admin_role, or the role itself when it has none. */
+export function adminRoleKey(role: string): string {
+  return ADMIN_ROLE_KEYS[role] ?? role;
+}
+
+/**
+ * The i18n key for a dashboard scope's name.
+ *
+ * `scope.name` is a MIX: usually real data (a district, a state, a village, an
+ * agent's first name), but two of them the SERVER invents — "All Regions" and
+ * "Unassigned". Only those two are ours to say; everything else passes through,
+ * the same call as `addressLabelKey`.
+ */
+export function scopeNameKey(name: string): string {
+  if (name === 'All Regions') return 'admin.scope.allRegions';
+  if (name === 'Unassigned') return 'admin.scope.unassigned';
+  return name;
+}
+
 /**
  * The i18n key for a delivery address's label.
  *

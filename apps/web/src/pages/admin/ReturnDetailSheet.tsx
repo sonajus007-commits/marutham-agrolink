@@ -31,7 +31,7 @@ export function ReturnDetailSheet({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [showCollect, setShowCollect] = useState(false);
@@ -90,10 +90,13 @@ export function ReturnDetailSheet({
           <Row label={t('admin.ret.refund')} value={refund} strong />
           {ret.refund_to ? <Row label={t('admin.ret.refundTo')} value={ret.refund_to} /> : null}
           {ret.requested_at ? (
-            <Row label={t('admin.ret.requestedOn')} value={fmtDate(ret.requested_at)} />
+            <Row
+              label={t('admin.ret.requestedOn')}
+              value={fmtDate(ret.requested_at, i18n.language)}
+            />
           ) : null}
           {ret.decided_at ? (
-            <Row label={t('admin.ret.decidedOn')} value={fmtDate(ret.decided_at)} />
+            <Row label={t('admin.ret.decidedOn')} value={fmtDate(ret.decided_at, i18n.language)} />
           ) : null}
         </Section>
 

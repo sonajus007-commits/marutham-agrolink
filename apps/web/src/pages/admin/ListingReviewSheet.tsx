@@ -41,7 +41,7 @@ export function ListingReviewSheet({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState<ListingAction | null>(null);
@@ -147,7 +147,10 @@ export function ListingReviewSheet({
             label={t('admin.lst.qty')}
             value={listing.qty_available != null ? String(listing.qty_available) : '—'}
           />
-          <Row label={t('admin.lst.submitted')} value={fmtDate(listing.created_at)} />
+          <Row
+            label={t('admin.lst.submitted')}
+            value={fmtDate(listing.created_at, i18n.language)}
+          />
         </Section>
 
         <Section title={`🧑‍🌾 ${t('admin.lst.seller')}`}>
@@ -177,7 +180,7 @@ export function ListingReviewSheet({
             </span>
           </div>
           {sub.expiresAt ? (
-            <Row label={t('admin.lst.expiresOn')} value={fmtDate(sub.expiresAt)} />
+            <Row label={t('admin.lst.expiresOn')} value={fmtDate(sub.expiresAt, i18n.language)} />
           ) : null}
         </Section>
 

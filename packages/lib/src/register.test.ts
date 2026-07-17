@@ -88,7 +88,7 @@ describe('validateRegistration — shared rules', () => {
 
   it('rejects a phone that is not 10 digits', () => {
     const f = { ...validConsumer(), phone: '98765' };
-    expect(validateRegistration(f, withTaluks).phone).toBe('Enter a valid 10-digit number');
+    expect(validateRegistration(f, withTaluks).phone).toBe('phone');
   });
 
   it('rejects a pincode that is not 6 digits', () => {
@@ -100,7 +100,7 @@ describe('validateRegistration — shared rules', () => {
   it('demands a taluk only when the district lists them', () => {
     const f = validConsumer();
     f.address = { ...f.address, taluk: '' };
-    expect(validateRegistration(f, { districtHasTaluks: true }).taluk).toBe('Select a taluk');
+    expect(validateRegistration(f, { districtHasTaluks: true }).taluk).toBe('taluk');
     expect(validateRegistration(f, { districtHasTaluks: false }).taluk).toBeUndefined();
   });
 
@@ -108,18 +108,16 @@ describe('validateRegistration — shared rules', () => {
     const blank = { ...validConsumer(), email: '' };
     expect(validateRegistration(blank, withTaluks).email).toBeUndefined();
     const bad = { ...validConsumer(), email: 'kavitha@' };
-    expect(validateRegistration(bad, withTaluks).email).toBe('Enter a valid email');
+    expect(validateRegistration(bad, withTaluks).email).toBe('email');
   });
 
   it('enforces the strong-password rules and the confirmation', () => {
     // Server would accept "secret" (6 chars); the client will not.
     const weak = { ...validConsumer(), password: 'secret', confirm_password: 'secret' };
-    expect(validateRegistration(weak, withTaluks).password).toBe('Does not meet requirements');
+    expect(validateRegistration(weak, withTaluks).password).toBe('passwordWeak');
 
     const mismatch = { ...validConsumer(), confirm_password: 'Strong@12345' };
-    expect(validateRegistration(mismatch, withTaluks).confirm_password).toBe(
-      'Passwords do not match',
-    );
+    expect(validateRegistration(mismatch, withTaluks).confirm_password).toBe('passwordMismatch');
   });
 
   it('does not ask a consumer for KYC, a village or a plan', () => {
@@ -141,14 +139,14 @@ describe('validateRegistration — Farmer seller', () => {
   it('requires the village — a farm address has nothing else to route by', () => {
     const f = validFarmer();
     f.address = { ...f.address, village_town: '' };
-    expect(validateRegistration(f, withTaluks).village_town).toBe('Required for farmers');
+    expect(validateRegistration(f, withTaluks).village_town).toBe('villageRequired');
   });
 
   it('requires a 12-digit Aadhaar and a bank name', () => {
     const f = { ...validFarmer(), aadhar: '1234', bank_name: '' };
     const errors = validateRegistration(f, withTaluks);
-    expect(errors.aadhar).toBe('Enter a valid 12-digit Aadhaar');
-    expect(errors.bank_name).toBe('Required');
+    expect(errors.aadhar).toBe('aadhaar');
+    expect(errors.bank_name).toBe('required');
   });
 
   it('bounds the account number to 9–18 digits and makes it be typed twice', () => {
@@ -156,9 +154,7 @@ describe('validateRegistration — Farmer seller', () => {
     expect(validateRegistration(short, withTaluks).bank_account).toBeTruthy();
 
     const typo = { ...validFarmer(), confirm_bank_account: '30123456780' };
-    expect(validateRegistration(typo, withTaluks).confirm_bank_account).toBe(
-      'Account numbers do not match',
-    );
+    expect(validateRegistration(typo, withTaluks).confirm_bank_account).toBe('bankMismatch');
   });
 
   it('lets IFSC be blank but validates its shape when given', () => {
@@ -166,7 +162,7 @@ describe('validateRegistration — Farmer seller', () => {
     expect(validateRegistration(blank, withTaluks).ifsc).toBeUndefined();
 
     const bad = { ...validFarmer(), ifsc: 'SBI1234' };
-    expect(validateRegistration(bad, withTaluks).ifsc).toBe('Enter a valid IFSC');
+    expect(validateRegistration(bad, withTaluks).ifsc).toBe('ifsc');
 
     // Typed lowercase, still an IFSC.
     const lower = { ...validFarmer(), ifsc: 'sbin0001234' };
@@ -175,9 +171,7 @@ describe('validateRegistration — Farmer seller', () => {
 
   it('requires a subscription plan', () => {
     const f = { ...validFarmer(), subscription_plan: '' };
-    expect(validateRegistration(f, withTaluks).subscription_plan).toBe(
-      'Please select a subscription plan',
-    );
+    expect(validateRegistration(f, withTaluks).subscription_plan).toBe('plan');
   });
 
   it('does not ask a Farmer for business details', () => {
@@ -194,7 +188,7 @@ describe('validateRegistration — Retailer seller', () => {
 
   it('requires a business name (the server enforces this too)', () => {
     const r = { ...validRetailer(), business_name: '' };
-    expect(validateRegistration(r, withTaluks).business_name).toBe('Business name is required');
+    expect(validateRegistration(r, withTaluks).business_name).toBe('businessName');
   });
 
   it('lets GSTIN be blank but validates its shape when given', () => {
@@ -202,9 +196,7 @@ describe('validateRegistration — Retailer seller', () => {
     expect(validateRegistration(blank, withTaluks).gst_number).toBeUndefined();
 
     const bad = { ...validRetailer(), gst_number: '33AABCU9603R1Z' };
-    expect(validateRegistration(bad, withTaluks).gst_number).toBe(
-      'Enter a valid 15-character GSTIN',
-    );
+    expect(validateRegistration(bad, withTaluks).gst_number).toBe('gstin');
   });
 
   it('does not ask a Retailer for Aadhaar, bank details or a village', () => {

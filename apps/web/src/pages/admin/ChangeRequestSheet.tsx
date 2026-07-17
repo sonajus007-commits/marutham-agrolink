@@ -35,7 +35,7 @@ export function ChangeRequestSheet({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [notes, setNotes] = useState('');
@@ -123,11 +123,14 @@ export function ChangeRequestSheet({
           {request.subscription_expires_at ? (
             <Row
               label={t('admin.cr.expires')}
-              value={fmtDateShort(request.subscription_expires_at)}
+              value={fmtDateShort(request.subscription_expires_at, i18n.language)}
             />
           ) : null}
           {request.requested_at ? (
-            <Row label={t('admin.cr.requestedOn')} value={fmtDateShort(request.requested_at)} />
+            <Row
+              label={t('admin.cr.requestedOn')}
+              value={fmtDateShort(request.requested_at, i18n.language)}
+            />
           ) : null}
         </Section>
 

@@ -11,6 +11,7 @@ import {
   type ListingReviewStatus,
 } from '@marutham/lib';
 import { ListingReviewSheet, LISTING_STATUS_TONE } from './ListingReviewSheet';
+import { useTableLabels } from './useTableLabels';
 
 /**
  * Listing approvals — a seller's request to sell a product.
@@ -27,7 +28,8 @@ import { ListingReviewSheet, LISTING_STATUS_TONE } from './ListingReviewSheet';
 const STATUSES: ListingReviewStatus[] = ['pending', 'active', 'rejected'];
 
 export function ListingsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const tableLabels = useTableLabels();
   const [listings, setListings] = useState<AdminListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -156,7 +158,7 @@ export function ListingsPage() {
           const waited = listingWaitDays(l.created_at);
           return (
             <span className="flex flex-col">
-              <span className="text-2xs text-fg">{fmtDateShort(l.created_at)}</span>
+              <span className="text-2xs text-fg">{fmtDateShort(l.created_at, i18n.language)}</span>
               {stale && waited !== null ? (
                 <span className="text-2xs font-bold text-danger">
                   {t('admin.lst.waiting', { count: waited })}
@@ -225,6 +227,7 @@ export function ListingsPage() {
       </div>
 
       <Table
+        labels={tableLabels}
         rows={rows}
         columns={columns}
         rowId={(l) => l.id}

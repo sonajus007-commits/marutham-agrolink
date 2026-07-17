@@ -108,7 +108,7 @@ function Body({
   onDone: () => void;
   onEdit: (emp: Employee) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [showReject, setShowReject] = useState(false);
@@ -191,7 +191,7 @@ function Body({
           <div>
             <p className="text-sm font-bold text-danger">{t('admin.emp.removedBanner')}</p>
             <p className="mt-0.5 text-2xs text-fg-muted">
-              {t('admin.emp.removedOn')}: {fmtDate(emp.deleted_at)}
+              {t('admin.emp.removedOn')}: {fmtDate(emp.deleted_at, i18n.language)}
             </p>
           </div>
           {canApprove ? (
@@ -252,7 +252,10 @@ function Body({
           <Row label={t('admin.emp.type')} value={String(emp.employment_type)} />
         ) : null}
         {emp.date_of_joining ? (
-          <Row label={t('admin.emp.doj')} value={fmtDateShort(emp.date_of_joining)} />
+          <Row
+            label={t('admin.emp.doj')}
+            value={fmtDateShort(emp.date_of_joining, i18n.language)}
+          />
         ) : null}
         {emp.work_location ? (
           <Row label={t('admin.emp.workLocation')} value={String(emp.work_location)} />
@@ -280,7 +283,7 @@ function Body({
           value={emp.is_hr_admin ? t('admin.emp.yes') : t('admin.emp.no')}
         />
         {emp.approved_at ? (
-          <Row label={t('admin.emp.approvedOn')} value={fmtDate(emp.approved_at)} />
+          <Row label={t('admin.emp.approvedOn')} value={fmtDate(emp.approved_at, i18n.language)} />
         ) : null}
       </Section>
 

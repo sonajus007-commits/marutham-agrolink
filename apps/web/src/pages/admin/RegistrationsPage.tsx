@@ -4,11 +4,13 @@ import { Button, EmptyState, FilterChips, Spinner, Table, type TableColumn } fro
 import { api, type Registration } from '@marutham/api-client';
 import { fmtDateShort } from '@marutham/lib';
 import { RegistrationDetailSheet, REG_STATUS_TONE } from './RegistrationDetailSheet';
+import { useTableLabels } from './useTableLabels';
 
 const statusOf = (r: Registration) => String(r.approval_status || 'pending_review');
 
 export function RegistrationsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const tableLabels = useTableLabels();
   const [regs, setRegs] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +101,7 @@ export function RegistrationsPage() {
         key: 'applied',
         header: t('admin.reg.appliedOn'),
         value: (r) => (r.created_at as string) || '',
-        render: (r) => fmtDateShort(r.created_at as string),
+        render: (r) => fmtDateShort(r.created_at as string, i18n.language),
       },
       {
         key: 'actions',
@@ -137,6 +139,7 @@ export function RegistrationsPage() {
       </div>
 
       <Table
+        labels={tableLabels}
         rows={rows}
         columns={columns}
         rowId={(r) => r.id}

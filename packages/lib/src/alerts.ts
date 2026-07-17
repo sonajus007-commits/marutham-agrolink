@@ -13,9 +13,27 @@
 import type { StatusTone } from './executive';
 
 export interface DashboardAlert {
+  /** A CODE ('delayed_payment', 'security', …) — what the alert IS. */
   type: string;
   severity: string;
+  /**
+   * The server's English sentence, numbers already interpolated. Kept as the
+   * FALLBACK: a type the catalogue has not been taught yet still says something
+   * true rather than rendering a bare key.
+   */
   message: string;
+  /**
+   * The numbers behind the sentence, so a translated screen can rebuild it in
+   * its own language and word order. The server used to send only `message`,
+   * which made the alert list the one part of a Tamil dashboard that could not
+   * be translated — the count was welded into English prose.
+   */
+  params?: Record<string, string | number>;
+}
+
+/** The i18n key for an alert type. Pair with `message` as the default. */
+export function alertKey(type: string): string {
+  return `admin.alert.${type}`;
 }
 
 const SEVERITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };

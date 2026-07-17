@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, EmptyState, Modal, Select, Spinner, StatTile } from '@marutham/ui';
 import { api, OfflineQueuedError, type EligibleAgent } from '@marutham/api-client';
-import { fmtDate, fmtMoney, groupHubQueue, type Order } from '@marutham/lib';
+import { fmtDate, fmtMoney, groupHubQueue, payMethodKey, type Order } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
 import { getCurrentPosition } from '../../native/geolocation';
@@ -159,7 +159,7 @@ function HubCard({
   toneLabel: string;
   action: React.ReactNode;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const bg = tone === 'arriving' ? 'var(--warning-bg)' : 'var(--success-bg)';
   const fg = tone === 'arriving' ? 'var(--warning-fg)' : 'var(--success-fg)';
 
@@ -171,13 +171,15 @@ function HubCard({
             {order.code || order.id.slice(0, 8).toUpperCase()}
           </div>
           <div className="mt-0.5 text-2xs text-fg-muted">
-            {fmtDate(order.created_at)}
+            {fmtDate(order.created_at, i18n.language)}
             {order.agent_name ? ` · 🛵 ${order.agent_name}` : ''}
           </div>
         </div>
         <div className="shrink-0 text-right">
           <div className="text-sm font-bold text-fg">{fmtMoney(order.total)}</div>
-          <div className="text-2xs text-fg-muted">{order.pay_method || ''}</div>
+          <div className="text-2xs text-fg-muted">
+            {order.pay_method ? t(payMethodKey(order.pay_method), order.pay_method) : ''}
+          </div>
         </div>
       </div>
 

@@ -15,13 +15,15 @@ import { fmtDateShort, fmtMoney, fmtMoneyInt } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
 import { PayoutDetailSheet, PAYOUT_STATUS_TONE } from './PayoutDetailSheet';
+import { useTableLabels } from './useTableLabels';
 
 const farmerName = (p: AdminPayout) => `${p.farmer?.fname || ''} ${p.farmer?.lname || ''}`.trim();
 const sumAmount = (list: AdminPayout[]) =>
   list.reduce((s, p) => s + (parseFloat(String(p.amount)) || 0), 0);
 
 export function PayoutsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const tableLabels = useTableLabels();
   const { user } = useAuth();
   const toast = useToast();
   const canSettle = user?.admin_role === 'Head Office';
@@ -101,7 +103,7 @@ export function PayoutsPage() {
         key: 'created',
         header: t('admin.pay.createdOn'),
         value: (p) => p.created_at || '',
-        render: (p) => fmtDateShort(p.created_at),
+        render: (p) => fmtDateShort(p.created_at, i18n.language),
       },
       {
         key: 'actions',
@@ -175,6 +177,7 @@ export function PayoutsPage() {
       </div>
 
       <Table
+        labels={tableLabels}
         rows={rows}
         columns={columns}
         rowId={(p) => p.id}

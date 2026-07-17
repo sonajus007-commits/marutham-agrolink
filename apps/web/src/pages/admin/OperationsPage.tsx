@@ -8,6 +8,8 @@ import {
   deliveryStages,
   totalInPipeline,
   rankedOpsDistricts,
+  alertKey,
+  scopeNameKey,
   sortAlerts,
   alertTone,
   fmtMoney,
@@ -157,7 +159,7 @@ export function OperationsPage() {
         <div>
           <h1 className="text-xl font-bold text-primary">
             {t('admin.ops.title')}
-            {scope?.name ? ` — ${scope.name}` : ''}
+            {scope?.name ? ` — ${t(scopeNameKey(scope.name), scope.name)}` : ''}
           </h1>
           <p className="text-xs text-fg-muted">
             {/* Say WHOSE numbers these are. A District Manager and Head Office see
@@ -464,7 +466,11 @@ export function OperationsPage() {
               >
                 {/* Severity carries an icon + the message, never colour alone. */}
                 <ToneDot tone={alertTone(a.severity)} />
-                <span className="text-fg">{a.message}</span>
+                {/* The server's English sentence is the DEFAULT: an alert type with
+                    no key still says something true. */}
+                <span className="text-fg">
+                  {String(t(alertKey(a.type), { ...a.params, defaultValue: a.message }))}
+                </span>
               </li>
             ))}
           </ul>

@@ -195,6 +195,87 @@ export const resources = {
       'consumer.home.col.status': 'Status',
       'consumer.orders.empty': 'No orders yet.',
 
+      // ── Account vocabularies. All stored VALUES the API filters on. ──
+      'user.role.consumer': 'Consumer',
+      'user.role.farmer': 'Seller',
+      'user.role.admin': 'Staff',
+      'user.status.active': 'active',
+      'user.status.suspended': 'suspended',
+      'user.status.blocked': 'blocked',
+      'seller.farmer': 'Farmer',
+      'seller.retailer': 'Retailer',
+      'adminRole.headOffice': 'Head Office',
+      'adminRole.boardOfDirector': 'Board of Director',
+      'adminRole.stateHead': 'State Head',
+      'adminRole.regionalManager': 'Regional Manager',
+      'adminRole.districtManager': 'District Manager',
+      'adminRole.hubIncharge': 'Hub Incharge',
+      'adminRole.deliveryAgent': 'Delivery Agent',
+      'adminRole.vco': 'VCO',
+
+      // ── Dashboard alerts. `type` is the code; the server's English `message` is the
+      //    default, so a type with no key here still says something true. ──
+      'admin.alert.high_cancellation': 'High cancellation rate: {{pct}}% of all orders.',
+      'admin.alert.delayed_payment_one': '{{count}} farmer payout pending over {{days}} days.',
+      'admin.alert.delayed_payment_other': '{{count}} farmer payouts pending over {{days}} days.',
+      'admin.alert.district_low': '{{district}} underperforming ({{revenue}}, {{count}} orders).',
+      'admin.alert.farmer_approval_one': '{{count}} farmer registration awaiting approval.',
+      'admin.alert.farmer_approval_other': '{{count}} farmer registrations awaiting approval.',
+      'admin.alert.returns_one': '{{count}} return awaiting a decision.',
+      'admin.alert.returns_other': '{{count}} returns awaiting a decision.',
+      'admin.alert.assign_one': '{{count}} order ready but no delivery agent assigned.',
+      'admin.alert.assign_other': '{{count}} orders ready but no delivery agent assigned.',
+      'admin.alert.employee_approval_one':
+        '{{count}} employee onboarding request awaiting HR approval.',
+      'admin.alert.employee_approval_other':
+        '{{count}} employee onboarding requests awaiting HR approval.',
+      'admin.alert.listing_approval_one': '{{count}} produce listing awaiting approval.',
+      'admin.alert.listing_approval_other': '{{count}} produce listings awaiting approval.',
+      'admin.alert.security': '{{count}} failed login attempts today — review access.',
+      // Enterprise table + pagination controls (admin only)
+      'admin.scope.allRegions': 'All Regions',
+      'admin.scope.unassigned': 'Unassigned',
+      'admin.table.export': 'Export',
+      'admin.table.selected': '{{count}} selected',
+      'admin.table.clear': 'Clear',
+      'admin.table.noMatch': 'No rows match “{{query}}”.',
+      'admin.table.clearSearch': 'Clear search',
+      'admin.table.selectRow': 'Select {{name}}',
+      'admin.table.selectAll': 'Select all rows on this page',
+      'admin.table.range': '{{from}}–{{to}} of {{total}}',
+      'admin.table.page': 'Page {{current}} of {{total}}',
+      'admin.table.prevPage': 'Previous page',
+      'admin.table.nextPage': 'Next page',
+
+      // ── Sign-up field faults (codes from validateRegistration) ──
+      'register.err.required': 'Required',
+      'register.err.gender': 'Please select your gender',
+      'register.err.phone': 'Enter a valid 10-digit number',
+      'register.err.email': 'Enter a valid email',
+      'register.err.state': 'Select a state',
+      'register.err.district': 'Select a district',
+      'register.err.taluk': 'Select a taluk',
+      'register.err.pincode': 'Enter a 6-digit pincode',
+      'register.err.passwordWeak': 'Does not meet requirements',
+      'register.err.passwordMismatch': 'Passwords do not match',
+      'register.err.plan': 'Please select a subscription plan',
+      'register.err.villageRequired': 'Required for farmers',
+      'register.err.aadhaar': 'Enter a valid 12-digit Aadhaar',
+      'register.err.bankAccount': 'Enter a valid account number (9–18 digits)',
+      'register.err.bankMismatch': 'Account numbers do not match',
+      'register.err.ifsc': 'Enter a valid IFSC',
+      'register.err.businessName': 'Business name is required',
+      'register.err.gstin': 'Enter a valid 15-character GSTIN',
+      // Business types. The VALUE is what business_type stores and HO reviews.
+      'business.grocery': 'Grocery / General Store',
+      'business.organic': 'Organic Store',
+      'business.wholesale': 'Wholesale Distributor',
+      'business.farmSupply': 'Farm Supply Shop',
+      'business.processor': 'Food Processor',
+      'business.other': 'Other',
+      // Sign-up field hint
+      'reg.aadhaarHint': '12-digit Aadhaar',
+
       // Agent: role labels. admin_role is the API's value; VCO stays VCO (an acronym).
       'agent.role.deliveryAgent': 'Delivery Agent',
       'agent.role.vco': 'VCO',
@@ -479,6 +560,12 @@ export const resources = {
       'address.selectTaluk': 'Select Taluk',
       'address.contactPhone': 'Contact phone',
       // Change password (shown on the consumer profile)
+      'pwd.rule.len': 'Min 8 characters',
+      'pwd.rule.upper': 'At least 1 uppercase (A-Z)',
+      'pwd.rule.digit': 'At least 1 number (0-9)',
+      'pwd.rule.special': 'At least 1 special (@#$!%*)',
+      'pwd.rule.met': 'met',
+      'pwd.rule.notMet': 'not met',
       'pwd.title': 'Change Password',
       'pwd.current': 'Current Password',
       'pwd.currentHint': 'Your current password',
@@ -1773,6 +1860,97 @@ export const resources = {
       'consumer.home.col.status': 'நிலை',
       'consumer.orders.empty': 'இதுவரை ஆர்டர்கள் இல்லை.',
 
+      // ── Account vocabularies. All stored VALUES the API filters on. ──
+      'user.role.consumer': 'நுகர்வோர்',
+      'user.role.farmer': 'விற்பனையாளர்',
+      'user.role.admin': 'ஊழியர்',
+      'user.status.active': 'செயலில்',
+      'user.status.suspended': 'இடைநிறுத்தப்பட்டது',
+      'user.status.blocked': 'தடுக்கப்பட்டது',
+      'seller.farmer': 'விவசாயி',
+      'seller.retailer': 'சில்லறை விற்பனையாளர்',
+      'adminRole.headOffice': 'தலைமை அலுவலகம்',
+      'adminRole.boardOfDirector': 'இயக்குநர் குழு',
+      'adminRole.stateHead': 'மாநிலத் தலைவர்',
+      'adminRole.regionalManager': 'மண்டல மேலாளர்',
+      'adminRole.districtManager': 'மாவட்ட மேலாளர்',
+      'adminRole.hubIncharge': 'மைய பொறுப்பாளர்',
+      'adminRole.deliveryAgent': 'வழங்கல் முகவர்',
+      'adminRole.vco': 'VCO',
+
+      // ── Dashboard alerts. `type` is the code; the server's English `message` is the
+      //    default, so a type with no key here still says something true. ──
+      'admin.alert.high_cancellation': 'அதிக ரத்து விகிதம்: அனைத்து ஆர்டர்களிலும் {{pct}}%.',
+      'admin.alert.delayed_payment_one':
+        '{{count}} விவசாயி பணப்பட்டுவாடா {{days}} நாட்களுக்கு மேல் நிலுவையில்.',
+      'admin.alert.delayed_payment_other':
+        '{{count}} விவசாயி பணப்பட்டுவாடாக்கள் {{days}} நாட்களுக்கு மேல் நிலுவையில்.',
+      'admin.alert.district_low':
+        '{{district}} குறைவாக செயல்படுகிறது ({{revenue}}, {{count}} ஆர்டர்கள்).',
+      'admin.alert.farmer_approval_one': '{{count}} விவசாயி பதிவு ஒப்புதலுக்குக் காத்திருக்கிறது.',
+      'admin.alert.farmer_approval_other':
+        '{{count}} விவசாயி பதிவுகள் ஒப்புதலுக்குக் காத்திருக்கின்றன.',
+      'admin.alert.returns_one':
+        '{{count}} திரும்பப் பெறும் கோரிக்கை முடிவுக்குக் காத்திருக்கிறது.',
+      'admin.alert.returns_other':
+        '{{count}} திரும்பப் பெறும் கோரிக்கைகள் முடிவுக்குக் காத்திருக்கின்றன.',
+      'admin.alert.assign_one': '{{count}} ஆர்டர் தயார், ஆனால் வழங்கல் முகவர் ஒதுக்கப்படவில்லை.',
+      'admin.alert.assign_other':
+        '{{count}} ஆர்டர்கள் தயார், ஆனால் வழங்கல் முகவர் ஒதுக்கப்படவில்லை.',
+      'admin.alert.employee_approval_one':
+        '{{count}} ஊழியர் சேர்க்கை கோரிக்கை HR ஒப்புதலுக்குக் காத்திருக்கிறது.',
+      'admin.alert.employee_approval_other':
+        '{{count}} ஊழியர் சேர்க்கை கோரிக்கைகள் HR ஒப்புதலுக்குக் காத்திருக்கின்றன.',
+      'admin.alert.listing_approval_one':
+        '{{count}} விளைபொருள் பட்டியல் ஒப்புதலுக்குக் காத்திருக்கிறது.',
+      'admin.alert.listing_approval_other':
+        '{{count}} விளைபொருள் பட்டியல்கள் ஒப்புதலுக்குக் காத்திருக்கின்றன.',
+      'admin.alert.security':
+        'இன்று {{count}} தோல்வியுற்ற உள்நுழைவு முயற்சிகள் — அணுகலை மதிப்பாய்வு செய்யவும்.',
+      // Enterprise table + pagination controls (admin only)
+      'admin.scope.allRegions': 'அனைத்து மண்டலங்கள்',
+      'admin.scope.unassigned': 'ஒதுக்கப்படவில்லை',
+      'admin.table.export': 'ஏற்றுமதி',
+      'admin.table.selected': '{{count}} தேர்ந்தெடுக்கப்பட்டது',
+      'admin.table.clear': 'அழி',
+      'admin.table.noMatch': '“{{query}}” உடன் பொருந்தும் வரிசைகள் இல்லை.',
+      'admin.table.clearSearch': 'தேடலை அழி',
+      'admin.table.selectRow': '{{name}} ஐத் தேர்ந்தெடு',
+      'admin.table.selectAll': 'இந்தப் பக்கத்தின் அனைத்து வரிசைகளையும் தேர்ந்தெடு',
+      'admin.table.range': '{{total}} இல் {{from}}–{{to}}',
+      'admin.table.page': 'பக்கம் {{current}} / {{total}}',
+      'admin.table.prevPage': 'முந்தைய பக்கம்',
+      'admin.table.nextPage': 'அடுத்த பக்கம்',
+
+      // ── Sign-up field faults (codes from validateRegistration) ──
+      'register.err.required': 'தேவை',
+      'register.err.gender': 'உங்கள் பாலினத்தைத் தேர்ந்தெடுக்கவும்',
+      'register.err.phone': 'சரியான 10 இலக்க எண்ணை உள்ளிடவும்',
+      'register.err.email': 'சரியான மின்னஞ்சலை உள்ளிடவும்',
+      'register.err.state': 'மாநிலத்தைத் தேர்ந்தெடுக்கவும்',
+      'register.err.district': 'மாவட்டத்தைத் தேர்ந்தெடுக்கவும்',
+      'register.err.taluk': 'வட்டத்தைத் தேர்ந்தெடுக்கவும்',
+      'register.err.pincode': '6 இலக்க பின்கோடை உள்ளிடவும்',
+      'register.err.passwordWeak': 'தேவைகளைப் பூர்த்தி செய்யவில்லை',
+      'register.err.passwordMismatch': 'கடவுச்சொற்கள் பொருந்தவில்லை',
+      'register.err.plan': 'சந்தா திட்டத்தைத் தேர்ந்தெடுக்கவும்',
+      'register.err.villageRequired': 'விவசாயிகளுக்குத் தேவை',
+      'register.err.aadhaar': 'சரியான 12 இலக்க ஆதார் எண்ணை உள்ளிடவும்',
+      'register.err.bankAccount': 'சரியான கணக்கு எண்ணை உள்ளிடவும் (9–18 இலக்கங்கள்)',
+      'register.err.bankMismatch': 'கணக்கு எண்கள் பொருந்தவில்லை',
+      'register.err.ifsc': 'சரியான IFSC ஐ உள்ளிடவும்',
+      'register.err.businessName': 'வணிகப் பெயர் தேவை',
+      'register.err.gstin': 'சரியான 15 எழுத்து GSTIN ஐ உள்ளிடவும்',
+      // Business types. The VALUE is what business_type stores and HO reviews.
+      'business.grocery': 'மளிகை / பொதுக் கடை',
+      'business.organic': 'இயற்கை பொருட்கள் கடை',
+      'business.wholesale': 'மொத்த விநியோகஸ்தர்',
+      'business.farmSupply': 'பண்ணை உபகரணக் கடை',
+      'business.processor': 'உணவு பதப்படுத்துபவர்',
+      'business.other': 'மற்றவை',
+      // Sign-up field hint
+      'reg.aadhaarHint': '12 இலக்க ஆதார்',
+
       // Agent: role labels. admin_role is the API's value; VCO stays VCO (an acronym).
       'agent.role.deliveryAgent': 'வழங்கல் முகவர்',
       'agent.role.vco': 'VCO',
@@ -2068,6 +2246,12 @@ export const resources = {
       'address.selectTaluk': 'வட்டத்தைத் தேர்ந்தெடு',
       'address.contactPhone': 'தொடர்பு எண்',
       // Change password (shown on the consumer profile)
+      'pwd.rule.len': 'குறைந்தது 8 எழுத்துகள்',
+      'pwd.rule.upper': 'குறைந்தது 1 பெரிய எழுத்து (A-Z)',
+      'pwd.rule.digit': 'குறைந்தது 1 எண் (0-9)',
+      'pwd.rule.special': 'குறைந்தது 1 சிறப்பு எழுத்து (@#$!%*)',
+      'pwd.rule.met': 'பூர்த்தியானது',
+      'pwd.rule.notMet': 'பூர்த்தியாகவில்லை',
       'pwd.title': 'கடவுச்சொல்லை மாற்று',
       'pwd.current': 'தற்போதைய கடவுச்சொல்',
       'pwd.currentHint': 'உங்கள் தற்போதைய கடவுச்சொல்',

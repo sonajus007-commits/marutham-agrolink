@@ -385,14 +385,14 @@ router.get('/executive', async (req, res) => {
   const alerts = [];
   const cancelRate = orders.length > 0 ? cancelledOrdersCount(orders) / orders.length : 0;
   if (cancelRate > 0.15) {
-    alerts.push({ type: 'high_cancellation', severity: 'high', message: `High cancellation rate: ${Math.round(cancelRate * 100)}% of all orders.` });
+    alerts.push({ type: 'high_cancellation', severity: 'high', params: { pct: Math.round(cancelRate * 100) }, message: `High cancellation rate: ${Math.round(cancelRate * 100)}% of all orders.` });
   }
   const stalePayouts = payouts.filter(p => p.status === 'pending' && (Date.now() - new Date(p.created_at)) > 7 * 86400000).length;
   if (stalePayouts > 0) {
-    alerts.push({ type: 'delayed_payment', severity: 'medium', message: `${plural(stalePayouts, 'farmer payout')} pending over 7 days.` });
+    alerts.push({ type: 'delayed_payment', severity: 'medium', params: { count: stalePayouts, days: 7 }, message: `${plural(stalePayouts, 'farmer payout')} pending over 7 days.` });
   }
   districts.filter(d => d.status === 'red' && d.orders > 0).slice(0, 3).forEach(d => {
-    alerts.push({ type: 'district_low', severity: 'low', message: `${d.district} underperforming (${inr(d.revenue)}, ${plural(d.orders, 'order')}).` });
+    alerts.push({ type: 'district_low', severity: 'low', params: { district: d.district, revenue: inr(d.revenue), count: d.orders }, message: `${d.district} underperforming (${inr(d.revenue)}, ${plural(d.orders, 'order')}).` });
   });
 
   res.json({
@@ -568,11 +568,11 @@ router.get('/operations', async (req, res) => {
 
   // ── Alerts (live) ───────────────────────────────────────────────────────────
   const alerts = [];
-  if (farmers.pending_approval > 0) alerts.push({ type: 'farmer_approval', severity: 'medium', message: `${farmers.pending_approval} farmer registration${farmers.pending_approval > 1 ? 's' : ''} awaiting approval.` });
-  if (payments.stale_count > 0) alerts.push({ type: 'delayed_payment', severity: 'high', message: `${payments.stale_count} farmer payout${payments.stale_count > 1 ? 's' : ''} pending over 7 days.` });
-  if (quality.pending_returns > 0) alerts.push({ type: 'returns', severity: 'medium', message: `${quality.pending_returns} return${quality.pending_returns > 1 ? 's' : ''} awaiting a decision.` });
+  if (farmers.pending_approval > 0) alerts.push({ type: 'farmer_approval', severity: 'medium', params: { count: farmers.pending_approval }, message: `${farmers.pending_approval} farmer registration${farmers.pending_approval > 1 ? 's' : ''} awaiting approval.` });
+  if (payments.stale_count > 0) alerts.push({ type: 'delayed_payment', severity: 'high', params: { count: payments.stale_count, days: 7 }, message: `${payments.stale_count} farmer payout${payments.stale_count > 1 ? 's' : ''} pending over 7 days.` });
+  if (quality.pending_returns > 0) alerts.push({ type: 'returns', severity: 'medium', params: { count: quality.pending_returns }, message: `${quality.pending_returns} return${quality.pending_returns > 1 ? 's' : ''} awaiting a decision.` });
   const unassigned = active.filter(o => !o.agent_id && ['Packaged', 'VCO Verified', 'Picked Up'].includes(o.status)).length;
-  if (unassigned > 0) alerts.push({ type: 'assign', severity: 'low', message: `${unassigned} order${unassigned > 1 ? 's' : ''} ready but no delivery agent assigned.` });
+  if (unassigned > 0) alerts.push({ type: 'assign', severity: 'low', params: { count: unassigned }, message: `${unassigned} order${unassigned > 1 ? 's' : ''} ready but no delivery agent assigned.` });
 
   res.json({
     scope,
@@ -803,10 +803,10 @@ router.get('/adminhead', async (req, res) => {
 
   const alerts = [];
   const totalPending = employees_pending + farmers_pending + listings_pending;
-  if (employees_pending > 0) alerts.push({ type: 'employee_approval', severity: 'high', message: `${employees_pending} employee onboarding request${employees_pending > 1 ? 's' : ''} awaiting HR approval.` });
-  if (farmers_pending > 0) alerts.push({ type: 'farmer_approval', severity: 'medium', message: `${farmers_pending} farmer registration${farmers_pending > 1 ? 's' : ''} pending review.` });
-  if (listings_pending > 0) alerts.push({ type: 'listing_approval', severity: 'medium', message: `${listings_pending} produce listing${listings_pending > 1 ? 's' : ''} awaiting approval.` });
-  if ((failedLoginsC.count || 0) >= 5) alerts.push({ type: 'security', severity: 'high', message: `${failedLoginsC.count} failed login attempts today — review access.` });
+  if (employees_pending > 0) alerts.push({ type: 'employee_approval', severity: 'high', params: { count: employees_pending }, message: `${employees_pending} employee onboarding request${employees_pending > 1 ? 's' : ''} awaiting HR approval.` });
+  if (farmers_pending > 0) alerts.push({ type: 'farmer_approval', severity: 'medium', params: { count: farmers_pending }, message: `${farmers_pending} farmer registration${farmers_pending > 1 ? 's' : ''} pending review.` });
+  if (listings_pending > 0) alerts.push({ type: 'listing_approval', severity: 'medium', params: { count: listings_pending }, message: `${listings_pending} produce listing${listings_pending > 1 ? 's' : ''} awaiting approval.` });
+  if ((failedLoginsC.count || 0) >= 5) alerts.push({ type: 'security', severity: 'high', params: { count: failedLoginsC.count }, message: `${failedLoginsC.count} failed login attempts today — review access.` });
 
   res.json({
     scope: { level: 'all', name: 'Head Office' },

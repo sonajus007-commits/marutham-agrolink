@@ -82,6 +82,24 @@ export interface TableProps<T> {
   exportFileName?: string;
   /** A CSS length. The sticky header only sticks against a bounded scroller. */
   maxHeight?: string;
+  /**
+   * The table's own controls, English by default. `caption`, `empty` and
+   * `searchPlaceholder` are already props and stay that way — these are what was
+   * left hardcoded inside. Forwarded to <Pagination>.
+   */
+  labels?: {
+    export?: string;
+    selected?: (count: number) => string;
+    clear?: string;
+    clearSearch?: string;
+    noMatch?: (query: string) => string;
+    selectRow?: (name: string) => string;
+    selectAll?: string;
+    range?: (from: number, to: number, total: number) => string;
+    page?: (current: number, total: number) => string;
+    prevPage?: string;
+    nextPage?: string;
+  };
   className?: string;
 }
 
@@ -126,6 +144,7 @@ export function Table<T>({
   bulkActions,
   exportFileName,
   maxHeight,
+  labels,
   className,
 }: TableProps<T>) {
   const [sort, setSort] = useState<SortState | null>(initialSort ?? null);
@@ -208,7 +227,9 @@ export function Table<T>({
         <div className="flex items-center gap-2 flex-wrap">
           {selectionCount > 0 && bulkActions ? (
             <>
-              <span className="text-sm font-bold text-fg">{selectionCount} selected</span>
+              <span className="text-sm font-bold text-fg">
+                {labels?.selected ? labels.selected(selectionCount) : `${selectionCount} selected`}
+              </span>
               {bulkActions([...selected], selectedRows)}
               <Button
                 variant="ghost"
@@ -216,7 +237,7 @@ export function Table<T>({
                 onClick={() => commit(new Set())}
               >
                 <X size={14} aria-hidden="true" />
-                Clear
+                {labels?.clear ?? 'Clear'}
               </Button>
             </>
           ) : (
@@ -238,7 +259,7 @@ export function Table<T>({
               disabled={total === 0}
             >
               <Download size={14} aria-hidden="true" />
-              Export
+              {labels?.export ?? 'Export'}
             </Button>
           ) : null}
         </div>
@@ -260,7 +281,7 @@ export function Table<T>({
                     className={CHECKBOX}
                     checked={headState === 'all'}
                     onChange={() => commit(toggleAll(selected, visibleIds))}
-                    aria-label="Select all rows on this page"
+                    aria-label={labels?.selectAll ?? 'Select all rows on this page'}
                     disabled={!visibleIds.length}
                   />
                 </th>
@@ -330,7 +351,11 @@ export function Table<T>({
                         className={CHECKBOX}
                         checked={isSelected}
                         onChange={() => commit(toggleOne(selected, id))}
-                        aria-label={'Select ' + (rowLabel ? rowLabel(row) : id)}
+                        aria-label={
+                          labels?.selectRow
+                            ? labels.selectRow(rowLabel ? rowLabel(row) : id)
+                            : 'Select ' + (rowLabel ? rowLabel(row) : id)
+                        }
                       />
                     </td>
                   ) : null}
@@ -356,13 +381,13 @@ export function Table<T>({
               empty
             ) : (
               <>
-                <div>No rows match “{query}”.</div>
+                <div>{labels?.noMatch ? labels.noMatch(query) : `No rows match “${query}”.`}</div>
                 <Button
                   variant="ghost"
                   className="mt-3 px-3 py-1.5 text-sm"
                   onClick={() => onQuery('')}
                 >
-                  Clear search
+                  {labels?.clearSearch ?? 'Clear search'}
                 </Button>
               </>
             )}
@@ -370,7 +395,18 @@ export function Table<T>({
         ) : null}
       </div>
 
-      <Pagination page={current} pageSize={pageSize} total={total} onPageChange={setPage} />
+      <Pagination
+        page={current}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={setPage}
+        labels={{
+          range: labels?.range,
+          page: labels?.page,
+          prev: labels?.prevPage,
+          next: labels?.nextPage,
+        }}
+      />
     </div>
   );
 }

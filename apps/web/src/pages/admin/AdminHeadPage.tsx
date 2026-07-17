@@ -9,10 +9,12 @@ import {
   rankedDepartments,
   staffTotal,
   approvalQueue,
+  alertKey,
   sortAlerts,
   alertTone,
   fmtNum,
   type ApprovalQueueItem,
+  adminRoleKey,
 } from '@marutham/lib';
 import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
@@ -88,7 +90,10 @@ export function AdminHeadPage() {
         type: 'category',
         // ECharts draws a category y-axis bottom-up, so the biggest must go last
         // for the ranking to read top-down.
-        data: roles.map((r) => r.role).reverse(),
+        /* ECharts draws to CANVAS, so these labels are invisible to a DOM sweep —
+           they were the last English on this page and only a screenshot found them.
+           The VALUE is still r.role; only the tick is spoken. */
+        data: roles.map((r) => t(adminRoleKey(r.role), r.role)).reverse(),
         axisTick: { show: false },
         axisLine: { show: false },
         axisLabel: { color: colors.gray },
@@ -110,7 +115,7 @@ export function AdminHeadPage() {
         },
       ],
     }),
-    [roles],
+    [roles, t],
   );
 
   /* Employees by department — same form, same reasoning, different question. */
@@ -297,7 +302,11 @@ export function AdminHeadPage() {
                 className="flex items-start gap-2 rounded-lg bg-surface-muted p-3 text-sm"
               >
                 <ToneDot tone={alertTone(a.severity)} />
-                <span className="text-fg">{a.message}</span>
+                {/* The server's English sentence is the DEFAULT: an alert type with
+                    no key still says something true. */}
+                <span className="text-fg">
+                  {String(t(alertKey(a.type), { ...a.params, defaultValue: a.message }))}
+                </span>
               </li>
             ))}
           </ul>

@@ -26,7 +26,7 @@ export function PayoutDetailSheet({
   open: boolean;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   if (!payout)
     return (
       <Sheet open={open} title={t('admin.pay.title')} onClose={onClose}>
@@ -77,10 +77,13 @@ export function PayoutDetailSheet({
             <Row label={t('admin.pay.reference')} value={String(payout.reference)} mono />
           ) : null}
           {payout.created_at ? (
-            <Row label={t('admin.pay.createdOn')} value={fmtDate(payout.created_at)} />
+            <Row
+              label={t('admin.pay.createdOn')}
+              value={fmtDate(payout.created_at, i18n.language)}
+            />
           ) : null}
           {payout.paid_at ? (
-            <Row label={t('admin.pay.paidOn')} value={fmtDate(payout.paid_at)} />
+            <Row label={t('admin.pay.paidOn')} value={fmtDate(payout.paid_at, i18n.language)} />
           ) : null}
         </Section>
       </div>

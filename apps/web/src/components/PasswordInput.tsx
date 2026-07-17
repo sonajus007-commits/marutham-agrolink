@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Input, cn } from '@marutham/ui';
 import { passwordRuleResults } from '@marutham/lib';
@@ -50,6 +51,7 @@ export function PasswordInput({
  * four rules on every keystroke is noise. The submit-time error is the alert.
  */
 export function PasswordRules({ value }: { value: string }) {
+  const { t } = useTranslation();
   return (
     <ul className="m-0 mt-2 list-none p-0">
       {passwordRuleResults(value).map((r) => (
@@ -67,8 +69,11 @@ export function PasswordRules({ value }: { value: string }) {
             )}
             aria-hidden="true"
           />
-          <span>{r.label}</span>
-          <span className="sr-only">{r.met ? ' — met' : ' — not met'}</span>
+          {/* The rule's `id` is already a code; `label` is its English default. */}
+          <span>{t(`pwd.rule.${r.id}`, r.label)}</span>
+          <span className="sr-only">
+            {r.met ? ` — ${t('pwd.rule.met', 'met')}` : ` — ${t('pwd.rule.notMet', 'not met')}`}
+          </span>
         </li>
       ))}
     </ul>

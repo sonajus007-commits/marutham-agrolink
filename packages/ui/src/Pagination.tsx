@@ -22,6 +22,14 @@ export interface PaginationProps {
   onPageChange: (page: number) => void;
   /** Show the "1–25 of 240" summary. Default true. */
   showRange?: boolean;
+  /** Accessible + visible strings. English by default, so every existing caller
+   *  renders exactly what it did. */
+  labels?: {
+    range?: (from: number, to: number, total: number) => string;
+    page?: (current: number, total: number) => string;
+    prev?: string;
+    next?: string;
+  };
   className?: string;
 }
 
@@ -29,6 +37,7 @@ export function Pagination({
   page,
   pageSize,
   total,
+  labels,
   onPageChange,
   showRange = true,
   className,
@@ -46,7 +55,9 @@ export function Pagination({
           under justify-between when the range is hidden. */}
       {showRange ? (
         <span className="text-xs text-fg-muted" aria-live="polite">
-          {(current - 1) * pageSize + 1}–{Math.min(current * pageSize, total)} of {total}
+          {labels?.range
+            ? labels.range((current - 1) * pageSize + 1, Math.min(current * pageSize, total), total)
+            : `${(current - 1) * pageSize + 1}–${Math.min(current * pageSize, total)} of ${total}`}
         </span>
       ) : (
         <span aria-hidden="true" />
@@ -58,19 +69,19 @@ export function Pagination({
           className="px-2 py-1.5"
           onClick={() => onPageChange(current - 1)}
           disabled={current <= 1}
-          aria-label="Previous page"
+          aria-label={labels?.prev ?? 'Previous page'}
         >
           <ChevronLeft size={16} aria-hidden="true" />
         </Button>
         <span className="text-xs text-fg-muted">
-          Page {current} of {pages}
+          {labels?.page ? labels.page(current, pages) : `Page ${current} of ${pages}`}
         </span>
         <Button
           variant="ghost"
           className="px-2 py-1.5"
           onClick={() => onPageChange(current + 1)}
           disabled={current >= pages}
-          aria-label="Next page"
+          aria-label={labels?.next ?? 'Next page'}
         >
           <ChevronRight size={16} aria-hidden="true" />
         </Button>

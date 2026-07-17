@@ -7,8 +7,10 @@
  * they live here as testable data rather than as regexes sprinkled through JSX.
  * Ported from the legacy `doRegister()` in frontend/index.html.
  *
- * Validation messages are English, like validateAddress() — the screen chrome is
- * translated, the field faults are not (yet). */
+ * Faults are CODES, not sentences. They used to be the English messages, which
+ * left a fully translated sign-up form faulting its fields in English — the gap
+ * this header used to describe. lib cannot reach i18n (pure, and shared with
+ * React Native), so the screen owns the wording; see `registerProblemKey`. */
 import type { AddressObject } from './format';
 import { isStrongPassword } from './password';
 import { PINCODE_RE } from './address';
@@ -19,6 +21,8 @@ export type RegisterSellerType = 'Farmer' | 'Retailer';
 
 export const GENDERS = ['Male', 'Female', 'Transgender'] as const;
 
+/* The VALUE is what `business_type` stores and what Head Office reviews, so it
+ * never changes; only the option text is spoken. A closed set, hence a key each. */
 export const BUSINESS_TYPES = [
   'Grocery / General Store',
   'Organic Store',
@@ -27,6 +31,20 @@ export const BUSINESS_TYPES = [
   'Food Processor',
   'Other',
 ] as const;
+
+const BUSINESS_TYPE_KEYS: Record<string, string> = {
+  'Grocery / General Store': 'business.grocery',
+  'Organic Store': 'business.organic',
+  'Wholesale Distributor': 'business.wholesale',
+  'Farm Supply Shop': 'business.farmSupply',
+  'Food Processor': 'business.processor',
+  Other: 'business.other',
+};
+
+/** The i18n key for a business type, or the value itself when it has none. */
+export function businessTypeKey(type: string): string {
+  return BUSINESS_TYPE_KEYS[type] ?? type;
+}
 
 const PHONE_RE = /^\d{10}$/;
 const AADHAAR_RE = /^\d{12}$/;
@@ -120,7 +138,33 @@ export type RegisterField =
   | 'gst_number'
   | 'subscription_plan';
 
-export type RegisterErrors = Partial<Record<RegisterField, string>>;
+/** Why a field is not acceptable. `required` is deliberately shared. */
+export type RegisterProblem =
+  | 'required'
+  | 'gender'
+  | 'phone'
+  | 'email'
+  | 'state'
+  | 'district'
+  | 'taluk'
+  | 'pincode'
+  | 'passwordWeak'
+  | 'passwordMismatch'
+  | 'plan'
+  | 'villageRequired'
+  | 'aadhaar'
+  | 'bankAccount'
+  | 'bankMismatch'
+  | 'ifsc'
+  | 'businessName'
+  | 'gstin';
+
+export type RegisterErrors = Partial<Record<RegisterField, RegisterProblem>>;
+
+/** The i18n key for a sign-up fault. `en` carries the wording. */
+export function registerProblemKey(problem: RegisterProblem): string {
+  return `register.err.${problem}`;
+}
 
 export interface RegisterValidateOptions {
   /** True when the chosen district actually lists taluks — only then is one required. */
@@ -136,42 +180,42 @@ export function validateRegistration(
   const a = form.address;
   const trim = (v?: string | null) => (v || '').trim();
 
-  if (!trim(form.fname)) e.fname = 'Required';
-  if (!form.gender) e.gender = 'Please select your gender';
-  if (!PHONE_RE.test(form.phone)) e.phone = 'Enter a valid 10-digit number';
-  if (form.email && !EMAIL_RE.test(form.email)) e.email = 'Enter a valid email';
+  if (!trim(form.fname)) e.fname = 'required';
+  if (!form.gender) e.gender = 'gender';
+  if (!PHONE_RE.test(form.phone)) e.phone = 'phone';
+  if (form.email && !EMAIL_RE.test(form.email)) e.email = 'email';
 
-  if (!trim(a.street1)) e.street1 = 'Required';
-  if (!a.state) e.state = 'Select a state';
-  if (!a.district) e.district = 'Select a district';
+  if (!trim(a.street1)) e.street1 = 'required';
+  if (!a.state) e.state = 'state';
+  if (!a.district) e.district = 'district';
   // A district with no taluks in the tree can't demand one.
-  if (opts.districtHasTaluks && !a.taluk) e.taluk = 'Select a taluk';
-  if (!trim(a.city)) e.city = 'Required';
-  if (!PINCODE_RE.test(a.pincode || '')) e.pincode = 'Enter a 6-digit pincode';
+  if (opts.districtHasTaluks && !a.taluk) e.taluk = 'taluk';
+  if (!trim(a.city)) e.city = 'required';
+  if (!PINCODE_RE.test(a.pincode || '')) e.pincode = 'pincode';
 
-  if (!isStrongPassword(form.password)) e.password = 'Does not meet requirements';
-  if (form.password !== form.confirm_password) e.confirm_password = 'Passwords do not match';
+  if (!isStrongPassword(form.password)) e.password = 'passwordWeak';
+  if (form.password !== form.confirm_password) e.confirm_password = 'passwordMismatch';
 
   if (form.role === 'farmer') {
-    if (!form.subscription_plan) e.subscription_plan = 'Please select a subscription plan';
+    if (!form.subscription_plan) e.subscription_plan = 'plan';
 
     if (form.seller_type === 'Farmer') {
       // A farm's village is its address — the delivery agent has nothing else to go on.
-      if (!trim(a.village_town)) e.village_town = 'Required for farmers';
-      if (!AADHAAR_RE.test(form.aadhar)) e.aadhar = 'Enter a valid 12-digit Aadhaar';
-      if (!trim(form.bank_name)) e.bank_name = 'Required';
+      if (!trim(a.village_town)) e.village_town = 'villageRequired';
+      if (!AADHAAR_RE.test(form.aadhar)) e.aadhar = 'aadhaar';
+      if (!trim(form.bank_name)) e.bank_name = 'required';
       if (form.bank_account.length < 9 || form.bank_account.length > 18) {
-        e.bank_account = 'Enter a valid account number (9–18 digits)';
+        e.bank_account = 'bankAccount';
       }
       if (form.bank_account !== form.confirm_bank_account) {
-        e.confirm_bank_account = 'Account numbers do not match';
+        e.confirm_bank_account = 'bankMismatch';
       }
       // IFSC is optional, but a wrong one silently breaks every payout.
-      if (form.ifsc && !IFSC_RE.test(form.ifsc.toUpperCase())) e.ifsc = 'Enter a valid IFSC';
+      if (form.ifsc && !IFSC_RE.test(form.ifsc.toUpperCase())) e.ifsc = 'ifsc';
     } else {
-      if (!trim(form.business_name)) e.business_name = 'Business name is required';
+      if (!trim(form.business_name)) e.business_name = 'businessName';
       if (form.gst_number && !GSTIN_RE.test(form.gst_number.toUpperCase())) {
-        e.gst_number = 'Enter a valid 15-character GSTIN';
+        e.gst_number = 'gstin';
       }
     }
   }

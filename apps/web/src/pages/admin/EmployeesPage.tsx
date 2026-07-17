@@ -6,12 +6,14 @@ import { fmtDateShort } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { EmployeeDetailSheet, EMP_APPROVAL_TONE } from './EmployeeDetailSheet';
 import { EmployeeFormSheet } from './EmployeeFormSheet';
+import { useTableLabels } from './useTableLabels';
 
 const approvalOf = (e: Employee) => String(e.approval_status || 'pending');
 const empName = (e: Employee) => `${e.fname || ''} ${e.lname || ''}`.trim();
 
 export function EmployeesPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const tableLabels = useTableLabels();
   const { user } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   // Removed staff are a SEPARATE set, not a filter on the list above — the server keeps
@@ -161,13 +163,13 @@ export function EmployeesPage() {
             key: 'removedOn',
             header: t('admin.emp.removedOn'),
             value: (e) => e.deleted_at || '',
-            render: (e) => fmtDateShort(e.deleted_at),
+            render: (e) => fmtDateShort(e.deleted_at, i18n.language),
           }
         : {
             key: 'created',
             header: t('admin.emp.addedOn'),
             value: (e) => e.created_at || '',
-            render: (e) => fmtDateShort(e.created_at),
+            render: (e) => fmtDateShort(e.created_at, i18n.language),
           },
       {
         key: 'actions',
@@ -214,6 +216,7 @@ export function EmployeesPage() {
       </div>
 
       <Table
+        labels={tableLabels}
         rows={rows}
         columns={columns}
         rowId={(e) => e.id || e.emp_id || empName(e)}

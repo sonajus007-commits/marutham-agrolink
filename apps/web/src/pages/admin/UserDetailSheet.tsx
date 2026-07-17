@@ -234,7 +234,7 @@ function Body({
  * The backend 403s a scoped admin, so the tabs are not merely hidden — a
  * District Manager has no way to reach the data. */
 function HistorySection({ userId, status }: { userId: string; status: UserStatusHistoryEntry[] }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user: me } = useAuth();
   const privileged = canSeeAudit(me?.admin_role);
 
@@ -273,7 +273,7 @@ function HistorySection({ userId, status }: { userId: string; status: UserStatus
             <span className="font-semibold text-fg">
               {h.old_status} → {h.new_status}
             </span>
-            <span className="text-fg-muted"> · {fmtDate(h.created_at)}</span>
+            <span className="text-fg-muted"> · {fmtDate(h.created_at, i18n.language)}</span>
             {h.changer ? (
               <span className="text-fg-muted"> · {h.changer.fname || h.changer.login_id}</span>
             ) : null}

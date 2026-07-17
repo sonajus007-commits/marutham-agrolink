@@ -12,6 +12,8 @@ import {
   SUBSCRIPTION_PLANS,
   GENDERS,
   BUSINESS_TYPES,
+  businessTypeKey,
+  registerProblemKey,
   fmtMoney,
   type RegisterForm,
   type RegisterErrors,
@@ -47,6 +49,17 @@ export function Register() {
   const [busy, setBusy] = useState(false);
   /** Set once a seller's application is in — swaps the form for the pending panel. */
   const [submitted, setSubmitted] = useState<RegisterResponse | null>(null);
+
+  /* `errors` holds CODES (validateRegistration is pure and cannot reach i18n).
+   * Spoken once, here, rather than at each of the twenty-odd <Field error=…>
+   * sites — the form reads the same as it did, in whichever language it is in. */
+  const err = useMemo(() => {
+    const out: Partial<Record<keyof RegisterErrors, string>> = {};
+    for (const [field, code] of Object.entries(errors) as [keyof RegisterErrors, string][]) {
+      if (code) out[field] = t(registerProblemKey(code as never));
+    }
+    return out;
+  }, [errors, t]);
 
   const isSeller = form.role === 'farmer';
   const isFarmer = isSeller && form.seller_type === 'Farmer';
@@ -224,7 +237,7 @@ export function Register() {
           {/* ── Personal ── */}
           <h2 className="reg-section">{t('reg.personal')}</h2>
           <div className="reg-grid">
-            <Field label={t('reg.fname')} required error={errors.fname}>
+            <Field label={t('reg.fname')} required error={err.fname}>
               {(p) => (
                 <Input
                   {...p}
@@ -251,7 +264,7 @@ export function Register() {
           <Field
             label={t('reg.gender')}
             required
-            error={errors.gender}
+            error={err.gender}
             hint={isSeller ? t('reg.genderHint') : undefined}
           >
             {(p) => (
@@ -266,7 +279,7 @@ export function Register() {
             )}
           </Field>
 
-          <Field label={t('reg.phone')} required error={errors.phone} hint={t('reg.phoneHint')}>
+          <Field label={t('reg.phone')} required error={err.phone} hint={t('reg.phoneHint')}>
             {(p) => (
               <Input
                 {...p}
@@ -279,7 +292,7 @@ export function Register() {
             )}
           </Field>
 
-          <Field label={t('reg.email')} error={errors.email}>
+          <Field label={t('reg.email')} error={err.email}>
             {(p) => (
               <Input
                 {...p}
@@ -312,13 +325,13 @@ export function Register() {
               taluk: districtHasTaluks,
             }}
             errors={{
-              street1: errors.street1,
-              state: errors.state,
-              district: errors.district,
-              taluk: errors.taluk,
-              city: errors.city,
-              pincode: errors.pincode,
-              village_town: errors.village_town,
+              street1: err.street1,
+              state: err.state,
+              district: err.district,
+              taluk: err.taluk,
+              city: err.city,
+              pincode: err.pincode,
+              village_town: err.village_town,
             }}
           />
 
@@ -326,13 +339,13 @@ export function Register() {
           {isFarmer ? (
             <>
               <h2 className="reg-section">{t('reg.kyc')}</h2>
-              <Field label={t('reg.aadhaar')} required error={errors.aadhar}>
+              <Field label={t('reg.aadhaar')} required error={err.aadhar}>
                 {(p) => (
                   <Input
                     {...p}
                     type="text"
                     inputMode="numeric"
-                    placeholder="12-digit Aadhaar"
+                    placeholder={t('reg.aadhaarHint', '12-digit Aadhaar')}
                     value={form.aadhar}
                     onChange={(e) =>
                       set({ aadhar: e.target.value.replace(/\D/g, '').slice(0, 12) })
@@ -340,7 +353,7 @@ export function Register() {
                   />
                 )}
               </Field>
-              <Field label={t('reg.bankName')} required error={errors.bank_name}>
+              <Field label={t('reg.bankName')} required error={err.bank_name}>
                 {(p) => (
                   <Input
                     {...p}
@@ -350,7 +363,7 @@ export function Register() {
                   />
                 )}
               </Field>
-              <Field label={t('reg.bankAccount')} required error={errors.bank_account}>
+              <Field label={t('reg.bankAccount')} required error={err.bank_account}>
                 {(p) => (
                   <Input
                     {...p}
@@ -363,11 +376,7 @@ export function Register() {
                   />
                 )}
               </Field>
-              <Field
-                label={t('reg.bankAccountConfirm')}
-                required
-                error={errors.confirm_bank_account}
-              >
+              <Field label={t('reg.bankAccountConfirm')} required error={err.confirm_bank_account}>
                 {(p) => (
                   <Input
                     {...p}
@@ -380,7 +389,7 @@ export function Register() {
                   />
                 )}
               </Field>
-              <Field label={t('reg.ifsc')} error={errors.ifsc} hint={t('reg.ifscHint')}>
+              <Field label={t('reg.ifsc')} error={err.ifsc} hint={t('reg.ifscHint')}>
                 {(p) => (
                   <Input
                     {...p}
@@ -398,7 +407,7 @@ export function Register() {
           {isRetailer ? (
             <>
               <h2 className="reg-section">{t('reg.business')}</h2>
-              <Field label={t('reg.businessName')} required error={errors.business_name}>
+              <Field label={t('reg.businessName')} required error={err.business_name}>
                 {(p) => (
                   <Input
                     {...p}
@@ -409,7 +418,7 @@ export function Register() {
                   />
                 )}
               </Field>
-              <Field label={t('reg.gst')} error={errors.gst_number} hint={t('reg.gstHint')}>
+              <Field label={t('reg.gst')} error={err.gst_number} hint={t('reg.gstHint')}>
                 {(p) => (
                   <Input
                     {...p}
@@ -430,9 +439,10 @@ export function Register() {
                     onChange={(e) => set({ business_type: e.target.value })}
                   >
                     <option value="">{t('reg.selectType')}</option>
+                    {/* The VALUE is what business_type stores and HO reviews. */}
                     {BUSINESS_TYPES.map((b) => (
                       <option key={b} value={b}>
-                        {b}
+                        {t(businessTypeKey(b), b)}
                       </option>
                     ))}
                   </Select>
@@ -443,7 +453,7 @@ export function Register() {
 
           {/* ── Security ── */}
           <h2 className="reg-section">{t('reg.security')}</h2>
-          <Field label={t('reg.password')} required error={errors.password}>
+          <Field label={t('reg.password')} required error={err.password}>
             {(p) => (
               <Input
                 {...p}
@@ -457,11 +467,12 @@ export function Register() {
           <ul className="pw-rules">
             {pwRules.map((r) => (
               <li key={r.id} className={r.met ? 'pw-rule met' : 'pw-rule'}>
-                <span aria-hidden="true">{r.met ? '✓' : '○'}</span> {r.label}
+                {/* The rule's `id` is already a code; `label` is its English default. */}
+                <span aria-hidden="true">{r.met ? '✓' : '○'}</span> {t(`pwd.rule.${r.id}`, r.label)}
               </li>
             ))}
           </ul>
-          <Field label={t('reg.confirmPassword')} required error={errors.confirm_password}>
+          <Field label={t('reg.confirmPassword')} required error={err.confirm_password}>
             {(p) => (
               <Input
                 {...p}
@@ -477,7 +488,7 @@ export function Register() {
           {isSeller ? (
             <>
               <h2 className="reg-section">{t('reg.plan')}</h2>
-              <Field label={t('reg.choosePlan')} required error={errors.subscription_plan}>
+              <Field label={t('reg.choosePlan')} required error={err.subscription_plan}>
                 {(p) => (
                   <Select
                     {...p}

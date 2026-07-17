@@ -12,6 +12,7 @@ import {
   rankedDistricts,
   findDistrict,
   districtTone,
+  alertKey,
   alertTone,
   formatGrowth,
   growthDirection,
@@ -525,7 +526,11 @@ export function ExecutivePage() {
               >
                 {/* Severity carries an icon + the message, never colour alone. */}
                 <ToneDot tone={alertTone(a.severity)} />
-                <span className="text-fg">{a.message}</span>
+                {/* The server's English sentence is the DEFAULT: an alert type with
+                    no key still says something true. */}
+                <span className="text-fg">
+                  {String(t(alertKey(a.type), { ...a.params, defaultValue: a.message }))}
+                </span>
               </li>
             ))}
           </ul>

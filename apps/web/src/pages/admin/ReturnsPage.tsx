@@ -4,9 +4,11 @@ import { Button, EmptyState, FilterChips, Spinner, Table, type TableColumn } fro
 import { api, type AdminReturn } from '@marutham/api-client';
 import { fmtDateShort, fmtMoney } from '@marutham/lib';
 import { ReturnDetailSheet, RETURN_STATUS_TONE, returnStatus } from './ReturnDetailSheet';
+import { useTableLabels } from './useTableLabels';
 
 export function ReturnsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const tableLabels = useTableLabels();
   const [returns, setReturns] = useState<AdminReturn[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +96,7 @@ export function ReturnsPage() {
         key: 'requested',
         header: t('admin.ret.requestedOn'),
         value: (r) => r.requested_at || '',
-        render: (r) => fmtDateShort(r.requested_at),
+        render: (r) => fmtDateShort(r.requested_at, i18n.language),
       },
       {
         key: 'actions',
@@ -132,6 +134,7 @@ export function ReturnsPage() {
       </div>
 
       <Table
+        labels={tableLabels}
         rows={rows}
         columns={columns}
         rowId={(r) => r.id}

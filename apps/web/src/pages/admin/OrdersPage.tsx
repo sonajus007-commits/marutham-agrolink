@@ -2,13 +2,23 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, EmptyState, FilterChips, Spinner, Table, type TableColumn } from '@marutham/ui';
 import { api } from '@marutham/api-client';
-import { fmtDateShort, fmtMoney, isOrderCancelled, statusColor, type Order } from '@marutham/lib';
+import {
+  fmtDateShort,
+  fmtMoney,
+  isOrderCancelled,
+  payMethodKey,
+  statusColor,
+  statusKey,
+  type Order,
+} from '@marutham/lib';
 import { AdminOrderSheet } from './AdminOrderSheet';
+import { useTableLabels } from './useTableLabels';
 
 const statusOf = (o: Order) => (isOrderCancelled(o) ? 'Cancelled' : o.status);
 
 export function OrdersPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const tableLabels = useTableLabels();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +50,8 @@ export function OrdersPage() {
       { value: 'all', label: `${t('admin.orders.all')} (${orders.length})` },
       ...[...counts.entries()]
         .sort((a, b) => b[1] - a[1])
-        .map(([s, n]) => ({ value: s, label: `${s} (${n})` })),
+        // The VALUE stays the English status — it is what the filter compares.
+        .map(([s, n]) => ({ value: s, label: `${t(statusKey(s), s)} (${n})` })),
     ];
   }, [orders, t]);
 
@@ -61,17 +72,24 @@ export function OrdersPage() {
       {
         key: 'status',
         header: t('admin.orders.status'),
+        /* `value` stays the English status: it drives the sort, the filter and the
+           CSV. Only the cell is spoken. */
         value: (o) => statusOf(o),
         render: (o) => (
           <span
             className="inline-block rounded-pill px-2 py-0.5 text-2xs font-bold text-white"
             style={{ background: statusColor(statusOf(o)) }}
           >
-            {statusOf(o)}
+            {t(statusKey(statusOf(o)), statusOf(o))}
           </span>
         ),
       },
-      { key: 'pay', header: t('admin.orders.payment'), value: (o) => o.pay_method || '' },
+      {
+        key: 'pay',
+        header: t('admin.orders.payment'),
+        value: (o) => o.pay_method || '',
+        render: (o) => (o.pay_method ? t(payMethodKey(o.pay_method), o.pay_method) : ''),
+      },
       {
         key: 'total',
         header: t('admin.orders.total'),
@@ -83,7 +101,7 @@ export function OrdersPage() {
         key: 'date',
         header: t('admin.orders.placedOn'),
         value: (o) => o.created_at || '',
-        render: (o) => fmtDateShort(o.created_at),
+        render: (o) => fmtDateShort(o.created_at, i18n.language),
       },
       {
         key: 'actions',
@@ -121,6 +139,7 @@ export function OrdersPage() {
       </div>
 
       <Table
+        labels={tableLabels}
         rows={rows}
         columns={columns}
         rowId={(o) => o.id}

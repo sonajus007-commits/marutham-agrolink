@@ -660,9 +660,13 @@ export interface ExecutiveTrendPoint {
 }
 
 export interface ExecutiveAlert {
+  /** A CODE ('delayed_payment', 'security', …) — what the alert IS. */
   type: string;
   severity: 'high' | 'medium' | 'low' | (string & {});
+  /** The server's English sentence. The FALLBACK when a type has no key yet. */
   message: string;
+  /** The numbers behind the sentence, so a translated screen can rebuild it. */
+  params?: Record<string, string | number>;
 }
 
 export type ExecutiveTrendMode = 'monthly' | 'quarterly' | 'yearly';

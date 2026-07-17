@@ -79,7 +79,7 @@ function Body({
   onDone: () => void;
   onChanged: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [showReject, setShowReject] = useState(false);
@@ -177,7 +177,10 @@ function Body({
         {reg.district ? <Row label={t('admin.reg.district')} value={String(reg.district)} /> : null}
         {reg.state ? <Row label={t('admin.reg.state')} value={String(reg.state)} /> : null}
         {address ? <div className="pt-1.5 text-2xs text-fg-muted">{address}</div> : null}
-        <Row label={t('admin.reg.appliedOn')} value={fmtDateShort(reg.created_at as string)} />
+        <Row
+          label={t('admin.reg.appliedOn')}
+          value={fmtDateShort(reg.created_at as string, i18n.language)}
+        />
       </Section>
 
       {reg.business_name || reg.gst_number || reg.bank_name ? (

@@ -2,15 +2,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, EmptyState, FilterChips, Spinner, Table, type TableColumn } from '@marutham/ui';
 import { api, type User } from '@marutham/api-client';
-import { fmtDateShort } from '@marutham/lib';
+import { fmtDateShort, adminRoleKey, userRoleKey, userStatusKey } from '@marutham/lib';
 import { UserDetailSheet, USER_STATUS_TONE } from './UserDetailSheet';
+import { useTableLabels } from './useTableLabels';
 
 const kindOf = (u: User) => (u.role === 'admin' ? 'admin' : u.role);
-const roleLabel = (u: User) =>
+/* The stored value, for the filter/sort/CSV. Spoken at the render site. */
+const roleValue = (u: User) =>
   u.role === 'admin' ? String(u.admin_role || 'Admin') : String(u.role);
+const roleKeyOf = (u: User) =>
+  u.role === 'admin' ? adminRoleKey(roleValue(u)) : userRoleKey(roleValue(u));
 
 export function UsersPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const tableLabels = useTableLabels();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +70,12 @@ export function UsersPage() {
         header: t('admin.users.name'),
         value: (u) => `${u.fname || ''} ${u.lname || ''}`.trim(),
       },
-      { key: 'role', header: t('admin.users.role'), value: (u) => roleLabel(u) },
+      {
+        key: 'role',
+        header: t('admin.users.role'),
+        value: (u) => roleValue(u),
+        render: (u) => t(roleKeyOf(u), roleValue(u)),
+      },
       {
         key: 'district',
         header: t('admin.users.district'),
@@ -80,7 +90,7 @@ export function UsersPage() {
             className="inline-block rounded-pill px-2 py-0.5 text-2xs font-bold text-white"
             style={{ background: USER_STATUS_TONE[String(u.status)] || 'var(--fg-muted)' }}
           >
-            {String(u.status)}
+            {t(userStatusKey(String(u.status)), String(u.status))}
           </span>
         ),
       },
@@ -89,7 +99,7 @@ export function UsersPage() {
         key: 'joined',
         header: t('admin.users.joined'),
         value: (u) => (u.created_at as string) || '',
-        render: (u) => fmtDateShort(u.created_at as string),
+        render: (u) => fmtDateShort(u.created_at as string, i18n.language),
       },
       {
         key: 'actions',
@@ -127,6 +137,7 @@ export function UsersPage() {
       </div>
 
       <Table
+        labels={tableLabels}
         rows={rows}
         columns={columns}
         rowId={(u) => u.id}
