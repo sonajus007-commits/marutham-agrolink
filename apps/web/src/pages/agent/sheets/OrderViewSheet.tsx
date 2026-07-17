@@ -13,6 +13,8 @@ import {
   statusKey,
   type OrderDetail,
 } from '@marutham/lib';
+import { useToast } from '../../../components/Toast';
+import { useAuth } from '../../../auth/AuthContext';
 
 export function OrderViewSheet({
   open,
@@ -64,19 +66,92 @@ export function OrderViewSheet({
 
 function OrderViewBody({ data }: { data: OrderDetail }) {
   const { t, i18n } = useTranslation();
+  const { user } = useAuth();
+  const toast = useToast();
   const { order: o, items, history, qr_svg } = data;
   const daText = resolveAddress(o.delivery_address);
   const charges = deriveOrderCharges(o);
+
+  // The delivery agent decides direct-vs-hub around pickup. The server (PATCH
+  // /route) allows the change only until the order is Out for Delivery, so it is
+  // offered at the two pickup-side stages. Optimistic: `route` drives the pipeline.
+  const [route, setRoute] = useState(o.route || 'direct');
+  const [routing, setRouting] = useState(false);
+  const isDeliveryAgent = user?.admin_role === 'Delivery Agent';
+  const canRoute = isDeliveryAgent && (o.status === 'VCO Verified' || o.status === 'Picked Up');
+
+  async function chooseRoute(next: string) {
+    if (next === route || routing) return;
+    const prev = route;
+    setRoute(next); // optimistic — the pipeline reflects it immediately
+    setRouting(true);
+    try {
+      await api.setRoute(o.id, next);
+      toast(
+        t('agent.deliver.routeSet', 'Route set to {{route}}', {
+          route:
+            next === 'hub'
+              ? t('agent.route.hub', 'Transit to Hub')
+              : t('agent.route.direct', 'Direct Delivery'),
+        }),
+        'ok',
+      );
+    } catch (e) {
+      setRoute(prev); // roll back on failure
+      toast(
+        e instanceof Error ? e.message : t('agent.deliver.routeFailed', 'Failed to set route'),
+        'er',
+      );
+    } finally {
+      setRouting(false);
+    }
+  }
 
   return (
     <>
       <div className="a-card" style={{ padding: '14px 10px' }}>
         {/* Labels are translated HERE — OrderPipeline keys its ✓ off the raw label. */}
         <OrderPipeline
-          nodes={buildPipeline(o.route, o.status)}
+          nodes={buildPipeline(route, o.status)}
           labelFor={(l) => t(statusKey(l), l)}
         />
       </div>
+
+      {canRoute ? (
+        <div className="a-card">
+          <h3>🗺 {t('agent.pickup.routeTitle', 'Send to Hub or Direct?')}</h3>
+          <div className="route-toggle">
+            <button
+              className={`route-btn ${route === 'direct' ? 'on' : ''}`}
+              onClick={() => chooseRoute('direct')}
+              disabled={routing}
+            >
+              🛵 {t('agent.route.directShort', 'Direct')}
+              <br />
+              <span style={{ fontSize: 9, fontWeight: 400 }}>
+                {t('agent.route.directEta', '~2 hrs ETA')}
+              </span>
+            </button>
+            <button
+              className={`route-btn ${route === 'hub' ? 'on' : ''}`}
+              onClick={() => chooseRoute('hub')}
+              disabled={routing}
+            >
+              🏭 {t('agent.route.hubShort', 'Via Hub')}
+              <br />
+              <span style={{ fontSize: 9, fontWeight: 400 }}>
+                {t('agent.route.hubEta', '~4 hrs ETA')}
+              </span>
+            </button>
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 8 }}>
+            {t(
+              'agent.pickup.routeHint',
+              'Via Hub routes this parcel through the hub for the last mile.',
+            )}
+          </div>
+        </div>
+      ) : null}
 
       {qr_svg ? (
         <div className="a-card" style={{ textAlign: 'center' }}>

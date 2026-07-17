@@ -30,7 +30,6 @@ export function DeliverSheet({
   const toast = useToast();
   const [data, setData] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [route, setRoute] = useState('direct');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -45,7 +44,6 @@ export function DeliverSheet({
       .then((res) => {
         if (!active) return;
         setData(res);
-        setRoute(res.order.route || 'direct');
       })
       .catch(
         (e) =>
@@ -56,29 +54,6 @@ export function DeliverSheet({
       active = false;
     };
   }, [open, orderId]);
-
-  async function changeRoute(next: string) {
-    if (!orderId) return;
-    setRoute(next);
-    try {
-      await api.setRoute(orderId, next);
-      // `next` is the ROUTE VALUE the API stores ('direct'|'hub') — spoken, not echoed.
-      toast(
-        t('agent.deliver.routeSet', 'Route set to {{route}}', {
-          route:
-            next === 'hub'
-              ? t('agent.route.hub', 'Transit to Hub')
-              : t('agent.route.direct', 'Direct Delivery'),
-        }),
-        'ok',
-      );
-    } catch (e) {
-      toast(
-        e instanceof Error ? e.message : t('agent.deliver.routeFailed', 'Failed to set route'),
-        'er',
-      );
-    }
-  }
 
   async function confirm() {
     if (!orderId || !data) return;
@@ -165,36 +140,13 @@ export function DeliverSheet({
             ))}
           </div>
 
-          <div className="a-card">
-            <h3>🗺 {t('agent.deliver.route', 'Route')}</h3>
-            <div className="route-toggle">
-              <button
-                className={`route-btn ${route === 'direct' ? 'on' : ''}`}
-                onClick={() => changeRoute('direct')}
-              >
-                🛵 {t('agent.route.directShort', 'Direct')}
-                <br />
-                <span style={{ fontSize: 9, fontWeight: 400 }}>
-                  {t('agent.route.directEta', '~2 hrs ETA')}
-                </span>
-              </button>
-              <button
-                className={`route-btn ${route === 'hub' ? 'on' : ''}`}
-                onClick={() => changeRoute('hub')}
-              >
-                🏭 {t('agent.route.hubShort', 'Via Hub')}
-                <br />
-                <span style={{ fontSize: 9, fontWeight: 400 }}>
-                  {t('agent.route.hubEta', '~4 hrs ETA')}
-                </span>
-              </button>
-            </div>
-            {o.eta_ts ? (
-              <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 8 }}>
+          {o.eta_ts ? (
+            <div className="a-card">
+              <div style={{ fontSize: 11, color: 'var(--gray)' }}>
                 {t('agent.deliver.eta', 'ETA:')} {fmtDate(o.eta_ts, i18n.language)}
               </div>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
 
           <div className="a-card">
             <h3>💳 {t('consumer.order.payment', 'Payment')}</h3>

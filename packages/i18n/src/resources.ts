@@ -328,6 +328,8 @@ export const resources = {
       'agent.route.hubSub': 'via hub',
       'agent.route.hubShort': 'Via Hub',
       'agent.route.hubEta': '~4 hrs ETA',
+      'agent.pickup.routeTitle': 'Send to Hub or Direct?',
+      'agent.pickup.routeHint': 'Via Hub routes this parcel through the hub for the last mile.',
       // Agent: verify sheet (VCO)
       'agent.verify.title': 'Verify Order',
       'agent.verify.village': 'Fulfilment village:',
@@ -2019,6 +2021,9 @@ export const resources = {
       'agent.route.hubSub': 'மையம் வழியாக',
       'agent.route.hubShort': 'மையம் வழியாக',
       'agent.route.hubEta': '~4 மணி நேரம்',
+      'agent.pickup.routeTitle': 'மையம் வழியாகவா நேரடியாகவா?',
+      'agent.pickup.routeHint':
+        'மையம் வழியாக என்றால் இந்த பொருள் கடைசி கட்டத்திற்கு மையம் வழியாகச் செல்லும்.',
       // Agent: verify sheet (VCO)
       'agent.verify.title': 'ஆர்டரைச் சரிபார்',
       'agent.verify.village': 'நிறைவேற்றும் கிராமம்:',
