@@ -9,6 +9,8 @@ export interface QtyStepperProps {
   disabled?: boolean;
   /** Round to whole numbers on blur (for non-decimal units). */
   integer?: boolean;
+  /** Accessible names for the three controls. English by default. */
+  labels?: { decrease?: string; increase?: string; quantity?: string };
 }
 
 const BTN =
@@ -25,6 +27,7 @@ export function QtyStepper({
   unit,
   disabled,
   integer,
+  labels,
 }: QtyStepperProps) {
   // Local text state lets the user type freely without the value snapping mid-edit.
   const [text, setText] = useState(String(value));
@@ -50,7 +53,7 @@ export function QtyStepper({
         className={BTN}
         onClick={() => onChange(round(Math.max(min, value - step)))}
         disabled={disabled}
-        aria-label="Decrease quantity"
+        aria-label={labels?.decrease ?? 'Decrease quantity'}
       >
         −
       </button>
@@ -62,14 +65,14 @@ export function QtyStepper({
         disabled={disabled}
         onChange={(e) => setText(e.target.value)}
         onBlur={(e) => commit(e.target.value)}
-        aria-label="Quantity"
+        aria-label={labels?.quantity ?? 'Quantity'}
       />
       <button
         type="button"
         className={BTN}
         onClick={() => onChange(round(value + step))}
         disabled={disabled}
-        aria-label="Increase quantity"
+        aria-label={labels?.increase ?? 'Increase quantity'}
       >
         +
       </button>

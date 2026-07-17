@@ -13,15 +13,31 @@ export type SavedAddress = AddressObject;
 export const PINCODE_RE = /^\d{6}$/;
 
 /**
+ * Why an address cannot be saved.
+ *
+ * A CODE, not a sentence. This used to return the English message itself, which
+ * meant a translated screen showed a translated form and then faulted it in
+ * English — and lib cannot reach i18n anyway, being pure and shared with React
+ * Native. The wording belongs to whoever is doing the talking; see
+ * `addressProblemKey`.
+ */
+export type AddressProblem = 'streetOrVillage' | 'stateDistrict' | 'pincode';
+
+/**
  * Validate an address for saving. Mirrors the legacy consumer checks: enough of
  * a locality to find the door, a state + district for routing, a real pincode.
- * Returns a human-readable message, or null when the address is acceptable.
+ * Returns the problem, or null when the address is acceptable.
  */
-export function validateAddress(a: SavedAddress): string | null {
-  if (!a.street1?.trim() && !a.village_town?.trim()) return 'Enter at least a street or village.';
-  if (!a.state || !a.district) return 'Select state and district.';
-  if (!PINCODE_RE.test(a.pincode || '')) return 'A valid 6-digit pincode is required.';
+export function validateAddress(a: SavedAddress): AddressProblem | null {
+  if (!a.street1?.trim() && !a.village_town?.trim()) return 'streetOrVillage';
+  if (!a.state || !a.district) return 'stateDistrict';
+  if (!PINCODE_RE.test(a.pincode || '')) return 'pincode';
   return null;
+}
+
+/** The i18n key for an address problem. Pair with `t()`; en carries the wording. */
+export function addressProblemKey(problem: AddressProblem): string {
+  return `address.err.${problem}`;
 }
 
 /** Compact one-line form used in lists and pickers (not the full postal line). */
@@ -29,9 +45,19 @@ export function addressSummary(a: SavedAddress): string {
   return [a.house_no, a.street1, a.landmark, a.village_town, a.pincode].filter(Boolean).join(', ');
 }
 
-/** Display name for an entry, falling back to its position. */
-export function addressTitle(a: SavedAddress, index: number): string {
-  return a.label || `Address ${index + 1}`;
+/**
+ * Display name for an entry, falling back to its position.
+ *
+ * `label` is the user's own word for the place ("Home", "Amma's") and is stored,
+ * so it is never translated. Only the fallback is ours to say, hence the hook —
+ * default English keeps every existing caller identical.
+ */
+export function addressTitle(
+  a: SavedAddress,
+  index: number,
+  fallback: (position: number) => string = (n) => `Address ${n}`,
+): string {
+  return a.label || fallback(index + 1);
 }
 
 /**

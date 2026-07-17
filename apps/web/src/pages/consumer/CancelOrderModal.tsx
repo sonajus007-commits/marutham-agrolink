@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Button, Modal } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import type { Order } from '@marutham/lib';
@@ -15,6 +16,7 @@ export function CancelOrderModal({
   onClose: () => void;
   onCancelled: () => void;
 }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
@@ -23,10 +25,13 @@ export function CancelOrderModal({
     setBusy(true);
     try {
       await api.cancelOrder(order.id, reason.trim());
-      toast('Order cancelled.', 'ok');
+      toast(t('consumer.cancel.done', 'Order cancelled.'), 'ok');
       onCancelled();
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'Could not cancel order', 'er');
+      toast(
+        e instanceof Error ? e.message : t('consumer.cancel.failed', 'Could not cancel order'),
+        'er',
+      );
     } finally {
       setBusy(false);
     }
@@ -35,28 +40,39 @@ export function CancelOrderModal({
   return (
     <Modal
       open={open}
-      title="Cancel this order?"
+      title={t('consumer.cancel.title', 'Cancel this order?')}
+      closeLabel={t('common.close', 'Close')}
       onClose={onClose}
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Keep order
+            {t('consumer.cancel.keep', 'Keep order')}
           </Button>
           <Button variant="danger" onClick={submit} disabled={busy}>
-            {busy ? 'Cancelling…' : 'Cancel order'}
+            {busy
+              ? t('consumer.cancel.busy', 'Cancelling…')
+              : t('consumer.cancel.confirm', 'Cancel order')}
           </Button>
         </>
       }
     >
       <p style={{ fontSize: 12, color: 'var(--gray)', lineHeight: 1.6, marginBottom: 12 }}>
-        Order <strong>{order.code || order.id.slice(0, 8).toUpperCase()}</strong> will be cancelled.
+        <Trans
+          i18nKey="consumer.cancel.body"
+          values={{ code: order.code || order.id.slice(0, 8).toUpperCase() }}
+          defaults="Order <1>{{code}}</1> will be cancelled."
+          components={{ 1: <strong /> }}
+        />
         {order.pay_status === 'paid'
-          ? ' Your payment will be refunded to the original payment method.'
+          ? ` ${t('consumer.cancel.refund', 'Your payment will be refunded to the original payment method.')}`
           : ''}
       </p>
       <div className="fg">
         <label className="fl" htmlFor="cancel-reason">
-          Reason <span style={{ fontWeight: 400, color: 'var(--gray)' }}>(optional)</span>
+          {t('consumer.cancel.reason', 'Reason')}{' '}
+          <span style={{ fontWeight: 400, color: 'var(--gray)' }}>
+            ({t('common.optional', 'optional')})
+          </span>
         </label>
         <textarea
           id="cancel-reason"
@@ -64,7 +80,7 @@ export function CancelOrderModal({
           rows={3}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Why are you cancelling?"
+          placeholder={t('consumer.cancel.reasonPlaceholder', 'Why are you cancelling?')}
         />
       </div>
     </Modal>

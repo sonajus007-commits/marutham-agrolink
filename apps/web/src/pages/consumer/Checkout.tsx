@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type PlaceOrderItem } from '@marutham/api-client';
 import {
+  addressProblemKey,
   addressSummary,
   addressTitle,
   buildAddress,
@@ -22,6 +24,7 @@ function addrLine(a: SavedAddress, i: number): string {
 }
 
 export function Checkout({ bill, onOrderPlaced }: { bill: CartBill; onOrderPlaced: () => void }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const cart = useCart();
   const toast = useToast();
@@ -46,8 +49,11 @@ export function Checkout({ bill, onOrderPlaced }: { bill: CartBill; onOrderPlace
   function collectNewAddress(): Record<string, unknown> | null {
     const problem = validateAddress(na);
     if (problem) {
-      setNaError(problem);
-      toast(problem, 'er');
+      // The code becomes a sentence here — lib returns the fault, this screen
+      // speaks it, in whichever language the screen is in.
+      const message = t(addressProblemKey(problem));
+      setNaError(message);
+      toast(message, 'er');
       return null;
     }
     setNaError(null);
@@ -56,7 +62,7 @@ export function Checkout({ bill, onOrderPlaced }: { bill: CartBill; onOrderPlace
 
   async function proceed() {
     if (cart.items.length === 0) {
-      toast('Your cart is empty.', 'er');
+      toast(t('consumer.cart.empty', 'Your cart is empty.'), 'er');
       return;
     }
     setResolving(true);
@@ -71,7 +77,13 @@ export function Checkout({ bill, onOrderPlaced }: { bill: CartBill; onOrderPlace
           farmerId = (res.listings || []).find((l) => l.listed)?.farmer_id || null;
         }
         if (!farmerId) {
-          toast('Some items have no available farmers. Please remove them.', 'er');
+          toast(
+            t(
+              'consumer.checkout.noFarmers',
+              'Some items have no available farmers. Please remove them.',
+            ),
+            'er',
+          );
           setResolving(false);
           return;
         }
@@ -100,7 +112,7 @@ export function Checkout({ bill, onOrderPlaced }: { bill: CartBill; onOrderPlace
     <div>
       <div className="fg">
         <label className="fl" htmlFor="checkout-addr">
-          Delivery Address <span className="rq">*</span>
+          {t('consumer.checkout.deliveryAddress', 'Delivery Address')} <span className="rq">*</span>
         </label>
         <select
           id="checkout-addr"
@@ -114,8 +126,12 @@ export function Checkout({ bill, onOrderPlaced }: { bill: CartBill; onOrderPlace
               {addrLine(a, i)}
             </option>
           ))}
-          <option value="profile">📍 Profile address</option>
-          <option value="new">➕ Deliver to a different address…</option>
+          <option value="profile">
+            📍 {t('consumer.checkout.profileAddress', 'Profile address')}
+          </option>
+          <option value="new">
+            ➕ {t('consumer.checkout.otherAddress', 'Deliver to a different address…')}
+          </option>
         </select>
 
         {choice !== 'new' ? (
@@ -131,9 +147,10 @@ export function Checkout({ bill, onOrderPlaced }: { bill: CartBill; onOrderPlace
               borderRadius: 9,
             }}
           >
-            📦 <b>Deliver to:</b>{' '}
+            📦 <b>{t('consumer.checkout.deliverTo', 'Deliver to:')}</b>{' '}
             {choice === 'profile'
-              ? profileText || '⚠️ No profile address on file — add one in the Profile tab.'
+              ? profileText ||
+                `⚠️ ${t('consumer.checkout.noProfileAddress', 'No profile address on file — add one in the Profile tab.')}`
               : addrLine(addrs[parseInt(choice)] || {}, parseInt(choice))}
           </div>
         ) : (
@@ -151,7 +168,9 @@ export function Checkout({ bill, onOrderPlaced }: { bill: CartBill; onOrderPlace
       </div>
 
       <button className="cons-btn-primary" onClick={proceed} disabled={resolving}>
-        {resolving ? 'Checking availability…' : 'Proceed to Pay →'}
+        {resolving
+          ? t('consumer.checkout.checking', 'Checking availability…')
+          : `${t('consumer.checkout.proceed', 'Proceed to Pay')} →`}
       </button>
 
       <PaymentSheet

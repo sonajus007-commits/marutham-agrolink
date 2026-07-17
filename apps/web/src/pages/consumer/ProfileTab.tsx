@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Field, Input, Select, FIELD_ERR_CLASS } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import { buildAddress } from '@marutham/lib';
@@ -7,7 +8,10 @@ import { useToast } from '../../components/Toast';
 import { AddressBook } from './AddressBook';
 import { ChangePasswordCard } from '../../components/ChangePasswordCard';
 
+/* The VALUE is what the users row stores and what the API expects; only the
+ * option text is translated. genderKey mirrors the statusKey pattern. */
 const GENDERS = ['Male', 'Female', 'Transgender'];
+const genderKey = (g: string) => `gender.${g.toLowerCase()}`;
 
 /* Fields a consumer may edit on their own record. Note `state`/`district` are
  * deliberately absent: the district scopes the storefront and the delivery hub,
@@ -36,6 +40,7 @@ function draftFrom(user: Record<string, unknown>): ProfileDraft {
 }
 
 export function ProfileTab() {
+  const { t } = useTranslation();
   const { user, updateUser } = useAuth();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
@@ -54,9 +59,9 @@ export function ProfileTab() {
 
   async function save() {
     if (draft.pincode && !/^\d{6}$/.test(draft.pincode))
-      return setError('Pincode must be 6 digits.');
+      return setError(t('consumer.profile.badPincode', 'Pincode must be 6 digits.'));
     if (draft.email && !/^\S+@\S+\.\S+$/.test(draft.email))
-      return setError('Enter a valid email address.');
+      return setError(t('consumer.profile.badEmail', 'Enter a valid email address.'));
     setError(null);
     setBusy(true);
     try {
@@ -72,10 +77,14 @@ export function ProfileTab() {
       }
       const res = await api.patchMe(patch);
       updateUser(res.user);
-      toast('Profile updated.', 'ok');
+      toast(t('consumer.profile.updated', 'Profile updated.'), 'ok');
       setEditing(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update profile');
+      setError(
+        e instanceof Error
+          ? e.message
+          : t('consumer.profile.updateFailed', 'Could not update profile'),
+      );
     } finally {
       setBusy(false);
     }
@@ -87,49 +96,64 @@ export function ProfileTab() {
   return (
     <>
       <section className="ord-card">
-        <h3>👤 My Profile</h3>
+        <h3>👤 {t('consumer.profile.title', 'My Profile')}</h3>
 
         <div className="lid-box">
-          <div className="lid-lbl">Your Login ID</div>
+          <div className="lid-lbl">{t('consumer.profile.loginId', 'Your Login ID')}</div>
           <div className="lid-val">{user.login_id || '—'}</div>
-          <div className="lid-note">Use this ID or phone number to login</div>
+          <div className="lid-note">
+            {t('consumer.profile.loginIdNote', 'Use this ID or phone number to login')}
+          </div>
         </div>
 
         <dl className="prof-rows">
-          <ProfRow label="Full Name" value={fullName} />
-          <ProfRow label="Gender" value={(user.gender as string) || '—'} />
+          <ProfRow label={t('consumer.profile.fullName', 'Full Name')} value={fullName} />
           <ProfRow
-            label="Phone"
+            label={t('consumer.profile.gender', 'Gender')}
+            value={user.gender ? t(genderKey(user.gender as string), user.gender as string) : '—'}
+          />
+          <ProfRow
+            label={t('consumer.profile.phone', 'Phone')}
             value={`${(user.country_code as string) || '+91'} ${user.phone}`}
             mono
           />
-          <ProfRow label="Email" value={(user.email as string) || '—'} />
-          <ProfRow label="District" value={(user.district as string) || '—'} />
-          <ProfRow label="Address" value={profileAddress || '—'} />
+          <ProfRow
+            label={t('consumer.profile.email', 'Email')}
+            value={(user.email as string) || '—'}
+          />
+          <ProfRow
+            label={t('consumer.profile.district', 'District')}
+            value={(user.district as string) || '—'}
+          />
+          <ProfRow label={t('consumer.profile.address', 'Address')} value={profileAddress || '—'} />
         </dl>
 
         {!editing ? (
           <button className="prof-editbtn" onClick={openEdit}>
-            ✏️ Edit Profile
+            ✏️ {t('consumer.profile.edit', 'Edit Profile')}
           </button>
         ) : (
           <div className="prof-form">
-            <h4 className="prof-form__title">Editable Fields</h4>
+            <h4 className="prof-form__title">
+              {t('consumer.profile.editableFields', 'Editable Fields')}
+            </h4>
 
-            <Field label="Gender">
+            <Field label={t('consumer.profile.gender', 'Gender')}>
               {(p) => (
                 <Select {...p} value={draft.gender} onChange={(e) => set('gender', e.target.value)}>
-                  <option value="">— Select Gender —</option>
+                  <option value="">
+                    — {t('consumer.profile.selectGender', 'Select Gender')} —
+                  </option>
                   {GENDERS.map((g) => (
                     <option key={g} value={g}>
-                      {g}
+                      {t(genderKey(g), g)}
                     </option>
                   ))}
                 </Select>
               )}
             </Field>
 
-            <Field label="Email">
+            <Field label={t('consumer.profile.email', 'Email')}>
               {(p) => (
                 <Input
                   {...p}
@@ -142,7 +166,7 @@ export function ProfileTab() {
               )}
             </Field>
 
-            <Field label="Street Line 1">
+            <Field label={t('consumer.profile.street1', 'Street Line 1')}>
               {(p) => (
                 <Input
                   {...p}
@@ -152,7 +176,7 @@ export function ProfileTab() {
                 />
               )}
             </Field>
-            <Field label="Street Line 2">
+            <Field label={t('consumer.profile.street2', 'Street Line 2')}>
               {(p) => (
                 <Input
                   {...p}
@@ -162,7 +186,7 @@ export function ProfileTab() {
                 />
               )}
             </Field>
-            <Field label="Village / Town">
+            <Field label={t('consumer.profile.village', 'Village / Town')}>
               {(p) => (
                 <Input
                   {...p}
@@ -172,7 +196,7 @@ export function ProfileTab() {
                 />
               )}
             </Field>
-            <Field label="City">
+            <Field label={t('consumer.profile.city', 'City')}>
               {(p) => (
                 <Input
                   {...p}
@@ -182,7 +206,7 @@ export function ProfileTab() {
                 />
               )}
             </Field>
-            <Field label="Pincode">
+            <Field label={t('consumer.profile.pincode', 'Pincode')}>
               {(p) => (
                 <Input
                   {...p}
@@ -203,10 +227,12 @@ export function ProfileTab() {
 
             <div className="prof-actions">
               <Button onClick={save} disabled={busy}>
-                {busy ? 'Saving…' : 'Save Changes'}
+                {busy
+                  ? t('consumer.addr.saving', 'Saving…')
+                  : t('consumer.profile.saveChanges', 'Save Changes')}
               </Button>
               <Button variant="ghost" onClick={() => setEditing(false)} disabled={busy}>
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
             </div>
           </div>

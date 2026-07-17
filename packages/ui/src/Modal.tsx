@@ -17,6 +17,8 @@ export interface ModalProps {
   dismissible?: boolean;
   /** Optional supporting line under the title. */
   subtitle?: ReactNode;
+  /** Accessible name for the ✕. English by default. */
+  closeLabel?: string;
 }
 
 /**
@@ -40,6 +42,7 @@ export function Modal({
   footer,
   dismissible = true,
   subtitle,
+  closeLabel,
 }: ModalProps) {
   const returnFocus = useReturnFocus(open);
 
@@ -73,7 +76,7 @@ export function Modal({
               {dismissible ? (
                 <Dialog.Close
                   className="cursor-pointer appearance-none border-0 bg-transparent p-1 text-[15px] leading-none text-fg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
-                  aria-label="Close"
+                  aria-label={closeLabel ?? 'Close'}
                 >
                   ✕
                 </Dialog.Close>

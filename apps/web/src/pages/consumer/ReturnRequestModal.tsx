@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Modal } from '@marutham/ui';
 import { api, type ReturnLine } from '@marutham/api-client';
 import { getProductEmoji, type Order, type OrderItem } from '@marutham/lib';
@@ -17,6 +18,7 @@ export function ReturnRequestModal({
   onClose: () => void;
   onSubmitted: () => void;
 }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [reason, setReason] = useState('');
@@ -33,13 +35,20 @@ export function ReturnRequestModal({
 
   async function submit() {
     // Selection first: with nothing ticked, "enter a reason" is the wrong nudge.
-    if (selected.size === 0) return toast('Select at least one item', 'er');
+    if (selected.size === 0)
+      return toast(t('consumer.return.selectItem', 'Select at least one item'), 'er');
     const trimmed = reason.trim();
-    if (!trimmed) return toast('Please enter a reason', 'er');
+    if (!trimmed) return toast(t('consumer.return.needReason', 'Please enter a reason'), 'er');
 
     const chosen = [...selected].map((idx) => items[idx]);
     if (chosen.some((it) => !it.id)) {
-      return toast('These items cannot be returned online. Please contact support.', 'er');
+      return toast(
+        t(
+          'consumer.return.notReturnable',
+          'These items cannot be returned online. Please contact support.',
+        ),
+        'er',
+      );
     }
 
     // Identify items by id only. The server owns price, name and the refund
@@ -53,10 +62,13 @@ export function ReturnRequestModal({
     setBusy(true);
     try {
       const res = await api.requestReturn(order.id, { lines });
-      toast(`Return ${res.code} submitted!`, 'ok');
+      toast(t('consumer.return.submitted', 'Return {{code}} submitted!', { code: res.code }), 'ok');
       onSubmitted();
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'Could not submit return', 'er');
+      toast(
+        e instanceof Error ? e.message : t('consumer.return.failed', 'Could not submit return'),
+        'er',
+      );
     } finally {
       setBusy(false);
     }
@@ -65,22 +77,25 @@ export function ReturnRequestModal({
   return (
     <Modal
       open={open}
-      title="Request return / refund"
+      title={t('consumer.return.title', 'Request return / refund')}
+      closeLabel={t('common.close', 'Close')}
       onClose={onClose}
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Close
+            {t('common.close', 'Close')}
           </Button>
           <Button variant="danger" onClick={submit} disabled={busy}>
-            {busy ? 'Submitting…' : 'Submit return'}
+            {busy
+              ? t('consumer.return.busy', 'Submitting…')
+              : t('consumer.return.submit', 'Submit return')}
           </Button>
         </>
       }
     >
       <fieldset style={{ border: 'none', padding: 0, margin: '0 0 12px' }}>
         <legend className="fl" style={{ marginBottom: 6 }}>
-          Select items to return
+          {t('consumer.return.selectLegend', 'Select items to return')}
         </legend>
         {items.map((it, idx) => (
           <label key={it.id || idx} className="ret-item">
@@ -97,7 +112,7 @@ export function ReturnRequestModal({
 
       <div className="fg">
         <label className="fl" htmlFor="return-reason">
-          Reason <span className="rq">*</span>
+          {t('consumer.cancel.reason', 'Reason')} <span className="rq">*</span>
         </label>
         <textarea
           id="return-reason"
@@ -105,7 +120,10 @@ export function ReturnRequestModal({
           rows={3}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Damaged, wrong item, quality issue…"
+          placeholder={t(
+            'consumer.return.reasonPlaceholder',
+            'Damaged, wrong item, quality issue…',
+          )}
         />
       </div>
     </Modal>

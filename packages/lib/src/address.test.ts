@@ -23,8 +23,8 @@ const defaults = (list: SavedAddress[]) => list.map((a) => !!a.is_default);
 
 describe('validateAddress', () => {
   it('needs a street or a village to find the door', () => {
-    expect(validateAddress({ state: 'TN', district: 'D', pincode: '622001' })).toMatch(
-      /street or village/,
+    expect(validateAddress({ state: 'TN', district: 'D', pincode: '622001' })).toBe(
+      'streetOrVillage',
     );
   });
 
@@ -35,15 +35,11 @@ describe('validateAddress', () => {
   });
 
   it('needs a state and district for routing', () => {
-    expect(validateAddress({ street1: 'x', state: 'TN', pincode: '622001' })).toMatch(
-      /state and district/,
-    );
+    expect(validateAddress({ street1: 'x', state: 'TN', pincode: '622001' })).toBe('stateDistrict');
   });
 
   it.each(['62200', '6220012', '6220a1', '', undefined])('rejects the pincode %o', (pincode) => {
-    expect(validateAddress({ street1: 'x', state: 'TN', district: 'D', pincode })).toMatch(
-      /pincode/,
-    );
+    expect(validateAddress({ street1: 'x', state: 'TN', district: 'D', pincode })).toBe('pincode');
   });
 
   it('accepts a complete address', () => {
@@ -51,9 +47,9 @@ describe('validateAddress', () => {
   });
 
   it('treats whitespace-only street as absent', () => {
-    expect(
-      validateAddress({ street1: '   ', state: 'TN', district: 'D', pincode: '622001' }),
-    ).toMatch(/street or village/);
+    expect(validateAddress({ street1: '   ', state: 'TN', district: 'D', pincode: '622001' })).toBe(
+      'streetOrVillage',
+    );
   });
 });
 

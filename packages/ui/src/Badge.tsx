@@ -54,7 +54,14 @@ export function PaymentBadge({ method }: { method?: string }) {
  * cancelled order renders "Out for Delivery", in transit-blue, unless the flag is
  * checked first. Every caller has to remember that, so no caller should have to.
  */
-export function StatusBadge({ order, label }: { order: Order; label?: string }) {
+export function StatusBadge({
+  order,
+  labelFor,
+}: {
+  order: Order;
+  /** Speak the status. Defaults to the English value the API sent. */
+  labelFor?: (status: string) => string;
+}) {
   const status = isOrderCancelled(order) ? 'Cancelled' : String(order.status ?? '');
-  return <Badge variant={statusTone(status)}>{label ?? status}</Badge>;
+  return <Badge variant={statusTone(status)}>{labelFor ? labelFor(status) : status}</Badge>;
 }

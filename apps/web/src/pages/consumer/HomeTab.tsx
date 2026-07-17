@@ -4,7 +4,9 @@ import {
   buildPipeline,
   fmtDateShort,
   fmtMoney,
+  payMethodKey,
   statusColor,
+  statusKey,
   bestOffer,
   offerConsumerPrice,
   getProductEmoji,
@@ -171,7 +173,7 @@ function RecentOrders({
   onOpenOrder: (id: string) => void;
   onGoToOrders: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <section className="cons-recent">
@@ -217,13 +219,13 @@ function RecentOrders({
                     {orderLabel(o)}
                   </button>
                 </td>
-                <td className="cons-recent__date">{fmtDateShort(o.created_at)}</td>
+                <td className="cons-recent__date">{fmtDateShort(o.created_at, i18n.language)}</td>
                 {/* An em-dash, not 0: item_count is absent for a role that did not ask
                     for it, and "0 items" would be a claim rather than a gap. */}
                 <td className="cons-recent__num">{o.item_count ?? '—'}</td>
                 <td className="cons-recent__num">{fmtMoney(o.total)}</td>
                 <td>
-                  <StatusBadge order={o} />
+                  <StatusBadge order={o} labelFor={(s) => t(statusKey(s), s)} />
                 </td>
               </tr>
             ))}
@@ -257,23 +259,36 @@ function TrackingCard({
   onOpen: (id: string) => void;
   trackLabel: string;
 }) {
+  const { t, i18n } = useTranslation();
   return (
     <article className="track-card" style={{ borderLeftColor: statusColor(o.status) }}>
       <div className="track-card__top">
         <div>
           <span className="ord-id">{orderLabel(o)}</span>
           <span className="ord-loc">
-            {fmtDateShort(o.created_at)}
+            {fmtDateShort(o.created_at, i18n.language)}
             {o.agent_name ? ` · 🛵 ${o.agent_name}` : ''}
           </span>
         </div>
         <div style={{ textAlign: 'right' }}>
           <span className="ord-amt">{fmtMoney(o.total)}</span>
-          {o.pay_method ? <span className="ord-item__pay">{o.pay_method}</span> : null}
+          {o.pay_method ? (
+            <span className="ord-item__pay">{t(payMethodKey(o.pay_method), o.pay_method)}</span>
+          ) : null}
         </div>
       </div>
 
-      <OrderProgress nodes={buildPipeline(o.route || 'direct', o.status)} />
+      {/* Labels are translated HERE, not baked into the nodes: OrderProgress and
+          OrderPipeline both key logic off the raw English label. */}
+      <OrderProgress
+        nodes={buildPipeline(o.route || 'direct', o.status)}
+        labelFor={(l) => t(statusKey(l), l)}
+        stepText={(step, total) =>
+          step > 0
+            ? t('consumer.home.stepOf', 'Step {{step}} of {{total}}', { step, total })
+            : t('consumer.home.steps', '{{total}} steps', { total })
+        }
+      />
 
       <button
         type="button"

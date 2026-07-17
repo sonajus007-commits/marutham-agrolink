@@ -44,9 +44,20 @@ function Connector({ kind }: { kind: GapKind | 'spacer' }) {
 export function OrderPipeline({
   nodes,
   activeColor = 'var(--sun)',
+  labelFor,
 }: {
   nodes: PipelineNode[];
   activeColor?: string;
+  /**
+   * Speak a stage label — display ONLY. Defaults to the English label
+   * `buildPipeline` produced, so every existing caller is unchanged.
+   *
+   * It exists as a prop rather than translated into `nodes` by the caller
+   * because the label is also LOGIC here: the ✓ below is decided by
+   * `node.label === 'Delivered'`. Hand this component pre-translated nodes and
+   * the final stage silently stops going green in Tamil.
+   */
+  labelFor?: (label: string) => string;
 }) {
   const N = nodes.length;
   const totalW = N * NODE_W;
@@ -70,6 +81,7 @@ export function OrderPipeline({
             const done = node.status === 'done';
             const active = node.status === 'active';
             const skipped = node.status === 'skipped';
+            // Compares the RAW label, never the spoken one — see `labelFor`.
             const green = done || (active && node.label === 'Delivered');
             const dotBg = green ? 'var(--success)' : active ? activeColor : 'var(--neutral-200)';
             const dotBd = green ? 'var(--success)' : active ? activeColor : 'var(--neutral-300)';
@@ -110,7 +122,7 @@ export function OrderPipeline({
                   )}
                   style={{ color: lblCl, maxWidth: NODE_W - 4 }}
                 >
-                  {node.label}
+                  {labelFor ? labelFor(node.label) : node.label}
                 </div>
               </div>
             );

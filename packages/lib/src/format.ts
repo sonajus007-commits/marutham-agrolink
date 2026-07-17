@@ -29,10 +29,24 @@ export function fmtNum(val: unknown): string {
   return Number(val || 0).toLocaleString('en-IN');
 }
 
-export function fmtDate(isoStr?: string | null): string {
+/**
+ * The app language as a locale Intl will accept.
+ *
+ * The region matters and is not decoration: bare `'en'` formats the date as
+ * "Jul 09, 2026", where `'en-IN'` gives "09 Jul 2026". Passing i18n.language
+ * straight through would silently reorder every English date in the app, so the
+ * two languages are mapped explicitly and anything unrecognised stays en-IN.
+ */
+export function dateLocale(lang?: string | null): string {
+  return lang === 'ta' ? 'ta-IN' : 'en-IN';
+}
+
+/* `lang` is optional on both formatters, so the ~37 existing call sites keep the
+ * exact output they have today and only the screens that pass it translate. */
+export function fmtDate(isoStr?: string | null, lang?: string | null): string {
   if (!isoStr) return '—';
   const d = new Date(isoStr);
-  return d.toLocaleDateString('en-IN', {
+  return d.toLocaleDateString(dateLocale(lang), {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -41,10 +55,14 @@ export function fmtDate(isoStr?: string | null): string {
   });
 }
 
-export function fmtDateShort(isoStr?: string | null): string {
+export function fmtDateShort(isoStr?: string | null, lang?: string | null): string {
   if (!isoStr) return '—';
   const d = new Date(isoStr);
-  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString(dateLocale(lang), {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 /* Every field is nullable: these columns come straight from Postgres, where an
@@ -96,6 +114,73 @@ export function resolveAddress(da: string | AddressObject | null | undefined): s
 
 export function statusColor(status: string): string {
   return (statusPalette as Record<string, string>)[status] ?? statusFallback;
+}
+
+/**
+ * Translation key per order status — for DISPLAY only.
+ *
+ * The status VALUE stays English, and must: it is what the API sends, what
+ * `statusColor` and `statusTone` key off, and what `buildPipeline` runs an
+ * indexOf against to decide which stage an order has reached. Translate the
+ * value and the pipeline breaks silently — indexOf returns -1 and every stage
+ * renders `pending`. The string is the data; this is only how it is spoken.
+ *
+ * The same nine strings serve as both `status` and pipeline stage label, so one
+ * map covers the pills, the progress bar and the timeline.
+ */
+const STATUS_KEYS: Record<string, string> = {
+  'Order Placed': 'status.orderPlaced',
+  Packaged: 'status.packaged',
+  'VCO Verified': 'status.vcoVerified',
+  'Picked Up': 'status.pickedUp',
+  'In Transit': 'status.inTransit',
+  'At Hub': 'status.atHub',
+  'Out for Delivery': 'status.outForDelivery',
+  Delivered: 'status.delivered',
+  Cancelled: 'status.cancelled',
+  // Not a status and not a pipeline stage — order_history carries it as a label
+  // of its own, so the timeline needs it even though no pill ever shows it.
+  'Agent Assigned': 'status.agentAssigned',
+};
+
+/**
+ * The i18n key for a status, or the status itself when it has none.
+ *
+ * Pair it with the raw status as the default — `t(statusKey(s), s)` — so an
+ * unrecognised status renders as whatever the API called it, not as a key.
+ */
+export function statusKey(status: string): string {
+  return STATUS_KEYS[status] ?? status;
+}
+
+/** The statuses that carry a translation. Lets a test prove none was missed. */
+export function translatedStatuses(): string[] {
+  return Object.keys(STATUS_KEYS);
+}
+
+/* Payment method and status are stored English too, and are shown on every order
+ * row, sheet and receipt. Same rule as the status: the value is the data, these
+ * are only how it is spoken. "UPI" is kept as-is on purpose — it is the name the
+ * audience actually uses, in either language. */
+const PAY_METHOD_KEYS: Record<string, string> = {
+  'Cash on Delivery': 'pay.cod',
+  UPI: 'pay.upi',
+  Card: 'pay.card',
+};
+
+const PAY_STATUS_KEYS: Record<string, string> = {
+  pending: 'pay.pending',
+  paid: 'pay.paid',
+};
+
+/** The i18n key for a payment method, or the method itself when it has none. */
+export function payMethodKey(method: string): string {
+  return PAY_METHOD_KEYS[method] ?? method;
+}
+
+/** The i18n key for a payment status, or the status itself when it has none. */
+export function payStatusKey(status: string): string {
+  return PAY_STATUS_KEYS[status] ?? status;
 }
 
 /**

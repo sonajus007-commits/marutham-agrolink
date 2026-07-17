@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Modal } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import {
+  addressProblemKey,
   addressSummary,
   addressTitle,
   removeAddress,
@@ -28,9 +30,14 @@ const EMPTY: SavedAddress = {
 };
 
 export function AddressBook() {
+  const { t } = useTranslation();
   const { user, updateUser } = useAuth();
   const toast = useToast();
   const addresses = (user?.delivery_addresses as SavedAddress[]) || [];
+
+  /** The label is the user's own word for the place; only our fallback is ours to say. */
+  const titleOf = (a: SavedAddress, i: number) =>
+    addressTitle(a, i, (n) => t('consumer.addr.nth', 'Address {{n}}', { n }));
 
   /** null = form closed; -1 = adding; >=0 = editing that index. */
   const [editing, setEditing] = useState<number | null>(null);
@@ -55,7 +62,8 @@ export function AddressBook() {
       toast(message, 'ok');
       return true;
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Could not save address';
+      const msg =
+        e instanceof Error ? e.message : t('consumer.addr.saveFailed', 'Could not save address');
       setError(msg);
       toast(msg, 'er');
       return false;
@@ -82,15 +90,17 @@ export function AddressBook() {
 
   async function save() {
     const problem = validateAddress(draft);
-    if (problem) return setError(problem);
+    if (problem) return setError(t(addressProblemKey(problem)));
     setError(null);
     const entry: SavedAddress = { ...draft, label: draft.label?.trim() || 'Home' };
     const next = upsertAddress(addresses, entry, editing === -1 ? null : editing);
-    if (await persist(next, 'Address saved.')) setEditing(null);
+    if (await persist(next, t('consumer.addr.saved', 'Address saved.'))) setEditing(null);
   }
 
   async function remove(i: number) {
-    if (await persist(removeAddress(addresses, i), 'Address removed.')) {
+    if (
+      await persist(removeAddress(addresses, i), t('consumer.addr.removed', 'Address removed.'))
+    ) {
       setConfirmDelete(null);
       // The form may have been editing the row that just shifted out from under it.
       if (editing !== null && editing >= 0) setEditing(null);
@@ -98,30 +108,37 @@ export function AddressBook() {
   }
 
   async function makeDefault(i: number) {
-    await persist(setDefaultAddress(addresses, i), 'Default address updated.');
+    await persist(
+      setDefaultAddress(addresses, i),
+      t('consumer.addr.defaultUpdated', 'Default address updated.'),
+    );
   }
 
   return (
     <section className="ord-card">
       <div className="prof-cardhead">
-        <h3>📍 Address Book</h3>
+        <h3>📍 {t('consumer.addr.title', 'Address Book')}</h3>
         {editing === null ? (
           <button className="prof-addbtn" onClick={openAdd}>
-            + Add
+            + {t('consumer.addr.add', 'Add')}
           </button>
         ) : null}
       </div>
 
       {addresses.length === 0 ? (
-        <p className="prof-empty">No saved addresses yet.</p>
+        <p className="prof-empty">{t('consumer.addr.none', 'No saved addresses yet.')}</p>
       ) : (
         <ul className="addr-list">
           {addresses.map((a, i) => (
             <li key={i} className={`addr-item${a.is_default ? ' is-default' : ''}`}>
               <div className="addr-item__main">
                 <div className="addr-item__title">
-                  {addressTitle(a, i)}
-                  {a.is_default ? <span className="addr-item__badge">Default</span> : null}
+                  {titleOf(a, i)}
+                  {a.is_default ? (
+                    <span className="addr-item__badge">
+                      {t('consumer.addr.default', 'Default')}
+                    </span>
+                  ) : null}
                 </div>
                 <div className="addr-item__line">{addressSummary(a) || '—'}</div>
               </div>
@@ -132,16 +149,18 @@ export function AddressBook() {
                     disabled={busy}
                     onClick={() => makeDefault(i)}
                   >
-                    Default
+                    {t('consumer.addr.makeDefault', 'Default')}
                   </button>
                 ) : null}
                 <button className="addr-btn" disabled={busy} onClick={() => openEdit(i)}>
-                  Edit
+                  {t('consumer.addr.edit', 'Edit')}
                 </button>
                 <button
                   className="addr-btn addr-btn--danger"
                   disabled={busy}
-                  aria-label={`Delete ${addressTitle(a, i)}`}
+                  aria-label={t('consumer.addr.deleteAria', 'Delete {{name}}', {
+                    name: titleOf(a, i),
+                  })}
                   onClick={() => setConfirmDelete(i)}
                 >
                   ✕
@@ -155,15 +174,21 @@ export function AddressBook() {
       {editing !== null ? (
         <div className="prof-form">
           <h4 className="prof-form__title">
-            {editing === -1 ? 'Add address' : `Edit ${addressTitle(addresses[editing], editing)}`}
+            {editing === -1
+              ? t('consumer.addr.addTitle', 'Add address')
+              : t('consumer.addr.editTitle', 'Edit {{name}}', {
+                  name: titleOf(addresses[editing], editing),
+                })}
           </h4>
           <AddressFields value={draft} onChange={setDraft} showLabel showPin error={error} />
           <div className="prof-actions">
             <Button onClick={save} disabled={busy}>
-              {busy ? 'Saving…' : 'Save Address'}
+              {busy
+                ? t('consumer.addr.saving', 'Saving…')
+                : t('consumer.addr.save', 'Save Address')}
             </Button>
             <Button variant="ghost" onClick={() => setEditing(null)} disabled={busy}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
           </div>
         </div>
@@ -171,29 +196,30 @@ export function AddressBook() {
 
       <Modal
         open={confirmDelete !== null}
-        title="Delete this address?"
+        title={t('consumer.addr.deleteTitle', 'Delete this address?')}
+        closeLabel={t('common.close', 'Close')}
         onClose={() => setConfirmDelete(null)}
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirmDelete(null)} disabled={busy}>
-              Keep it
+              {t('consumer.addr.keep', 'Keep it')}
             </Button>
             <Button
               variant="danger"
               onClick={() => confirmDelete !== null && remove(confirmDelete)}
               disabled={busy}
             >
-              {busy ? 'Deleting…' : 'Delete'}
+              {busy ? t('consumer.addr.deleting', 'Deleting…') : t('common.delete', 'Delete')}
             </Button>
           </>
         }
       >
         {confirmDelete !== null && addresses[confirmDelete] ? (
           <p style={{ fontSize: 12, color: 'var(--gray)', lineHeight: 1.6 }}>
-            <strong>{addressTitle(addresses[confirmDelete], confirmDelete)}</strong> —{' '}
+            <strong>{titleOf(addresses[confirmDelete], confirmDelete)}</strong> —{' '}
             {addressSummary(addresses[confirmDelete]) || '—'}
             {addresses[confirmDelete].is_default && addresses.length > 1
-              ? ' This is your default address; the next one will become the default.'
+              ? ` ${t('consumer.addr.defaultWarning', 'This is your default address; the next one will become the default.')}`
               : ''}
           </p>
         ) : null}

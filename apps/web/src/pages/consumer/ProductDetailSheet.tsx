@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sheet, QtyStepper } from '@marutham/ui';
 import {
   offerConsumerPrice,
@@ -31,13 +32,14 @@ export function ProductDetailSheet({
   onClose: () => void;
   onAdd: (item: CartItem) => void;
 }) {
+  const { t } = useTranslation();
   if (!product) return null;
   const dp = product.district_price;
   const mktPrice = dp ? parseFloat(String(dp.market_price)) : 0;
   const photos = Array.from(new Set(offers.map((o) => o.images?.[0]).filter(Boolean))) as string[];
 
   return (
-    <Sheet open={open} title={product.name} onClose={onClose}>
+    <Sheet open={open} title={product.name} onClose={onClose} backLabel={t('common.back', 'Back')}>
       {photos.length ? (
         <div
           style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 14, paddingBottom: 4 }}
@@ -107,7 +109,7 @@ export function ProductDetailSheet({
           </div>
           {mktPrice > 0 ? (
             <div style={{ fontSize: 11, color: 'var(--gray)' }}>
-              Govt price: {fmtMoney(mktPrice)} / {product.unit}
+              {t('consumer.detail.govtPrice', 'Govt price:')} {fmtMoney(mktPrice)} / {product.unit}
             </div>
           ) : null}
         </div>
@@ -137,14 +139,14 @@ export function ProductDetailSheet({
             color: 'var(--gray)',
           }}
         >
-          No farmers have listed this product today.
+          {t('consumer.detail.noOffers', 'No farmers have listed this product today.')}
         </div>
       ) : (
         <>
           <div
             style={{ fontSize: 12, fontWeight: 700, color: 'var(--neutral-700)', marginBottom: 10 }}
           >
-            {offers.length} seller offer{offers.length > 1 ? 's' : ''} today
+            {t('consumer.detail.offerCount', { count: offers.length })}
           </div>
           {offers.map((o, k) => (
             <OfferRow
@@ -178,6 +180,7 @@ function OfferRow({
   onAdd: (item: CartItem) => void;
   onAdded: () => void;
 }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const unit = product.unit;
   const defStep = unitStep(unit);
@@ -198,24 +201,46 @@ function OfferRow({
 
   const qtyRule =
     offer.qty_type === 'MOQ'
-      ? `Min ${offer.qty_value} ${unit}`
+      ? t('consumer.detail.minQty', 'Min {{qty}} {{unit}}', { qty: offer.qty_value, unit })
       : offer.qty_type === 'SPQ'
-        ? `Packs of ${offer.qty_value} ${unit}`
+        ? t('consumer.detail.packsOf', 'Packs of {{qty}} {{unit}}', { qty: offer.qty_value, unit })
         : '';
 
   function add() {
-    if (isNaN(qty) || qty <= 0) return toast('Enter a valid quantity', 'er');
+    if (isNaN(qty) || qty <= 0)
+      return toast(t('consumer.detail.badQty', 'Enter a valid quantity'), 'er');
     if (!unitAllowsDecimal(unit) && qty % 1 !== 0)
-      return toast(`Whole numbers only for ${unit}`, 'er');
+      return toast(
+        t('consumer.detail.wholeOnly', 'Whole numbers only for {{unit}}', { unit }),
+        'er',
+      );
     if (offer.qty_type === 'MOQ' && qty < parseFloat(String(offer.qty_value)))
-      return toast(`Minimum order: ${offer.qty_value} ${unit}`, 'er');
+      return toast(
+        t('consumer.detail.minOrder', 'Minimum order: {{qty}} {{unit}}', {
+          qty: offer.qty_value,
+          unit,
+        }),
+        'er',
+      );
     if (
       offer.qty_type === 'SPQ' &&
       Math.round(qty * 100) % Math.round(parseFloat(String(offer.qty_value)) * 100) !== 0
     )
-      return toast(`Must be in packs of ${offer.qty_value} ${unit}`, 'er');
+      return toast(
+        t('consumer.detail.mustPack', 'Must be in packs of {{qty}} {{unit}}', {
+          qty: offer.qty_value,
+          unit,
+        }),
+        'er',
+      );
     if (offer.qty_available != null && qty > offer.qty_available)
-      return toast(`Only ${offer.qty_available} ${unit} available`, 'er');
+      return toast(
+        t('consumer.shop.onlyAvailable', 'Only {{qty}} {{unit}} available', {
+          qty: offer.qty_available,
+          unit,
+        }).trim(),
+        'er',
+      );
 
     onAdd({
       product_id: product.id,
@@ -229,7 +254,14 @@ function OfferRow({
       farmer_price_rs: parseFloat(String(offer.farmer_price)),
     });
     const savAmt = mktPrice > 0 ? (mktPrice - custPrice) * qty : 0;
-    toast(savAmt > 0 ? `Added — save ${fmtMoney(savAmt)} vs market` : 'Added to cart', 'ok');
+    toast(
+      savAmt > 0
+        ? t('consumer.detail.addedSave', 'Added — save {{amount}} vs market', {
+            amount: fmtMoney(savAmt),
+          })
+        : t('consumer.detail.added', 'Added to cart'),
+      'ok',
+    );
     onAdded();
   }
 
@@ -285,7 +317,7 @@ function OfferRow({
           )}
           <div>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)' }}>
-              {f.fname || 'Seller'}
+              {f.fname || t('consumer.detail.seller', 'Seller')}
               {f.lname ? ` ${f.lname}` : ''}
             </span>
             <div style={{ fontSize: 10, color: 'var(--gray)' }}>
@@ -307,7 +339,9 @@ function OfferRow({
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--leaf)' }}>
             {fmtMoney(custPrice)}
           </div>
-          <div style={{ fontSize: 9, color: 'var(--gray)' }}>per {unit}</div>
+          <div style={{ fontSize: 9, color: 'var(--gray)' }}>
+            {t('consumer.detail.per', 'per {{unit}}', { unit })}
+          </div>
         </div>
       </div>
 
@@ -322,7 +356,10 @@ function OfferRow({
               padding: '2px 6px',
             }}
           >
-            {offer.qty_available} {unit} available
+            {t('consumer.detail.available', '{{qty}} {{unit}} available', {
+              qty: offer.qty_available,
+              unit,
+            })}
           </span>
         ) : null}
         {qtyRule ? (
@@ -349,7 +386,10 @@ function OfferRow({
               padding: '2px 6px',
             }}
           >
-            Save {fmtMoney(perSave)}/{unit}
+            {t('consumer.detail.savePer', 'Save {{amount}}/{{unit}}', {
+              amount: fmtMoney(perSave),
+              unit,
+            })}
           </span>
         ) : null}
       </div>
@@ -366,7 +406,7 @@ function OfferRow({
             borderRadius: 8,
           }}
         >
-          Sold out from this farmer
+          {t('consumer.detail.soldOut', 'Sold out from this farmer')}
         </div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -377,9 +417,14 @@ function OfferRow({
             unit={unit}
             integer={!unitAllowsDecimal(unit)}
             onChange={setQty}
+            labels={{
+              decrease: t('consumer.qty.decrease', 'Decrease quantity'),
+              increase: t('consumer.qty.increase', 'Increase quantity'),
+              quantity: t('consumer.qty.quantity', 'Quantity'),
+            }}
           />
           <button className="cons-btn-sm" style={{ marginLeft: 'auto' }} onClick={add}>
-            Add
+            {t('consumer.detail.add', 'Add')}
           </button>
         </div>
       )}

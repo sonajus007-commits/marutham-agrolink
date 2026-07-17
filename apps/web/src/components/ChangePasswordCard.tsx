@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Button, Card, Field, FIELD_ERR_CLASS } from '@marutham/ui';
 import { api } from '@marutham/api-client';
@@ -11,6 +12,7 @@ import { PasswordInput, PasswordRules } from './PasswordInput';
  * with the design-system primitives so it carries no legacy page CSS.
  */
 export function ChangePasswordCard() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState('');
@@ -26,18 +28,20 @@ export function ChangePasswordCard() {
   }
 
   async function submit() {
-    if (!current) return setError('Enter your current password.');
+    if (!current) return setError(t('pwd.needCurrent', 'Enter your current password.'));
     // The client is stricter than the server's 6-char floor, on purpose.
-    if (!isStrongPassword(next)) return setError('New password does not meet the requirements.');
-    if (next === current) return setError('New password must differ from the current one.');
+    if (!isStrongPassword(next))
+      return setError(t('pwd.weak', 'New password does not meet the requirements.'));
+    if (next === current)
+      return setError(t('pwd.same', 'New password must differ from the current one.'));
     setError(null);
     setBusy(true);
     try {
       await api.changePassword(current, next);
-      toast('Password changed successfully.', 'ok');
+      toast(t('pwd.changed', 'Password changed successfully.'), 'ok');
       close();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not change password');
+      setError(e instanceof Error ? e.message : t('pwd.failed', 'Could not change password'));
     } finally {
       setBusy(false);
     }
@@ -45,33 +49,35 @@ export function ChangePasswordCard() {
 
   return (
     <Card>
-      <h3 className="mb-3 text-md font-bold text-primary">🔒 Change Password</h3>
+      <h3 className="mb-3 text-md font-bold text-primary">
+        🔒 {t('pwd.title', 'Change Password')}
+      </h3>
       {!open ? (
         <Button variant="ghost" onClick={() => setOpen(true)}>
-          🔒 Change Password
+          🔒 {t('pwd.title', 'Change Password')}
         </Button>
       ) : (
         <div className="flex flex-col gap-3">
-          <Field label="Current Password">
+          <Field label={t('pwd.current', 'Current Password')}>
             {(p) => (
               <PasswordInput
                 {...p}
                 value={current}
                 onChange={setCurrent}
-                placeholder="Your current password"
+                placeholder={t('pwd.currentHint', 'Your current password')}
                 autoComplete="current-password"
               />
             )}
           </Field>
 
-          <Field label="New Password">
+          <Field label={t('pwd.new', 'New Password')}>
             {(p) => (
               <>
                 <PasswordInput
                   {...p}
                   value={next}
                   onChange={setNext}
-                  placeholder="New strong password"
+                  placeholder={t('pwd.newHint', 'New strong password')}
                   autoComplete="new-password"
                 />
                 <PasswordRules value={next} />
@@ -88,10 +94,10 @@ export function ChangePasswordCard() {
 
           <div className="flex gap-2">
             <Button onClick={submit} disabled={busy}>
-              {busy ? 'Updating…' : 'Update Password'}
+              {busy ? t('pwd.busy', 'Updating…') : t('pwd.update', 'Update Password')}
             </Button>
             <Button variant="ghost" onClick={close} disabled={busy}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
           </div>
         </div>

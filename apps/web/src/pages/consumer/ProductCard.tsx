@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { QtyStepper } from '@marutham/ui';
 import {
   bestOffer,
@@ -31,6 +32,7 @@ export function ProductCard({
   onOpenDetail: (id: string) => void;
   onChangeQty: (product: Product, nextQty: number) => void;
 }) {
+  const { t } = useTranslation();
   const dp = product.district_price;
   const handling = dp ? parseFloat(String(dp.handling)) || 0 : 0;
   const best = bestOffer(offers, seller);
@@ -99,25 +101,29 @@ export function ProductCard({
             <>
               <div className="prod-price">{fmtMoney(custPrice)}</div>
               <div style={{ fontSize: 9, color: 'var(--gray)' }}>
-                seller {fmtMoney(farmerPrice!)}
+                {t('consumer.card.seller', 'seller')} {fmtMoney(farmerPrice!)}
               </div>
               {handling > 0 ? (
-                <div style={{ fontSize: 9, color: 'var(--gray)' }}>+{fmtMoney(handling)} hdl</div>
+                <div style={{ fontSize: 9, color: 'var(--gray)' }}>
+                  +{fmtMoney(handling)} {t('consumer.card.handling', 'hdl')}
+                </div>
               ) : null}
             </>
           ) : dp ? (
             <>
               <div className="prod-price" style={{ fontSize: 12, color: 'var(--gray)' }}>
-                Mkt {fmtMoney(dp.market_price)}
+                {t('consumer.card.mkt', 'Mkt')} {fmtMoney(dp.market_price)}
               </div>
-              <div style={{ fontSize: 9, color: 'var(--red)' }}>No offers</div>
+              <div style={{ fontSize: 9, color: 'var(--red)' }}>
+                {t('consumer.card.noOffers', 'No offers')}
+              </div>
             </>
           ) : (
             <div className="prod-price" style={{ fontSize: 12, color: 'var(--gray)' }}>
-              Price TBD
+              {t('consumer.card.priceTbd', 'Price TBD')}
             </div>
           )}
-          <div className="prod-unit">/ {product.unit || 'unit'}</div>
+          <div className="prod-unit">/ {product.unit || t('consumer.card.unit', 'unit')}</div>
         </div>
       </div>
 
@@ -127,37 +133,52 @@ export function ProductCard({
             className="prod-chip"
             style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}
           >
-            🌶 Perishable
+            🌶 {t('consumer.card.perishable', 'Perishable')}
           </span>
         ) : null}
         {best?.time_available ? (
           <span style={{ fontSize: 10, color: 'var(--schedule)' }}>
-            Order by {best.time_available}
+            {t('consumer.card.orderBy', 'Order by {{time}}', { time: best.time_available })}
           </span>
         ) : null}
         {availLeft != null ? (
           <span style={{ fontSize: 10, color: availLeft <= 0 ? 'var(--red)' : 'var(--gray)' }}>
-            {availLeft} {product.unit || ''} avail{cartQty > 0 ? ` (${cartQty} in cart)` : ''}
+            {t('consumer.card.avail', '{{qty}} {{unit}} avail', {
+              qty: availLeft,
+              unit: product.unit || '',
+            })}
+            {cartQty > 0
+              ? ` ${t('consumer.card.inCart', '({{qty}} in cart)', { qty: cartQty })}`
+              : ''}
           </span>
         ) : null}
         {best?.bulk_qty && best?.bulk_disc_pct ? (
           <span style={{ fontSize: 10, color: 'var(--leaf)', fontWeight: 700 }}>
-            Bulk {best.bulk_qty}+ → {best.bulk_disc_pct}% off
+            {t('consumer.card.bulk', 'Bulk {{qty}}+ → {{pct}}% off', {
+              qty: best.bulk_qty,
+              pct: best.bulk_disc_pct,
+            })}
           </span>
         ) : null}
 
         <div className="prod-actions">
           {custPrice == null && !dp ? (
-            <span style={{ fontSize: 10, color: 'var(--gray)' }}>Not in your area</span>
+            <span style={{ fontSize: 10, color: 'var(--gray)' }}>
+              {t('consumer.card.notInArea', 'Not in your area')}
+            </span>
           ) : !best || !hasStock ? (
-            <span style={{ fontSize: 10, color: 'var(--red)' }}>No offers today</span>
+            <span style={{ fontSize: 10, color: 'var(--red)' }}>
+              {t('consumer.card.noOffersToday', 'No offers today')}
+            </span>
           ) : !ws.open ? (
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--red)' }}>🔒 Closed</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--red)' }}>
+                🔒 {t('consumer.card.closed', 'Closed')}
+              </div>
             </div>
           ) : cartQty === 0 ? (
             <button className="cons-btn-sm" onClick={() => onOpenDetail(product.id)}>
-              View →
+              {t('consumer.card.view', 'View')} →
             </button>
           ) : (
             <QtyStepper
@@ -166,6 +187,11 @@ export function ProductCard({
               step={unitStep(product.unit)}
               integer={!unitAllowsDecimal(product.unit)}
               onChange={(q) => onChangeQty(product, q)}
+              labels={{
+                decrease: t('consumer.qty.decrease', 'Decrease quantity'),
+                increase: t('consumer.qty.increase', 'Increase quantity'),
+                quantity: t('consumer.qty.quantity', 'Quantity'),
+              }}
             />
           )}
         </div>
@@ -175,6 +201,7 @@ export function ProductCard({
 }
 
 function SellerBadge({ type }: { type?: string }) {
+  const { t } = useTranslation();
   const retailer = type === 'Retailer';
   return (
     <span
@@ -187,7 +214,9 @@ function SellerBadge({ type }: { type?: string }) {
         color: retailer ? 'var(--info)' : 'var(--success)',
       }}
     >
-      {retailer ? '🏪 Retailer' : '🌱 Direct from Farmer'}
+      {retailer
+        ? `🏪 ${t('consumer.card.retailer', 'Retailer')}`
+        : `🌱 ${t('consumer.card.fromFarmer', 'Direct from Farmer')}`}
     </span>
   );
 }

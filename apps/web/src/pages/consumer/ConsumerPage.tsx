@@ -156,7 +156,7 @@ function ConsumerInner() {
               <h2>
                 {t('consumer.welcome')}, {user.fname}!
               </h2>
-              <p>Fresh vegetables · Same morning harvest</p>
+              <p>{t('consumer.heroSub', 'Fresh vegetables · Same morning harvest')}</p>
             </div>
           </div>
 

@@ -1,4 +1,13 @@
-import { fmtDateShort, fmtMoney, isOrderCancelled, statusColor, type Order } from '@marutham/lib';
+import { useTranslation } from 'react-i18next';
+import {
+  fmtDateShort,
+  fmtMoney,
+  isOrderCancelled,
+  payMethodKey,
+  statusColor,
+  statusKey,
+  type Order,
+} from '@marutham/lib';
 
 /** Short human handle for an order — the code, or a truncated id for old rows. */
 export function orderLabel(o: Order): string {
@@ -11,23 +20,30 @@ export function orderLabel(o: Order): string {
  * the legacy markup put onclick on a <div>.
  */
 export function OrderRow({ order, onOpen }: { order: Order; onOpen: (id: string) => void }) {
-  const label = isOrderCancelled(order) ? 'Cancelled' : order.status;
+  const { t, i18n } = useTranslation();
+  /* The English status stays the value — statusColor keys off it. Only the
+   * spoken version is translated. */
+  const status = isOrderCancelled(order) ? 'Cancelled' : String(order.status ?? '');
   return (
     <button type="button" className="ord-item" onClick={() => onOpen(order.id)}>
       <span
         className="ord-item__bar"
-        style={{ background: statusColor(label) }}
+        style={{ background: statusColor(status) }}
         aria-hidden="true"
       />
       <span className="ord-item__main">
         <span className="ord-id">{orderLabel(order)}</span>
         <span className="ord-loc">
-          {label} · {fmtDateShort(order.created_at)}
+          {t(statusKey(status), status)} · {fmtDateShort(order.created_at, i18n.language)}
         </span>
       </span>
       <span className="ord-item__right">
         <span className="ord-amt">{fmtMoney(order.total)}</span>
-        {order.pay_method ? <span className="ord-item__pay">{order.pay_method}</span> : null}
+        {order.pay_method ? (
+          <span className="ord-item__pay">
+            {t(payMethodKey(order.pay_method), order.pay_method)}
+          </span>
+        ) : null}
       </span>
     </button>
   );

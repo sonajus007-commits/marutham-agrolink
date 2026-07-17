@@ -1,7 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { buildPipeline, PIPELINE_STAGES } from './pipeline';
 import { isStrongPassword, passwordRuleResults, PASSWORD_RULES } from './password';
-import { buildAddress, resolveAddress, statusColor, statusTone, fmtMoney } from './format';
+import {
+  buildAddress,
+  resolveAddress,
+  statusColor,
+  statusTone,
+  statusKey,
+  translatedStatuses,
+  dateLocale,
+  fmtDateShort,
+  fmtMoney,
+} from './format';
 import { statusPalette } from '@marutham/tokens';
 
 describe('buildPipeline', () => {
@@ -89,6 +99,47 @@ describe('formatters', () => {
     expect(statusTone('Out for Delivery')).toBe('info');
     expect(statusTone('Order Placed')).toBe('warning');
     expect(statusTone('Nonsense')).toBe('neutral');
+  });
+
+  it('keys a status for translation, and falls back to the status itself', () => {
+    expect(statusKey('Delivered')).toBe('status.delivered');
+    expect(statusKey('Out for Delivery')).toBe('status.outForDelivery');
+    // No key: `t(key, status)` then renders the API's own wording, not "status.x".
+    expect(statusKey('Nonsense')).toBe('Nonsense');
+  });
+
+  /* The pipeline decides which stage an order reached with an indexOf against
+   * these exact English strings. If a translation ever replaced the value rather
+   * than the label, indexOf would return -1 and EVERY stage would render pending —
+   * a progress bar that silently shows nothing reached. */
+  it('translates the LABEL and leaves the pipeline value alone', () => {
+    const nodes = buildPipeline('hub', 'Picked Up');
+    expect(nodes.map((n) => n.label)).toEqual([...PIPELINE_STAGES]);
+    expect(nodes.find((n) => n.status === 'active')?.label).toBe('Picked Up');
+  });
+
+  /* Every pipeline stage is rendered as a label, so every one needs a key. A stage
+   * added without one would sit in a Tamil progress bar in English. */
+  it('has a translation key for every pipeline stage AND every palette status', () => {
+    const unkeyed = [...PIPELINE_STAGES, ...Object.keys(statusPalette)].filter(
+      (s) => !translatedStatuses().includes(s),
+    );
+    expect(unkeyed).toEqual([]);
+  });
+
+  it('maps the app language to a locale Intl formats Indian-style', () => {
+    // Bare 'en' would render "Jul 09, 2026" — the region is load-bearing.
+    expect(dateLocale('en')).toBe('en-IN');
+    expect(dateLocale('ta')).toBe('ta-IN');
+    expect(dateLocale(undefined)).toBe('en-IN');
+  });
+
+  it('formats a date in Tamil only when asked, and is unchanged by default', () => {
+    const iso = '2026-07-09T10:30:00Z';
+    expect(fmtDateShort(iso)).toBe('09 Jul 2026'); // every existing caller
+    expect(fmtDateShort(iso, 'en')).toBe('09 Jul 2026');
+    expect(fmtDateShort(iso, 'ta')).toContain('ஜூலை');
+    expect(fmtDateShort(null, 'ta')).toBe('—');
   });
 
   /* A status added to the palette but not to statusTone would not fail anything —

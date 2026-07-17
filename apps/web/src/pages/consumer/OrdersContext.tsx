@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   createContext,
   useCallback,
@@ -27,6 +28,7 @@ interface OrdersState {
 const Ctx = createContext<OrdersState | null>(null);
 
 export function OrdersProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,11 +40,15 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       const res = await api.getOrders();
       setOrders(res.orders || []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load orders');
+      setError(
+        e instanceof Error ? e.message : t('consumer.orders.loadFailed', 'Could not load orders'),
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+    // `t` is a dependency: without it this closure keeps the language it was
+    // created in, and the fallback would still be English after a switch.
+  }, [t]);
 
   useEffect(() => {
     void refresh();

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, OrderPipeline, OrderTimeline, Sheet, Spinner, StarRating } from '@marutham/ui';
 import { api, type TrackResponse } from '@marutham/api-client';
 import {
@@ -12,9 +13,12 @@ import {
   isOrderActive,
   isOrderCancelled,
   itemLineTotal,
+  payMethodKey,
+  payStatusKey,
   resolveAddress,
   returnWindowHoursLeft,
   statusColor,
+  statusKey,
   type OrderDetail,
   type OrderItem,
 } from '@marutham/lib';
@@ -40,6 +44,7 @@ export function OrderDetailSheet({
   onOrderChanged: () => void;
   onGoToCart: () => void;
 }) {
+  const { t } = useTranslation();
   const [data, setData] = useState<OrderDetail | null>(null);
   const [track, setTrack] = useState<TrackResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +63,15 @@ export function OrderDetailSheet({
         setData(detail);
         setTrack(tr);
       })
-      .catch((e) => active && setError(e instanceof Error ? e.message : 'Could not load order'));
+      .catch(
+        (e) =>
+          active &&
+          setError(
+            e instanceof Error
+              ? e.message
+              : t('consumer.detail.loadFailed', 'Could not load order'),
+          ),
+      );
 
     return () => {
       active = false;
@@ -100,7 +113,12 @@ export function OrderDetailSheet({
   }, [onOrderChanged, onClose]);
 
   return (
-    <Sheet open={open} title={order?.code || 'Order'} onClose={onClose}>
+    <Sheet
+      open={open}
+      title={order?.code || t('consumer.order.title', 'Order')}
+      onClose={onClose}
+      backLabel={t('common.back', 'Back')}
+    >
       {error ? (
         <div style={{ textAlign: 'center', padding: 24, color: 'var(--red)', fontSize: 13 }}>
           {error}
@@ -133,6 +151,7 @@ function OrderDetailBody({
   onClose: () => void;
   onGoToCart: () => void;
 }) {
+  const { t, i18n } = useTranslation();
   const { order: o, history, qr_svg } = data;
   const toast = useToast();
   const reorder = useReorder();
@@ -147,19 +166,20 @@ function OrderDetailBody({
   const addressLabel =
     typeof o.delivery_address === 'object' ? o.delivery_address?.label : undefined;
   const isDelivered = o.status === 'Delivered';
-  const statusLabel = isOrderCancelled(o) ? 'Cancelled' : o.status;
+  // The English value drives statusColor; only the spoken form is translated.
+  const status = isOrderCancelled(o) ? 'Cancelled' : String(o.status ?? '');
   const hoursLeft = canRequestReturn(o) ? Math.ceil(returnWindowHoursLeft(o)) : 0;
 
   function handleReorder() {
     const { added, unavailable } = reorder(items);
     if (added === 0) {
-      toast('None of these items are available today.', 'er');
+      toast(t('consumer.order.reorderNone', 'None of these items are available today.'), 'er');
       return;
     }
     toast(
       unavailable.length
-        ? `${added} item${added === 1 ? '' : 's'} added — ${unavailable.length} unavailable today`
-        : `${added} item${added === 1 ? '' : 's'} added to cart.`,
+        ? t('consumer.order.reorderPartial', { count: added, missing: unavailable.length })
+        : t('consumer.order.reorderAll', { count: added }),
       unavailable.length ? 'nfo' : 'ok',
     );
     onClose();
@@ -169,12 +189,17 @@ function OrderDetailBody({
   return (
     <>
       <div className="ord-card" style={{ padding: '14px 10px' }}>
-        <OrderPipeline nodes={buildPipeline(o.route || 'direct', o.status)} />
+        <OrderPipeline
+          nodes={buildPipeline(o.route || 'direct', o.status)}
+          labelFor={(l) => t(statusKey(l), l)}
+        />
         {track?.agent || track?.eta ? (
           <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
             {track.agent ? (
               <div className="track-box track-box--agent">
-                <div className="track-box__k">🛵 Your Delivery Agent</div>
+                <div className="track-box__k">
+                  🛵 {t('consumer.order.agent', 'Your Delivery Agent')}
+                </div>
                 <div className="track-box__v">{track.agent.name}</div>
                 {track.agent.vehicle ? (
                   <div className="track-box__sub">{track.agent.vehicle}</div>
@@ -183,8 +208,8 @@ function OrderDetailBody({
             ) : null}
             {track.eta ? (
               <div className="track-box track-box--eta">
-                <div className="track-box__k">⏱ Estimated Arrival</div>
-                <div className="track-box__v">{fmtDate(track.eta)}</div>
+                <div className="track-box__k">⏱ {t('consumer.order.eta', 'Estimated Arrival')}</div>
+                <div className="track-box__v">{fmtDate(track.eta, i18n.language)}</div>
               </div>
             ) : null}
           </div>
@@ -200,19 +225,19 @@ function OrderDetailBody({
           flexWrap: 'wrap',
         }}
       >
-        <span className="ord-status-pill" style={{ background: statusColor(statusLabel) }}>
-          {statusLabel}
+        <span className="ord-status-pill" style={{ background: statusColor(status) }}>
+          {t(statusKey(status), status)}
         </span>
         {canCancelOrder(o) ? (
           <button className="cons-btn-outline-danger" onClick={() => setShowCancel(true)}>
-            Cancel Order
+            {t('consumer.order.cancel', 'Cancel Order')}
           </button>
         ) : null}
       </div>
 
       {qr_svg ? (
         <div className="ord-card" style={{ textAlign: 'center' }}>
-          <h3>📷 Order QR</h3>
+          <h3>📷 {t('consumer.order.qr', 'Order QR')}</h3>
           <div
             style={{
               display: 'inline-block',
@@ -235,41 +260,41 @@ function OrderDetailBody({
             {o.code || ''}
           </div>
           <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 2 }}>
-            Show this to your delivery agent
+            {t('consumer.order.qrHint', 'Show this to your delivery agent')}
           </div>
         </div>
       ) : null}
 
       <div className="ord-card">
-        <h3>📋 Order Info</h3>
+        <h3>📋 {t('consumer.order.info', 'Order Info')}</h3>
         <div className="irow">
-          <span className="ilbl">Order Code</span>
+          <span className="ilbl">{t('consumer.order.code', 'Order Code')}</span>
           <span className="ival">{o.code || '—'}</span>
         </div>
         <div className="irow">
-          <span className="ilbl">Placed On</span>
-          <span className="ival">{fmtDate(o.created_at)}</span>
+          <span className="ilbl">{t('consumer.order.placedOn', 'Placed On')}</span>
+          <span className="ival">{fmtDate(o.created_at, i18n.language)}</span>
         </div>
         <div className="irow">
-          <span className="ilbl">Payment</span>
+          <span className="ilbl">{t('consumer.order.payment', 'Payment')}</span>
           <span className="ival">
-            {o.pay_method}
+            {o.pay_method ? t(payMethodKey(o.pay_method), o.pay_method) : '—'}
             {' · '}
             <span style={{ color: o.pay_status === 'paid' ? 'var(--success)' : 'var(--sun)' }}>
-              {o.pay_status}
+              {o.pay_status ? t(payStatusKey(o.pay_status), o.pay_status) : ''}
             </span>
           </span>
         </div>
         {o.delivered_at ? (
           <div className="irow">
-            <span className="ilbl">Delivered</span>
-            <span className="ival">{fmtDate(o.delivered_at)}</span>
+            <span className="ilbl">{t('status.delivered', 'Delivered')}</span>
+            <span className="ival">{fmtDate(o.delivered_at, i18n.language)}</span>
           </div>
         ) : null}
       </div>
 
       <div className="ord-card">
-        <h3>📍 Delivery Address</h3>
+        <h3>📍 {t('consumer.checkout.deliveryAddress', 'Delivery Address')}</h3>
         {addressLabel ? (
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--forest)', marginBottom: 3 }}>
             {addressLabel}
@@ -281,7 +306,7 @@ function OrderDetailBody({
       </div>
 
       <div className="ord-card">
-        <h3>🌿 Items</h3>
+        <h3>🌿 {t('consumer.order.items', 'Items')}</h3>
         {items.map((item, idx) => (
           <ItemRow
             key={item.id || idx}
@@ -298,39 +323,43 @@ function OrderDetailBody({
       </div>
 
       <div className="ord-card">
-        <h3>💰 Price Breakdown</h3>
+        <h3>💰 {t('consumer.order.priceBreakdown', 'Price Breakdown')}</h3>
         <div className="irow">
-          <span className="ilbl">Item Total</span>
+          <span className="ilbl">{t('consumer.cart.itemTotal', 'Item Total')}</span>
           <span className="ival">{fmtMoney(charges.itemTotal)}</span>
         </div>
         {charges.handling > 0 ? (
           <div className="irow">
-            <span className="ilbl">Handling charges</span>
+            <span className="ilbl">{t('consumer.cart.handling', 'Handling charges')}</span>
             <span className="ival">{fmtMoney(charges.handling)}</span>
           </div>
         ) : null}
         {charges.marketFee > 0 ? (
           <div className="irow">
             <span className="ilbl">
-              Market fee{' '}
-              <span style={{ fontSize: 10, color: 'var(--gray)' }}>(multiple farmers)</span>
+              {t('consumer.order.marketFee', 'Market fee')}{' '}
+              <span style={{ fontSize: 10, color: 'var(--gray)' }}>
+                ({t('consumer.order.multipleFarmers', 'multiple farmers')})
+              </span>
             </span>
             <span className="ival">{fmtMoney(charges.marketFee)}</span>
           </div>
         ) : null}
         <div className="irow">
-          <span className="ilbl">Delivery</span>
+          <span className="ilbl">{t('consumer.cart.delivery', 'Delivery')}</span>
           <span className="ival">
             {charges.delivery > 0 ? (
               fmtMoney(charges.delivery)
             ) : (
-              <span style={{ color: 'var(--success)', fontWeight: 700 }}>FREE</span>
+              <span style={{ color: 'var(--success)', fontWeight: 700 }}>
+                {t('consumer.cart.free', 'FREE')}
+              </span>
             )}
           </span>
         </div>
         <div className="irow">
           <span className="ilbl" style={{ fontWeight: 700 }}>
-            Total
+            {t('consumer.order.total', 'Total')}
           </span>
           <span className="ival" style={{ fontSize: 15 }}>
             {fmtMoney(charges.total)}
@@ -339,7 +368,7 @@ function OrderDetailBody({
         {charges.saved > 0 ? (
           <div className="irow">
             <span className="ilbl" style={{ color: 'var(--leaf)' }}>
-              💚 You Saved
+              💚 {t('consumer.order.youSaved', 'You Saved')}
             </span>
             <span className="ival" style={{ color: 'var(--leaf)' }}>
               {fmtMoney(charges.saved)}
@@ -350,7 +379,7 @@ function OrderDetailBody({
 
       {isDelivered ? (
         <Button variant="ghost" block onClick={handleReorder} style={{ marginBottom: 12 }}>
-          🔄 Reorder All Items
+          🔄 {t('consumer.order.reorder', 'Reorder All Items')}
         </Button>
       ) : null}
 
@@ -359,14 +388,18 @@ function OrderDetailBody({
           className="ord-card"
           style={{ background: 'var(--warning-bg)', borderColor: 'var(--warning-bg)' }}
         >
-          <h3 style={{ color: 'var(--warning-fg)' }}>↩ Return Requested</h3>
+          <h3 style={{ color: 'var(--warning-fg)' }}>
+            ↩ {t('consumer.order.returnRequested', 'Return Requested')}
+          </h3>
           <div className="irow">
-            <span className="ilbl">Return Code</span>
+            <span className="ilbl">{t('consumer.order.returnCode', 'Return Code')}</span>
             <span className="ival">{o.return_code || '—'}</span>
           </div>
           <div className="irow">
-            <span className="ilbl">Status</span>
-            <span className="ival">{o.return_status || 'pending'}</span>
+            <span className="ilbl">{t('consumer.home.col.status', 'Status')}</span>
+            <span className="ival">
+              {t(payStatusKey(o.return_status || 'pending'), o.return_status || 'pending')}
+            </span>
           </div>
         </div>
       ) : canRequestReturn(o) ? (
@@ -374,17 +407,23 @@ function OrderDetailBody({
           className="cons-btn-outline-danger cons-btn-outline-danger--block"
           onClick={() => setShowReturn(true)}
         >
-          ↩ Request Return / Refund
+          ↩ {t('consumer.return.title', 'Request return / refund')}
           <span style={{ display: 'block', fontWeight: 400, fontSize: 10, marginTop: 2 }}>
-            {hoursLeft}h left in the return window
+            {t('consumer.order.returnWindow', '{{hours}}h left in the return window', {
+              hours: hoursLeft,
+            })}
           </span>
         </button>
       ) : null}
 
       {history.length ? (
         <div className="ord-card">
-          <h3>📍 Status Timeline</h3>
-          <OrderTimeline entries={history} />
+          <h3>📍 {t('consumer.order.timeline', 'Status Timeline')}</h3>
+          <OrderTimeline
+            entries={history}
+            labelFor={(l) => t(statusKey(l), l)}
+            lang={i18n.language}
+          />
         </div>
       ) : null}
 
@@ -416,6 +455,7 @@ function ItemRow({
   canRate: boolean;
   onRated: (stars: number) => void;
 }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   // Show the click immediately; roll back if the server rejects it.
@@ -434,11 +474,14 @@ function ItemRow({
     setBusy(true);
     try {
       await api.rateItem(orderId, item.id, stars);
-      toast('Thanks for your rating!', 'ok');
+      toast(t('consumer.order.rateThanks', 'Thanks for your rating!'), 'ok');
       onRated(stars);
     } catch (e) {
       if (mounted.current) setOptimistic(null);
-      toast(e instanceof Error ? e.message : 'Could not save rating', 'er');
+      toast(
+        e instanceof Error ? e.message : t('consumer.order.rateFailed', 'Could not save rating'),
+        'er',
+      );
     } finally {
       if (mounted.current) setBusy(false);
     }
@@ -461,19 +504,40 @@ function ItemRow({
       </div>
       <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 2 }}>
         {item.qty} {item.unit} × {fmtMoney(item.price)}
-        {item.farmer_name ? ` · from ${item.farmer_name}` : ''}
+        {item.farmer_name
+          ? ` · ${t('consumer.cart.fromSeller', 'from {{name}}', { name: item.farmer_name })}`
+          : ''}
       </div>
       {canRate ? (
         <div style={{ marginTop: 6, display: 'flex', gap: 6, alignItems: 'center' }}>
           {item.rated ? (
             <>
-              <span style={{ fontSize: 10, color: 'var(--gray)' }}>Rated:</span>
-              <StarRating value={item.rating_value || 0} />
+              <span style={{ fontSize: 10, color: 'var(--gray)' }}>
+                {t('consumer.order.rated', 'Rated:')}
+              </span>
+              <StarRating
+                value={item.rating_value || 0}
+                labels={{
+                  rated: (v) =>
+                    t('consumer.order.ratedAria', 'Rated {{value}} out of 5', { value: v }),
+                }}
+              />
             </>
           ) : (
             <>
-              <span style={{ fontSize: 10, color: 'var(--gray)' }}>Rate:</span>
-              <StarRating value={optimistic || 0} onRate={rate} disabled={busy} label={item.name} />
+              <span style={{ fontSize: 10, color: 'var(--gray)' }}>
+                {t('consumer.order.rate', 'Rate:')}
+              </span>
+              <StarRating
+                value={optimistic || 0}
+                onRate={rate}
+                disabled={busy}
+                label={item.name}
+                labels={{
+                  rate: (name) => t('consumer.order.rateAria', 'Rate {{name}}', { name }),
+                  star: (n) => t('consumer.order.starAria', { count: n }),
+                }}
+              />
             </>
           )}
         </div>

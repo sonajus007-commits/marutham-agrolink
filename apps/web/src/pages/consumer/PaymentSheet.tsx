@@ -1,19 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sheet } from '@marutham/ui';
 import { api, type PlaceOrderItem } from '@marutham/api-client';
 import { fmtMoney } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
-
-const METHODS = [
-  { id: 'UPI', label: 'UPI', desc: 'GPay, PhonePe, Paytm', icon: '📱' },
-  { id: 'Card', label: 'Credit / Debit Card', desc: 'Visa, Mastercard, RuPay', icon: '💳' },
-  {
-    id: 'Cash on Delivery',
-    label: 'Cash on Delivery',
-    desc: 'Pay when your order arrives',
-    icon: '💵',
-  },
-];
 
 export function PaymentSheet({
   open,
@@ -32,8 +22,30 @@ export function PaymentSheet({
   onClose: () => void;
   onPlaced: () => void;
 }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [method, setMethod] = useState('UPI');
+
+  /* `id` is the pay_method the API stores and prices off — never translated. The
+   * brand names in `desc` are brands: they read the same in both languages. */
+  const methods = useMemo(
+    () => [
+      { id: 'UPI', label: t('pay.upi', 'UPI'), desc: 'GPay, PhonePe, Paytm', icon: '📱' },
+      {
+        id: 'Card',
+        label: t('consumer.pay.cardLong', 'Credit / Debit Card'),
+        desc: 'Visa, Mastercard, RuPay',
+        icon: '💳',
+      },
+      {
+        id: 'Cash on Delivery',
+        label: t('pay.cod', 'Cash on Delivery'),
+        desc: t('consumer.pay.codDesc', 'Pay when your order arrives'),
+        icon: '💵',
+      },
+    ],
+    [t],
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -47,24 +59,34 @@ export function PaymentSheet({
         delivery_fee: deliveryFee,
         delivery_address: address,
       });
-      toast(`Order placed! ${res.order.code || ''}`, 'ok');
+      toast(
+        t('consumer.pay.placed', 'Order placed! {{code}}', { code: res.order.code || '' }).trim(),
+        'ok',
+      );
       onPlaced();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not place order');
+      setError(e instanceof Error ? e.message : t('consumer.pay.failed', 'Could not place order'));
       setBusy(false);
     }
   }
 
   return (
-    <Sheet open={open} title="Payment" onClose={onClose}>
+    <Sheet
+      open={open}
+      title={t('consumer.pay.title', 'Payment')}
+      onClose={onClose}
+      backLabel={t('common.back', 'Back')}
+    >
       <div style={{ textAlign: 'center', marginBottom: 16 }}>
-        <div style={{ fontSize: 11, color: 'var(--gray)' }}>Amount payable</div>
+        <div style={{ fontSize: 11, color: 'var(--gray)' }}>
+          {t('consumer.pay.amountPayable', 'Amount payable')}
+        </div>
         <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--forest-soft)' }}>
           {fmtMoney(amount)}
         </div>
       </div>
 
-      {METHODS.map((m) => {
+      {methods.map((m) => {
         const on = method === m.id;
         return (
           <button
@@ -126,7 +148,11 @@ export function PaymentSheet({
         onClick={confirm}
         disabled={busy}
       >
-        {busy ? 'Placing order…' : method === 'Cash on Delivery' ? 'Place Order (COD)' : 'Pay Now'}
+        {busy
+          ? t('consumer.pay.placing', 'Placing order…')
+          : method === 'Cash on Delivery'
+            ? t('consumer.pay.placeCod', 'Place Order (COD)')
+            : t('consumer.pay.payNow', 'Pay Now')}
       </button>
     </Sheet>
   );

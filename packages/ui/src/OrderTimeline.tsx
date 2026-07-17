@@ -1,8 +1,27 @@
 import { fmtDate, type OrderHistoryEntry } from '@marutham/lib';
 import { cn } from './lib/cn';
 
-/** Status history for an order. Shared by the Agent and Consumer order views. */
-export function OrderTimeline({ entries }: { entries: OrderHistoryEntry[] }) {
+/**
+ * Status history for an order. Shared by the Agent and Consumer order views.
+ *
+ * `note` is deliberately NOT translatable. It is English prose composed by the
+ * backend and STORED ("Delivered — by Admin Lakshmi (Head Office) — manual
+ * override."), with names already baked in — an audit record of what was written
+ * at the time, not a message this component formats. Speaking it in Tamil would
+ * mean the backend emitting a structured event plus params and a migration for
+ * the rows already written; until then it stays in the language it was recorded in.
+ */
+export function OrderTimeline({
+  entries,
+  labelFor,
+  lang,
+}: {
+  entries: OrderHistoryEntry[];
+  /** Speak a history label. Defaults to the label as stored. */
+  labelFor?: (label: string) => string;
+  /** App language for the timestamps. Defaults to en-IN. */
+  lang?: string;
+}) {
   if (!entries.length) return null;
   const lastIdx = entries.length - 1;
 
@@ -29,8 +48,10 @@ export function OrderTimeline({ entries }: { entries: OrderHistoryEntry[] }) {
             aria-hidden="true"
           />
           <div>
-            <div className="text-base font-bold text-primary">{h.label}</div>
-            <div className="mt-px text-xs text-fg-muted">{fmtDate(h.ts)}</div>
+            <div className="text-base font-bold text-primary">
+              {labelFor ? labelFor(h.label) : h.label}
+            </div>
+            <div className="mt-px text-xs text-fg-muted">{fmtDate(h.ts, lang)}</div>
             {h.note ? <div className="mt-0.5 text-sm italic text-fg-muted">{h.note}</div> : null}
           </div>
         </li>

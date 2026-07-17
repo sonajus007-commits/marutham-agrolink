@@ -7,6 +7,8 @@ export interface SheetProps {
   title: ReactNode;
   onClose: () => void;
   children: ReactNode;
+  /** Accessible name for the back control. English by default. */
+  backLabel?: string;
 }
 
 /**
@@ -24,7 +26,7 @@ export interface SheetProps {
  * omit it and the page behind a full-screen sheet scrolls under your thumb.
  * The sheet covers it entirely, so it paints nothing.
  */
-export function Sheet({ open, title, onClose, children }: SheetProps) {
+export function Sheet({ open, title, onClose, children, backLabel }: SheetProps) {
   const returnFocus = useReturnFocus(open);
 
   return (
@@ -44,7 +46,7 @@ export function Sheet({ open, title, onClose, children }: SheetProps) {
           <div className="sticky top-0 z-[var(--z-sticky)] flex items-center gap-3 bg-[linear-gradient(135deg,var(--forest),var(--forest-soft))] px-4 py-3.5">
             <Dialog.Close
               className="size-9 shrink-0 cursor-pointer appearance-none rounded-md border-0 bg-white/15 text-[18px] text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              aria-label="Back"
+              aria-label={backLabel ?? 'Back'}
             >
               ←
             </Dialog.Close>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { QtyStepper, EmptyState } from '@marutham/ui';
 import {
   cartBill,
@@ -19,6 +20,7 @@ function offerAvailable(offers: Offer[], listingId?: string | null): number {
 }
 
 export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
+  const { t } = useTranslation();
   const { productById, offersByProduct } = useConsumerData();
   const cart = useCart();
   const toast = useToast();
@@ -26,9 +28,9 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
   if (cart.items.length === 0) {
     return (
       <EmptyState icon="🛒">
-        Your cart is empty.
+        {t('consumer.cart.empty', 'Your cart is empty.')}
         <br />
-        Browse the shop to add items.
+        {t('consumer.cart.emptyHint', 'Browse the shop to add items.')}
       </EmptyState>
     );
   }
@@ -41,14 +43,22 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
     let q = next;
     if (q > avail) {
       q = avail;
-      toast(`Only ${avail} ${item.unit || ''} available`, 'er');
+      toast(
+        t('consumer.shop.onlyAvailable', 'Only {{qty}} {{unit}} available', {
+          qty: avail,
+          unit: item.unit || '',
+        }).trim(),
+        'er',
+      );
     }
     cart.updateQtyAt(index, q);
   }
 
   return (
     <>
-      <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--forest)' }}>🛒 Your Cart</div>
+      <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--forest)' }}>
+        🛒 {t('consumer.cart.title', 'Your Cart')}
+      </div>
 
       {cart.items.map((item, idx) => {
         const p = productById[item.product_id] || {};
@@ -80,7 +90,7 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
                 </div>
                 {item.farmer_name ? (
                   <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 2 }}>
-                    from {item.farmer_name}
+                    {t('consumer.cart.fromSeller', 'from {{name}}', { name: item.farmer_name })}
                   </div>
                 ) : null}
                 <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>
@@ -90,7 +100,9 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
                   <div
                     style={{ fontSize: 9, color: 'var(--success)', fontWeight: 700, marginTop: 2 }}
                   >
-                    Save {fmtMoney((mkt - unitPrice) * item.qty)} vs market
+                    {t('consumer.cart.saveVsMarket', 'Save {{amount}} vs market', {
+                      amount: fmtMoney((mkt - unitPrice) * item.qty),
+                    })}
                   </div>
                 ) : null}
               </div>
@@ -101,6 +113,11 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
                   step={unitStep(item.unit)}
                   integer={!unitAllowsDecimal(item.unit)}
                   onChange={(q) => setQty(idx, q)}
+                  labels={{
+                    decrease: t('consumer.qty.decrease', 'Decrease quantity'),
+                    increase: t('consumer.qty.increase', 'Increase quantity'),
+                    quantity: t('consumer.qty.quantity', 'Quantity'),
+                  }}
                 />
                 <div
                   style={{ fontWeight: 700, fontSize: 14, color: 'var(--forest)', marginTop: 4 }}
@@ -120,7 +137,7 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
                     marginTop: 3,
                   }}
                 >
-                  Remove
+                  {t('consumer.cart.remove', 'Remove')}
                 </button>
               </div>
             </div>
@@ -131,33 +148,37 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
       {/* Bill summary */}
       <div className="sum-card">
         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--forest)', marginBottom: 10 }}>
-          Bill Summary
+          {t('consumer.cart.billSummary', 'Bill Summary')}
         </div>
         {/* The bill is a money COLUMN — every row goes through fmtMoney so the
             figures align and add up on screen exactly as they add up. The unit
             price and the "save" nudges above stay compact on purpose: they are
             prose, not a column. */}
         <div className="irow">
-          <span className="ilbl">Item Total</span>
+          <span className="ilbl">{t('consumer.cart.itemTotal', 'Item Total')}</span>
           <span className="ival">{fmtMoney(bill.itemSubtotal)}</span>
         </div>
         {bill.handling > 0 ? (
           <div className="irow">
-            <span className="ilbl">Handling charges</span>
+            <span className="ilbl">{t('consumer.cart.handling', 'Handling charges')}</span>
             <span className="ival">{fmtMoney(bill.handling)}</span>
           </div>
         ) : null}
         {bill.marketFee > 0 ? (
           <div className="irow">
-            <span className="ilbl">Market fee (multiple farmers)</span>
+            <span className="ilbl">
+              {t('consumer.cart.marketFee', 'Market fee (multiple farmers)')}
+            </span>
             <span className="ival">{fmtMoney(bill.marketFee)}</span>
           </div>
         ) : null}
         <div className="irow">
-          <span className="ilbl">Delivery</span>
+          <span className="ilbl">{t('consumer.cart.delivery', 'Delivery')}</span>
           <span className="ival">
             {bill.delivery === 0 ? (
-              <span style={{ color: 'var(--success)', fontWeight: 700 }}>FREE</span>
+              <span style={{ color: 'var(--success)', fontWeight: 700 }}>
+                {t('consumer.cart.free', 'FREE')}
+              </span>
             ) : (
               fmtMoney(bill.delivery)
             )}
@@ -165,19 +186,25 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
         </div>
         {bill.itemSubtotal > 0 && bill.itemSubtotal < 150 ? (
           <div style={{ fontSize: 10, color: 'var(--warning-fg)', marginTop: 2 }}>
-            Add {fmtMoney(150 - bill.itemSubtotal)} more for FREE delivery
+            {t('consumer.cart.freeDeliveryNudge', 'Add {{amount}} more for FREE delivery', {
+              amount: fmtMoney(150 - bill.itemSubtotal),
+            })}
           </div>
         ) : null}
         {bill.savings > 0 ? (
           <div className="irow" style={{ color: 'var(--success)', fontWeight: 700 }}>
-            <span className="ilbl">🎉 You Save</span>
-            <span className="ival">{fmtMoney(bill.savings)} vs Govt Rate</span>
+            <span className="ilbl">🎉 {t('consumer.cart.youSave', 'You Save')}</span>
+            <span className="ival">
+              {t('consumer.cart.vsGovtRate', '{{amount}} vs Govt Rate', {
+                amount: fmtMoney(bill.savings),
+              })}
+            </span>
           </div>
         ) : null}
         <div style={{ borderTop: '2px solid var(--forest-soft)', margin: '10px 0' }} />
         <div className="irow">
           <span className="ilbl" style={{ fontSize: 14, fontWeight: 700, color: 'var(--forest)' }}>
-            Grand Total
+            {t('consumer.cart.grandTotal', 'Grand Total')}
           </span>
           <span className="ival" style={{ fontSize: 16, color: 'var(--forest)' }}>
             {fmtMoney(bill.total)}

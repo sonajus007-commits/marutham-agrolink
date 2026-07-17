@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FilterChips, Spinner, EmptyState, type ChipOption } from '@marutham/ui';
 import {
   filterProducts,
@@ -15,13 +16,8 @@ import { ProductCard } from './ProductCard';
 import { ProductDetailSheet } from './ProductDetailSheet';
 import { useToast } from '../../components/Toast';
 
-const SELLER_OPTIONS: ChipOption[] = [
-  { value: 'All', label: 'All Sellers' },
-  { value: 'Farmer', label: '🌱 Farm Direct' },
-  { value: 'Retailer', label: '🏪 Retail' },
-];
-
 export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
+  const { t } = useTranslation();
   const {
     products,
     offersByProduct,
@@ -45,22 +41,39 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
   const [state, setState] = useState('Tamil Nadu');
   const [detailId, setDetailId] = useState<string | null>(null);
 
+  const sellerOptions = useMemo<ChipOption[]>(
+    () => [
+      { value: 'All', label: t('consumer.shop.allSellers', 'All Sellers') },
+      { value: 'Farmer', label: `🌱 ${t('consumer.shop.farmDirect', 'Farm Direct')}` },
+      { value: 'Retailer', label: `🏪 ${t('consumer.shop.retail', 'Retail')}` },
+    ],
+    [t],
+  );
+
+  /* Only the "All" chip is translated. Every other label is a product_group /
+   * category / sub_type straight out of the DB — data, not copy, and an open set
+   * (10 categories today, added by whoever adds a product). Translating those
+   * belongs in the taxonomy, not in a screen. `value` is untouched either way:
+   * 'All' is the sentinel filterProducts compares against, so a translated value
+   * would filter the catalogue down to nothing. */
+  const allLabel = t('common.all', 'All');
+
   // Filter chip option lists derived from the catalog.
   const groupOptions = useMemo<ChipOption[]>(() => {
     const gs = [
       'All',
       ...new Set(products.map((p) => p.product_group).filter(Boolean) as string[]),
     ];
-    return gs.map((g) => ({ value: g, label: g }));
-  }, [products]);
+    return gs.map((g) => ({ value: g, label: g === 'All' ? allLabel : g }));
+  }, [products, allLabel]);
 
   const catOptions = useMemo<ChipOption[]>(() => {
     const inGroup = group === 'All' ? products : products.filter((p) => p.product_group === group);
     const cs = [...new Set(inGroup.map((p) => p.category).filter(Boolean) as string[])];
     return cs.length > 1
-      ? [{ value: 'All', label: 'All' }, ...cs.map((c) => ({ value: c, label: c }))]
+      ? [{ value: 'All', label: allLabel }, ...cs.map((c) => ({ value: c, label: c }))]
       : [];
-  }, [products, group]);
+  }, [products, group, allLabel]);
 
   const subOptions = useMemo<ChipOption[]>(() => {
     if (cat === 'All') return [];
@@ -73,9 +86,9 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
       ),
     ];
     return subs.length > 1
-      ? [{ value: 'All', label: 'All' }, ...subs.map((s) => ({ value: s, label: s }))]
+      ? [{ value: 'All', label: allLabel }, ...subs.map((s) => ({ value: s, label: s }))]
       : [];
-  }, [products, cat]);
+  }, [products, cat, allLabel]);
 
   const filtered = useMemo(
     () => filterProducts(products, offersByProduct, { group, cat, sub, seller, city, search }),
@@ -92,7 +105,13 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
     let q = nextQty;
     if (q > avail) {
       q = avail;
-      toast(`Only ${avail} ${product.unit || ''} available`, 'er');
+      toast(
+        t('consumer.shop.onlyAvailable', 'Only {{qty}} {{unit}} available', {
+          qty: avail,
+          unit: product.unit || '',
+        }).trim(),
+        'er',
+      );
     }
     cart.updateQtyAt(idx, q);
   }
@@ -103,11 +122,15 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
   return (
     <>
       <div className="cons-lochero">
-        <div className="cons-lochero__label">Fresh From Farms Near You</div>
+        <div className="cons-lochero__label">
+          {t('consumer.shop.heroLabel', 'Fresh From Farms Near You')}
+        </div>
         <div className="cons-lochero__scope">
           {district}, {state}
         </div>
-        <div className="cons-lochero__sub">Same-morning harvest · delivered to your door</div>
+        <div className="cons-lochero__sub">
+          {t('consumer.shop.heroSub', 'Same-morning harvest · delivered to your door')}
+        </div>
       </div>
 
       {cart.count > 0 ? (
@@ -122,8 +145,10 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
         >
           <div>
             <span style={{ fontSize: 18 }}>🛒</span>{' '}
+            {/* i18next owns the plural: "item"/"items" is an English rule, and the
+                two languages do not split at the same place. */}
             <span className="cart-bar__count">
-              {cart.count} item{cart.count === 1 ? '' : 's'} in cart
+              {t('consumer.shop.cartItems', { count: cart.count })}
             </span>
           </div>
           <div className="cart-bar__total">{fmtMoney(cartTotal)}</div>
@@ -134,22 +159,22 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
         <input
           className="cons-input"
           type="text"
-          placeholder="🔍  Search products…"
+          placeholder={`🔍  ${t('consumer.shop.searchPlaceholder', 'Search products…')}`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          aria-label="Search products"
+          aria-label={t('consumer.shop.searchAria', 'Search products')}
         />
       </div>
 
       <div>
-        <div className="filt-label">Seller</div>
+        <div className="filt-label">{t('consumer.shop.filter.seller', 'Seller')}</div>
         <FilterChips
-          options={SELLER_OPTIONS}
+          options={sellerOptions}
           value={seller}
           onChange={(v) => setSeller(v as SellerFilter)}
-          aria-label="Seller filter"
+          aria-label={t('consumer.shop.filter.sellerAria', 'Seller filter')}
         />
-        <div className="filt-label">Group</div>
+        <div className="filt-label">{t('consumer.shop.filter.group', 'Group')}</div>
         <FilterChips
           options={groupOptions}
           value={group}
@@ -158,11 +183,11 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
             setCat('All');
             setSub('All');
           }}
-          aria-label="Product group"
+          aria-label={t('consumer.shop.filter.groupAria', 'Product group')}
         />
         {catOptions.length ? (
           <>
-            <div className="filt-label">Category</div>
+            <div className="filt-label">{t('consumer.shop.filter.category', 'Category')}</div>
             <FilterChips
               options={catOptions}
               value={cat}
@@ -170,24 +195,29 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
                 setCat(v);
                 setSub('All');
               }}
-              aria-label="Category"
+              aria-label={t('consumer.shop.filter.categoryAria', 'Category')}
             />
           </>
         ) : null}
         {subOptions.length ? (
           <>
-            <div className="filt-label">Sub-type</div>
-            <FilterChips options={subOptions} value={sub} onChange={setSub} aria-label="Sub-type" />
+            <div className="filt-label">{t('consumer.shop.filter.subType', 'Sub-type')}</div>
+            <FilterChips
+              options={subOptions}
+              value={sub}
+              onChange={setSub}
+              aria-label={t('consumer.shop.filter.subTypeAria', 'Sub-type')}
+            />
           </>
         ) : null}
 
-        <div className="filt-label">Location</div>
+        <div className="filt-label">{t('consumer.shop.filter.location', 'Location')}</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
           <select
             className="cons-select"
             value={state}
             onChange={(e) => setState(e.target.value)}
-            aria-label="State"
+            aria-label={t('consumer.shop.filter.state', 'State')}
           >
             {(locations.states.length ? locations.states : ['Tamil Nadu']).map((s) => (
               <option key={s} value={s}>
@@ -199,7 +229,7 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
             className="cons-select"
             value={district}
             onChange={(e) => setDistrict(e.target.value)}
-            aria-label="District"
+            aria-label={t('consumer.shop.filter.district', 'District')}
           >
             {(locations.districtsOf(state).length ? locations.districtsOf(state) : [district]).map(
               (d) => (
@@ -214,10 +244,10 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
           className="cons-input"
           style={{ fontSize: 12, padding: '8px 10px' }}
           type="text"
-          placeholder="🔍 Village / city (optional)"
+          placeholder={`🔍 ${t('consumer.shop.villagePlaceholder', 'Village / city (optional)')}`}
           value={city}
           onChange={(e) => setCity(e.target.value)}
-          aria-label="Village or city filter"
+          aria-label={t('consumer.shop.filter.villageAria', 'Village or city filter')}
         />
       </div>
 
@@ -227,7 +257,9 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
         <EmptyState>{error}</EmptyState>
       ) : filtered.length === 0 ? (
         <EmptyState icon="🔍">
-          {search ? `No products match "${search}".` : 'No products in this category.'}
+          {search
+            ? t('consumer.shop.noMatch', 'No products match "{{query}}".', { query: search })
+            : t('consumer.shop.noProducts', 'No products in this category.')}
         </EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

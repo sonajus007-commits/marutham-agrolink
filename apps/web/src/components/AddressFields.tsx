@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Field, Input, Select, FIELD_ERR_CLASS } from '@marutham/ui';
 import type { SavedAddress } from '@marutham/lib';
 import { useLocations } from '../hooks/useLocations';
@@ -56,17 +57,22 @@ function pincodeOnly(v: string): string {
   return v.replace(/\D/g, '').slice(0, 6);
 }
 
-const DEFAULT_LABELS: Record<AddressFieldKey, string> = {
-  house_no: 'House / Flat No.',
-  street1: 'Street Line 1',
-  street2: 'Street Line 2',
-  landmark: 'Landmark',
-  state: 'State',
-  district: 'District',
-  taluk: 'Taluk',
-  village_town: 'Village / Town',
-  city: 'City',
-  pincode: 'Pincode',
+/* [key, English] per field. Each screen using this form is translated, and a
+ * `labels` override from a caller still wins — see `field()` below. The English
+ * travels WITH the key as the default: a key with no resource renders as the key
+ * itself ("address.houseNo") right there in the form, and a form that labels a
+ * field with a dotted identifier is worse than one that never translated. */
+const LABELS: Record<AddressFieldKey, readonly [string, string]> = {
+  house_no: ['address.houseNo', 'House / Flat No.'],
+  street1: ['address.street1', 'Street Line 1'],
+  street2: ['address.street2', 'Street Line 2'],
+  landmark: ['address.landmark', 'Landmark'],
+  state: ['address.state', 'State'],
+  district: ['address.district', 'District'],
+  taluk: ['address.taluk', 'Taluk'],
+  village_town: ['address.village', 'Village / Town'],
+  city: ['address.city', 'City'],
+  pincode: ['address.pincode', 'Pincode'],
 };
 
 export function AddressFields({
@@ -81,12 +87,13 @@ export function AddressFields({
   required = {},
   labels = {},
 }: AddressFieldsProps) {
+  const { t } = useTranslation();
   const { states, districtsOf, taluksOf } = useLocations();
   const set = (patch: Partial<SavedAddress>) => onChange({ ...value, ...patch });
 
   /** Everything <Field> needs for one address key, so no call site re-derives it. */
   const field = (key: AddressFieldKey, alwaysRequired = false) => ({
-    label: labels[key] ?? DEFAULT_LABELS[key],
+    label: labels[key] ?? t(LABELS[key][0], LABELS[key][1]),
     required: alwaysRequired || required[key] === true,
     error: errors[key] ?? null,
   });
@@ -94,12 +101,12 @@ export function AddressFields({
   return (
     <>
       {showLabel ? (
-        <Field label="Label (e.g. Home, Work)">
+        <Field label={t('address.nickname', 'Label (e.g. Home, Work)')}>
           {(p) => (
             <Input
               {...p}
               type="text"
-              placeholder="Home"
+              placeholder={t('address.nicknameHint', 'Home')}
               value={value.label || ''}
               onChange={(e) => set({ label: e.target.value })}
             />
@@ -137,7 +144,7 @@ export function AddressFields({
             <Input
               {...p}
               type="text"
-              placeholder="Area, Colony"
+              placeholder={t('address.street1Hint', 'Area, Colony')}
               value={value.street2 || ''}
               onChange={(e) => set({ street2: e.target.value })}
             />
@@ -150,7 +157,7 @@ export function AddressFields({
           <Input
             {...p}
             type="text"
-            placeholder="Near school, temple…"
+            placeholder={t('address.landmarkHint', 'Near school, temple…')}
             value={value.landmark || ''}
             onChange={(e) => set({ landmark: e.target.value })}
           />
@@ -166,7 +173,7 @@ export function AddressFields({
             /* A new state invalidates the district and taluk below it. */
             onChange={(e) => set({ state: e.target.value, district: '', taluk: '' })}
           >
-            <option value="">— Select State —</option>
+            <option value="">— {t('address.selectState', 'Select State')} —</option>
             {states.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -185,7 +192,7 @@ export function AddressFields({
             disabled={!value.state}
             onChange={(e) => set({ district: e.target.value, taluk: '' })}
           >
-            <option value="">— Select District —</option>
+            <option value="">— {t('address.selectDistrict', 'Select District')} —</option>
             {districtsOf(value.state || '').map((d) => (
               <option key={d} value={d}>
                 {d}
@@ -203,7 +210,7 @@ export function AddressFields({
             disabled={!value.district}
             onChange={(e) => set({ taluk: e.target.value })}
           >
-            <option value="">— Select Taluk —</option>
+            <option value="">— {t('address.selectTaluk', 'Select Taluk')} —</option>
             {taluksOf(value.state || '', value.district || '').map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -237,7 +244,7 @@ export function AddressFields({
       </Field>
 
       {showPhone ? (
-        <Field label="Contact phone">
+        <Field label={t('address.contactPhone', 'Contact phone')}>
           {(p) => (
             <Input
               {...p}
