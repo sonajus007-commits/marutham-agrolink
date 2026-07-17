@@ -8,7 +8,10 @@ import {
   fmtMoney,
   getProductEmoji,
   isOrderCancelled,
+  payMethodKey,
+  payStatusKey,
   statusColor,
+  statusKey,
   type Order,
   type OrderHistoryEntry,
   type OrderItem,
@@ -32,7 +35,7 @@ export function FarmerOrderSheet({
   open: boolean;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [items, setItems] = useState<OrderItem[] | null>(null);
   const [history, setHistory] = useState<OrderHistoryEntry[]>([]);
@@ -55,16 +58,30 @@ export function FarmerOrderSheet({
         // name, so redact it out of the notes before showing them.
         setHistory(scrubBuyerName(detail.history || [], order.consumer_name));
       })
-      .catch((e) => active && setError(e instanceof Error ? e.message : 'Could not load order'));
+      .catch(
+        (e) =>
+          active &&
+          setError(
+            e instanceof Error
+              ? e.message
+              : t('consumer.detail.loadFailed', 'Could not load order'),
+          ),
+      );
     return () => {
       active = false;
     };
   }, [open, order, user?.id]);
 
-  const statusLabel = order ? (isOrderCancelled(order) ? 'Cancelled' : order.status) : '';
+  // The English value drives statusColor; only the spoken form is translated.
+  const status = order ? (isOrderCancelled(order) ? 'Cancelled' : String(order.status ?? '')) : '';
 
   return (
-    <Sheet open={open} title={order?.code || t('farmer.orders.title')} onClose={onClose}>
+    <Sheet
+      open={open}
+      title={order?.code || t('farmer.orders.title')}
+      onClose={onClose}
+      backLabel={t('common.back', 'Back')}
+    >
       {!order ? null : error ? (
         <div className="p-6 text-center text-sm text-danger">{error}</div>
       ) : items === null ? (
@@ -72,23 +89,31 @@ export function FarmerOrderSheet({
       ) : (
         <div className="flex flex-col gap-3">
           <div className="rounded-base border border-border-subtle bg-surface p-3">
-            <OrderPipeline nodes={buildPipeline(order.route || 'direct', order.status)} />
+            <OrderPipeline
+              nodes={buildPipeline(order.route || 'direct', order.status)}
+              labelFor={(l) => t(statusKey(l), l)}
+            />
           </div>
 
           <span
             className="self-start rounded-pill px-3 py-1 text-xs font-bold text-white"
-            style={{ background: statusColor(statusLabel) }}
+            style={{ background: statusColor(status) }}
           >
-            {statusLabel}
+            {t(statusKey(status), status)}
           </span>
 
           <section className="rounded-base border border-border-subtle bg-surface p-4">
             <h3 className="mb-2 text-sm font-bold text-primary">📋 {t('farmer.orders.info')}</h3>
             <InfoRow label={t('farmer.orders.code')} value={order.code || '—'} />
-            <InfoRow label={t('farmer.orders.placedOn')} value={fmtDate(order.created_at)} />
+            <InfoRow
+              label={t('farmer.orders.placedOn')}
+              value={fmtDate(order.created_at, i18n.language)}
+            />
             <InfoRow
               label={t('farmer.orders.payment')}
-              value={`${order.pay_method || '—'} · ${order.pay_status || ''}`}
+              value={`${order.pay_method ? t(payMethodKey(order.pay_method), order.pay_method) : '—'} · ${
+                order.pay_status ? t(payStatusKey(order.pay_status), order.pay_status) : ''
+              }`}
             />
             {order.village ? (
               <InfoRow label={t('farmer.orders.deliveryArea')} value={order.village} />
@@ -130,7 +155,11 @@ export function FarmerOrderSheet({
               <h3 className="mb-2 text-sm font-bold text-primary">
                 📍 {t('farmer.orders.timeline')}
               </h3>
-              <OrderTimeline entries={history} />
+              <OrderTimeline
+                entries={history}
+                labelFor={(l) => t(statusKey(l), l)}
+                lang={i18n.language}
+              />
             </section>
           ) : null}
         </div>

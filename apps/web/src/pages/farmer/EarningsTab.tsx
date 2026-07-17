@@ -5,6 +5,8 @@ import { api } from '@marutham/api-client';
 import {
   farmerEarnings,
   farmerWeeklyEarnings,
+  payStatusKey,
+  payoutMethodKey,
   subscriptionStatus,
   fmtMoney,
   fmtMoneyInt,
@@ -20,7 +22,7 @@ import { EChart } from '../../components/EChart';
 import { useAuth } from '../../auth/AuthContext';
 
 export function EarningsTab({ onRenew }: { onRenew: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
@@ -41,7 +43,9 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
         .then(setRatings)
         .catch(() => setRatings(null));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load earnings');
+      setError(
+        e instanceof Error ? e.message : t('farmer.earn.loadFailed', 'Could not load earnings'),
+      );
     } finally {
       setLoading(false);
     }
@@ -54,7 +58,11 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
   const earnings = useMemo(() => farmerEarnings(orders, payouts), [orders, payouts]);
   const sub = useMemo(() => subscriptionStatus(user || {}), [user]);
 
-  const weekly = useMemo(() => farmerWeeklyEarnings(orders, 8), [orders]);
+  // The bar labels follow the UI language — the axis was English on a Tamil page.
+  const weekly = useMemo(
+    () => farmerWeeklyEarnings(orders, 8, undefined, i18n.language),
+    [orders, i18n.language],
+  );
   const trendEmpty = useMemo(() => weekly.every((w) => w.amount === 0), [weekly]);
   const trendOption = useMemo<EChartsOption>(
     () => ({
@@ -178,14 +186,16 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
                 <span className="payout__main">
                   <span className="payout__order">{p.order?.code || '—'}</span>
                   <span className="payout__meta">
-                    {fmtDateShort(p.paid_at || p.created_at)}
-                    {p.method ? ` · ${p.method}` : ''}
+                    {fmtDateShort(p.paid_at || p.created_at, i18n.language)}
+                    {p.method ? ` · ${t(payoutMethodKey(p.method), p.method)}` : ''}
                     {p.reference ? ` · ${p.reference}` : ''}
                   </span>
                 </span>
                 <span className="payout__right">
                   <span className="payout__amt">{fmtMoney(p.amount)}</span>
-                  <span className={`payout__status payout__status--${p.status}`}>{p.status}</span>
+                  <span className={`payout__status payout__status--${p.status}`}>
+                    {t(payStatusKey(p.status), p.status)}
+                  </span>
                 </span>
               </li>
             ))}
@@ -197,7 +207,7 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
 }
 
 function SubscriptionCard({ sub, onRenew }: { sub: SubscriptionStatus; onRenew: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const icon = sub.level === 'expired' ? '🔒' : sub.level === 'expiring' ? '⚠️' : '✅';
   const label =
     sub.level === 'expired'
@@ -210,10 +220,15 @@ function SubscriptionCard({ sub, onRenew }: { sub: SubscriptionStatus; onRenew: 
     <section className={`fm-sub fm-sub--${sub.level}`}>
       <div>
         <div className="fm-sub__label">📅 {t('farmer.sub.title')}</div>
-        <div className="fm-sub__plan">{sub.plan || '—'}</div>
+        {/* The plan NAME is the value the server prices off — only spoken here. */}
+        <div className="fm-sub__plan">
+          {sub.plan
+            ? t(`farmer.sub.plan.${sub.plan.replace(/\s+/g, '').toLowerCase()}`, sub.plan)
+            : '—'}
+        </div>
         {sub.expiresAt ? (
           <div className="fm-sub__valid">
-            {t('farmer.sub.validUntil')} {fmtDateShort(sub.expiresAt)}
+            {t('farmer.sub.validUntil')} {fmtDateShort(sub.expiresAt, i18n.language)}
           </div>
         ) : null}
       </div>

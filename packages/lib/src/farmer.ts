@@ -1,6 +1,7 @@
 /* Farmer/seller domain: what a seller earns, what the customer pays, and when a
  * listing stops accepting orders. Pure and framework-agnostic, so the web
  * listing form and a future React Native app project the same numbers. */
+import { dateLocale } from './format';
 import { sellerFeePct, type SellerType } from './fees';
 import { isOrderActive, isOrderCancelled, type Order } from './orders';
 
@@ -76,32 +77,81 @@ export function projectBulkPrice(
  * occurrence. The grouping is presentation only, exactly as the legacy page
  * treated it. */
 
+/** The parenthetical on a cutoff label, as a code — the only part that is WORDS. */
+export type CutoffNote = 'prevEvening' | 'midnight' | 'noon' | 'currentDay';
+
+export type CutoffGroup = 'Previous Evening' | 'Current Day';
+
 export interface CutoffOption {
   /** Stored verbatim in farmer_listings.time_available. */
   value: string;
-  /** What the seller reads. */
+  /** What the seller reads, in English. The default when nothing translates it. */
   label: string;
-  /** Optgroup heading. */
-  group: 'Previous Evening' | 'Current Day';
+  /**
+   * The clock time alone ("8 PM"). A screen composes `time (note)` so a Tamil
+   * seller reads "8 PM (முந்தைய மாலை)" — the time is the same in every language,
+   * so translating sixteen whole labels would be fifteen copies of "8 PM".
+   */
+  time: string;
+  /** Qualifier code, absent when the time speaks for itself. */
+  note?: CutoffNote;
+  /** Optgroup heading. A VALUE — the screen keys its translation off it. */
+  group: CutoffGroup;
 }
 
 export const CUTOFF_OPTIONS: readonly CutoffOption[] = [
-  { value: '8 PM', label: '8 PM (previous evening)', group: 'Previous Evening' },
-  { value: '9 PM', label: '9 PM (previous evening)', group: 'Previous Evening' },
-  { value: '10 PM', label: '10 PM (previous evening)', group: 'Previous Evening' },
-  { value: '11 PM', label: '11 PM (previous evening)', group: 'Previous Evening' },
-  { value: '12 AM', label: '12 AM (midnight)', group: 'Current Day' },
-  { value: '4 AM', label: '4 AM', group: 'Current Day' },
-  { value: '6 AM', label: '6 AM', group: 'Current Day' },
-  { value: '7 AM', label: '7 AM', group: 'Current Day' },
-  { value: '8 AM', label: '8 AM', group: 'Current Day' },
-  { value: '9 AM', label: '9 AM', group: 'Current Day' },
-  { value: '10 AM', label: '10 AM', group: 'Current Day' },
-  { value: '12 PM', label: '12 PM (noon)', group: 'Current Day' },
-  { value: '2 PM', label: '2 PM', group: 'Current Day' },
-  { value: '4 PM', label: '4 PM', group: 'Current Day' },
-  { value: '6 PM', label: '6 PM', group: 'Current Day' },
-  { value: '8 PM (today)', label: '8 PM (current day)', group: 'Current Day' },
+  {
+    value: '8 PM',
+    label: '8 PM (previous evening)',
+    time: '8 PM',
+    note: 'prevEvening',
+    group: 'Previous Evening',
+  },
+  {
+    value: '9 PM',
+    label: '9 PM (previous evening)',
+    time: '9 PM',
+    note: 'prevEvening',
+    group: 'Previous Evening',
+  },
+  {
+    value: '10 PM',
+    label: '10 PM (previous evening)',
+    time: '10 PM',
+    note: 'prevEvening',
+    group: 'Previous Evening',
+  },
+  {
+    value: '11 PM',
+    label: '11 PM (previous evening)',
+    time: '11 PM',
+    note: 'prevEvening',
+    group: 'Previous Evening',
+  },
+  {
+    value: '12 AM',
+    label: '12 AM (midnight)',
+    time: '12 AM',
+    note: 'midnight',
+    group: 'Current Day',
+  },
+  { value: '4 AM', label: '4 AM', time: '4 AM', group: 'Current Day' },
+  { value: '6 AM', label: '6 AM', time: '6 AM', group: 'Current Day' },
+  { value: '7 AM', label: '7 AM', time: '7 AM', group: 'Current Day' },
+  { value: '8 AM', label: '8 AM', time: '8 AM', group: 'Current Day' },
+  { value: '9 AM', label: '9 AM', time: '9 AM', group: 'Current Day' },
+  { value: '10 AM', label: '10 AM', time: '10 AM', group: 'Current Day' },
+  { value: '12 PM', label: '12 PM (noon)', time: '12 PM', note: 'noon', group: 'Current Day' },
+  { value: '2 PM', label: '2 PM', time: '2 PM', group: 'Current Day' },
+  { value: '4 PM', label: '4 PM', time: '4 PM', group: 'Current Day' },
+  { value: '6 PM', label: '6 PM', time: '6 PM', group: 'Current Day' },
+  {
+    value: '8 PM (today)',
+    label: '8 PM (current day)',
+    time: '8 PM',
+    note: 'currentDay',
+    group: 'Current Day',
+  },
 ];
 
 export const DEFAULT_CUTOFF = '8 AM';
@@ -157,27 +207,55 @@ export interface ListingDraft {
   qty_value?: NumericInput;
 }
 
+/**
+ * Why a listing draft cannot be saved.
+ *
+ * A CODE, not a sentence. These used to be the English messages themselves,
+ * which faulted a translated form in English — and lib cannot reach i18n, being
+ * pure and shared with React Native. Same call as `validateAddress`; see
+ * `listingProblemKey`.
+ */
+export type ListingProblem =
+  | 'product'
+  | 'price'
+  | 'qty'
+  | 'cutoff'
+  | 'bulkPair'
+  | 'bulkMax'
+  | 'bulkOverQty'
+  | 'ruleType'
+  | 'ruleOverQty';
+
 /** First problem with the draft, or null. */
-export function validateListing(d: ListingDraft): string | null {
-  if (!d.product_id) return 'Select a product.';
+export function validateListing(d: ListingDraft): ListingProblem | null {
+  if (!d.product_id) return 'product';
   const price = Number(d.farmer_price);
-  if (!(price > 0)) return 'Enter your selling price.';
+  if (!(price > 0)) return 'price';
   const qty = Number(d.qty_available);
-  if (!(qty > 0)) return 'Enter the quantity you have available.';
-  if (parseCutoffHour(d.time_available) === null) return 'Choose when orders should stop.';
+  if (!(qty > 0)) return 'qty';
+  if (parseCutoffHour(d.time_available) === null) return 'cutoff';
 
   const bulkQty = Number(d.bulk_qty || 0);
   const bulkDisc = Number(d.bulk_disc_pct || 0);
-  if (bulkQty > 0 !== bulkDisc > 0) return 'A bulk offer needs both a quantity and a discount.';
-  if (bulkDisc > MAX_BULK_DISC_PCT) return `Bulk discount cannot exceed ${MAX_BULK_DISC_PCT}%.`;
-  if (bulkQty > 0 && bulkQty > qty) return 'The bulk quantity is more than you have available.';
+  if (bulkQty > 0 !== bulkDisc > 0) return 'bulkPair';
+  if (bulkDisc > MAX_BULK_DISC_PCT) return 'bulkMax';
+  if (bulkQty > 0 && bulkQty > qty) return 'bulkOverQty';
 
   const qtyValue = Number(d.qty_value || 0);
-  if (qtyValue > 0 && !d.qty_type) return 'Choose whether that is a minimum order or a pack size.';
-  if (qtyValue > 0 && qtyValue > qty)
-    return 'The order rule is larger than the quantity available.';
+  if (qtyValue > 0 && !d.qty_type) return 'ruleType';
+  if (qtyValue > 0 && qtyValue > qty) return 'ruleOverQty';
 
   return null;
+}
+
+/**
+ * The i18n key for a listing problem. `en` carries the wording.
+ *
+ * `bulkMax` interpolates `{{max}}` — pass MAX_BULK_DISC_PCT rather than baking 90
+ * into the copy, so the cap and the sentence cannot drift apart in two languages.
+ */
+export function listingProblemKey(problem: ListingProblem): string {
+  return `listing.err.${problem}`;
 }
 
 /* ── Earnings ──────────────────────────────────────────────────────────────
@@ -253,7 +331,10 @@ function startOfWeek(d: Date): Date {
   return x;
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/* The bar label was `${date} ${MONTHS[month]}` off a hardcoded English array, so
+ * the trend chart's axis stayed English on a Tamil dashboard. Intl gives the same
+ * "12 Jul" for en-IN — byte-identical to the array it replaces — and "ஜூலை 12"
+ * for ta-IN, where the month leads. */
 
 /**
  * A farmer's DELIVERED earnings bucketed into the last `weeks` calendar weeks
@@ -266,6 +347,8 @@ export function farmerWeeklyEarnings(
   orders: Order[],
   weeks = 8,
   now: Date = new Date(),
+  /** App language for the bar labels. Omit and they stay en-IN, as before. */
+  lang?: string | null,
 ): WeekEarning[] {
   const current = startOfWeek(now);
   const buckets = Array.from({ length: weeks }, (_, i) => {
@@ -288,7 +371,7 @@ export function farmerWeeklyEarnings(
 
   return buckets.map((b) => ({
     weekStart: b.start.toISOString(),
-    label: `${b.start.getDate()} ${MONTHS[b.start.getMonth()]}`,
+    label: b.start.toLocaleDateString(dateLocale(lang), { day: 'numeric', month: 'short' }),
     amount: b.amount,
   }));
 }

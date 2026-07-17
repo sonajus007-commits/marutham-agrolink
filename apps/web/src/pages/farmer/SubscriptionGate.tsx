@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Button, Modal, Spinner, FIELD_LABEL_CLASS, FIELD_ERR_CLASS } from '@marutham/ui';
 import { api, type SubscriptionPlan, type SubscriptionPlansResponse } from '@marutham/api-client';
 import { fmtMoney } from '@marutham/lib';
@@ -15,6 +16,10 @@ import { useToast } from '../../components/Toast';
  * Never divide by 100: the legacy gate did, and advertised a ₹300 activation as
  * "Pay ₹2 & Activate".
  */
+/* Plan NAMES are the value the server prices off (`paySubscription(plan.name)`),
+ * and a closed set of four — so they get a key each and the value is untouched. */
+const planKey = (name: string) => `farmer.sub.plan.${name.replace(/\s+/g, '').toLowerCase()}`;
+
 export function SubscriptionGate({
   open,
   blocking,
@@ -26,6 +31,7 @@ export function SubscriptionGate({
   onClose: () => void;
   onPaid: () => void;
 }) {
+  const { t } = useTranslation();
   const { updateUser } = useAuth();
   const toast = useToast();
   const [data, setData] = useState<SubscriptionPlansResponse | null>(null);
@@ -42,7 +48,13 @@ export function SubscriptionGate({
     api
       .getSubscriptionPlans()
       .then((d) => active && setData(d))
-      .catch((e) => active && setError(e instanceof Error ? e.message : 'Could not load plans'));
+      .catch(
+        (e) =>
+          active &&
+          setError(
+            e instanceof Error ? e.message : t('farmer.sub.loadFailed', 'Could not load plans'),
+          ),
+      );
     return () => {
       active = false;
     };
@@ -59,10 +71,15 @@ export function SubscriptionGate({
       // Only the plan NAME crosses the wire. The server prices it.
       const res = await api.paySubscription(plan.name);
       updateUser(res.user);
-      toast(`Paid ${fmtMoney(res.amount_paid)} — your account is active.`, 'ok');
+      toast(
+        t('farmer.sub.paid', 'Paid {{amount}} — your account is active.', {
+          amount: fmtMoney(res.amount_paid),
+        }),
+        'ok',
+      );
       onPaid();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Payment failed';
+      const msg = e instanceof Error ? e.message : t('farmer.sub.payFailed', 'Payment failed');
       setError(msg);
       toast(msg, 'er');
     } finally {
@@ -75,22 +92,31 @@ export function SubscriptionGate({
       open={open}
       dismissible={!blocking}
       onClose={onClose}
-      title={blocking ? '🔒 Activate Your Account' : '🔄 Renew Subscription'}
+      closeLabel={t('common.close', 'Close')}
+      title={
+        blocking
+          ? `🔒 ${t('farmer.sub.activate', 'Activate Your Account')}`
+          : `🔄 ${t('farmer.sub.renew', 'Renew Subscription')}`
+      }
       subtitle={
         blocking
-          ? 'Choose a plan and pay to start selling your produce.'
-          : 'Extend your subscription to keep selling.'
+          ? t('farmer.sub.activateSub', 'Choose a plan and pay to start selling your produce.')
+          : t('farmer.sub.renewSub', 'Extend your subscription to keep selling.')
       }
       footer={
         data ? (
           <>
             {!blocking ? (
               <Button variant="ghost" onClick={onClose} disabled={busy}>
-                Later
+                {t('farmer.sub.later', 'Later')}
               </Button>
             ) : null}
             <Button onClick={pay} disabled={!plan || busy}>
-              {busy ? 'Processing…' : plan ? `Pay ${fmtMoney(total)} & Activate` : 'Select a plan'}
+              {busy
+                ? t('farmer.sub.processing', 'Processing…')
+                : plan
+                  ? t('farmer.sub.payCta', 'Pay {{amount}} & Activate', { amount: fmtMoney(total) })
+                  : t('farmer.sub.selectPlan', 'Select a plan')}
             </Button>
           </>
         ) : null
@@ -106,13 +132,18 @@ export function SubscriptionGate({
         <>
           {data.concession_pct > 0 ? (
             <p className="sub-concession">
-              🌸 <strong>Women &amp; Transgender concession:</strong> {data.concession_pct}% off the
-              plan fee, already applied below.
+              🌸{' '}
+              <Trans
+                i18nKey="farmer.sub.concession"
+                values={{ pct: data.concession_pct }}
+                defaults="<1>Women & Transgender concession:</1> {{pct}}% off the plan fee, already applied below."
+                components={{ 1: <strong /> }}
+              />
             </p>
           ) : null}
 
           <fieldset className="sub-plans">
-            <legend className={FIELD_LABEL_CLASS}>Choose a plan</legend>
+            <legend className={FIELD_LABEL_CLASS}>{t('farmer.sub.choose', 'Choose a plan')}</legend>
             {data.plans.map((p) => (
               <PlanOption
                 key={p.name}
@@ -126,19 +157,20 @@ export function SubscriptionGate({
           {plan ? (
             <div className="sub-summary">
               <div className="sub-summary__row">
-                <span>Plan fee</span>
+                <span>{t('farmer.sub.planFee', 'Plan fee')}</span>
                 <span>{fmtMoney(plan.amount)}</span>
               </div>
               {regCharge > 0 ? (
                 <div className="sub-summary__row">
                   <span>
-                    Registration charge <small>(one-time)</small>
+                    {t('farmer.sub.regCharge', 'Registration charge')}{' '}
+                    <small>({t('farmer.sub.oneTime', 'one-time')})</small>
                   </span>
                   <span>{fmtMoney(data.registration_charge)}</span>
                 </div>
               ) : null}
               <div className="sub-summary__row sub-summary__row--total">
-                <span>Total payable</span>
+                <span>{t('farmer.sub.totalPayable', 'Total payable')}</span>
                 <span>{fmtMoney(total)}</span>
               </div>
             </div>
@@ -146,7 +178,11 @@ export function SubscriptionGate({
 
           {!data.registration_charge_applies ? (
             <p className="sub-note">
-              ✓ Your one-time registration charge is already paid — renewals are plan fee only.
+              ✓{' '}
+              {t(
+                'farmer.sub.regPaid',
+                'Your one-time registration charge is already paid — renewals are plan fee only.',
+              )}
             </p>
           ) : null}
 
@@ -170,6 +206,7 @@ function PlanOption({
   checked: boolean;
   onSelect: () => void;
 }) {
+  const { t } = useTranslation();
   // Both are rupee strings, so a plain !== is a string compare — equal means no
   // concession. The legacy page compared 20000 with "200.00" and always struck through.
   const discounted = plan.base_amount !== plan.amount;
@@ -178,8 +215,10 @@ function PlanOption({
     <label className={`sub-plan${checked ? ' is-on' : ''}`}>
       <input type="radio" name="subplan" checked={checked} onChange={onSelect} />
       <span className="sub-plan__main">
-        <span className="sub-plan__name">{plan.name}</span>
-        <span className="sub-plan__days">{plan.days} days validity</span>
+        <span className="sub-plan__name">{t(planKey(plan.name), plan.name)}</span>
+        <span className="sub-plan__days">
+          {t('farmer.sub.validity', '{{days}} days validity', { days: plan.days })}
+        </span>
       </span>
       <span className="sub-plan__price">
         {discounted ? <s>{fmtMoney(plan.base_amount)}</s> : null}

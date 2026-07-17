@@ -1,5 +1,12 @@
 import { useTranslation } from 'react-i18next';
-import { fmtDateShort, fmtMoney, isOrderCancelled, statusColor, type Order } from '@marutham/lib';
+import {
+  fmtDateShort,
+  fmtMoney,
+  isOrderCancelled,
+  statusColor,
+  statusKey,
+  type Order,
+} from '@marutham/lib';
 
 /** Short human handle for an order — the code, or a truncated id for old rows. */
 export function orderLabel(o: Order): string {
@@ -13,8 +20,9 @@ export function orderLabel(o: Order): string {
  * name, phone or address.
  */
 export function FarmerOrderRow({ order, onOpen }: { order: Order; onOpen: (o: Order) => void }) {
-  const { t } = useTranslation();
-  const label = isOrderCancelled(order) ? 'Cancelled' : order.status;
+  const { t, i18n } = useTranslation();
+  // The English value drives statusColor; only the spoken form is translated.
+  const status = isOrderCancelled(order) ? 'Cancelled' : String(order.status ?? '');
   return (
     <button
       type="button"
@@ -23,13 +31,13 @@ export function FarmerOrderRow({ order, onOpen }: { order: Order; onOpen: (o: Or
     >
       <span
         className="w-1 shrink-0 rounded-full"
-        style={{ background: statusColor(label) }}
+        style={{ background: statusColor(status) }}
         aria-hidden="true"
       />
       <span className="flex min-w-0 flex-1 flex-col justify-center">
         <span className="text-sm font-bold text-primary">{orderLabel(order)}</span>
         <span className="text-2xs text-fg-muted">
-          {label} · {fmtDateShort(order.created_at)}
+          {t(statusKey(status), status)} · {fmtDateShort(order.created_at, i18n.language)}
           {order.village ? ` · ${order.village}` : ''}
         </span>
       </span>

@@ -34,7 +34,7 @@ function draftFrom(user: Record<string, unknown>): ProfileDraft {
 }
 
 export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, updateUser } = useAuth();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
@@ -54,9 +54,9 @@ export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
 
   async function save() {
     if (draft.pincode && !/^\d{6}$/.test(draft.pincode))
-      return setError('Pincode must be 6 digits.');
+      return setError(t('consumer.profile.badPincode', 'Pincode must be 6 digits.'));
     if (draft.email && !/^\S+@\S+\.\S+$/.test(draft.email))
-      return setError('Enter a valid email address.');
+      return setError(t('consumer.profile.badEmail', 'Enter a valid email address.'));
     setError(null);
     setBusy(true);
     try {
@@ -74,7 +74,11 @@ export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
       toast('Profile updated.', 'ok');
       setEditing(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update profile');
+      setError(
+        e instanceof Error
+          ? e.message
+          : t('consumer.profile.updateFailed', 'Could not update profile'),
+      );
     } finally {
       setBusy(false);
     }
@@ -203,9 +207,19 @@ export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
         <Card>
           <h3 className="mb-3 text-md font-bold text-primary">📅 {t('farmer.sub.title')}</h3>
           <dl className="flex flex-col">
-            <ProfRow label={t('farmer.profile.plan')} value={sub.plan || '—'} />
+            <ProfRow
+              label={t('farmer.profile.plan')}
+              value={
+                sub.plan
+                  ? t(`farmer.sub.plan.${sub.plan.replace(/\s+/g, '').toLowerCase()}`, sub.plan)
+                  : '—'
+              }
+            />
             {sub.expiresAt ? (
-              <ProfRow label={t('farmer.sub.validUntil')} value={fmtDateShort(sub.expiresAt)} />
+              <ProfRow
+                label={t('farmer.sub.validUntil')}
+                value={fmtDateShort(sub.expiresAt, i18n.language)}
+              />
             ) : null}
           </dl>
           <Button variant="ghost" className="mt-3" onClick={onRenew}>

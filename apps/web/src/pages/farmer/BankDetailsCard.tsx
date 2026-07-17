@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Card, Field, Input, FIELD_ERR_CLASS } from '@marutham/ui';
 import { api, SENSITIVE_FIELDS, type ProfileChangeRequest } from '@marutham/api-client';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
 
-/** Sensitive seller fields, in display order, with their labels. */
-const FIELDS: { key: (typeof SENSITIVE_FIELDS)[number]; label: string }[] = [
-  { key: 'business_name', label: 'Business / Farm Name' },
-  { key: 'business_type', label: 'Business Type' },
-  { key: 'gst_number', label: 'GST Number' },
-  { key: 'bank_name', label: 'Bank Name' },
-  { key: 'bank_account', label: 'Account Number' },
-  { key: 'ifsc', label: 'IFSC Code' },
+/* Sensitive seller fields, in display order. `key` is the column the server
+ * expects; [i18n key, English] is only how it is labelled. */
+const FIELDS: { key: (typeof SENSITIVE_FIELDS)[number]; label: [string, string] }[] = [
+  { key: 'business_name', label: ['farmer.bank.businessName', 'Business / Farm Name'] },
+  { key: 'business_type', label: ['farmer.bank.businessType', 'Business Type'] },
+  { key: 'gst_number', label: ['farmer.bank.gst', 'GST Number'] },
+  { key: 'bank_name', label: ['farmer.bank.bankName', 'Bank Name'] },
+  { key: 'bank_account', label: ['farmer.bank.account', 'Account Number'] },
+  { key: 'ifsc', label: ['farmer.bank.ifsc', 'IFSC Code'] },
 ];
 
 type Draft = Record<string, string>;
@@ -30,6 +32,7 @@ function draftFrom(user: Record<string, unknown>): Draft {
  * state and hide the form until it is resolved. See [[project-profile-change-requests]].
  */
 export function BankDetailsCard() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
@@ -73,7 +76,7 @@ export function BankDetailsCard() {
       if (draft[key] && draft[key] !== current[key]) changes[key] = draft[key];
     }
     if (Object.keys(changes).length === 0) {
-      setError('Change at least one value to request an update.');
+      setError(t('farmer.bank.noChange', 'Change at least one value to request an update.'));
       return;
     }
     setError(null);
@@ -82,9 +85,11 @@ export function BankDetailsCard() {
       const res = await api.profileChangeRequest(changes);
       setPending(res.request);
       setEditing(false);
-      toast('Change request sent to the admin team for approval.', 'ok');
+      toast(t('farmer.bank.sent', 'Change request sent to the admin team for approval.'), 'ok');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not submit change request');
+      setError(
+        e instanceof Error ? e.message : t('farmer.bank.failed', 'Could not submit change request'),
+      );
     } finally {
       setBusy(false);
     }
@@ -92,23 +97,36 @@ export function BankDetailsCard() {
 
   return (
     <Card>
-      <h3 className="mb-1 text-md font-bold text-primary">🏦 Bank & Business Details</h3>
+      <h3 className="mb-1 text-md font-bold text-primary">
+        🏦 {t('farmer.bank.title', 'Bank & Business Details')}
+      </h3>
       <p className="mb-3 text-2xs text-fg-muted">
-        These affect your payouts, so changes are reviewed and approved by the admin team.
+        {t(
+          'farmer.bank.blurb',
+          'These affect your payouts, so changes are reviewed and approved by the admin team.',
+        )}
       </p>
 
       {pending ? (
         <div className="rounded-sm border border-warning-bg bg-warning-bg p-3">
           <div className="text-sm font-bold text-warning-fg">
-            ⏳ Change request pending approval
+            ⏳ {t('farmer.bank.pending', 'Change request pending approval')}
           </div>
           <p className="mt-1 text-2xs text-warning-fg">
-            The admin team has been notified by email and will review your request shortly.
+            {t(
+              'farmer.bank.pendingBlurb',
+              'The admin team has been notified by email and will review your request shortly.',
+            )}
           </p>
           <dl className="mt-2 flex flex-col gap-1">
             {Object.entries(pending.requested_changes || {}).map(([k, v]) => (
               <div key={k} className="flex justify-between gap-3 text-2xs">
-                <dt className="text-fg-muted">{FIELDS.find((f) => f.key === k)?.label || k}</dt>
+                <dt className="text-fg-muted">
+                  {(() => {
+                    const f = FIELDS.find((x) => x.key === k);
+                    return f ? t(f.label[0], f.label[1]) : k;
+                  })()}
+                </dt>
                 <dd className="font-semibold text-fg">{v}</dd>
               </div>
             ))}
@@ -122,19 +140,21 @@ export function BankDetailsCard() {
                 key={key}
                 className="flex justify-between gap-3 border-b border-border-subtle py-1.5 last:border-b-0"
               >
-                <dt className="text-2xs uppercase tracking-wide text-fg-muted">{label}</dt>
+                <dt className="text-2xs uppercase tracking-wide text-fg-muted">
+                  {t(label[0], label[1])}
+                </dt>
                 <dd className="text-sm font-semibold text-fg">{current[key] || '—'}</dd>
               </div>
             ))}
           </dl>
           <Button variant="ghost" className="mt-3" onClick={openEdit}>
-            ✏️ Request Change
+            ✏️ {t('farmer.bank.requestChange', 'Request Change')}
           </Button>
         </>
       ) : (
         <div className="flex flex-col gap-3">
           {FIELDS.map(({ key, label }) => (
-            <Field key={key} label={label}>
+            <Field key={key} label={t(label[0], label[1])}>
               {(p) => (
                 <Input
                   {...p}
@@ -154,10 +174,12 @@ export function BankDetailsCard() {
 
           <div className="flex gap-2">
             <Button onClick={submit} disabled={busy}>
-              {busy ? 'Submitting…' : 'Submit for Approval'}
+              {busy
+                ? t('consumer.return.busy', 'Submitting…')
+                : t('farmer.bank.submit', 'Submit for Approval')}
             </Button>
             <Button variant="ghost" onClick={() => setEditing(false)} disabled={busy}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
           </div>
         </div>

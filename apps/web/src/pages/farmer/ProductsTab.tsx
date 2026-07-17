@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { Button, EmptyState, Modal, Spinner, Select, FIELD_LABEL_CLASS } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import {
@@ -44,11 +44,17 @@ export function ProductsTab() {
       setListings(l.listings || []);
       setProducts(p.products || []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load your products');
+      setError(
+        e instanceof Error
+          ? e.message
+          : t('farmer.prod.loadFailed', 'Could not load your products'),
+      );
     } finally {
       setLoading(false);
     }
-  }, [user?.district]);
+    // `t` is a dependency: without it this closure keeps the language it was
+    // created in, and the fallback would still be English after a switch.
+  }, [user?.district, t]);
 
   useEffect(() => {
     void load();
@@ -64,7 +70,10 @@ export function ProductsTab() {
       toast(ok, 'ok');
       await load();
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'That did not work', 'er');
+      toast(
+        e instanceof Error ? e.message : t('farmer.prod.actionFailed', 'That did not work'),
+        'er',
+      );
     } finally {
       setBusyId(null);
     }
@@ -85,7 +94,7 @@ export function ProductsTab() {
           cutoff_ts,
           listed: false,
         }),
-      'Product request submitted — an admin will review it.',
+      t('farmer.prod.requested', 'Product request submitted — an admin will review it.'),
     );
   }
 
@@ -119,14 +128,14 @@ export function ProductsTab() {
                 act(
                   l.id,
                   () => api.setListingFlags(l.id, { confirmed: true }),
-                  'Confirmed — customers can order it.',
+                  t('farmer.prod.confirmed', 'Confirmed — customers can order it.'),
                 )
               }
               onUnconfirm={() =>
                 act(
                   l.id,
                   () => api.setListingFlags(l.id, { confirmed: false }),
-                  'Confirmation removed.',
+                  t('farmer.prod.unconfirmed', 'Confirmation removed.'),
                 )
               }
               onDelete={() => setConfirmDelete(l)}
@@ -162,31 +171,40 @@ export function ProductsTab() {
         open={confirmDelete !== null}
         title={
           confirmDelete?.listing_status === 'pending'
-            ? 'Cancel this request?'
-            : 'Remove this listing?'
+            ? t('farmer.prod.cancelRequestTitle', 'Cancel this request?')
+            : t('farmer.prod.removeTitle', 'Remove this listing?')
         }
+        closeLabel={t('common.close', 'Close')}
         onClose={() => setConfirmDelete(null)}
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirmDelete(null)}>
-              Keep it
+              {t('consumer.addr.keep', 'Keep it')}
             </Button>
             <Button
               variant="danger"
               onClick={() => {
                 const l = confirmDelete!;
                 setConfirmDelete(null);
-                void act(l.id, () => api.deleteListing(l.id), 'Listing removed.');
+                void act(
+                  l.id,
+                  () => api.deleteListing(l.id),
+                  t('farmer.prod.removed', 'Listing removed.'),
+                );
               }}
             >
-              Remove
+              {t('farmer.listing.remove', 'Remove')}
             </Button>
           </>
         }
       >
         <p style={{ fontSize: 12, color: 'var(--gray)', lineHeight: 1.6 }}>
-          <strong>{confirmDelete?.product?.name}</strong> will no longer be offered to customers.
-          You can request it again later.
+          <Trans
+            i18nKey="farmer.prod.removeBody"
+            values={{ name: confirmDelete?.product?.name ?? '' }}
+            defaults="<1>{{name}}</1> will no longer be offered to customers. You can request it again later."
+            components={{ 1: <strong /> }}
+          />
         </p>
       </Modal>
     </>
@@ -204,6 +222,7 @@ function RequestProductModal({
   onClose: () => void;
   onRequest: (productId: string) => void;
 }) {
+  const { t } = useTranslation();
   const [pick, setPick] = useState('');
   useEffect(() => {
     if (open) setPick('');
@@ -212,27 +231,33 @@ function RequestProductModal({
   return (
     <Modal
       open={open}
-      title="Request a new product"
-      subtitle="An admin approves the product before you can price it."
+      title={t('farmer.prod.requestTitle', 'Request a new product')}
+      subtitle={t(
+        'farmer.prod.requestSubtitle',
+        'An admin approves the product before you can price it.',
+      )}
+      closeLabel={t('common.close', 'Close')}
       onClose={onClose}
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button disabled={!pick} onClick={() => onRequest(pick)}>
-            Submit request
+            {t('farmer.prod.submitRequest', 'Submit request')}
           </Button>
         </>
       }
     >
       {products.length === 0 ? (
-        <p className="fm-note">You have already requested every available product.</p>
+        <p className="fm-note">
+          {t('farmer.prod.allRequested', 'You have already requested every available product.')}
+        </p>
       ) : (
         <label className="mb-3">
-          <span className={FIELD_LABEL_CLASS}>Product</span>
+          <span className={FIELD_LABEL_CLASS}>{t('farmer.form.product', 'Product')}</span>
           <Select value={pick} onChange={(e) => setPick(e.target.value)}>
-            <option value="">— Select a product —</option>
+            <option value="">— {t('farmer.prod.selectProduct', 'Select a product')} —</option>
             {products.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}

@@ -211,40 +211,40 @@ describe('validateListing', () => {
   });
 
   it.each([
-    ['no product', { product_id: '' }, /Select a product/],
-    ['no price', { farmer_price: '' as const }, /selling price/],
-    ['zero price', { farmer_price: 0 }, /selling price/],
-    ['negative price', { farmer_price: -5 }, /selling price/],
-    ['no quantity', { qty_available: 0 }, /quantity you have/],
-    ['unreadable cutoff', { time_available: 'sometime' }, /when orders should stop/],
-  ])('rejects %s', (_why, over, re) => {
-    expect(validateListing(draft(over as Partial<ListingDraft>))).toMatch(re);
+    ['no product', { product_id: '' }, 'product'],
+    ['no price', { farmer_price: '' as const }, 'price'],
+    ['zero price', { farmer_price: 0 }, 'price'],
+    ['negative price', { farmer_price: -5 }, 'price'],
+    ['no quantity', { qty_available: 0 }, 'qty'],
+    ['unreadable cutoff', { time_available: 'sometime' }, 'cutoff'],
+  ])('rejects %s', (_why, over, code) => {
+    expect(validateListing(draft(over as Partial<ListingDraft>))).toBe(code);
   });
 
   it('a bulk offer needs both a quantity and a discount', () => {
-    expect(validateListing(draft({ bulk_qty: 5 }))).toMatch(/both a quantity and a discount/);
-    expect(validateListing(draft({ bulk_disc_pct: 10 }))).toMatch(/both a quantity and a discount/);
+    expect(validateListing(draft({ bulk_qty: 5 }))).toBe('bulkPair');
+    expect(validateListing(draft({ bulk_disc_pct: 10 }))).toBe('bulkPair');
     expect(validateListing(draft({ bulk_qty: 5, bulk_disc_pct: 10 }))).toBeNull();
   });
 
   it('rejects a bulk discount above the server cap', () => {
-    expect(validateListing(draft({ bulk_qty: 5, bulk_disc_pct: 95 }))).toMatch(/cannot exceed 90%/);
+    expect(validateListing(draft({ bulk_qty: 5, bulk_disc_pct: 95 }))).toBe('bulkMax');
   });
 
   it('rejects a bulk quantity larger than the stock on hand', () => {
-    expect(validateListing(draft({ qty_available: 4, bulk_qty: 5, bulk_disc_pct: 10 }))).toMatch(
-      /more than you have/,
+    expect(validateListing(draft({ qty_available: 4, bulk_qty: 5, bulk_disc_pct: 10 }))).toBe(
+      'bulkOverQty',
     );
   });
 
   it('an order rule needs a type', () => {
-    expect(validateListing(draft({ qty_value: 2 }))).toMatch(/minimum order or a pack size/);
+    expect(validateListing(draft({ qty_value: 2 }))).toBe('ruleType');
     expect(validateListing(draft({ qty_value: 2, qty_type: 'MOQ' }))).toBeNull();
   });
 
   it('rejects an order rule bigger than the stock on hand', () => {
-    expect(validateListing(draft({ qty_available: 1, qty_value: 5, qty_type: 'SPQ' }))).toMatch(
-      /larger than the quantity/,
+    expect(validateListing(draft({ qty_available: 1, qty_value: 5, qty_type: 'SPQ' }))).toBe(
+      'ruleOverQty',
     );
   });
 });

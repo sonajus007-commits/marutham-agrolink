@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Field, Input, Select, Sheet, FIELD_ERR_CLASS } from '@marutham/ui';
 import { api, type ListingPayload } from '@marutham/api-client';
 import {
   CUTOFF_OPTIONS,
   DEFAULT_CUTOFF,
+  MAX_BULK_DISC_PCT,
   cutoffTimestamp,
   cutoffLabel,
+  listingProblemKey,
   projectBulkPrice,
   projectConsumerPrice,
   validateListing,
@@ -55,7 +58,14 @@ export function ListingFormSheet({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const toast = useToast();
+
+  /* "8 PM (previous evening)" is a time plus a qualifier; only the qualifier is
+   * words. Composing here keeps fifteen copies of a clock time out of the
+   * resource file. */
+  const cutoffText = (o: (typeof CUTOFF_OPTIONS)[number]) =>
+    o.note ? `${o.time} (${t(`farmer.cutoff.${o.note}`)})` : o.time;
   const [draft, setDraft] = useState<ListingDraft>(() => draftFrom(listing));
   const [images, setImages] = useState<string[]>(listing.images || []);
   const [error, setError] = useState<string | null>(null);
@@ -91,11 +101,13 @@ export function ListingFormSheet({
 
   async function save() {
     const problem = validateListing(draft);
-    if (problem) return setError(problem);
+    // The code becomes a sentence here; `max` is passed rather than written into
+    // the copy, so the cap and the wording cannot drift in two languages.
+    if (problem) return setError(t(listingProblemKey(problem), { max: MAX_BULK_DISC_PCT }));
     setError(null);
 
     const cutoff_ts = cutoffTimestamp(draft.time_available);
-    if (!cutoff_ts) return setError('Choose when orders should stop.');
+    if (!cutoff_ts) return setError(t('listing.err.cutoff'));
 
     const hasBulk = Number(draft.bulk_qty) > 0 && Number(draft.bulk_disc_pct) > 0;
     const hasQtyRule = Number(draft.qty_value) > 0;
@@ -117,10 +129,11 @@ export function ListingFormSheet({
     setBusy(true);
     try {
       await api.updateListing(listing.id, payload);
-      toast('Listing saved — customers can order it now.', 'ok');
+      toast(t('farmer.form.saved', 'Listing saved — customers can order it now.'), 'ok');
       onSaved();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Could not save the listing';
+      const msg =
+        e instanceof Error ? e.message : t('farmer.form.saveFailed', 'Could not save the listing');
       setError(msg);
       toast(msg, 'er');
     } finally {
@@ -129,12 +142,20 @@ export function ListingFormSheet({
   }
 
   return (
-    <Sheet open={open} title={listing.product?.name ?? 'Listing'} onClose={onClose}>
-      <Field label="Product">
+    <Sheet
+      open={open}
+      title={listing.product?.name ?? t('farmer.form.listing', 'Listing')}
+      onClose={onClose}
+      backLabel={t('common.back', 'Back')}
+    >
+      <Field label={t('farmer.form.product', 'Product')}>
         {(p) => <Input {...p} value={listing.product?.name || ''} readOnly />}
       </Field>
 
-      <Field label={`Your selling price (₹ per ${unit})`} required>
+      <Field
+        label={t('farmer.form.price', 'Your selling price (₹ per {{unit}})', { unit })}
+        required
+      >
         {(p) => (
           <Input
             {...p}
@@ -149,21 +170,39 @@ export function ListingFormSheet({
 
       {preview ? (
         <div className="price-preview">
-          <strong>Customer pays {fmtMoney(preview.consumerPrice)}</strong> / {unit}
+          <strong>
+            {t('farmer.form.customerPays', 'Customer pays {{amount}}', {
+              amount: fmtMoney(preview.consumerPrice),
+            })}
+          </strong>{' '}
+          / {unit}
           <span className="price-preview__break">
-            your {fmtMoney(preview.farmerPrice)} + {preview.feePct}% platform fee
-            {handling > 0 ? ` + ${fmtMoney(handling)} handling` : ''}
+            {t('farmer.form.priceBreak', 'your {{amount}} + {{pct}}% platform fee', {
+              amount: fmtMoney(preview.farmerPrice),
+              pct: preview.feePct,
+            })}
+            {handling > 0
+              ? ` + ${t('farmer.form.plusHandling', '{{amount}} handling', { amount: fmtMoney(handling) })}`
+              : ''}
           </span>
           {bulk ? (
             <span className="price-preview__bulk">
-              Bulk {bulk.bulkQty}+ {unit}: you get {fmtMoney(bulk.farmerPrice)} → customer pays{' '}
-              {fmtMoney(bulk.consumerPrice)}
+              {t(
+                'farmer.form.bulkPreview',
+                'Bulk {{qty}}+ {{unit}}: you get {{yours}} → customer pays {{theirs}}',
+                {
+                  qty: bulk.bulkQty,
+                  unit,
+                  yours: fmtMoney(bulk.farmerPrice),
+                  theirs: fmtMoney(bulk.consumerPrice),
+                },
+              )}
             </span>
           ) : null}
         </div>
       ) : null}
 
-      <Field label={`Quantity available (${unit})`} required>
+      <Field label={t('farmer.form.qty', 'Quantity available ({{unit}})', { unit })} required>
         {(p) => (
           <Input
             {...p}
@@ -177,9 +216,9 @@ export function ListingFormSheet({
       </Field>
 
       <Field
-        label="Stop taking orders at"
+        label={t('farmer.form.cutoff', 'Stop taking orders at')}
         required
-        hint="Orders close at this time; you re-list the next day."
+        hint={t('farmer.form.cutoffHint', 'Orders close at this time; you re-list the next day.')}
       >
         {(p) => (
           <Select
@@ -187,11 +226,20 @@ export function ListingFormSheet({
             value={draft.time_available}
             onChange={(e) => set('time_available', e.target.value)}
           >
+            {/* The group string is a VALUE the options are filtered by — only its
+                heading is translated. */}
             {(['Previous Evening', 'Current Day'] as const).map((group) => (
-              <optgroup key={group} label={group}>
+              <optgroup
+                key={group}
+                label={
+                  group === 'Previous Evening'
+                    ? t('farmer.cutoff.groupPrev', 'Previous Evening')
+                    : t('farmer.cutoff.groupToday', 'Current Day')
+                }
+              >
                 {CUTOFF_OPTIONS.filter((o) => o.group === group).map((o) => (
                   <option key={o.value} value={o.value}>
-                    {o.label}
+                    {cutoffText(o)}
                   </option>
                 ))}
               </optgroup>
@@ -207,10 +255,11 @@ export function ListingFormSheet({
 
       <fieldset className="lf-group">
         <legend>
-          Bulk offer <span className="lf-optional">(optional)</span>
+          {t('farmer.form.bulkOffer', 'Bulk offer')}{' '}
+          <span className="lf-optional">({t('common.optional', 'optional')})</span>
         </legend>
         <div className="lf-row">
-          <Field label={`Buy at least (${unit})`}>
+          <Field label={t('farmer.form.buyAtLeast', 'Buy at least ({{unit}})', { unit })}>
             {(p) => (
               <Input
                 {...p}
@@ -221,7 +270,7 @@ export function ListingFormSheet({
               />
             )}
           </Field>
-          <Field label="Discount (%)">
+          <Field label={t('farmer.form.discount', 'Discount (%)')}>
             {(p) => (
               <Input
                 {...p}
@@ -237,23 +286,24 @@ export function ListingFormSheet({
 
       <fieldset className="lf-group">
         <legend>
-          Order rule <span className="lf-optional">(optional)</span>
+          {t('farmer.form.orderRule', 'Order rule')}{' '}
+          <span className="lf-optional">({t('common.optional', 'optional')})</span>
         </legend>
         <div className="lf-row">
-          <Field label="Type">
+          <Field label={t('farmer.form.ruleType', 'Type')}>
             {(p) => (
               <Select
                 {...p}
                 value={draft.qty_type || ''}
                 onChange={(e) => set('qty_type', e.target.value as 'MOQ' | 'SPQ' | '')}
               >
-                <option value="">— None —</option>
-                <option value="MOQ">Minimum order</option>
-                <option value="SPQ">Fixed pack size</option>
+                <option value="">— {t('farmer.form.ruleNone', 'None')} —</option>
+                <option value="MOQ">{t('farmer.form.ruleMoq', 'Minimum order')}</option>
+                <option value="SPQ">{t('farmer.form.ruleSpq', 'Fixed pack size')}</option>
               </Select>
             )}
           </Field>
-          <Field label={`Amount (${unit})`}>
+          <Field label={t('farmer.form.ruleAmount', 'Amount ({{unit}})', { unit })}>
             {(p) => (
               <Input
                 {...p}
@@ -267,12 +317,15 @@ export function ListingFormSheet({
         </div>
         <p className="lf-hint">
           {draft.qty_type === 'SPQ'
-            ? 'Sold in fixed packs — e.g. a 5-piece lemon pack.'
-            : 'The smallest amount a customer must buy — e.g. 1 bunch minimum.'}
+            ? t('farmer.form.spqHint', 'Sold in fixed packs — e.g. a 5-piece lemon pack.')
+            : t(
+                'farmer.form.moqHint',
+                'The smallest amount a customer must buy — e.g. 1 bunch minimum.',
+              )}
         </p>
       </fieldset>
 
-      <Field label="Photos">
+      <Field label={t('farmer.form.photos', 'Photos')}>
         {() => <ImagePicker images={images} onChange={setImages} onError={(m) => toast(m, 'er')} />}
       </Field>
 
@@ -284,10 +337,10 @@ export function ListingFormSheet({
 
       <div className="prof-actions">
         <Button onClick={save} disabled={busy}>
-          {busy ? 'Saving…' : 'Save & list'}
+          {busy ? t('consumer.addr.saving', 'Saving…') : t('farmer.form.saveList', 'Save & list')}
         </Button>
         <Button variant="ghost" onClick={onClose} disabled={busy}>
-          Cancel
+          {t('common.cancel', 'Cancel')}
         </Button>
       </div>
     </Sheet>

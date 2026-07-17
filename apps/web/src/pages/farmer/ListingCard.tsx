@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Button } from '@marutham/ui';
 import {
   getProductEmoji,
@@ -8,13 +9,15 @@ import {
   type ListingState,
 } from '@marutham/lib';
 
-const STATE_BADGE: Record<ListingState, { text: string; cls: string }> = {
-  pending: { text: '⏳ Pending approval', cls: 'is-pending' },
-  rejected: { text: '❌ Rejected', cls: 'is-rejected' },
-  needs_price: { text: '✅ Approved', cls: 'is-approved' },
-  cutoff_passed: { text: '✅ Approved', cls: 'is-approved' },
-  listed: { text: '✅ Approved', cls: 'is-approved' },
-  confirmed: { text: '✅ Approved', cls: 'is-approved' },
+/* listingState() already returns a CODE, so the badge only ever needed a label.
+ * [icon, key, English, class] — the English travels with the key as the default. */
+const STATE_BADGE: Record<ListingState, { icon: string; key: string; en: string; cls: string }> = {
+  pending: { icon: '⏳', key: 'farmer.listing.pending', en: 'Pending approval', cls: 'is-pending' },
+  rejected: { icon: '❌', key: 'farmer.listing.rejected', en: 'Rejected', cls: 'is-rejected' },
+  needs_price: { icon: '✅', key: 'farmer.listing.approved', en: 'Approved', cls: 'is-approved' },
+  cutoff_passed: { icon: '✅', key: 'farmer.listing.approved', en: 'Approved', cls: 'is-approved' },
+  listed: { icon: '✅', key: 'farmer.listing.approved', en: 'Approved', cls: 'is-approved' },
+  confirmed: { icon: '✅', key: 'farmer.listing.approved', en: 'Approved', cls: 'is-approved' },
 };
 
 export function ListingCard({
@@ -32,6 +35,7 @@ export function ListingCard({
   onUnconfirm: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const state = listingState(listing);
   const p = listing.product;
   const unit = p?.unit || '';
@@ -63,27 +67,39 @@ export function ListingCard({
       </div>
 
       <div className="listing__badges">
-        <span className={`listing__badge ${badge.cls}`}>{badge.text}</span>
+        <span className={`listing__badge ${badge.cls}`}>
+          {badge.icon} {t(badge.key, badge.en)}
+        </span>
         {priced && listing.qty_available != null ? (
           <span className="listing__tag">
-            {listing.qty_available} {unit} available
+            {t('farmer.listing.available', '{{qty}} {{unit}} available', {
+              qty: listing.qty_available,
+              unit,
+            })}
           </span>
         ) : null}
         {priced && listing.time_available ? (
           <span className="listing__tag listing__tag--cutoff">
-            Order by {listing.time_available}
+            {t('consumer.card.orderBy', 'Order by {{time}}', { time: listing.time_available })}
           </span>
         ) : null}
         {priced && listing.bulk_qty && listing.bulk_disc_pct ? (
           <span className="listing__tag listing__tag--bulk">
-            Bulk {listing.bulk_qty}+ → {listing.bulk_disc_pct}% off
+            {t('consumer.card.bulk', 'Bulk {{qty}}+ → {{pct}}% off', {
+              qty: listing.bulk_qty,
+              pct: listing.bulk_disc_pct,
+            })}
           </span>
         ) : null}
         {state === 'confirmed' ? (
-          <span className="listing__tag listing__tag--ok">Confirmed for delivery</span>
+          <span className="listing__tag listing__tag--ok">
+            {t('farmer.listing.confirmedTag', 'Confirmed for delivery')}
+          </span>
         ) : null}
         {state === 'cutoff_passed' ? (
-          <span className="listing__tag listing__tag--warn">Cutoff passed</span>
+          <span className="listing__tag listing__tag--warn">
+            {t('farmer.listing.cutoffPassed', 'Cutoff passed')}
+          </span>
         ) : null}
       </div>
 
@@ -122,9 +138,12 @@ function Actions({
   onUnconfirm: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const remove = (
     <button className="listing__link listing__link--danger" onClick={onDelete} disabled={busy}>
-      {state === 'pending' ? 'Cancel request' : 'Remove'}
+      {state === 'pending'
+        ? t('farmer.listing.cancelRequest', 'Cancel request')
+        : t('farmer.listing.remove', 'Remove')}
     </button>
   );
 
@@ -132,7 +151,9 @@ function Actions({
     case 'pending':
       return (
         <>
-          <span className="listing__note">Awaiting admin approval</span>
+          <span className="listing__note">
+            {t('farmer.listing.awaiting', 'Awaiting admin approval')}
+          </span>
           {remove}
         </>
       );
@@ -144,7 +165,11 @@ function Actions({
               the only part they can act on. The fallback survives for rows rejected
               before the reason was stored — a new rejection cannot reach it, because
               the server refuses one without a reason. */}
-          <span className="listing__note">{reason || 'Contact support for details.'}</span>
+          {/* The reason is the ADMIN's own words, stored on the row — shown verbatim,
+              never translated. Only our fallback is ours to say. */}
+          <span className="listing__note">
+            {reason || t('farmer.listing.noReason', 'Contact support for details.')}
+          </span>
           {remove}
         </>
       );
@@ -153,7 +178,7 @@ function Actions({
       return (
         <>
           <Button onClick={onEdit} disabled={busy} style={{ padding: '6px 12px', fontSize: 11 }}>
-            💰 Set selling price
+            💰 {t('farmer.listing.setPrice', 'Set selling price')}
           </Button>
           {remove}
         </>
@@ -168,7 +193,7 @@ function Actions({
             className="listing__btn--warn"
             style={{ padding: '6px 12px', fontSize: 11 }}
           >
-            Update price &amp; re-list
+            {t('farmer.listing.relist', 'Update price & re-list')}
           </Button>
           {remove}
         </>
@@ -178,10 +203,10 @@ function Actions({
       return (
         <>
           <Button onClick={onConfirm} disabled={busy} style={{ padding: '6px 12px', fontSize: 11 }}>
-            Confirm for tomorrow
+            {t('farmer.listing.confirmTomorrow', 'Confirm for tomorrow')}
           </Button>
           <button className="listing__link" onClick={onEdit} disabled={busy}>
-            Edit
+            {t('consumer.addr.edit', 'Edit')}
           </button>
           {remove}
         </>
@@ -191,10 +216,10 @@ function Actions({
       return (
         <>
           <button className="listing__link" onClick={onEdit} disabled={busy}>
-            Edit
+            {t('consumer.addr.edit', 'Edit')}
           </button>
           <button className="listing__link" onClick={onUnconfirm} disabled={busy}>
-            Undo confirm
+            {t('farmer.listing.undoConfirm', 'Undo confirm')}
           </button>
           {remove}
         </>

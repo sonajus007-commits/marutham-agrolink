@@ -25,11 +25,15 @@ export function FarmerOrdersTab() {
       const res = await api.getOrders();
       setOrders(res.orders || []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load orders');
+      setError(
+        e instanceof Error ? e.message : t('consumer.orders.loadFailed', 'Could not load orders'),
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+    // `t` is a dependency: without it this closure keeps the language it was
+    // created in, and the fallback would still be English after a switch.
+  }, [t]);
 
   useEffect(() => {
     void load();

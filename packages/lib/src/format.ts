@@ -183,6 +183,20 @@ export function payStatusKey(status: string): string {
   return PAY_STATUS_KEYS[status] ?? status;
 }
 
+/* How a PAYOUT reached the seller. `payouts.method` stores a snake_case code
+ * ("bank_transfer"), which the earnings screen was printing verbatim — so even
+ * the English read "bank_transfer". A key map gives both languages a real word. */
+const PAYOUT_METHOD_KEYS: Record<string, string> = {
+  bank_transfer: 'payout.method.bankTransfer',
+  upi: 'payout.method.upi',
+  cash: 'payout.method.cash',
+};
+
+/** The i18n key for a payout method, or the raw code when it has none. */
+export function payoutMethodKey(method: string): string {
+  return PAYOUT_METHOD_KEYS[method] ?? method;
+}
+
 /**
  * The semantic role an ORDER status belongs to. Each has a contrast-checked
  * Bg/Fg pair.
