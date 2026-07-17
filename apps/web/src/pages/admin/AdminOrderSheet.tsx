@@ -21,11 +21,23 @@ import {
   itemLineTotal,
   resolveAddress,
   statusColor,
+  PIPELINE_STAGES,
   type OrderDetail,
   payMethodKey,
   payStatusKey,
 } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
+import { useAuth } from '../../auth/AuthContext';
+
+// Mirrors the backend gate on POST /orders/:id/status. Only these roles get the
+// manual status-override control; everyone else sees the read-only sheet.
+const MANUAL_STATUS_ADMIN_ROLES = [
+  'Head Office',
+  'State Head',
+  'Regional Manager',
+  'District Manager',
+  'Hub Incharge',
+];
 
 /**
  * Admin order detail. Unlike the seller sheet this shows the FULL order — buyer
@@ -85,14 +97,44 @@ export function AdminOrderSheet({
 function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void }) {
   const { t, i18n } = useTranslation();
   const toast = useToast();
+  const { user } = useAuth();
   const { order: o, items, history, qr_svg } = data;
   const [showCancel, setShowCancel] = useState(false);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [targetStatus, setTargetStatus] = useState('');
+  const [settingStatus, setSettingStatus] = useState(false);
 
   const charges = deriveOrderCharges(o);
   const address = resolveAddress(o.delivery_address);
   const statusLabel = isOrderCancelled(o) ? 'Cancelled' : o.status;
+
+  // Manual override: senior admins only, and never on a cancelled order (that
+  // lifecycle is terminal). Offer the statuses valid for THIS order's route,
+  // minus the one it is already at — matching the server's validation.
+  const canOverride =
+    !isOrderCancelled(o) && MANUAL_STATUS_ADMIN_ROLES.includes(user?.admin_role ?? '');
+  const isHub = (o.route || 'direct') === 'hub';
+  const statusOptions = PIPELINE_STAGES.filter(
+    (s) => (isHub || (s !== 'In Transit' && s !== 'At Hub')) && s !== o.status,
+  );
+
+  async function setStatus() {
+    if (!targetStatus) return;
+    setSettingStatus(true);
+    try {
+      const res = await api.setOrderStatus(o.id, targetStatus);
+      toast(res.message || t('admin.orders.statusSet', 'Order status updated.'), 'ok');
+      onChanged();
+    } catch (e) {
+      toast(
+        e instanceof Error ? e.message : t('admin.orders.statusFailed', 'Could not set status'),
+        'er',
+      );
+    } finally {
+      setSettingStatus(false);
+    }
+  }
 
   async function cancel() {
     setBusy(true);
@@ -126,6 +168,35 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
           </Button>
         ) : null}
       </div>
+
+      {canOverride && statusOptions.length > 0 ? (
+        <Section title={`🛠 ${t('admin.orders.setStatus', 'Set Status Manually')}`}>
+          <p className="mb-2 text-2xs text-fg-muted">
+            {t(
+              'admin.orders.setStatusHint',
+              'Override the order stage — forward or back. Logged to the timeline.',
+            )}
+          </p>
+          <div className="flex items-center gap-2">
+            <select
+              className={INPUT_CLASS}
+              aria-label={t('admin.orders.setStatus', 'Set Status Manually')}
+              value={targetStatus}
+              onChange={(e) => setTargetStatus(e.target.value)}
+            >
+              <option value="">— {t('admin.orders.chooseStatus', 'Choose status')} —</option>
+              {statusOptions.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+            <Button variant="primary" onClick={setStatus} disabled={!targetStatus || settingStatus}>
+              {settingStatus ? '…' : t('admin.orders.apply', 'Apply')}
+            </Button>
+          </div>
+        </Section>
+      ) : null}
 
       <Section title={`📋 ${t('admin.orders.info')}`}>
         <Row label={t('admin.orders.code')} value={o.code || '—'} />

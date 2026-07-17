@@ -468,6 +468,93 @@ router.post('/:id/advance', async (req, res) => {
   res.json({ ok: true, message: `Order advanced to: ${updated.status}.`, newStatus: updated.status, order: updated });
 });
 
+// ── POST /orders/:id/status  (Senior admin — set order to ANY status) ─────────
+// Unlike /advance (one step forward), this SETS the order to any status in its
+// route's stage map — forward, backward, or a jump. A last-resort correction tool
+// for when the physical flow and the record diverge. Restricted to senior admins,
+// audited in the timeline, and it touches the delivery/pickup stamps to match the
+// target so the record stays internally consistent.
+const MANUAL_STATUS_ADMIN_ROLES = [
+  'Head Office',
+  'State Head',
+  'Regional Manager',
+  'District Manager',
+  'Hub Incharge',
+];
+
+router.post('/:id/status', async (req, res) => {
+  if (req.user.role !== 'admin' || !MANUAL_STATUS_ADMIN_ROLES.includes(req.user.admin_role)) {
+    return res.status(403).json({ error: 'Only senior admins can manually set an order status.' });
+  }
+
+  const target = req.body?.status;
+  if (!target || typeof target !== 'string') {
+    return res.status(400).json({ error: 'A target status is required.' });
+  }
+
+  // maybeSingle, not fetchActiveOrder: this tool must reach a Delivered order too
+  // (the point is to correct/reverse one). A cancelled order stays off-limits —
+  // cancellation is a separate, terminal lifecycle, not a stage on this map.
+  const { data: order, error: fErr } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('id', req.params.id)
+    .maybeSingle();
+  if (fErr) return res.status(500).json({ error: 'Could not load order.' });
+  if (!order) return res.status(404).json({ error: 'Order not found.' });
+  if (order.cancelled) return res.status(400).json({ error: 'Order is cancelled.' });
+
+  const route = resolveRoute(order);
+  const map = STAGE_MAP[route] || STAGE_MAP.direct;
+  const newStage = map.indexOf(target);
+  if (newStage === -1) {
+    return res
+      .status(400)
+      .json({ error: `"${target}" is not a valid status for this order's ${route} route.` });
+  }
+  if (newStage === order.stage) {
+    return res.status(400).json({ error: `Order is already "${target}".` });
+  }
+
+  const now = new Date().toISOString();
+  const delivering = target === 'Delivered';
+  const wasDelivered = order.status === 'Delivered';
+
+  const updates = {
+    stage: newStage,
+    status: target,
+    updated_at: now,
+    // Landing ON delivered stamps the time; a COD order banks its cash, mirroring
+    // a real delivery scan. Money is only ever set forward here, never auto-reversed
+    // (see below) — reversing a payment is a finance action, not a status fix.
+    ...(delivering ? { delivered_at: now } : {}),
+    ...(delivering && order.pay_method === 'Cash on Delivery' ? { pay_status: 'paid' } : {}),
+    ...(target === 'Picked Up' ? { picked_up_at: now } : {}),
+    // Reversing OUT of delivered must not leave a stale delivery stamp/geo behind.
+    ...(wasDelivered && !delivering
+      ? { delivered_at: null, delivered_lat: null, delivered_lng: null, delivery_distance_m: null }
+      : {}),
+  };
+
+  const { data: updated, error } = await supabase
+    .from('orders')
+    .update(updates)
+    .eq('id', order.id)
+    .select()
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+
+  const actor = `${req.user.fname} (${req.user.admin_role})`;
+  const { error: histErr } = await supabase.from('order_history').insert({
+    order_id: order.id,
+    label: target,
+    note: `Status set to "${target}" (from "${order.status}") by ${actor} — manual override.`,
+  });
+  if (histErr) console.error(`Order ${order.id}: manual status history entry failed:`, histErr.message);
+
+  res.json({ ok: true, message: `Order set to: ${target}.`, newStatus: target, order: updated });
+});
+
 // ── POST /orders/:id/assign  (Admin only — assign / reassign delivery agent) ──
 router.post('/:id/assign', async (req, res) => {
   if (req.user.role !== 'admin') {

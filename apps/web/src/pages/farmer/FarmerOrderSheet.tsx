@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { OrderPipeline, OrderTimeline, Sheet, Spinner } from '@marutham/ui';
+import { Button, OrderPipeline, OrderTimeline, Sheet, Spinner } from '@marutham/ui';
 import { api } from '@marutham/api-client';
+import { useToast } from '../../components/Toast';
 import {
   buildPipeline,
   fmtDate,
@@ -30,16 +31,25 @@ export function FarmerOrderSheet({
   order,
   open,
   onClose,
+  onChanged,
 }: {
   order: Order | null;
   open: boolean;
   onClose: () => void;
+  /** Called after the seller advances the order (e.g. marks it Packaged) so the
+   *  parent list refetches — the row's status is now stale. */
+  onChanged?: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const toast = useToast();
   const [items, setItems] = useState<OrderItem[] | null>(null);
   const [history, setHistory] = useState<OrderHistoryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Optimistic status after a successful pack: the prop `order` is the list row,
+  // which we do not mutate. Null until the seller packs it in this session.
+  const [packedStatus, setPackedStatus] = useState<string | null>(null);
+  const [packing, setPacking] = useState(false);
 
   useEffect(() => {
     if (!open || !order) return;
@@ -47,6 +57,7 @@ export function FarmerOrderSheet({
     setItems(null);
     setHistory([]);
     setError(null);
+    setPackedStatus(null);
     api
       .getOrder(order.id)
       .then((detail) => {
@@ -73,7 +84,35 @@ export function FarmerOrderSheet({
   }, [open, order, user?.id]);
 
   // The English value drives statusColor; only the spoken form is translated.
-  const status = order ? (isOrderCancelled(order) ? 'Cancelled' : String(order.status ?? '')) : '';
+  // packedStatus wins when set, so the pipeline + badge reflect the pack we just did.
+  const rawStatus = packedStatus ?? (order ? String(order.status ?? '') : '');
+  const status = order ? (isOrderCancelled(order) ? 'Cancelled' : rawStatus) : '';
+
+  // Packing is the ONE status action a seller owns: Order Placed → Packaged, and
+  // only for an order that actually carries their produce. The server re-checks all
+  // three (farmer role, stage 0, has-items), so this gate is UX, not the guard.
+  const canPack =
+    !!order && !isOrderCancelled(order) && rawStatus === 'Order Placed' && (items?.length ?? 0) > 0;
+
+  async function pack() {
+    if (!order) return;
+    setPacking(true);
+    try {
+      const res = await api.markPackaged(order.id);
+      setPackedStatus('Packaged');
+      toast(res.message || t('farmer.orders.packed', 'Order marked as Packaged.'), 'ok');
+      onChanged?.();
+    } catch (e) {
+      toast(
+        e instanceof Error
+          ? e.message
+          : t('farmer.orders.packFailed', 'Could not mark as packaged'),
+        'er',
+      );
+    } finally {
+      setPacking(false);
+    }
+  }
 
   return (
     <Sheet
@@ -90,7 +129,7 @@ export function FarmerOrderSheet({
         <div className="flex flex-col gap-3">
           <div className="rounded-base border border-border-subtle bg-surface p-3">
             <OrderPipeline
-              nodes={buildPipeline(order.route || 'direct', order.status)}
+              nodes={buildPipeline(order.route || 'direct', rawStatus)}
               labelFor={(l) => t(statusKey(l), l)}
             />
           </div>
@@ -101,6 +140,14 @@ export function FarmerOrderSheet({
           >
             {t(statusKey(status), status)}
           </span>
+
+          {canPack ? (
+            <Button variant="primary" onClick={pack} disabled={packing}>
+              {packing
+                ? t('farmer.orders.packing', 'Marking…')
+                : `📦 ${t('farmer.orders.markPackaged', 'Mark as Packaged')}`}
+            </Button>
+          ) : null}
 
           <section className="rounded-base border border-border-subtle bg-surface p-4">
             <h3 className="mb-2 text-sm font-bold text-primary">📋 {t('farmer.orders.info')}</h3>

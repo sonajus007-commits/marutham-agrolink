@@ -69,7 +69,12 @@ export function FarmerOrdersTab() {
         </section>
       )}
 
-      <FarmerOrderSheet order={open} open={open !== null} onClose={() => setOpen(null)} />
+      <FarmerOrderSheet
+        order={open}
+        open={open !== null}
+        onClose={() => setOpen(null)}
+        onChanged={load}
+      />
     </>
   );
 }

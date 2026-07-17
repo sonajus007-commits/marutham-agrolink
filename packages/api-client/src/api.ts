@@ -263,6 +263,20 @@ export const api = {
   setRoute(id: string, route: string): Promise<{ message?: string }> {
     return apiFetch('PATCH', '/orders/' + id + '/route', { route });
   },
+  /** Farmer marks their own order Packaged (Order Placed → Packaged). The server
+   *  enforces farmer-role + stage 0 + "you have items in this order" (POST
+   *  /orders/:id/pack). Online-only: unlike the field scans, packing happens at
+   *  the farm where the seller has signal, and there is no stage to assert. */
+  markPackaged(id: string): Promise<ScanResponse> {
+    return apiFetch<ScanResponse>('POST', '/orders/' + id + '/pack');
+  },
+  /** Senior-admin manual override: set an order to ANY status on its route —
+   *  forward, backward, or a jump (POST /orders/:id/status). Distinct from a scan
+   *  or /advance, which only step one stage forward. The server gates the role and
+   *  validates the status against the order's route. */
+  setOrderStatus(id: string, status: string): Promise<ScanResponse> {
+    return apiFetch<ScanResponse>('POST', '/orders/' + id + '/status', { status });
+  },
 
   // ── Consumer storefront ──
   getProducts(params?: Record<string, string>): Promise<{ products: Product[] }> {
