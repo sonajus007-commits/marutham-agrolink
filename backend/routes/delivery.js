@@ -207,6 +207,38 @@ router.post('/:id/pack', async (req, res) => {
   res.json({ ok: true, message: 'Order marked as Packaged.', newStatus: updated.status, order: updated });
 });
 
+// ── POST /orders/:id/confirm-received  (Consumer — confirm receipt → Delivered) ─
+// The one status action a CONSUMER owns. An order that is Out for Delivery has
+// reached them; confirming receipt completes it (→ Delivered) and unlocks rating —
+// the parallel to the agent's delivery scan, minus the proof-of-delivery GPS (the
+// customer is not the courier, so no geofence is computed). A COD order is still
+// marked paid, exactly as an agent delivery would: receiving the parcel is the
+// payment event.
+router.post('/:id/confirm-received', async (req, res) => {
+  if (req.user.role !== 'consumer') {
+    return res.status(403).json({ error: 'Only the customer can confirm receipt.' });
+  }
+
+  const order = await fetchActiveOrder(req.params.id, res);
+  if (!order) return;
+
+  if (order.consumer_id !== req.user.id) {
+    return res.status(403).json({ error: 'You can only confirm your own orders.' });
+  }
+  // Only from Out for Delivery: a customer cannot confirm a parcel that has not yet
+  // left for them, and advanceStage from this stage lands on Delivered on both the
+  // direct (4→5) and hub (6→7) maps.
+  if (order.status !== 'Out for Delivery') {
+    return res.status(400).json({ error: `Cannot confirm receipt yet — the order is "${order.status}".` });
+  }
+
+  const { updated, error, conflict } = await advanceStage(order, `Customer ${req.user.fname}`);
+  if (conflict) return conflictResponse(res);
+  if (error) return res.status(500).json({ error });
+
+  res.json({ ok: true, message: 'Delivery confirmed. Thank you!', newStatus: updated.status, order: updated });
+});
+
 // ── POST /orders/:id/scan  ⭐ role-scoped scan ────────────────────────────────
 // Body: { order_code } (from QR scan or manual entry)
 router.post('/:id/scan', async (req, res) => {

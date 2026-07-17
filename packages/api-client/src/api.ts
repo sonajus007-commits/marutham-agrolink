@@ -270,6 +270,12 @@ export const api = {
   markPackaged(id: string): Promise<ScanResponse> {
     return apiFetch<ScanResponse>('POST', '/orders/' + id + '/pack');
   },
+  /** Consumer confirms receipt of an Out-for-Delivery order → Delivered, which
+   *  unlocks rating (POST /orders/:id/confirm-received). Consumer-only + owner-only
+   *  + Out-for-Delivery-only server-side. */
+  confirmReceived(id: string): Promise<ScanResponse> {
+    return apiFetch<ScanResponse>('POST', '/orders/' + id + '/confirm-received');
+  },
   /** Senior-admin manual override: set an order to ANY status on its route —
    *  forward, backward, or a jump (POST /orders/:id/status). Distinct from a scan
    *  or /advance, which only step one stage forward. The server gates the role and

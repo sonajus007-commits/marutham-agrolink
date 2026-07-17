@@ -467,3 +467,48 @@ test('a missing target status is a 400 before any query runs', async () => {
   assert.match(res.body.error, /required/);
   assert.equal(db.callsTo('orders', 'update').length, 0);
 });
+
+// ── POST /:id/confirm-received — the customer confirms receipt → Delivered ──────
+// The ONE status action a consumer owns: an Out-for-Delivery order they own can be
+// confirmed received, which completes it and unlocks rating. Server re-checks role,
+// ownership, and that the order is actually Out for Delivery.
+
+test('a customer confirms receipt of their Out-for-Delivery order → Delivered', async () => {
+  const db = dbFor(outForDelivery({ consumer_id: 'c1' })); // CONSUMER.id === 'c1'
+  app = await mountRoute('delivery', { supabase: db, user: CONSUMER });
+  const res = await app.post('/o1/confirm-received', {});
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.equal(update.status, 'Delivered');
+  assert.ok(update.delivered_at, 'delivered_at is stamped');
+});
+
+test('a delivery agent cannot confirm receipt, and nothing is written', async () => {
+  const db = dbFor(outForDelivery({ consumer_id: 'c1' }));
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/confirm-received', {});
+
+  assert.equal(res.status, 403);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+test('a customer cannot confirm someone else’s order', async () => {
+  const db = dbFor(outForDelivery({ consumer_id: 'someone-else' }));
+  app = await mountRoute('delivery', { supabase: db, user: CONSUMER });
+  const res = await app.post('/o1/confirm-received', {});
+
+  assert.equal(res.status, 403);
+  assert.match(res.body.error, /your own/);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+test('confirmation is refused before the order is Out for Delivery', async () => {
+  const db = dbFor(outForDelivery({ consumer_id: 'c1', stage: 3, status: 'Picked Up' }));
+  app = await mountRoute('delivery', { supabase: db, user: CONSUMER });
+  const res = await app.post('/o1/confirm-received', {});
+
+  assert.equal(res.status, 400);
+  assert.match(res.body.error, /Cannot confirm receipt yet/);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});

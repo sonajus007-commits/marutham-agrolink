@@ -131,6 +131,7 @@ export function OrderDetailSheet({
           data={data}
           track={track}
           onChanged={handleChanged}
+          onSilentRefresh={onOrderChanged}
           onClose={onClose}
           onGoToCart={onGoToCart}
         />
@@ -143,12 +144,16 @@ function OrderDetailBody({
   data,
   track,
   onChanged,
+  onSilentRefresh,
   onClose,
   onGoToCart,
 }: {
   data: OrderDetail;
   track: TrackResponse | null;
   onChanged: () => void;
+  /** Refetch the parent list WITHOUT closing the sheet — used after confirming
+   *  receipt, so the sheet stays open and rating unlocks in place. */
+  onSilentRefresh: () => void;
   onClose: () => void;
   onGoToCart: () => void;
 }) {
@@ -159,17 +164,48 @@ function OrderDetailBody({
   const [items, setItems] = useState<OrderItem[]>(data.items);
   const [showCancel, setShowCancel] = useState(false);
   const [showReturn, setShowReturn] = useState(false);
+  // Optimistic status after the customer confirms receipt: the prop order is not
+  // mutated, but the pipeline, the status pill and the rating gate all read this.
+  const [confirmedStatus, setConfirmedStatus] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => setItems(data.items), [data.items]);
+  useEffect(() => setConfirmedStatus(null), [data.order.id]);
 
   const charges = deriveOrderCharges(o);
   const address = resolveAddress(o.delivery_address);
   const addressLabel =
     typeof o.delivery_address === 'object' ? o.delivery_address?.label : undefined;
-  const isDelivered = o.status === 'Delivered';
+  const effectiveStatus = confirmedStatus ?? String(o.status ?? '');
+  const isDelivered = effectiveStatus === 'Delivered';
+  // Confirm receipt is the ONE status action a customer owns: Out for Delivery →
+  // Delivered. The server re-checks role, ownership and stage, so this is just UX.
+  const canConfirm = !isOrderCancelled(o) && effectiveStatus === 'Out for Delivery';
   // The English value drives statusColor; only the spoken form is translated.
-  const status = isOrderCancelled(o) ? 'Cancelled' : String(o.status ?? '');
+  const status = isOrderCancelled(o) ? 'Cancelled' : effectiveStatus;
   const hoursLeft = canRequestReturn(o) ? Math.ceil(returnWindowHoursLeft(o)) : 0;
+
+  async function confirmReceived() {
+    setConfirming(true);
+    try {
+      await api.confirmReceived(o.id);
+      setConfirmedStatus('Delivered');
+      toast(
+        t('consumer.order.confirmedThanks', 'Delivery confirmed — you can now rate your items.'),
+        'ok',
+      );
+      onSilentRefresh(); // update the list badge behind the still-open sheet
+    } catch (e) {
+      toast(
+        e instanceof Error
+          ? e.message
+          : t('consumer.order.confirmFailed', 'Could not confirm delivery'),
+        'er',
+      );
+    } finally {
+      setConfirming(false);
+    }
+  }
 
   function handleReorder() {
     const { added, unavailable } = reorder(items);
@@ -191,7 +227,7 @@ function OrderDetailBody({
     <>
       <div className="ord-card" style={{ padding: '14px 10px' }}>
         <OrderPipeline
-          nodes={buildPipeline(o.route || 'direct', o.status)}
+          nodes={buildPipeline(o.route || 'direct', effectiveStatus)}
           labelFor={(l) => t(statusKey(l), l)}
         />
         {track?.agent || track?.eta ? (
@@ -235,6 +271,20 @@ function OrderDetailBody({
           </button>
         ) : null}
       </div>
+
+      {canConfirm ? (
+        <Button
+          variant="primary"
+          block
+          onClick={confirmReceived}
+          disabled={confirming}
+          style={{ marginBottom: 16 }}
+        >
+          {confirming
+            ? t('consumer.order.confirming', 'Confirming…')
+            : `✅ ${t('consumer.order.confirmReceived', 'Confirm Received')}`}
+        </Button>
+      ) : null}
 
       {qr_svg ? (
         <div className="ord-card" style={{ textAlign: 'center' }}>
