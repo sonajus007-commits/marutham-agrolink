@@ -173,6 +173,25 @@ export const resources = {
       'consumer.home.noOrders': 'No orders yet. Browse the shop and place your first order!',
       'consumer.home.shopNow': 'Shop Now',
       'consumer.home.track': 'Track Order',
+      // KPI row + Recommended strip. These shipped with inline English defaults
+      // only, which reads as English on a Tamil dashboard — the fallback language
+      // IS English, so a missing key is invisible until someone switches.
+      'consumer.home.thisMonth': 'Orders this month',
+      'consumer.home.thisMonthHint': 'Placed in {{month}}',
+      'consumer.home.totalSpent': 'Total spent',
+      'consumer.home.totalSpentHint': 'On delivered orders',
+      'consumer.home.recommended': 'Recommended for You',
+      'consumer.home.browseAll': 'Browse all',
+      'consumer.home.from': 'from',
+      // Recent Orders table
+      'consumer.home.recentOrders': 'Recent Orders',
+      'consumer.home.viewAllOrders': 'View all orders',
+      'consumer.home.recentOrdersCaption': 'Your most recent orders',
+      'consumer.home.col.order': 'Order ID',
+      'consumer.home.col.date': 'Date',
+      'consumer.home.col.items': 'Items',
+      'consumer.home.col.amount': 'Amount',
+      'consumer.home.col.status': 'Status',
       'consumer.orders.empty': 'No orders yet.',
 
       // ── Farmer / Retailer role ──
@@ -1216,6 +1235,21 @@ export const resources = {
         'இதுவரை ஆர்டர்கள் இல்லை. கடையைப் பார்வையிட்டு முதல் ஆர்டரைச் செய்யுங்கள்!',
       'consumer.home.shopNow': 'இப்போது வாங்க',
       'consumer.home.track': 'ஆர்டரைக் கண்காணி',
+      'consumer.home.thisMonth': 'இந்த மாத ஆர்டர்கள்',
+      'consumer.home.thisMonthHint': '{{month}} மாதத்தில் இடப்பட்டது',
+      'consumer.home.totalSpent': 'மொத்தச் செலவு',
+      'consumer.home.totalSpentHint': 'வழங்கப்பட்ட ஆர்டர்களில்',
+      'consumer.home.recommended': 'உங்களுக்குப் பரிந்துரைக்கப்பட்டவை',
+      'consumer.home.browseAll': 'அனைத்தையும் காண்க',
+      'consumer.home.from': 'இருந்து',
+      'consumer.home.recentOrders': 'சமீபத்திய ஆர்டர்கள்',
+      'consumer.home.viewAllOrders': 'எல்லா ஆர்டர்களும்',
+      'consumer.home.recentOrdersCaption': 'உங்கள் சமீபத்திய ஆர்டர்கள்',
+      'consumer.home.col.order': 'ஆர்டர் ஐடி',
+      'consumer.home.col.date': 'தேதி',
+      'consumer.home.col.items': 'பொருட்கள்',
+      'consumer.home.col.amount': 'தொகை',
+      'consumer.home.col.status': 'நிலை',
       'consumer.orders.empty': 'இதுவரை ஆர்டர்கள் இல்லை.',
 
       // ── Farmer / Retailer role ──

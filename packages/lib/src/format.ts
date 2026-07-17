@@ -97,3 +97,51 @@ export function resolveAddress(da: string | AddressObject | null | undefined): s
 export function statusColor(status: string): string {
   return (statusPalette as Record<string, string>)[status] ?? statusFallback;
 }
+
+/**
+ * The semantic role an ORDER status belongs to. Each has a contrast-checked
+ * Bg/Fg pair.
+ *
+ * Deliberately not `StatusTone`, which ./executive already owns for the
+ * dashboards' green/amber/red revenue bands. Same idea, different domain, and
+ * this one needs `info` — a band is never "in flight". Widening the shared union
+ * to fit would hand a new case to every exhaustive switch over a district band.
+ */
+export type OrderStatusTone = 'success' | 'danger' | 'info' | 'warning' | 'neutral';
+
+/**
+ * The status as a semantic ROLE, for anything that draws it as a filled pill.
+ *
+ * `statusColor` is a FILL — the 4px bar down a card. Several of its hexes are
+ * light (`Order Placed` is the brand sun yellow, `Packaged` is gold), so a pill
+ * that used one as a background under white text would be unreadable: gold on
+ * white measures 2.21:1, which is why tokens.ts pairs it with dark text rather
+ * than `white`. A tone instead names a role, and every role carries a `<role>Bg`
+ * tint with a `<role>Fg` ink that `check-contrast.mjs` asserts at AA.
+ *
+ * So: `statusColor` where it is a bar or a rule, `statusTone` where it is type on
+ * a fill. Cancelled is checked by the CALLER (`isOrderCancelled`) — the flag is a
+ * column, not a status string, and an order can carry it while `status` still
+ * reads whatever stage it had reached.
+ */
+export function statusTone(status: string): OrderStatusTone {
+  switch (status) {
+    case 'Delivered':
+      return 'success';
+    case 'Cancelled':
+      return 'danger';
+    // Placed but not yet moving — the customer is waiting on us.
+    case 'Order Placed':
+    case 'Packaged':
+      return 'warning';
+    // In flight. Nothing is wrong and nothing is finished.
+    case 'VCO Verified':
+    case 'Picked Up':
+    case 'Out for Delivery':
+    case 'In Transit':
+    case 'At Hub':
+      return 'info';
+    default:
+      return 'neutral';
+  }
+}

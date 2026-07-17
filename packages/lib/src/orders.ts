@@ -62,6 +62,14 @@ export interface Order {
   return_code?: string | null;
   return_status?: string | null;
   saved?: string | number;
+  /**
+   * How many lines the order has. Not a column — GET /orders counts order_items
+   * for CONSUMERS only, so it is absent for every other role. A farmer's list is
+   * filtered to orders containing her produce but an order may hold other
+   * farmers' lines too, and a whole-order tally on her screen would be a number
+   * about somebody else.
+   */
+  item_count?: number;
   [key: string]: unknown;
 }
 

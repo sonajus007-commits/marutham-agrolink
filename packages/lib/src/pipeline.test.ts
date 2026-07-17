@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildPipeline, PIPELINE_STAGES } from './pipeline';
 import { isStrongPassword, passwordRuleResults, PASSWORD_RULES } from './password';
-import { buildAddress, resolveAddress, statusColor, fmtMoney } from './format';
+import { buildAddress, resolveAddress, statusColor, statusTone, fmtMoney } from './format';
+import { statusPalette } from '@marutham/tokens';
 
 describe('buildPipeline', () => {
   it('marks stages before the current one done, and the current one active', () => {
@@ -80,6 +81,23 @@ describe('formatters', () => {
   it('gives cancelled orders their own colour and falls back for unknowns', () => {
     expect(statusColor('Cancelled')).toBe('#c0392b');
     expect(statusColor('Nonsense')).toBe('#757575'); // statusFallback = colors.gray (brand Text Grey)
+  });
+
+  it('tones a status by what it MEANS, not by its fill colour', () => {
+    expect(statusTone('Delivered')).toBe('success');
+    expect(statusTone('Cancelled')).toBe('danger');
+    expect(statusTone('Out for Delivery')).toBe('info');
+    expect(statusTone('Order Placed')).toBe('warning');
+    expect(statusTone('Nonsense')).toBe('neutral');
+  });
+
+  /* A status added to the palette but not to statusTone would not fail anything —
+   * it would fall through to `neutral` and render as a grey pill next to correctly
+   * coloured ones, which reads as "no status" rather than as a bug. The palette is
+   * the list of statuses that exist, so it is the list that must be covered. */
+  it('has a tone for EVERY status in the palette', () => {
+    const untoned = Object.keys(statusPalette).filter((s) => statusTone(s) === 'neutral');
+    expect(untoned).toEqual([]);
   });
 
   it('formats money with grouping and paise, always', () => {

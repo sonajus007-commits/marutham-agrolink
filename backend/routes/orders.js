@@ -344,9 +344,20 @@ router.get('/', async (req, res) => {
   /** Farmers only: { order_id → paise this farmer is owed }. Attached below. */
   let farmerPayouts = null;
 
+  const COLUMNS = 'id, code, consumer_name, district, village, delivery_village, total, status, stage, route, pay_method, pay_status, created_at, agent_name';
+
+  /* Consumers also get a line-item count, for the dashboard's Recent Orders table.
+   * It is an EMBEDDED AGGREGATE rather than a second fetch-and-group (the shape the
+   * farmer branch below uses for payouts) because the count is then computed in SQL:
+   * reading the rows to length them would put every line item of every order the
+   * consumer has ever placed through the 1000-row PostgREST cap, and past it the
+   * count would not error — it would just quietly get smaller. Only consumers ask
+   * for this, so no other role pays for the join. */
+  const wantsItemCount = u.role === 'consumer';
+
   let query = supabase
     .from('orders')
-    .select('id, code, consumer_name, district, village, delivery_village, total, status, stage, route, pay_method, pay_status, created_at, agent_name')
+    .select(wantsItemCount ? `${COLUMNS}, order_items(count)` : COLUMNS)
     .order('created_at', { ascending: false });
 
   if (u.role === 'consumer') {
@@ -409,9 +420,19 @@ router.get('/', async (req, res) => {
 
   // Computed, not stored: there is no orders.farmer_payout column. Paise here;
   // convertMoney turns it into rupees on the way out.
-  const orders = farmerPayouts
+  let orders = farmerPayouts
     ? data.map(o => ({ ...o, farmer_payout: farmerPayouts[o.id] || 0 }))
     : data;
+
+  // Flatten the aggregate away: PostgREST hands it back as order_items: [{ count: n }],
+  // and an order with no lines arrives as [] rather than a zero row. item_count is
+  // deliberately NOT a MONEY_FIELD — it is a tally, not paise.
+  if (wantsItemCount) {
+    orders = orders.map(({ order_items, ...o }) => ({
+      ...o,
+      item_count: order_items?.[0]?.count ?? 0,
+    }));
+  }
 
   res.json({ orders });
 });

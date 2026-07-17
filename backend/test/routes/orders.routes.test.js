@@ -298,3 +298,91 @@ describe('POST /orders — cart validation', () => {
     assert.equal(res.status, 403);
   });
 });
+
+// The consumer dashboard's Recent Orders table shows how many lines an order had.
+// The count is an embedded aggregate, which is the only reason these tests are
+// interesting: PostgREST hands it back nested, and the response then passes through
+// convertMoney on its way out.
+describe('GET /orders — the consumer item count', () => {
+  let app, mute;
+  beforeEach(() => { mute = muteConsoleError(); });
+  afterEach(async () => { mute.restore(); if (app) await app.close(); });
+
+  /** Orders as PostgREST returns them for the embed: order_items: [{ count: n }]. */
+  function ordersFake(rows) {
+    return fakeSupabase({ 'orders:select': { data: rows } });
+  }
+
+  test('flattens the nested aggregate into item_count', async () => {
+    const supa = ordersFake([
+      { id: 'o1', code: 'ORD1', total: 12500, order_items: [{ count: 3 }] },
+      { id: 'o2', code: 'ORD2', total: 5000,  order_items: [{ count: 1 }] },
+    ]);
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+
+    const res = await app.get('/');
+
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body.orders.map((o) => o.item_count), [3, 1]);
+  });
+
+  test('does not leak the raw embed to the client', async () => {
+    const supa = ordersFake([{ id: 'o1', code: 'ORD1', order_items: [{ count: 2 }] }]);
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+
+    const res = await app.get('/');
+
+    assert.ok(!('order_items' in res.body.orders[0]), 'order_items should be flattened away');
+  });
+
+  // An order with no lines comes back as [], NOT as a row reading zero. Reaching
+  // straight for [0].count would make item_count undefined and render as blank.
+  test('an order with no lines is 0, not undefined', async () => {
+    const supa = ordersFake([{ id: 'o1', code: 'ORD1', order_items: [] }]);
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+
+    const res = await app.get('/');
+
+    assert.equal(res.body.orders[0].item_count, 0);
+  });
+
+  // convertMoney rewrites every field it recognises into rupees. A tally named like
+  // a money field would come back as "0.03" — the same class of bug as the ₹2 / ₹300
+  // subscription screen that MONEY_FIELDS was written for.
+  test('item_count is a tally, not money — it survives the rupee conversion', async () => {
+    const supa = ordersFake([{ id: 'o1', code: 'ORD1', total: 12500, order_items: [{ count: 3 }] }]);
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+
+    const res = await app.get('/');
+
+    assert.equal(res.body.orders[0].item_count, 3);          // not "0.03"
+    assert.equal(res.body.orders[0].total, '125.00');        // money still converts
+  });
+
+  test('the consumer query ASKS for the embed', async () => {
+    const supa = ordersFake([{ id: 'o1', code: 'ORD1', order_items: [{ count: 1 }] }]);
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+
+    await app.get('/');
+
+    const cols = supa.callsTo('orders', 'select')[0].cols;
+    assert.match(cols, /order_items\(count\)/);
+  });
+
+  // A farmer's list is filtered to orders CONTAINING her produce, but an order can
+  // hold other farmers' lines too — so a whole-order tally would be a number about
+  // somebody else. She is not asked for it, and does not get it.
+  test('a farmer neither asks for the embed nor receives item_count', async () => {
+    const supa = fakeSupabase({
+      'order_items:select': { data: [{ order_id: 'o1', farmer_price: 2000, qty: 2 }] },
+      'orders:select': { data: [{ id: 'o1', code: 'ORD1', total: 5000 }] },
+    });
+    app = await mountRoute('orders', { supabase: supa, user: { id: FARMER_ID, role: 'farmer' } });
+
+    const res = await app.get('/');
+
+    assert.equal(res.status, 200);
+    assert.ok(!supa.callsTo('orders', 'select')[0].cols.includes('order_items'));
+    assert.ok(!('item_count' in res.body.orders[0]));
+  });
+});

@@ -173,7 +173,11 @@ function ConsumerInner() {
             ) : tab === 'addresses' ? (
               <AddressBook />
             ) : tab === 'home' ? (
-              <HomeTab onOpenOrder={setOpenOrderId} onGoToShop={() => setTab('shop')} />
+              <HomeTab
+                onOpenOrder={setOpenOrderId}
+                onGoToShop={() => setTab('shop')}
+                onGoToOrders={() => setTab('orders')}
+              />
             ) : tab === 'shop' ? (
               <ShopTab onGoToCart={() => setTab('cart')} />
             ) : tab === 'cart' ? (

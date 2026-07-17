@@ -453,12 +453,15 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+/* --fg-muted, not --gray: the named grey is AA on white only, and these titles sit
+   on the app background, where it measures 4.41:1 and axe flags it. Same swap the
+   sidebar made for its inactive items. */
 .cons-section-title {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  color: var(--gray);
+  color: var(--fg-muted);
   margin-bottom: 8px;
 }
 
@@ -859,6 +862,122 @@
   width: 16px;
   height: 16px;
   accent-color: var(--forest);
+}
+
+/* Recent Orders (mockup's consumer dashboard).
+
+   The table and the row list hold the same orders and are swapped at 1024px, never
+   shown together — `display: none` keeps the hidden one out of the a11y tree too,
+   so nothing is announced or tabbed twice. */
+.cons-recent {
+  margin: 14px 0;
+}
+.cons-recent__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+/* --accent-fg, not --accent: the brand pink is 3.76:1 on white, which clears
+   AA-Large only, and this label is 12px — nowhere near large text. The deep pink
+   is the ink sibling for exactly this case. */
+.cons-recent__all {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: var(--accent-fg);
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+  border-radius: 6px;
+}
+.cons-recent__all:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+
+.cons-recent__table {
+  display: none; /* desktop only — see the 1024px query below */
+}
+.cons-recent__table table {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--surface-muted);
+  border-radius: 14px;
+  border-collapse: separate; /* a collapsed border cannot be rounded away by the card */
+  border-spacing: 0;
+  overflow: hidden;
+}
+.cons-recent__table th {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--fg-muted);
+  text-align: left;
+  padding: 10px 14px;
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+.cons-recent__table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--muted);
+  font-size: 13px;
+  color: var(--fg);
+  vertical-align: middle;
+}
+.cons-recent__table tr:last-child td {
+  border-bottom: none;
+}
+.cons-recent__table tbody tr:hover {
+  background: var(--tint-25);
+}
+.cons-recent__date {
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+/* Right-aligned and tabular so the amounts line up digit-for-digit. */
+.cons-recent__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cons-recent__id {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--forest);
+  border-radius: 4px;
+}
+.cons-recent__id:hover {
+  text-decoration: underline;
+}
+.cons-recent__id:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+
+/* The phone rendering: the row list this section has always used. */
+.cons-recent__list {
+  background: var(--surface);
+  border: 1px solid var(--surface-muted);
+  border-radius: 14px;
+  padding: 4px 16px;
+}
+
+@media (min-width: 1024px) {
+  .cons-recent__table {
+    display: block;
+  }
+  .cons-recent__list {
+    display: none;
+  }
 }
 
 /* Recommended-for-you strip (mockup's consumer dashboard). Horizontal scroll on

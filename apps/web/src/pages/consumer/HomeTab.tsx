@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Button, EmptyState, OrderProgress, Spinner, StatTile } from '@marutham/ui';
+import { Button, EmptyState, OrderProgress, Spinner, StatTile, StatusBadge } from '@marutham/ui';
 import {
   buildPipeline,
   fmtDateShort,
@@ -21,11 +21,13 @@ const PAST_PREVIEW = 4;
 export function HomeTab({
   onOpenOrder,
   onGoToShop,
+  onGoToOrders,
 }: {
   onOpenOrder: (id: string) => void;
   onGoToShop: () => void;
+  onGoToOrders: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { orders, groups, loading, error } = useOrders();
   const { products, offersByProduct } = useConsumerData();
 
@@ -67,8 +69,10 @@ export function HomeTab({
         <StatTile
           label={t('consumer.home.thisMonth', 'Orders this month')}
           value={thisMonth}
+          // The month name follows the UI language: interpolating an English
+          // "July" into the Tamil sentence left it half-translated.
           hint={t('consumer.home.thisMonthHint', 'Placed in {{month}}', {
-            month: now.toLocaleString('en', { month: 'long' }),
+            month: now.toLocaleString(i18n.language, { month: 'long' }),
           })}
           accent="var(--accent)"
         />
@@ -136,16 +140,103 @@ export function HomeTab({
           ) : null}
 
           {groups.past.length > 0 ? (
-            <section className="ord-card">
-              <h3>📦 {t('consumer.home.pastOrders')}</h3>
-              {groups.past.slice(0, PAST_PREVIEW).map((o) => (
-                <OrderRow key={o.id} order={o} onOpen={onOpenOrder} />
-              ))}
-            </section>
+            <RecentOrders
+              orders={groups.past.slice(0, PAST_PREVIEW)}
+              onOpenOrder={onOpenOrder}
+              onGoToOrders={onGoToOrders}
+            />
           ) : null}
         </>
       )}
     </>
+  );
+}
+
+/**
+ * The dashboard's Recent Orders (mockup panel 2).
+ *
+ * The SAME orders rendered twice, and never both at once — the table from 1024px,
+ * the phone's existing row list below that. Five columns do not fit a 390px phone
+ * without a sideways scrollbar or type too small to read, and this portal is
+ * phone-first while the mockup is a desktop comp; the sidebar drew the line in the
+ * same place. Because CSS hides one outright, the reader gets one set of tab stops
+ * rather than each order twice.
+ */
+function RecentOrders({
+  orders,
+  onOpenOrder,
+  onGoToOrders,
+}: {
+  orders: Order[];
+  onOpenOrder: (id: string) => void;
+  onGoToOrders: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <section className="cons-recent">
+      <div className="cons-recent__head">
+        <h2 className="cons-section-title">{t('consumer.home.recentOrders', 'Recent Orders')}</h2>
+        <button type="button" className="cons-recent__all" onClick={onGoToOrders}>
+          {t('consumer.home.viewAllOrders', 'View all orders')} <span aria-hidden="true">→</span>
+        </button>
+      </div>
+
+      <div className="cons-recent__table">
+        <table>
+          <caption className="sr-only">
+            {t('consumer.home.recentOrdersCaption', 'Your most recent orders')}
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">{t('consumer.home.col.order', 'Order ID')}</th>
+              <th scope="col">{t('consumer.home.col.date', 'Date')}</th>
+              {/* The unit is the heading, so the cell is a bare number: it keeps the
+                  column aligned, and it sidesteps pluralising "item" in two languages. */}
+              <th scope="col" className="cons-recent__num">
+                {t('consumer.home.col.items', 'Items')}
+              </th>
+              <th scope="col" className="cons-recent__num">
+                {t('consumer.home.col.amount', 'Amount')}
+              </th>
+              <th scope="col">{t('consumer.home.col.status', 'Status')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((o) => (
+              <tr key={o.id}>
+                <td>
+                  {/* The control is the order code rather than the whole row: a <tr>
+                      cannot be a button, and a click handler on one is invisible to a
+                      keyboard — the same reason OrderRow is a real <button>. */}
+                  <button
+                    type="button"
+                    className="cons-recent__id"
+                    onClick={() => onOpenOrder(o.id)}
+                  >
+                    {orderLabel(o)}
+                  </button>
+                </td>
+                <td className="cons-recent__date">{fmtDateShort(o.created_at)}</td>
+                {/* An em-dash, not 0: item_count is absent for a role that did not ask
+                    for it, and "0 items" would be a claim rather than a gap. */}
+                <td className="cons-recent__num">{o.item_count ?? '—'}</td>
+                <td className="cons-recent__num">{fmtMoney(o.total)}</td>
+                <td>
+                  <StatusBadge order={o} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="cons-recent__list">
+        {orders.map((o) => (
+          <OrderRow key={o.id} order={o} onOpen={onOpenOrder} />
+        ))}
+      </div>
+    </section>
   );
 }
 

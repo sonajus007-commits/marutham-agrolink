@@ -10,7 +10,7 @@ export { Select, SELECT_CLASS } from './Select';
 export type { SelectProps } from './Select';
 export { KpiCard } from './KpiCard';
 export type { KpiCardProps } from './KpiCard';
-export { Badge, PaymentBadge } from './Badge';
+export { Badge, PaymentBadge, StatusBadge } from './Badge';
 export type { BadgeVariant } from './Badge';
 export { Spinner } from './Spinner';
 export { EmptyState } from './EmptyState';
