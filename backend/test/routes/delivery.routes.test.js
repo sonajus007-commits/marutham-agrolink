@@ -301,3 +301,169 @@ test('losing the compare-and-swap answers 409, not a false success', async () =>
   assert.equal(res.status, 409);
   assert.match(res.body.error, /updated by someone else/);
 });
+
+// ── POST /:id/pack — the seller marks their order Packaged ──────────────────────
+// The ONE status action a farmer owns: Order Placed (stage 0) → Packaged. The route
+// re-checks farmer role, stage 0, and that the seller actually has items on the
+// order — the UI button is only a mirror of these three guards.
+const FARMER = { id: 'f1', role: 'farmer', fname: 'Murugan' };
+
+function placed(extra = {}) {
+  return {
+    id: 'o1',
+    code: 'ORD1',
+    stage: 0,
+    status: 'Order Placed',
+    route: 'direct',
+    cancelled: false,
+    pay_method: 'UPI',
+    ...extra,
+  };
+}
+
+function packDb(order, items = [{ id: 'i1' }]) {
+  return fakeSupabase({
+    'orders:select': { data: [order] },
+    'order_items:select': { data: items },
+    'orders:update': { data: { id: 'o1', status: 'Packaged', stage: 1 } },
+  });
+}
+
+test('a farmer with items packs a stage-0 order → Packaged', async () => {
+  const db = packDb(placed());
+  app = await mountRoute('delivery', { supabase: db, user: FARMER });
+  const res = await app.post('/o1/pack', {});
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.equal(update.status, 'Packaged');
+  assert.equal(update.stage, 1);
+});
+
+test('a non-farmer cannot pack, and nothing is written', async () => {
+  const db = packDb(placed());
+  app = await mountRoute('delivery', { supabase: db, user: CONSUMER });
+  const res = await app.post('/o1/pack', {});
+
+  assert.equal(res.status, 403);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+test('packing is refused once the order has left stage 0', async () => {
+  const db = packDb(placed({ stage: 2, status: 'VCO Verified' }));
+  app = await mountRoute('delivery', { supabase: db, user: FARMER });
+  const res = await app.post('/o1/pack', {});
+
+  assert.equal(res.status, 400);
+  assert.match(res.body.error, /Cannot pack/);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+test('a farmer with no items on the order cannot pack it', async () => {
+  const db = packDb(placed(), []); // this seller has no line on the order
+  app = await mountRoute('delivery', { supabase: db, user: FARMER });
+  const res = await app.post('/o1/pack', {});
+
+  assert.equal(res.status, 403);
+  assert.match(res.body.error, /no items/);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+// ── POST /:id/status — senior-admin manual override to ANY status ───────────────
+// Unlike a scan or /advance (one step forward), this SETS the order to any status
+// on its route — forward, backward, or a jump. Restricted to senior admins,
+// validated against the order's route, and it keeps the delivery/pickup stamps
+// consistent with the target.
+const HO = { id: 'h9', role: 'admin', admin_role: 'Head Office', fname: 'Lakshmi' };
+
+function statusDb(order, updated = { id: 'o1' }) {
+  return fakeSupabase({
+    'orders:select': { data: [order] },
+    'orders:update': { data: updated },
+  });
+}
+
+test('a senior admin can jump an order forward to any status on its route', async () => {
+  const db = statusDb(placed({ stage: 1, status: 'Packaged' }));
+  app = await mountRoute('delivery', { supabase: db, user: HO });
+  const res = await app.post('/o1/status', { status: 'Picked Up' });
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.equal(update.status, 'Picked Up');
+  assert.equal(update.stage, 3); // a jump of two stages, which /advance could not do
+});
+
+test('moving to Delivered stamps delivered_at and banks a COD order', async () => {
+  const order = placed({ stage: 4, status: 'Out for Delivery', pay_method: 'Cash on Delivery' });
+  const db = statusDb(order);
+  app = await mountRoute('delivery', { supabase: db, user: HO });
+  const res = await app.post('/o1/status', { status: 'Delivered' });
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.equal(update.status, 'Delivered');
+  assert.ok(update.delivered_at, 'delivered_at is stamped');
+  assert.equal(update.pay_status, 'paid', 'a COD order is marked paid on delivery');
+});
+
+test('reversing out of Delivered clears the delivery stamp', async () => {
+  const db = statusDb(placed({ stage: 5, status: 'Delivered' }));
+  app = await mountRoute('delivery', { supabase: db, user: HO });
+  const res = await app.post('/o1/status', { status: 'Packaged' });
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.equal(update.status, 'Packaged');
+  assert.ok('delivered_at' in update && update.delivered_at === null, 'delivered_at is cleared');
+  assert.equal(update.delivered_lat, null);
+});
+
+test('a hub-only status is rejected for a direct-route order, and nothing is written', async () => {
+  const db = statusDb(placed({ stage: 1, status: 'Packaged' }));
+  app = await mountRoute('delivery', { supabase: db, user: HO });
+  const res = await app.post('/o1/status', { status: 'At Hub' });
+
+  assert.equal(res.status, 400);
+  assert.match(res.body.error, /not a valid status/);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+test('setting the status the order is already at is a 400', async () => {
+  const db = statusDb(placed({ stage: 1, status: 'Packaged' }));
+  app = await mountRoute('delivery', { supabase: db, user: HO });
+  const res = await app.post('/o1/status', { status: 'Packaged' });
+
+  assert.equal(res.status, 400);
+  assert.match(res.body.error, /already/);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+test('a cancelled order cannot be moved by the override, and nothing is written', async () => {
+  const db = statusDb(placed({ stage: 1, status: 'Packaged', cancelled: true }));
+  app = await mountRoute('delivery', { supabase: db, user: HO });
+  const res = await app.post('/o1/status', { status: 'Delivered' });
+
+  assert.equal(res.status, 400);
+  assert.match(res.body.error, /cancelled/);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+test('a non-senior admin (Delivery Agent) cannot set status, and nothing is written', async () => {
+  const db = statusDb(placed({ stage: 1, status: 'Packaged' }));
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/status', { status: 'Delivered' });
+
+  assert.equal(res.status, 403);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+test('a missing target status is a 400 before any query runs', async () => {
+  const db = statusDb(placed());
+  app = await mountRoute('delivery', { supabase: db, user: HO });
+  const res = await app.post('/o1/status', {});
+
+  assert.equal(res.status, 400);
+  assert.match(res.body.error, /required/);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
