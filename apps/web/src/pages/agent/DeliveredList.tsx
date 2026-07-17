@@ -44,7 +44,10 @@ export function DeliveredList({
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontWeight: 800, color: 'var(--forest)' }}>{fmtMoney(o.total)}</div>
-              <PaymentBadge method={o.pay_method} />
+              <PaymentBadge
+                method={o.pay_method}
+                labels={{ cod: t('agent.cod', 'COD'), upi: t('pay.upi', 'UPI') }}
+              />
             </div>
           </div>
         );

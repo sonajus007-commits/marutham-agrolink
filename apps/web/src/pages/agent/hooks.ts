@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type FieldDashboardResponse } from '@marutham/api-client';
 import { groupOrders, deriveAgentStats, type OrderQueues, type AgentStats } from '@marutham/lib';
 
@@ -31,6 +32,7 @@ interface AgentOrdersState {
 
 /** Fetch orders, group into queues, derive stats, and poll every 60s. */
 export function useAgentOrders(isVCO: boolean): AgentOrdersState {
+  const { t } = useTranslation();
   const [queues, setQueues] = useState<OrderQueues | null>(null);
   const [stats, setStats] = useState<AgentStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,11 +49,13 @@ export function useAgentOrders(isVCO: boolean): AgentOrdersState {
       setError(null);
     } catch (e) {
       if (!mounted.current) return;
-      setError(e instanceof Error ? e.message : 'Failed to load orders');
+      setError(e instanceof Error ? e.message : t('agent.err.orders', 'Failed to load orders'));
     } finally {
       if (mounted.current) setLoading(false);
     }
-  }, [isVCO]);
+    // `t` is a dependency: without it this closure keeps the language it was
+    // created in, and the fallback would still be English after a switch.
+  }, [isVCO, t]);
 
   useEffect(() => {
     mounted.current = true;
@@ -72,6 +76,7 @@ export function useFieldDashboard(): {
   error: string | null;
   reload: () => void;
 } {
+  const { t } = useTranslation();
   const [data, setData] = useState<FieldDashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
@@ -84,9 +89,12 @@ export function useFieldDashboard(): {
         setError(null);
       }
     } catch (e) {
-      if (mounted.current) setError(e instanceof Error ? e.message : 'Failed to load dashboard');
+      if (mounted.current)
+        setError(
+          e instanceof Error ? e.message : t('agent.err.dashboard', 'Failed to load dashboard'),
+        );
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     mounted.current = true;

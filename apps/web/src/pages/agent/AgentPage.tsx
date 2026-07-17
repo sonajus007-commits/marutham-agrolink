@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState, Spinner } from '@marutham/ui';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
 import { api } from '@marutham/api-client';
+import { statusKey } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider, useToast } from '../../components/Toast';
 import { useAgentOrders, useFieldDashboard, useClock } from './hooks';
@@ -54,12 +55,20 @@ function AgentPageInner() {
   const name = user.fname + (user.lname ? ' ' + user.lname : '');
   const sub = isVCO
     ? `VCO · ${(user.vco_city as string) || (user.village_town as string) || (user.district as string) || '—'}`
-    : `Delivery Agent · ${(user.district as string) || '—'}`;
+    : `${t('agent.role.deliveryAgent', 'Delivery Agent')} · ${(user.district as string) || '—'}`;
 
   async function quickScan(id: string) {
     try {
       const res = await api.scanOrder(id);
-      toast(res.message || `Advanced to: ${res.newStatus}`, 'ok');
+      /* Built from res.newStatus rather than echoing res.message: the server's
+       * message is English prose it composed ("Order advanced to: Picked Up."),
+       * and the status inside it is exactly what statusKey already speaks. */
+      toast(
+        t('agent.advanced', 'Advanced to: {{status}}', {
+          status: t(statusKey(String(res.newStatus ?? '')), String(res.newStatus ?? '')),
+        }),
+        'ok',
+      );
       reload();
       field.reload();
     } catch (e) {

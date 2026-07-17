@@ -40,10 +40,26 @@ export function Badge({
   return <span className={badge({ variant })}>{children}</span>;
 }
 
-/** Convenience: pick the badge variant + label from a payment method string. */
-export function PaymentBadge({ method }: { method?: string }) {
+/**
+ * Convenience: pick the badge variant + label from a payment method string.
+ *
+ * The method string is the API's own value and is what decides the variant. The
+ * two labels are English abbreviations, so they take an override — a pill this
+ * small cannot carry "Cash on Delivery" in any language.
+ */
+export function PaymentBadge({
+  method,
+  labels,
+}: {
+  method?: string;
+  labels?: { cod?: string; upi?: string };
+}) {
   const isCod = method === 'Cash on Delivery';
-  return <Badge variant={isCod ? 'cod' : 'upi'}>{isCod ? 'COD' : 'UPI'}</Badge>;
+  return (
+    <Badge variant={isCod ? 'cod' : 'upi'}>
+      {isCod ? (labels?.cod ?? 'COD') : (labels?.upi ?? 'UPI')}
+    </Badge>
+  );
 }
 
 /**

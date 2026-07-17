@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sheet, Spinner, OrderPipeline, OrderTimeline } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import {
   fmtMoney,
+  payMethodKey,
+  payStatusKey,
   resolveAddress,
   buildPipeline,
   deriveOrderCharges,
   itemLineTotal,
+  statusKey,
   type OrderDetail,
 } from '@marutham/lib';
 
@@ -19,6 +23,7 @@ export function OrderViewSheet({
   orderId: string | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [data, setData] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,16 +35,20 @@ export function OrderViewSheet({
     api
       .getOrder(orderId)
       .then((res) => active && setData(res))
-      .catch((e) => active && setError(e instanceof Error ? e.message : 'Failed to load order'));
+      .catch(
+        (e) =>
+          active &&
+          setError(e instanceof Error ? e.message : t('agent.err.order', 'Failed to load order')),
+      );
     return () => {
       active = false;
     };
   }, [open, orderId]);
 
-  const title = data?.order.code || 'Order';
+  const title = data?.order.code || t('consumer.order.title', 'Order');
 
   return (
-    <Sheet open={open} title={title} onClose={onClose}>
+    <Sheet open={open} title={title} onClose={onClose} backLabel={t('common.back', 'Back')}>
       {error ? (
         <div style={{ textAlign: 'center', padding: 24, color: 'var(--red)', fontSize: 13 }}>
           {error}
@@ -54,6 +63,7 @@ export function OrderViewSheet({
 }
 
 function OrderViewBody({ data }: { data: OrderDetail }) {
+  const { t, i18n } = useTranslation();
   const { order: o, items, history, qr_svg } = data;
   const daText = resolveAddress(o.delivery_address);
   const charges = deriveOrderCharges(o);
@@ -61,13 +71,17 @@ function OrderViewBody({ data }: { data: OrderDetail }) {
   return (
     <>
       <div className="a-card" style={{ padding: '14px 10px' }}>
-        <OrderPipeline nodes={buildPipeline(o.route, o.status)} />
+        {/* Labels are translated HERE — OrderPipeline keys its ✓ off the raw label. */}
+        <OrderPipeline
+          nodes={buildPipeline(o.route, o.status)}
+          labelFor={(l) => t(statusKey(l), l)}
+        />
       </div>
 
       {qr_svg ? (
         <div className="a-card" style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 11, color: 'var(--gray)', fontWeight: 600, marginBottom: 8 }}>
-            📷 Order QR — scan to advance
+            📷 {t('agent.view.qr', 'Order QR — scan to advance')}
           </div>
           <div
             style={{
@@ -98,7 +112,7 @@ function OrderViewBody({ data }: { data: OrderDetail }) {
           style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
         >
           <span style={{ fontWeight: 800, color: 'var(--forest)' }}>
-            {o.consumer_name || 'Consumer'}
+            {o.consumer_name || t('agent.consumer', 'Consumer')}
           </span>
           <span
             style={{
@@ -110,7 +124,7 @@ function OrderViewBody({ data }: { data: OrderDetail }) {
               color: 'var(--forest)',
             }}
           >
-            {o.status}
+            {t(statusKey(String(o.status ?? '')), String(o.status ?? ''))}
           </span>
         </div>
         {o.consumer_phone ? (
@@ -126,7 +140,7 @@ function OrderViewBody({ data }: { data: OrderDetail }) {
       {o.agent_name ? (
         <div className="a-card">
           <div style={{ fontSize: 11, color: 'var(--gray)', fontWeight: 600 }}>
-            🛵 Delivery Agent
+            🛵 {t('consumer.order.agent', 'Your Delivery Agent')}
           </div>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)', marginTop: 2 }}>
             {o.agent_name}
@@ -136,36 +150,38 @@ function OrderViewBody({ data }: { data: OrderDetail }) {
       ) : null}
 
       <div className="a-card">
-        <h3>🌿 Items</h3>
+        <h3>🌿 {t('consumer.order.items', 'Items')}</h3>
         {items.map((it, i) => (
           <div className="irow" key={it.id || i}>
             <span>
-              {it.name || 'Item'} × {it.qty}
+              {it.name || t('agent.view.item', 'Item')} × {it.qty}
               {it.unit ? ` ${it.unit}` : ''}
             </span>
             <span style={{ fontWeight: 600 }}>{fmtMoney(itemLineTotal(it))}</span>
           </div>
         ))}
         <div className="a-row">
-          <span className="a-row__k">Item Total</span>
+          <span className="a-row__k">{t('consumer.cart.itemTotal', 'Item Total')}</span>
           <span className="a-row__v">{fmtMoney(charges.itemTotal)}</span>
         </div>
         {charges.handling > 0 ? (
           <div className="a-row">
-            <span className="a-row__k">Handling charges</span>
+            <span className="a-row__k">{t('consumer.cart.handling', 'Handling charges')}</span>
             <span className="a-row__v">{fmtMoney(charges.handling)}</span>
           </div>
         ) : null}
         {charges.marketFee > 0 ? (
           <div className="a-row">
-            <span className="a-row__k">Market fee (multiple farmers)</span>
+            <span className="a-row__k">
+              {t('consumer.cart.marketFee', 'Market fee (multiple farmers)')}
+            </span>
             <span className="a-row__v">{fmtMoney(charges.marketFee)}</span>
           </div>
         ) : null}
         <div className="a-row">
-          <span className="a-row__k">Delivery</span>
+          <span className="a-row__k">{t('consumer.cart.delivery', 'Delivery')}</span>
           <span className="a-row__v">
-            {charges.delivery > 0 ? fmtMoney(charges.delivery) : 'FREE'}
+            {charges.delivery > 0 ? fmtMoney(charges.delivery) : t('consumer.cart.free', 'FREE')}
           </span>
         </div>
         <div
@@ -180,19 +196,23 @@ function OrderViewBody({ data }: { data: OrderDetail }) {
             paddingTop: 6,
           }}
         >
-          <span>Total</span>
+          <span>{t('consumer.order.total', 'Total')}</span>
           <span>{fmtMoney(charges.total)}</span>
         </div>
         <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 4 }}>
-          {o.pay_method || 'UPI'}
-          {o.pay_status ? ` · ${o.pay_status}` : ''}
+          {o.pay_method ? t(payMethodKey(o.pay_method), o.pay_method) : t('pay.upi', 'UPI')}
+          {o.pay_status ? ` · ${t(payStatusKey(o.pay_status), o.pay_status)}` : ''}
         </div>
       </div>
 
       {history.length ? (
         <div className="a-card">
-          <h3>📍 Timeline</h3>
-          <OrderTimeline entries={history} />
+          <h3>📍 {t('consumer.order.timeline', 'Status Timeline')}</h3>
+          <OrderTimeline
+            entries={history}
+            labelFor={(l) => t(statusKey(l), l)}
+            lang={i18n.language}
+          />
         </div>
       ) : null}
     </>

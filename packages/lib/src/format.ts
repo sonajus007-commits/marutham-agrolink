@@ -198,6 +198,19 @@ export function payoutMethodKey(method: string): string {
 }
 
 /**
+ * The i18n key for a delivery address's label.
+ *
+ * Almost every label is the USER's own word for the place ("Home", "Amma's") and
+ * must pass through untouched. The exception is "Registered address", which the
+ * SERVER invents (routes/orders.js) when an order captured no address of its own
+ * and it falls back to the profile — that one is ours to say, and it was the only
+ * English left on a Tamil delivery sheet.
+ */
+export function addressLabelKey(label: string): string {
+  return label === 'Registered address' ? 'address.registered' : label;
+}
+
+/**
  * The semantic role an ORDER status belongs to. Each has a contrast-checked
  * Bg/Fg pair.
  *

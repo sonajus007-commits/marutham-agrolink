@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PaymentBadge } from '@marutham/ui';
 import { fmtMoney, resolveAddress, type Order } from '@marutham/lib';
 
@@ -33,6 +34,7 @@ function OrderCard({
   onOpenVerify: (id: string) => void;
   onQuickScan: (id: string) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const code = order.code || order.id.slice(0, 8).toUpperCase();
   const addr = resolveAddress(order.delivery_address);
@@ -58,13 +60,18 @@ function OrderCard({
       }}
     >
       <div className="delv-card__code">{code}</div>
-      <div className="delv-card__name">{order.consumer_name || 'Consumer'}</div>
+      <div className="delv-card__name">
+        {order.consumer_name || t('agent.consumer', 'Consumer')}
+      </div>
       {addr ? <div className="delv-card__addr">{addr}</div> : null}
       <div className="delv-card__meta">
         <div className="delv-card__pay">{fmtMoney(order.total)}</div>
-        <PaymentBadge method={order.pay_method} />
+        <PaymentBadge
+          method={order.pay_method}
+          labels={{ cod: t('agent.cod', 'COD'), upi: t('pay.upi', 'UPI') }}
+        />
         {action === 'view' ? (
-          <span className="delv-card__view">View →</span>
+          <span className="delv-card__view">{t('consumer.card.view', 'View')} →</span>
         ) : action === 'deliver' ? (
           <button
             className="delv-card__btn"

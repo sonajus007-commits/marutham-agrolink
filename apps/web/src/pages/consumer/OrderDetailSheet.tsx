@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, OrderPipeline, OrderTimeline, Sheet, Spinner, StarRating } from '@marutham/ui';
 import { api, type TrackResponse } from '@marutham/api-client';
 import {
+  addressLabelKey,
   buildPipeline,
   canCancelOrder,
   canRequestReturn,
@@ -297,7 +298,7 @@ function OrderDetailBody({
         <h3>📍 {t('consumer.checkout.deliveryAddress', 'Delivery Address')}</h3>
         {addressLabel ? (
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--forest)', marginBottom: 3 }}>
-            {addressLabel}
+            {t(addressLabelKey(addressLabel), addressLabel)}
           </div>
         ) : null}
         <div style={{ fontSize: 12, color: 'var(--neutral-700)', lineHeight: 1.55 }}>

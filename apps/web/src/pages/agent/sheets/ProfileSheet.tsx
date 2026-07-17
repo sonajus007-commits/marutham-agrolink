@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sheet } from '@marutham/ui';
 import { api } from '@marutham/api-client';
-import { employeeDetailPairs, type EmployeeRecord } from '@marutham/lib';
+import { employeeDetailPairs, type EmployeeDetailPair, type EmployeeRecord } from '@marutham/lib';
 import { useAuth } from '../../../auth/AuthContext';
 import { useToast } from '../../../components/Toast';
 
@@ -15,7 +15,7 @@ export function ProfileSheet({
   onClose: () => void;
   isVCO: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, updateUser, logout } = useAuth();
   const toast = useToast();
 
@@ -23,7 +23,7 @@ export function ProfileSheet({
   const [vehicle, setVehicle] = useState('');
   const [villages, setVillages] = useState<string[]>([]);
   const [villageInput, setVillageInput] = useState('');
-  const [empPairs, setEmpPairs] = useState<[string, string][] | null>(null);
+  const [empPairs, setEmpPairs] = useState<EmployeeDetailPair[] | null>(null);
   const [cpw, setCpw] = useState('');
   const [npw, setNpw] = useState('');
   const [pwErr, setPwErr] = useState('');
@@ -43,7 +43,10 @@ export function ProfileSheet({
     let active = true;
     api
       .getMyEmployeeRecord()
-      .then((res) => active && setEmpPairs(employeeDetailPairs(res.employee as EmployeeRecord)))
+      .then(
+        (res) =>
+          active && setEmpPairs(employeeDetailPairs(res.employee as EmployeeRecord, i18n.language)),
+      )
       .catch(() => active && setEmpPairs(null));
     return () => {
       active = false;
@@ -60,7 +63,7 @@ export function ProfileSheet({
       updateUser(res.user);
       toast(msg, 'ok');
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'Save failed', 'er');
+      toast(e instanceof Error ? e.message : t('agent.profile.saveFailed', 'Save failed'), 'er');
     }
   }
 
@@ -78,15 +81,16 @@ export function ProfileSheet({
 
   async function changePw() {
     setPwErr('');
-    if (!cpw) return setPwErr('Enter your current password.');
-    if (npw.length < 6) return setPwErr('New password must be at least 6 characters.');
+    if (!cpw) return setPwErr(t('pwd.needCurrent', 'Enter your current password.'));
+    if (npw.length < 6)
+      return setPwErr(t('agent.profile.pwShort', 'New password must be at least 6 characters.'));
     try {
       await api.changePassword(cpw, npw);
       setCpw('');
       setNpw('');
       toast('Password changed.', 'ok');
     } catch (e) {
-      setPwErr(e instanceof Error ? e.message : 'Failed to change password');
+      setPwErr(e instanceof Error ? e.message : t('pwd.failed', 'Could not change password'));
     }
   }
 
@@ -96,26 +100,36 @@ export function ProfileSheet({
       <div className="a-card">
         <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--forest)' }}>{name}</div>
         <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>
-          {(user.admin_role as string) || 'Delivery Agent'} · {(user.district as string) || '—'}
+          {/* admin_role is the API's value; the agent page serves two roles, and
+              anything else renders as whatever the API called it. */}
+          {t(
+            `agent.role.${String(user.admin_role || '') === 'VCO' ? 'vco' : 'deliveryAgent'}`,
+            (user.admin_role as string) || 'Delivery Agent',
+          )}{' '}
+          · {(user.district as string) || '—'}
         </div>
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div className="a-row">
-            <span className="a-row__k">Login ID</span>
+            <span className="a-row__k">{t('agent.profile.loginId', 'Login ID')}</span>
             <span className="a-row__v">{user.login_id}</span>
           </div>
           <div className="a-row">
-            <span className="a-row__k">Phone</span>
+            <span className="a-row__k">{t('consumer.profile.phone', 'Phone')}</span>
             <span className="a-row__v">
               {(user.country_code as string) || '+91'} {user.phone}
             </span>
           </div>
           <div className="a-row">
-            <span className="a-row__k">District</span>
+            <span className="a-row__k">{t('address.district', 'District')}</span>
             <span className="a-row__v">{(user.district as string) || '—'}</span>
           </div>
           <div className="a-row">
-            <span className="a-row__k">Gender</span>
-            <span className="a-row__v">{(user.gender as string) || '—'}</span>
+            <span className="a-row__k">{t('consumer.profile.gender', 'Gender')}</span>
+            <span className="a-row__v">
+              {user.gender
+                ? t(`gender.${String(user.gender).toLowerCase()}`, user.gender as string)
+                : '—'}
+            </span>
           </div>
         </div>
       </div>
@@ -124,16 +138,20 @@ export function ProfileSheet({
       {empPairs ? (
         <div className="a-card">
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)' }}>
-            🧑‍💼 Employee Details
+            🧑‍💼 {t('agent.profile.employee', 'Employee Details')}
           </div>
           <div style={{ fontSize: 10, color: 'var(--gray)', marginBottom: 10 }}>
-            Maintained by Head Office · read-only
+            {t('agent.profile.employeeNote', 'Maintained by Head Office · read-only')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {empPairs.map(([k, v]) => (
-              <div className="a-row" key={k}>
-                <span className="a-row__k">{k}</span>
-                <span className="a-row__v">{v}</span>
+            {empPairs.map(([label, v, key]) => (
+              <div className="a-row" key={key}>
+                <span className="a-row__k">{t(key, label)}</span>
+                {/* designation/department/employment type are HO-typed master data
+                    and stay as entered; gender is a known vocabulary. */}
+                <span className="a-row__v">
+                  {key === 'emp.gender' && v !== '—' ? t(`gender.${v.toLowerCase()}`, v) : v}
+                </span>
               </div>
             ))}
           </div>
@@ -150,12 +168,13 @@ export function ProfileSheet({
             className="a-select"
             value={gender}
             onChange={(e) => setGender(e.target.value)}
-            aria-label="Gender"
+            aria-label={t('consumer.profile.gender', 'Gender')}
           >
             <option value="">— Select Gender —</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Transgender">Transgender</option>
+            {/* The VALUE is what the users row stores. */}
+            <option value="Male">{t('gender.male', 'Male')}</option>
+            <option value="Female">{t('gender.female', 'Female')}</option>
+            <option value="Transgender">{t('gender.transgender', 'Transgender')}</option>
           </select>
           <button className="a-btn-save" onClick={saveGender}>
             {t('agent.profile.save')}
@@ -172,10 +191,10 @@ export function ProfileSheet({
           <input
             className="a-input"
             type="text"
-            placeholder="e.g. TN 38 AB 1234 — Bike"
+            placeholder={t('agent.profile.vehicleHint', 'e.g. TN 38 AB 1234 — Bike')}
             value={vehicle}
             onChange={(e) => setVehicle(e.target.value)}
-            aria-label="Vehicle"
+            aria-label={t('agent.profile.vehicle', 'Vehicle')}
           />
           <button
             className="a-btn-save"
@@ -193,7 +212,10 @@ export function ProfileSheet({
             📍 {t('agent.profile.villages')}
           </div>
           <div style={{ fontSize: 11, color: 'var(--gray)', marginBottom: 10 }}>
-            You'll be auto-suggested for orders in these villages — for collection and delivery.
+            {t(
+              'agent.profile.villagesNote',
+              'You’ll be auto-suggested for orders in these villages — for collection and delivery.',
+            )}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
             {villages.length ? (
@@ -202,21 +224,23 @@ export function ProfileSheet({
                   {v}
                   <button
                     onClick={() => setVillages(villages.filter((_, j) => j !== i))}
-                    aria-label={`Remove ${v}`}
+                    aria-label={t('agent.profile.removeVillage', 'Remove {{name}}', { name: v })}
                   >
                     ✕
                   </button>
                 </span>
               ))
             ) : (
-              <span style={{ fontSize: 12, color: 'var(--gray)' }}>No villages added yet.</span>
+              <span style={{ fontSize: 12, color: 'var(--gray)' }}>
+                {t('agent.profile.noVillages', 'No villages added yet.')}
+              </span>
             )}
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <input
               className="a-input"
               type="text"
-              placeholder="Add a village/town"
+              placeholder={t('agent.profile.addVillage', 'Add a village/town')}
               value={villageInput}
               onChange={(e) => setVillageInput(e.target.value)}
               onKeyDown={(e) => {
@@ -225,18 +249,23 @@ export function ProfileSheet({
                   addVillage();
                 }
               }}
-              aria-label="Add a village or town"
+              aria-label={t('agent.profile.addVillageAria', 'Add a village or town')}
             />
             <button className="a-btn-save" onClick={addVillage}>
-              Add
+              {t('consumer.addr.add', 'Add')}
             </button>
           </div>
           <button
             className="a-btn-save"
             style={{ marginTop: 10, width: '100%' }}
-            onClick={() => patch({ service_villages: villages }, 'Service villages saved.')}
+            onClick={() =>
+              patch(
+                { service_villages: villages },
+                t('agent.profile.villagesSaved', 'Service villages saved.'),
+              )
+            }
           >
-            Save Villages
+            {t('agent.profile.saveVillages', 'Save Villages')}
           </button>
         </div>
       ) : null}
@@ -250,7 +279,7 @@ export function ProfileSheet({
           <input
             className="a-input"
             type="password"
-            placeholder="Current password"
+            placeholder={t('pwd.currentHint', 'Your current password')}
             value={cpw}
             onChange={(e) => setCpw(e.target.value)}
             autoComplete="current-password"
@@ -258,14 +287,14 @@ export function ProfileSheet({
           <input
             className="a-input"
             type="password"
-            placeholder="New password (min 6 chars)"
+            placeholder={t('agent.profile.newPwHint', 'New password (min 6 chars)')}
             value={npw}
             onChange={(e) => setNpw(e.target.value)}
             autoComplete="new-password"
           />
           {pwErr ? <div style={{ fontSize: 11, color: 'var(--red)' }}>{pwErr}</div> : null}
           <button className="a-btn-save" style={{ width: '100%' }} onClick={changePw}>
-            Update Password
+            {t('pwd.update', 'Update Password')}
           </button>
         </div>
       </div>

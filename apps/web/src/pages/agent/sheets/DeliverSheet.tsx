@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sheet, Spinner } from '@marutham/ui';
 import { api, OfflineQueuedError } from '@marutham/api-client';
 import {
+  addressLabelKey,
   fmtMoney,
   fmtDate,
+  payMethodKey,
+  payStatusKey,
   resolveAddress,
   type OrderDetail,
   type AddressObject,
@@ -22,6 +26,7 @@ export function DeliverSheet({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const { t, i18n } = useTranslation();
   const toast = useToast();
   const [data, setData] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +47,11 @@ export function DeliverSheet({
         setData(res);
         setRoute(res.order.route || 'direct');
       })
-      .catch((e) => active && setError(e instanceof Error ? e.message : 'Failed to load order'));
+      .catch(
+        (e) =>
+          active &&
+          setError(e instanceof Error ? e.message : t('agent.err.order', 'Failed to load order')),
+      );
     return () => {
       active = false;
     };
@@ -53,9 +62,21 @@ export function DeliverSheet({
     setRoute(next);
     try {
       await api.setRoute(orderId, next);
-      toast(`Route set to ${next}`, 'ok');
+      // `next` is the ROUTE VALUE the API stores ('direct'|'hub') — spoken, not echoed.
+      toast(
+        t('agent.deliver.routeSet', 'Route set to {{route}}', {
+          route:
+            next === 'hub'
+              ? t('agent.route.hub', 'Transit to Hub')
+              : t('agent.route.direct', 'Direct Delivery'),
+        }),
+        'ok',
+      );
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'Failed to set route', 'er');
+      toast(
+        e instanceof Error ? e.message : t('agent.deliver.routeFailed', 'Failed to set route'),
+        'er',
+      );
     }
   }
 
@@ -66,7 +87,10 @@ export function DeliverSheet({
     // send. GET /orders/:id selects *, so this cannot happen in practice — but a
     // silent weaker request is worse than saying so.
     if (typeof stage !== 'number') {
-      toast('Could not read this order’s stage. Reload and try again.', 'er');
+      toast(
+        t('agent.err.noStage', 'Could not read this order’s stage. Reload and try again.'),
+        'er',
+      );
       return;
     }
     setBusy(true);
@@ -79,17 +103,20 @@ export function DeliverSheet({
       // we loaded rides along: if the order moved on meanwhile, the server refuses
       // the replay rather than advancing it from somewhere else.
       await api.deliverOffline(orderId, stage, coords);
-      toast('Order delivered! 🎉', 'ok');
+      toast(t('agent.deliver.done', 'Order delivered! 🎉'), 'ok');
       onChanged();
     } catch (e) {
       if (e instanceof OfflineQueuedError) {
         // Parked, not lost. We do NOT fake the status: the list keeps showing what
         // the server actually knows until the queue syncs.
-        toast('No signal — saved on your device. It will sync automatically.', 'ok');
+        toast(
+          t('agent.queued', 'No signal — saved on your device. It will sync automatically.'),
+          'ok',
+        );
         onChanged();
         return;
       }
-      toast(e instanceof Error ? e.message : 'Failed to confirm', 'er');
+      toast(e instanceof Error ? e.message : t('agent.deliver.failed', 'Failed to confirm'), 'er');
       setBusy(false);
     }
   }
@@ -98,7 +125,12 @@ export function DeliverSheet({
   const isCod = o?.pay_method === 'Cash on Delivery';
 
   return (
-    <Sheet open={open} title={o?.code || 'Deliver Order'} onClose={onClose}>
+    <Sheet
+      open={open}
+      title={o?.code || t('agent.deliver.title', 'Deliver Order')}
+      onClose={onClose}
+      backLabel={t('common.back', 'Back')}
+    >
       {error ? (
         <div style={{ textAlign: 'center', padding: 24, color: 'var(--red)', fontSize: 13 }}>
           {error}
@@ -109,10 +141,12 @@ export function DeliverSheet({
         <>
           {isCod ? (
             <div className="cod-bar">
-              <div className="cod-bar__label">Collect Cash on Delivery</div>
+              <div className="cod-bar__label">
+                {t('agent.deliver.collectCod', 'Collect Cash on Delivery')}
+              </div>
               <div className="cod-bar__amt">{fmtMoney(o.total)}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,.7)', marginTop: 6 }}>
-                Collect before handing over
+                {t('agent.deliver.collectFirst', 'Collect before handing over')}
               </div>
             </div>
           ) : null}
@@ -120,7 +154,7 @@ export function DeliverSheet({
           <DeliveryAddress order={o} />
 
           <div className="a-card">
-            <h3>🌿 Items to Hand Over</h3>
+            <h3>🌿 {t('agent.deliver.items', 'Items to Hand Over')}</h3>
             {data.items.map((it, i) => (
               <div className="irow" key={i}>
                 <span>{it.name}</span>
@@ -132,46 +166,50 @@ export function DeliverSheet({
           </div>
 
           <div className="a-card">
-            <h3>🗺 Route</h3>
+            <h3>🗺 {t('agent.deliver.route', 'Route')}</h3>
             <div className="route-toggle">
               <button
                 className={`route-btn ${route === 'direct' ? 'on' : ''}`}
                 onClick={() => changeRoute('direct')}
               >
-                🛵 Direct
+                🛵 {t('agent.route.directShort', 'Direct')}
                 <br />
-                <span style={{ fontSize: 9, fontWeight: 400 }}>~2 hrs ETA</span>
+                <span style={{ fontSize: 9, fontWeight: 400 }}>
+                  {t('agent.route.directEta', '~2 hrs ETA')}
+                </span>
               </button>
               <button
                 className={`route-btn ${route === 'hub' ? 'on' : ''}`}
                 onClick={() => changeRoute('hub')}
               >
-                🏭 Via Hub
+                🏭 {t('agent.route.hubShort', 'Via Hub')}
                 <br />
-                <span style={{ fontSize: 9, fontWeight: 400 }}>~4 hrs ETA</span>
+                <span style={{ fontSize: 9, fontWeight: 400 }}>
+                  {t('agent.route.hubEta', '~4 hrs ETA')}
+                </span>
               </button>
             </div>
             {o.eta_ts ? (
               <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 8 }}>
-                ETA: {fmtDate(o.eta_ts)}
+                {t('agent.deliver.eta', 'ETA:')} {fmtDate(o.eta_ts, i18n.language)}
               </div>
             ) : null}
           </div>
 
           <div className="a-card">
-            <h3>💳 Payment</h3>
+            <h3>💳 {t('consumer.order.payment', 'Payment')}</h3>
             <div className="irow">
-              <span>Method</span>
-              <span>{o.pay_method || '—'}</span>
+              <span>{t('agent.deliver.method', 'Method')}</span>
+              <span>{o.pay_method ? t(payMethodKey(o.pay_method), o.pay_method) : '—'}</span>
             </div>
             <div className="irow">
-              <span>Status</span>
+              <span>{t('consumer.home.col.status', 'Status')}</span>
               <span style={{ color: o.pay_status === 'paid' ? 'var(--green)' : 'var(--sun)' }}>
-                {o.pay_status || '—'}
+                {o.pay_status ? t(payStatusKey(o.pay_status), o.pay_status) : '—'}
               </span>
             </div>
             <div className="irow">
-              <span>Total</span>
+              <span>{t('consumer.order.total', 'Total')}</span>
               <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--forest)' }}>
                 {fmtMoney(o.total)}
               </span>
@@ -180,10 +218,10 @@ export function DeliverSheet({
 
           <button className="confirm-btn" onClick={confirm} disabled={busy}>
             {busy
-              ? 'Confirming…'
+              ? t('agent.deliver.busy', 'Confirming…')
               : isCod
-                ? '✅ Confirm Cash Collected & Delivered'
-                : '✅ Confirm Delivered'}
+                ? `✅ ${t('agent.deliver.ctaCod', 'Confirm Cash Collected & Delivered')}`
+                : `✅ ${t('agent.deliver.cta', 'Confirm Delivered')}`}
           </button>
         </>
       )}
@@ -192,6 +230,7 @@ export function DeliverSheet({
 }
 
 function DeliveryAddress({ order }: { order: OrderDetail['order'] }) {
+  const { t } = useTranslation();
   const da = order.delivery_address;
   const daText = resolveAddress(da);
   const label = da && typeof da === 'object' ? (da as AddressObject).label : undefined;
@@ -201,15 +240,15 @@ function DeliveryAddress({ order }: { order: OrderDetail['order'] }) {
 
   return (
     <div className="a-card">
-      <h3>📍 Delivery Address</h3>
+      <h3>📍 {t('consumer.checkout.deliveryAddress', 'Delivery Address')}</h3>
       <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--forest)', marginBottom: 3 }}>
-        {order.consumer_name || 'Consumer'}
-        {label ? ` · ${label}` : ''}
+        {order.consumer_name || t('agent.consumer', 'Consumer')}
+        {label ? ` · ${t(addressLabelKey(label), label)}` : ''}
       </div>
       <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--forest)' }}>{daText || '—'}</div>
       {callPhone ? (
         <a className="call-link" href={`tel:${callPhone}`}>
-          📞 Call Customer
+          📞 {t('agent.deliver.call', 'Call Customer')}
         </a>
       ) : null}
     </div>

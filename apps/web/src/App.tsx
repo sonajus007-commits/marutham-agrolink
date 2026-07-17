@@ -57,9 +57,17 @@ function AppBar() {
 }
 
 /** Redirect "/" to the signed-in user's home screen. */
+/* The route-level chunk fallback and the auth check both showed a hardcoded
+ * "Loading…" — app chrome, in English, for every role and every language, and the
+ * FIRST thing a Tamil user sees while a lazy route compiles. */
+function Loading() {
+  const { t } = useTranslation();
+  return <div className="centered">{t('common.loading', 'Loading…')}</div>;
+}
+
 function RoleHome() {
   const { user, loading } = useAuth();
-  if (loading) return <div className="centered">Loading…</div>;
+  if (loading) return <Loading />;
   if (!user) return <Navigate to="/login" replace />;
   return <Navigate to={roleHome(user)} replace />;
 }
@@ -71,7 +79,7 @@ export function App() {
           Capacitor build sets Vite base to '/', so BASE_URL is '/' and the app
           mounts at the root instead. */}
       <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/+$/, '') || '/'}>
-        <Suspense fallback={<div className="centered">Loading…</div>}>
+        <Suspense fallback={<Loading />}>
           <Routes>
             <Route path="/login" element={<Login />} />
             {/* Sign-up is public and code-split — it never loads for a signed-in user. */}

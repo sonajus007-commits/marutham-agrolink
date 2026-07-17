@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sheet, Spinner } from '@marutham/ui';
 import { api, OfflineQueuedError, type EligibleAgent } from '@marutham/api-client';
 import type { Order } from '@marutham/lib';
@@ -16,6 +17,7 @@ export function VerifySheet({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [order, setOrder] = useState<Order | null>(null);
   const [matched, setMatched] = useState<EligibleAgent[]>([]);
@@ -42,7 +44,11 @@ export function VerifySheet({
         setAll(elig.all || []);
         if ((elig.matched || []).length >= 1) setAgentId(elig.matched[0].id);
       })
-      .catch((e) => active && setError(e instanceof Error ? e.message : 'Failed to load order'));
+      .catch(
+        (e) =>
+          active &&
+          setError(e instanceof Error ? e.message : t('agent.err.order', 'Failed to load order')),
+      );
     return () => {
       active = false;
     };
@@ -55,7 +61,10 @@ export function VerifySheet({
     // send. GET /orders/:id selects *, so this cannot happen in practice — but a
     // silent weaker request is worse than saying so.
     if (typeof stage !== 'number') {
-      toast('Could not read this order’s stage. Reload and try again.', 'er');
+      toast(
+        t('agent.err.noStage', 'Could not read this order’s stage. Reload and try again.'),
+        'er',
+      );
       return;
     }
     setBusy(true);
@@ -66,20 +75,26 @@ export function VerifySheet({
       // The stage guard matters most here: replayed a stage late, this same body would
       // land on the pick-up branch and make the VCO the delivery agent, silently
       // discarding the route and agent they chose.
-      const res = await api.verifyOrderOffline(orderId, stage, {
+      await api.verifyOrderOffline(orderId, stage, {
         route,
         agent_id: agentId || undefined,
         coords,
       });
-      toast(res.message || 'Order verified.', 'ok');
+      /* Our own wording, not res.message: the server's is English prose composed
+       * server-side ("Order advanced to: Picked Up."), so echoing it would put an
+       * English sentence in a Tamil toast. Nothing is lost — verify has one outcome. */
+      toast(t('agent.verify.done', 'Order verified.'), 'ok');
       onChanged();
     } catch (e) {
       if (e instanceof OfflineQueuedError) {
-        toast('No signal — saved on your device. It will sync automatically.', 'ok');
+        toast(
+          t('agent.queued', 'No signal — saved on your device. It will sync automatically.'),
+          'ok',
+        );
         onChanged();
         return;
       }
-      toast(e instanceof Error ? e.message : 'Verify failed', 'er');
+      toast(e instanceof Error ? e.message : t('agent.verify.failed', 'Verify failed'), 'er');
       setBusy(false);
     }
   }
@@ -87,7 +102,12 @@ export function VerifySheet({
   const others = all.filter((a) => !matched.some((m) => m.id === a.id));
 
   return (
-    <Sheet open={open} title={order?.code || 'Verify Order'} onClose={onClose}>
+    <Sheet
+      open={open}
+      title={order?.code || t('agent.verify.title', 'Verify Order')}
+      onClose={onClose}
+      backLabel={t('common.back', 'Back')}
+    >
       {error ? (
         <div style={{ textAlign: 'center', padding: 24, color: 'var(--red)', fontSize: 13 }}>
           {error}
@@ -98,39 +118,43 @@ export function VerifySheet({
         <>
           <div className="a-card">
             <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--forest)' }}>
-              {order.consumer_name || 'Consumer'}
+              {order.consumer_name || t('agent.consumer', 'Consumer')}
             </div>
             <div style={{ fontSize: 12, color: 'var(--gray)', marginTop: 2 }}>
-              Fulfilment village: <b>{order.village || '—'}</b>
+              {t('agent.verify.village', 'Fulfilment village:')} <b>{order.village || '—'}</b>
             </div>
           </div>
 
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--forest)', marginBottom: 8 }}>
-            Delivery route
+            {t('agent.verify.route', 'Delivery route')}
           </div>
           <div className="route-toggle" style={{ marginBottom: 14 }}>
             <button
               className={`route-btn ${route === 'direct' ? 'on' : ''}`}
               onClick={() => setRoute('direct')}
             >
-              🛵 Direct Delivery
+              🛵 {t('agent.route.direct', 'Direct Delivery')}
               <br />
-              <span style={{ fontSize: 9, fontWeight: 400 }}>to consumer</span>
+              <span style={{ fontSize: 9, fontWeight: 400 }}>
+                {t('agent.route.directSub', 'to consumer')}
+              </span>
             </button>
             <button
               className={`route-btn ${route === 'hub' ? 'on' : ''}`}
               onClick={() => setRoute('hub')}
             >
-              🏭 Transit to Hub
+              🏭 {t('agent.route.hub', 'Transit to Hub')}
               <br />
-              <span style={{ fontSize: 9, fontWeight: 400 }}>via hub</span>
+              <span style={{ fontSize: 9, fontWeight: 400 }}>
+                {t('agent.route.hubSub', 'via hub')}
+              </span>
             </button>
           </div>
 
           <div
             style={{ fontSize: 12, fontWeight: 700, color: 'var(--forest)', margin: '6px 0 8px' }}
           >
-            Collection agent
+            {t('agent.verify.collectionAgent', 'Collection agent')}
           </div>
           {matched.length ? (
             <div
@@ -144,8 +168,7 @@ export function VerifySheet({
                 marginBottom: 8,
               }}
             >
-              ✓ {matched.length} agent{matched.length > 1 ? 's' : ''} cover this village —
-              auto-selected.
+              ✓ {t('agent.verify.matched', { count: matched.length })}
             </div>
           ) : (
             <div
@@ -159,18 +182,18 @@ export function VerifySheet({
                 marginBottom: 8,
               }}
             >
-              No agent is tagged to this village. Pick one manually.
+              {t('agent.verify.noMatch', 'No agent is tagged to this village. Pick one manually.')}
             </div>
           )}
           <select
             className="a-select"
             value={agentId}
             onChange={(e) => setAgentId(e.target.value)}
-            aria-label="Collection agent"
+            aria-label={t('agent.verify.collectionAgent', 'Collection agent')}
           >
-            <option value="">— Assign later —</option>
+            <option value="">— {t('agent.verify.assignLater', 'Assign later')} —</option>
             {matched.length ? (
-              <optgroup label="Covers this village">
+              <optgroup label={t('agent.verify.covers', 'Covers this village')}>
                 {matched.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
@@ -180,7 +203,7 @@ export function VerifySheet({
               </optgroup>
             ) : null}
             {others.length ? (
-              <optgroup label="Other agents in district">
+              <optgroup label={t('agent.verify.others', 'Other agents in district')}>
                 {others.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
@@ -197,7 +220,9 @@ export function VerifySheet({
             onClick={confirm}
             disabled={busy}
           >
-            {busy ? '⏳ Verifying…' : '✓ Verify & Assign'}
+            {busy
+              ? `⏳ ${t('agent.verify.busy', 'Verifying…')}`
+              : `✓ ${t('agent.verify.cta', 'Verify & Assign')}`}
           </button>
         </>
       )}

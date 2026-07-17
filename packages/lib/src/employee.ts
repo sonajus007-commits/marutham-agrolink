@@ -1,11 +1,16 @@
 /* Employee master formatting — ported from frontend/js/shared.js.
  * Shared by the self-profile views in the Agent and Admin roles. */
+import { dateLocale } from './format';
 
-function fmtEmpDate(d?: string | null): string {
+function fmtEmpDate(d?: string | null, lang?: string | null): string {
   if (!d) return '—';
   const dt = new Date(d);
   if (isNaN(dt.getTime())) return d;
-  return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return dt.toLocaleDateString(dateLocale(lang), {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 export interface EmployeeRecord {
@@ -35,9 +40,21 @@ export interface EmployeeRecord {
 }
 
 /** Label/value pairs for an employee master record. Returns null if no record. */
+/**
+ * [English label, value, i18n key] per row.
+ *
+ * The key is THIRD and the English label FIRST on purpose: both callers
+ * destructure `[label, value]`, so the admin profile — which is not translated —
+ * keeps rendering exactly what it did, while a translated screen can reach past
+ * it for `t(key, label)`. Adding a field beats forking the function.
+ */
+export type EmployeeDetailPair = [label: string, value: string, key: string];
+
 export function employeeDetailPairs(
   e: EmployeeRecord | null | undefined,
-): [string, string][] | null {
+  /** App language for the dates. Omit and they stay en-IN, as before. */
+  lang?: string | null,
+): EmployeeDetailPair[] | null {
   if (!e) return null;
   const addr = [
     e.house_no,
@@ -54,18 +71,18 @@ export function employeeDetailPairs(
     .filter(Boolean)
     .join(', ');
   return [
-    ['Employee No', e.emp_id || '—'],
-    ['Role / Designation', e.designation || '—'],
-    ['Department', e.department || '—'],
-    ['Employment Type', e.employment_type || '—'],
-    ['Start Date', fmtEmpDate(e.date_of_joining)],
-    ['Aadhaar', e.aadhar ? '•••• •••• ' + String(e.aadhar).slice(-4) : '—'],
-    ['Gender', e.gender || '—'],
-    ['Date of Birth', e.dob ? fmtEmpDate(e.dob) : '—'],
-    ['Phone', e.phone || '—'],
-    ['Email', e.email || '—'],
-    ['Work Location', e.work_location || '—'],
-    ['Reporting Manager', e.reporting_manager || '—'],
-    ['Address', addr || '—'],
+    ['Employee No', e.emp_id || '—', 'emp.no'],
+    ['Role / Designation', e.designation || '—', 'emp.designation'],
+    ['Department', e.department || '—', 'emp.department'],
+    ['Employment Type', e.employment_type || '—', 'emp.employmentType'],
+    ['Start Date', fmtEmpDate(e.date_of_joining, lang), 'emp.startDate'],
+    ['Aadhaar', e.aadhar ? '•••• •••• ' + String(e.aadhar).slice(-4) : '—', 'emp.aadhaar'],
+    ['Gender', e.gender || '—', 'emp.gender'],
+    ['Date of Birth', e.dob ? fmtEmpDate(e.dob, lang) : '—', 'emp.dob'],
+    ['Phone', e.phone || '—', 'emp.phone'],
+    ['Email', e.email || '—', 'emp.email'],
+    ['Work Location', e.work_location || '—', 'emp.workLocation'],
+    ['Reporting Manager', e.reporting_manager || '—', 'emp.reportingManager'],
+    ['Address', addr || '—', 'emp.address'],
   ];
 }
