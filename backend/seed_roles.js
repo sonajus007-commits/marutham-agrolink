@@ -59,11 +59,16 @@ async function getLoginId(role, adminRole, fname) {
   return `${base}${toAlphaCounter(maxN + 1)}`;
 }
 
+// village_town is the fulfilment village: an order takes it from the FARMER, and a
+// VCO's queue is scoped to orders whose village equals the VCO's village_town. So
+// the seed farmer and the seed VCO must share one, or every VCO queue is empty and
+// the VerifySheet is unreachable. Delivery Agent gets it too so pickup scoping lines
+// up. Roles whose queues are not village-scoped (management) leave it null.
 const USERS = [
   { role: 'consumer',  adminRole: null,               fname: 'Kavitha',  lname: 'R',  phone: '9811100001' },
-  { role: 'farmer',    adminRole: null,               fname: 'Murugan',  lname: 'S',  phone: '9811100002' },
-  { role: 'admin',     adminRole: 'Delivery Agent',   fname: 'Selvam',   lname: 'P',  phone: '9811100003' },
-  { role: 'admin',     adminRole: 'VCO',              fname: 'Priya',    lname: 'K',  phone: '9811100004' },
+  { role: 'farmer',    adminRole: null,               fname: 'Murugan',  lname: 'S',  phone: '9811100002', village: DISTRICT },
+  { role: 'admin',     adminRole: 'Delivery Agent',   fname: 'Selvam',   lname: 'P',  phone: '9811100003', village: DISTRICT },
+  { role: 'admin',     adminRole: 'VCO',              fname: 'Priya',    lname: 'K',  phone: '9811100004', village: DISTRICT },
   { role: 'admin',     adminRole: 'District Manager', fname: 'Arun',     lname: 'M',  phone: '9811100005' },
   { role: 'admin',     adminRole: 'Hub Incharge',     fname: 'Ramesh',   lname: 'V',  phone: '9811100006' },
   { role: 'admin',     adminRole: 'Regional Manager', fname: 'Deepa',    lname: 'N',  phone: '9811100007' },
@@ -111,6 +116,7 @@ async function seed() {
         lname:        u.lname,
         country_code: '+91',
         street1:      STREET1,
+        village_town: u.village || null,
         city:         CITY,
         district:     DISTRICT,
         pincode:      PINCODE,
