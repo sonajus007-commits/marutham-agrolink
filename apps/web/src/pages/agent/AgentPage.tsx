@@ -78,6 +78,9 @@ function AgentPageInner() {
 
   const setLang = (lang: AppLanguage) => changeLanguage(lang);
 
+  const pickUpDirect = queues ? queues.toPickUp.filter((o) => o.route !== 'hub') : [];
+  const pickUpHub = queues ? queues.toPickUp.filter((o) => o.route === 'hub') : [];
+
   const sections = queues
     ? [
         isVCO && queues.toVerify.length
@@ -90,14 +93,40 @@ function AgentPageInner() {
               btn: `✓ ${t('agent.btn.verify')}`,
             }
           : null,
-        queues.toPickUp.length
+        /* A verified order is split by ROUTE: a direct one is collected for the
+           doorstep, a hub one is run to the hub. Same scan, different journey — one
+           "Pick Up" button for both read as a mistake once the hub order came back
+           saying "In Transit". */
+        pickUpDirect.length
           ? {
               key: 'pickup',
               title: `📦 ${t('agent.queue.pickup')}`,
-              orders: queues.toPickUp,
+              orders: pickUpDirect,
               action: 'pickup' as const,
               cls: 'q-section--pickup',
               btn: `⬆ ${t('agent.btn.pickup')}`,
+            }
+          : null,
+        pickUpHub.length
+          ? {
+              key: 'tohub',
+              title: `🏭 ${t('agent.queue.toHub', 'Send to Hub')}`,
+              orders: pickUpHub,
+              action: 'pickup' as const,
+              cls: 'q-section--transit',
+              btn: `🚚 ${t('agent.btn.toHub', 'Send to Hub')}`,
+            }
+          : null,
+        /* Hub lane: the Incharge has named this agent, and collecting it is their
+           scan. A VCO never sees it — a VCO does not work the hub. */
+        !isVCO && queues.toCollect.length
+          ? {
+              key: 'collect',
+              title: `🏭 ${t('agent.queue.collect', 'Collect from Hub')}`,
+              orders: queues.toCollect,
+              action: 'pickup' as const,
+              cls: 'q-section--pickup',
+              btn: `⬆ ${t('agent.btn.collect', 'Collect')}`,
             }
           : null,
         queues.inTransit.length

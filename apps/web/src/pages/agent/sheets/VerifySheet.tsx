@@ -259,7 +259,12 @@ export function VerifySheet({
           >
             {busy
               ? `⏳ ${t('agent.verify.busy', 'Verifying…')}`
-              : `✓ ${t('agent.verify.cta', 'Verify & Assign')}`}
+              : /* nothing is assigned on the hub route — the hub does that later */
+                `✓ ${
+                  route === 'hub'
+                    ? t('agent.verify.ctaHub', 'Verify & Send to Hub')
+                    : t('agent.verify.cta', 'Verify & Assign')
+                }`}
           </button>
         </>
       )}

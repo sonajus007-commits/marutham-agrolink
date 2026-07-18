@@ -83,13 +83,19 @@ export interface OrderDetail {
 export interface OrderQueues {
   toVerify: Order[]; // Packaged — VCO to verify
   toPickUp: Order[]; // VCO Verified — agent to pick up
+  toCollect: Order[]; // At Hub — last-mile agent to collect FROM the hub
   inTransit: Order[]; // Picked Up — agent to advance to Out for Delivery
   toDeliver: Order[]; // Out for Delivery — agent to deliver
-  inProgress: Order[]; // Order Placed / In Transit / At Hub — view only
+  inProgress: Order[]; // Order Placed / In Transit — view only
   delivered: Order[]; // Delivered
 }
 
-const IN_PROGRESS_STATUSES = ['Order Placed', 'In Transit', 'At Hub'];
+/* 'At Hub' is NOT here: on the hub lane the Hub Incharge assigns a last-mile agent
+ * and that agent then scans their own pickup, so it is an ACTIONABLE queue for them
+ * (toCollect), not a view-only status. Leaving it in this list was why an assigned
+ * agent could see the order but had no button to collect it. 'In Transit' stays —
+ * that leg is a bulk movement received by hub staff, not by an agent. */
+const IN_PROGRESS_STATUSES = ['Order Placed', 'In Transit'];
 
 /** Group a flat order list into the Agent screen's queues. */
 export function groupOrders(orders: Order[]): OrderQueues {
@@ -97,6 +103,7 @@ export function groupOrders(orders: Order[]): OrderQueues {
   return {
     toVerify: orders.filter(active('Packaged')),
     toPickUp: orders.filter(active('VCO Verified')),
+    toCollect: orders.filter(active('At Hub')),
     inTransit: orders.filter(active('Picked Up')),
     toDeliver: orders.filter(active('Out for Delivery')),
     inProgress: orders.filter((o) => IN_PROGRESS_STATUSES.includes(o.status) && !o.cancelled),
@@ -114,7 +121,10 @@ export interface AgentStats {
 /** Derive the 3 header stats, role-aware (VCO vs Delivery Agent). */
 export function deriveAgentStats(q: OrderQueues, isVCO: boolean): AgentStats {
   const queue =
-    (isVCO ? q.toVerify.length : 0) + q.toPickUp.length + q.inTransit.length + q.toDeliver.length;
+    (isVCO ? q.toVerify.length : q.toCollect.length) +
+    q.toPickUp.length +
+    q.inTransit.length +
+    q.toDeliver.length;
   if (isVCO) {
     const pipeline = q.toPickUp.length + q.inTransit.length + q.toDeliver.length;
     return {

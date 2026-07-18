@@ -6,6 +6,8 @@ import {
   canRequestReturn,
   returnWindowHoursLeft,
   groupConsumerOrders,
+  groupOrders,
+  deriveAgentStats,
   deriveOrderCharges,
   itemLineTotal,
   CANCELLABLE_STATUSES,
@@ -206,5 +208,50 @@ describe('itemLineTotal', () => {
 
   it('treats a missing price as zero rather than NaN', () => {
     expect(itemLineTotal({ name: 'x', qty: 2 })).toBe(0);
+  });
+});
+
+/* The agent screen's queues. 'At Hub' is the one that matters: on the hub lane the
+ * Incharge assigns a last-mile agent and THAT AGENT scans their own pickup, so it
+ * must be an actionable queue. It used to sit in the view-only inProgress list,
+ * which left an assigned agent looking at an order with no button to collect it. */
+describe('groupOrders — the agent queues', () => {
+  it('puts an At Hub order in the actionable collect queue, not view-only', () => {
+    const q = groupOrders([order({ status: 'At Hub', route: 'hub' })]);
+    expect(q.toCollect).toHaveLength(1);
+    expect(q.inProgress).toHaveLength(0);
+  });
+
+  it('leaves In Transit view-only — that leg is received by hub staff, not an agent', () => {
+    const q = groupOrders([order({ status: 'In Transit', route: 'hub' })]);
+    expect(q.inProgress).toHaveLength(1);
+    expect(q.toCollect).toHaveLength(0);
+  });
+
+  it('routes each remaining status to exactly one actionable queue', () => {
+    const q = groupOrders([
+      order({ id: 'a', status: 'Packaged' }),
+      order({ id: 'b', status: 'VCO Verified' }),
+      order({ id: 'c', status: 'Picked Up' }),
+      order({ id: 'd', status: 'Out for Delivery' }),
+      order({ id: 'e', status: 'Delivered' }),
+    ]);
+    expect(q.toVerify.map((o) => o.id)).toEqual(['a']);
+    expect(q.toPickUp.map((o) => o.id)).toEqual(['b']);
+    expect(q.inTransit.map((o) => o.id)).toEqual(['c']);
+    expect(q.toDeliver.map((o) => o.id)).toEqual(['d']);
+    expect(q.delivered.map((o) => o.id)).toEqual(['e']);
+  });
+
+  it('a cancelled order is in no actionable queue', () => {
+    const q = groupOrders([order({ status: 'At Hub', route: 'hub', cancelled: true })]);
+    expect(q.toCollect).toHaveLength(0);
+  });
+
+  // A parcel waiting at the hub is work the agent has to do, so it must be counted.
+  it("counts an agent's hub collections in their queue stat", () => {
+    const q = groupOrders([order({ status: 'At Hub', route: 'hub' })]);
+    expect(deriveAgentStats(q, false).queue).toBe(1);
+    expect(deriveAgentStats(q, true).queue).toBe(0); // a VCO does not work the hub
   });
 });
