@@ -77,84 +77,121 @@ export function projectBulkPrice(
  * occurrence. The grouping is presentation only, exactly as the legacy page
  * treated it. */
 
-/** The parenthetical on a cutoff label, as a code — the only part that is WORDS. */
-export type CutoffNote = 'prevEvening' | 'midnight' | 'noon' | 'currentDay';
+/* ── Order cutoff: a ROLLING window, computed in IST ──────────────────────────
+ *
+ * The seller picks when their listing stops taking orders. This used to be a
+ * fixed list of sixteen clock times spanning "previous evening 8 PM" to "current
+ * day 8 PM", which had two faults: most of it was already in the PAST by the time
+ * a seller opened the form (you could close a listing at 6 AM at four in the
+ * afternoon), and it was computed with setHours — the DEVICE's timezone — so a
+ * phone on the wrong zone silently stored a cutoff hours away from what was shown.
+ *
+ * Now the options are generated: every whole hour from the next one up to and
+ * including the next 8 AM, which is when the selling cycle closes. At 4:30 PM a
+ * seller is offered 5 PM … 8 AM tomorrow; at 7:10 AM only 8 AM is left.
+ *
+ * Everything is anchored to IST, never to the device. India has one timezone and
+ * no DST, so a fixed +5:30 is exact — and it means every seller nationwide sees
+ * the same window at the same instant, whatever their phone believes.
+ */
 
-export type CutoffGroup = 'Previous Evening' | 'Current Day';
+/** IST is UTC+5:30 year-round — no DST, so a constant offset is exact. */
+export const IST_OFFSET_MINUTES = 330;
 
-export interface CutoffOption {
-  /** Stored verbatim in farmer_listings.time_available. */
-  value: string;
-  /** What the seller reads, in English. The default when nothing translates it. */
-  label: string;
-  /**
-   * The clock time alone ("8 PM"). A screen composes `time (note)` so a Tamil
-   * seller reads "8 PM (முந்தைய மாலை)" — the time is the same in every language,
-   * so translating sixteen whole labels would be fifteen copies of "8 PM".
-   */
-  time: string;
-  /** Qualifier code, absent when the time speaks for itself. */
-  note?: CutoffNote;
-  /** Optgroup heading. A VALUE — the screen keys its translation off it. */
-  group: CutoffGroup;
+/** 8 AM IST closes the selling cycle: the last cutoff a seller can choose. */
+export const DAILY_CLOSE_HOUR = 8;
+
+const HOUR_MS = 3_600_000;
+
+interface IstClock {
+  y: number;
+  m: number;
+  d: number;
+  h: number;
 }
 
-export const CUTOFF_OPTIONS: readonly CutoffOption[] = [
-  {
-    value: '8 PM',
-    label: '8 PM (previous evening)',
-    time: '8 PM',
-    note: 'prevEvening',
-    group: 'Previous Evening',
-  },
-  {
-    value: '9 PM',
-    label: '9 PM (previous evening)',
-    time: '9 PM',
-    note: 'prevEvening',
-    group: 'Previous Evening',
-  },
-  {
-    value: '10 PM',
-    label: '10 PM (previous evening)',
-    time: '10 PM',
-    note: 'prevEvening',
-    group: 'Previous Evening',
-  },
-  {
-    value: '11 PM',
-    label: '11 PM (previous evening)',
-    time: '11 PM',
-    note: 'prevEvening',
-    group: 'Previous Evening',
-  },
-  {
-    value: '12 AM',
-    label: '12 AM (midnight)',
-    time: '12 AM',
-    note: 'midnight',
-    group: 'Current Day',
-  },
-  { value: '4 AM', label: '4 AM', time: '4 AM', group: 'Current Day' },
-  { value: '6 AM', label: '6 AM', time: '6 AM', group: 'Current Day' },
-  { value: '7 AM', label: '7 AM', time: '7 AM', group: 'Current Day' },
-  { value: '8 AM', label: '8 AM', time: '8 AM', group: 'Current Day' },
-  { value: '9 AM', label: '9 AM', time: '9 AM', group: 'Current Day' },
-  { value: '10 AM', label: '10 AM', time: '10 AM', group: 'Current Day' },
-  { value: '12 PM', label: '12 PM (noon)', time: '12 PM', note: 'noon', group: 'Current Day' },
-  { value: '2 PM', label: '2 PM', time: '2 PM', group: 'Current Day' },
-  { value: '4 PM', label: '4 PM', time: '4 PM', group: 'Current Day' },
-  { value: '6 PM', label: '6 PM', time: '6 PM', group: 'Current Day' },
-  {
-    value: '8 PM (today)',
-    label: '8 PM (current day)',
-    time: '8 PM',
-    note: 'currentDay',
-    group: 'Current Day',
-  },
-];
+/** The IST wall-clock reading of an absolute instant. */
+function istClock(at: Date): IstClock {
+  const shifted = new Date(at.getTime() + IST_OFFSET_MINUTES * 60_000);
+  return {
+    y: shifted.getUTCFullYear(),
+    m: shifted.getUTCMonth(),
+    d: shifted.getUTCDate(),
+    h: shifted.getUTCHours(),
+  };
+}
 
-export const DEFAULT_CUTOFF = '8 AM';
+/**
+ * The absolute instant at which IST reads y/m/d hour:00.
+ * Date.UTC normalises overflow, so hour 25 or day 32 roll forward correctly —
+ * that is what lets the slot walk cross midnight and month ends without special
+ * cases.
+ */
+function istInstant(c: { y: number; m: number; d: number }, hour: number): Date {
+  return new Date(Date.UTC(c.y, c.m, c.d, hour) - IST_OFFSET_MINUTES * 60_000);
+}
+
+/** "5 PM", "12 AM", "12 PM" from a 24-hour clock hour. */
+export function formatHour12(hour: number): string {
+  const h = ((hour % 24) + 24) % 24;
+  const suffix = h < 12 ? 'AM' : 'PM';
+  const twelve = h % 12 === 0 ? 12 : h % 12;
+  return `${twelve} ${suffix}`;
+}
+
+/** Which IST day a slot lands on, relative to the seller's now. */
+export type CutoffDay = 'today' | 'tomorrow';
+
+export interface CutoffSlot {
+  /** Stored verbatim in farmer_listings.time_available, e.g. "5 PM". */
+  value: string;
+  /** The clock time alone — identical in every language, so it is never translated. */
+  time: string;
+  /** 24-hour clock hour in IST. */
+  hour: number;
+  /** Absolute instant this cutoff falls at; goes to farmer_listings.cutoff_ts. */
+  ts: string;
+  /** Optgroup heading. A VALUE — the screen keys its translation off it. */
+  day: CutoffDay;
+}
+
+/**
+ * The cutoffs a seller may choose right now: every whole IST hour from the next
+ * one through the next 8 AM. Never empty — 8 AM is always reachable, and when the
+ * window has almost run out it is the only entry left.
+ */
+export function cutoffSlots(now: Date = new Date()): CutoffSlot[] {
+  const c = istClock(now);
+
+  // The next whole hour. Strictly after `now`: a cutoff at the current hour has
+  // either passed or is passing, and would be expired before anyone could order.
+  const start = istInstant(c, c.h + 1);
+
+  // The next 8 AM at or after that. When the day's 8 AM has gone, it is tomorrow's.
+  let end = istInstant(c, DAILY_CLOSE_HOUR);
+  if (end.getTime() < start.getTime()) end = istInstant({ ...c, d: c.d + 1 }, DAILY_CLOSE_HOUR);
+
+  const slots: CutoffSlot[] = [];
+  for (let t = start.getTime(); t <= end.getTime(); t += HOUR_MS) {
+    const at = new Date(t);
+    const clock = istClock(at);
+    slots.push({
+      value: formatHour12(clock.h),
+      time: formatHour12(clock.h),
+      hour: clock.h,
+      ts: at.toISOString(),
+      day: clock.d === c.d ? 'today' : 'tomorrow',
+    });
+  }
+  return slots;
+}
+
+/**
+ * The cutoff every listing falls back to when nobody chose one — always the LAST
+ * slot of the window, so it is the most permissive choice rather than one that
+ * expires in an hour. 8 AM closes the cycle, so it is always present.
+ */
+export const DEFAULT_CUTOFF = formatHour12(DAILY_CLOSE_HOUR);
 
 /** 24-hour clock from a stored value like "8 PM (today)", or null if unreadable. */
 export function parseCutoffHour(value: string): number | null {
@@ -169,21 +206,79 @@ export function parseCutoffHour(value: string): number | null {
 }
 
 /**
- * Absolute timestamp for a cutoff value: the next occurrence of that hour.
- * If the hour has already passed today, it rolls to tomorrow.
+ * The absolute instant for a chosen cutoff, or null when that choice is no longer
+ * on offer — a value from a stale form, or one the seller sat on until it expired.
+ * Null is the REFUSAL: the caller must make them pick again rather than quietly
+ * booking a cutoff in the past. Resolved against the live window, so it is exact
+ * in IST regardless of what the device's clock is set to.
  */
 export function cutoffTimestamp(value: string, now: Date = new Date()): string | null {
   const hour = parseCutoffHour(value);
   if (hour === null) return null;
-  const d = new Date(now);
-  d.setHours(hour, 0, 0, 0);
-  if (d.getTime() <= now.getTime()) d.setDate(d.getDate() + 1);
-  return d.toISOString();
+  return cutoffSlots(now).find((s) => s.hour === hour)?.ts ?? null;
 }
 
 /** Display label for a stored value, falling back to the value itself. */
 export function cutoffLabel(value: string): string {
-  return CUTOFF_OPTIONS.find((o) => o.value === value)?.label ?? value;
+  return value;
+}
+
+/* ── Retailer shop hours ──────────────────────────────────────────────────────
+ *
+ * A farmer's cutoff belongs to a LISTING (this harvest stops selling at 6 PM); a
+ * retailer's hours belong to the SHOP (we are open 9-7, every day), so they live
+ * on the account and every listing inherits them. Both are read in IST.
+ *
+ * The band is the business rule: retailers trade between 8 AM and 8 PM, for
+ * ordering and for pickup. Mirrored by a CHECK constraint in migration 035 — this
+ * copy only exists to tell the retailer before a pointless round trip.
+ */
+
+/** Earliest hour a retailer may open (8 AM IST). */
+export const SHOP_BAND_OPEN = 8;
+/** Latest hour a retailer may close (8 PM IST). */
+export const SHOP_BAND_CLOSE = 20;
+
+export interface ShopHourOption {
+  hour: number;
+  label: string;
+}
+
+/** Selectable hours across the trading band, inclusive of both ends. */
+export function shopHourOptions(): ShopHourOption[] {
+  const out: ShopHourOption[] = [];
+  for (let h = SHOP_BAND_OPEN; h <= SHOP_BAND_CLOSE; h++)
+    out.push({ hour: h, label: formatHour12(h) });
+  return out;
+}
+
+export type ShopHoursProblem = 'required' | 'band' | 'order';
+
+/**
+ * Why a retailer's chosen window is unacceptable, or null when it is fine.
+ * `null`/undefined hours are 'required' — a retailer has to state their hours
+ * before they can sell, so "not chosen yet" is a problem, not an empty success.
+ */
+export function validateShopHours(
+  open: number | null | undefined,
+  close: number | null | undefined,
+): ShopHoursProblem | null {
+  if (open == null || close == null) return 'required';
+  if (!Number.isInteger(open) || !Number.isInteger(close)) return 'band';
+  if (open < SHOP_BAND_OPEN || open > SHOP_BAND_CLOSE) return 'band';
+  if (close < SHOP_BAND_OPEN || close > SHOP_BAND_CLOSE) return 'band';
+  // Equal is rejected too: a window that opens and shuts at the same hour is shut.
+  if (open >= close) return 'order';
+  return null;
+}
+
+/** "9 AM – 7 PM", or null when the retailer has not set their hours yet. */
+export function shopHoursLabel(
+  open: number | null | undefined,
+  close: number | null | undefined,
+): string | null {
+  if (open == null || close == null) return null;
+  return `${formatHour12(open)} – ${formatHour12(close)}`;
 }
 
 /* ── Listing validation ────────────────────────────────────────────────────

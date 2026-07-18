@@ -732,6 +732,7 @@ router.patch('/me', requireAuth, async (req, res) => {
     'service_villages',                                // Delivery Agent: villages they cover (text[])
     'delivery_addresses',                              // consumer address book (JSONB array)
     'farm_lat', 'farm_lng',                            // seller farm coordinates (best-effort GPS)
+    'shop_open_hour', 'shop_close_hour',               // Retailer: daily trading window (IST hours)
   ];
 
   const updates = {};
@@ -749,6 +750,44 @@ router.patch('/me', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Invalid farm location.' });
     }
     updates[key] = n;
+  }
+
+  // Retailer trading window. There is a CHECK constraint behind this (migration
+  // 035), so an unvalidated bad pair would surface as a Postgres 500 rather than a
+  // usable message. Both hours move together: a request that sets only one would
+  // be checked against a stale partner, so the pair is read from the merge of what
+  // was sent and what is stored.
+  if (updates.shop_open_hour !== undefined || updates.shop_close_hour !== undefined) {
+    const { data: current, error: cErr } = await supabase
+      .from('users')
+      .select('shop_open_hour, shop_close_hour')
+      .eq('id', req.user.id)
+      .maybeSingle();
+    if (cErr) {
+      console.error('Shop-hours lookup failed:', cErr.message);
+      return res.status(500).json({ error: 'Could not read your current shop hours.' });
+    }
+
+    const pick = (k) => (updates[k] !== undefined ? updates[k] : current?.[k] ?? null);
+    const open = pick('shop_open_hour');
+    const close = pick('shop_close_hour');
+
+    // Clearing BOTH is allowed — that is a retailer un-setting their hours, which
+    // the constraint permits and the profile screen reads as "not chosen yet".
+    if (open !== null || close !== null) {
+      const nums = [open, close].map(Number);
+      const bad =
+        nums.some((n) => !Number.isInteger(n)) ||
+        nums.some((n) => n < 8 || n > 20) ||
+        nums[0] >= nums[1];
+      if (bad) {
+        return res.status(400).json({
+          error: 'Shop hours must be whole hours between 8 AM and 8 PM, and open must be before close.',
+        });
+      }
+      updates.shop_open_hour = nums[0];
+      updates.shop_close_hour = nums[1];
+    }
   }
 
   if (Object.keys(updates).length === 0) {

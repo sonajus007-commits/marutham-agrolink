@@ -1372,6 +1372,14 @@
           "type": "text[]",
           "notNull": true
         },
+        "shop_close_hour": {
+          "type": "smallint",
+          "notNull": false
+        },
+        "shop_open_hour": {
+          "type": "smallint",
+          "notNull": false
+        },
         "state": {
           "type": "text",
           "notNull": false

@@ -8,6 +8,7 @@ import { useToast } from '../../components/Toast';
 import { ChangePasswordCard } from '../../components/ChangePasswordCard';
 import { BankDetailsCard } from './BankDetailsCard';
 import { FarmLocationCard } from './FarmLocationCard';
+import { ShopHoursCard } from './ShopHoursCard';
 
 /* Self-service fields a seller may edit directly (applied immediately via
  * PATCH /auth/me). District/state are support-gated and bank/business go through
@@ -228,6 +229,9 @@ export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
         </Card>
       ) : null}
 
+      {/* Shop hours are a RETAILER concept; a farmer's availability is the
+          per-listing cutoff instead. */}
+      {user.seller_type === 'Retailer' ? <ShopHoursCard /> : null}
       <FarmLocationCard />
       <BankDetailsCard />
       <ChangePasswordCard />

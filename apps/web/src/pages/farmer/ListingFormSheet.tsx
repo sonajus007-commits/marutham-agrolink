@@ -3,11 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Button, Field, Input, Select, Sheet, FIELD_ERR_CLASS } from '@marutham/ui';
 import { api, type ListingPayload } from '@marutham/api-client';
 import {
-  CUTOFF_OPTIONS,
-  DEFAULT_CUTOFF,
   MAX_BULK_DISC_PCT,
+  cutoffSlots,
   cutoffTimestamp,
-  cutoffLabel,
+  type CutoffSlot,
   listingProblemKey,
   projectBulkPrice,
   projectConsumerPrice,
@@ -27,7 +26,10 @@ function draftFrom(l: FarmerListing): ListingDraft {
     product_id: l.product?.id || l.product_id,
     farmer_price: listingPriceRs(l) || '',
     qty_available: l.qty_available ?? '',
-    time_available: l.time_available || DEFAULT_CUTOFF,
+    /* Deliberately NOT defaulted: the cutoff is mandatory and the valid choices
+       depend on the time of day, so the sheet seeds it from the live window once
+       it opens (keeping the saved one only if it is still on offer). */
+    time_available: l.time_available || '',
     bulk_qty: l.bulk_qty ?? '',
     bulk_disc_pct: l.bulk_disc_pct ?? '',
     qty_type: l.qty_type ?? '',
@@ -61,11 +63,10 @@ export function ListingFormSheet({
   const { t } = useTranslation();
   const toast = useToast();
 
-  /* "8 PM (previous evening)" is a time plus a qualifier; only the qualifier is
-   * words. Composing here keeps fifteen copies of a clock time out of the
-   * resource file. */
-  const cutoffText = (o: (typeof CUTOFF_OPTIONS)[number]) =>
-    o.note ? `${o.time} (${t(`farmer.cutoff.${o.note}`)})` : o.time;
+  /* The choosable cutoffs, generated in IST from the moment the sheet opened.
+   * Held in state rather than recomputed each render so the list cannot shift
+   * under the seller mid-edit (it would, on the hour). */
+  const [slots, setSlots] = useState<CutoffSlot[]>(() => cutoffSlots());
   const [draft, setDraft] = useState<ListingDraft>(() => draftFrom(listing));
   const [images, setImages] = useState<string[]>(listing.images || []);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +74,15 @@ export function ListingFormSheet({
 
   useEffect(() => {
     if (!open) return;
-    setDraft(draftFrom(listing));
+    const fresh = cutoffSlots();
+    setSlots(fresh);
+    const d = draftFrom(listing);
+    /* A saved cutoff survives only while it is still on offer. Once it has passed
+       — the usual case for a listing being re-listed the next day — it is cleared
+       so the seller has to choose from the live window, rather than saving a time
+       that already went by. */
+    if (!fresh.some((sl) => sl.value === d.time_available)) d.time_available = '';
+    setDraft(d);
     setImages(listing.images || []);
     setError(null);
   }, [open, listing]);
@@ -218,7 +227,10 @@ export function ListingFormSheet({
       <Field
         label={t('farmer.form.cutoff', 'Stop taking orders at')}
         required
-        hint={t('farmer.form.cutoffHint', 'Orders close at this time; you re-list the next day.')}
+        hint={t(
+          'farmer.form.cutoffHint',
+          'Orders close at this time. Choose any hour from now until 8 AM (IST).',
+        )}
       >
         {(p) => (
           <Select
@@ -226,29 +238,31 @@ export function ListingFormSheet({
             value={draft.time_available}
             onChange={(e) => set('time_available', e.target.value)}
           >
-            {/* The group string is a VALUE the options are filtered by — only its
+            {/* Mandatory, and never pre-answered: the seller states their own
+                selling window rather than inheriting a default they did not read. */}
+            <option value="">{t('farmer.cutoff.choose', '— Select a time —')}</option>
+            {/* The day string is a VALUE the options are filtered by — only its
                 heading is translated. */}
-            {(['Previous Evening', 'Current Day'] as const).map((group) => (
-              <optgroup
-                key={group}
-                label={
-                  group === 'Previous Evening'
-                    ? t('farmer.cutoff.groupPrev', 'Previous Evening')
-                    : t('farmer.cutoff.groupToday', 'Current Day')
-                }
-              >
-                {CUTOFF_OPTIONS.filter((o) => o.group === group).map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {cutoffText(o)}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-            {/* A value stored before the option list changed must not be silently
-                rewritten to the first option when the seller opens the form. */}
-            {CUTOFF_OPTIONS.some((o) => o.value === draft.time_available) ? null : (
-              <option value={draft.time_available}>{cutoffLabel(draft.time_available)}</option>
-            )}
+            {(['today', 'tomorrow'] as const).map((day) => {
+              const inDay = slots.filter((sl) => sl.day === day);
+              if (!inDay.length) return null;
+              return (
+                <optgroup
+                  key={day}
+                  label={
+                    day === 'today'
+                      ? t('farmer.cutoff.groupToday', 'Today')
+                      : t('farmer.cutoff.groupTomorrow', 'Tomorrow')
+                  }
+                >
+                  {inDay.map((sl) => (
+                    <option key={sl.value} value={sl.value}>
+                      {sl.time}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
           </Select>
         )}
       </Field>

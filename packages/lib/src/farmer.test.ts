@@ -16,7 +16,11 @@ import {
   parseCutoffHour,
   cutoffLabel,
   DEFAULT_CUTOFF,
-  CUTOFF_OPTIONS,
+  cutoffSlots,
+  validateShopHours,
+  shopHourOptions,
+  shopHoursLabel,
+  formatHour12,
   MAX_BULK_DISC_PCT,
   SUBSCRIPTION_WARN_DAYS,
   type ListingDraft,
@@ -156,44 +160,128 @@ describe('parseCutoffHour — values in the database, not a lookup table', () =>
   });
 });
 
+/* The window is anchored to IST, so every `now` here is written as the UTC instant
+ * that corresponds to a known IST wall-clock time. 4:30 PM IST = 11:00 UTC. */
+const istNow = (h: number, min = 0) => new Date(Date.UTC(2026, 6, 9, h, min) - 330 * 60_000);
+
+/** The IST hour an ISO instant falls on. */
+const istHourOf = (iso: string) => new Date(new Date(iso).getTime() + 330 * 60_000).getUTCHours();
+
+describe('cutoffSlots — the rolling window', () => {
+  it('starts at the NEXT whole hour, never one already passing', () => {
+    const s = cutoffSlots(istNow(16, 30)); // 4:30 PM IST
+    expect(s[0].value).toBe('5 PM');
+  });
+
+  it('runs through to 8 AM and stops there', () => {
+    const s = cutoffSlots(istNow(16, 30));
+    expect(s.at(-1)!.value).toBe('8 AM');
+    expect(s.map((x) => x.value)).not.toContain('9 AM');
+  });
+
+  it('offers a full day of slots when the morning cutoff has just gone', () => {
+    const s = cutoffSlots(istNow(10, 0)); // 10 AM — past today's 8 AM
+    expect(s[0].value).toBe('11 AM');
+    expect(s.at(-1)!.value).toBe('8 AM');
+    expect(s.at(-1)!.day).toBe('tomorrow');
+  });
+
+  it('leaves exactly one slot in the last hour before the cycle closes', () => {
+    const s = cutoffSlots(istNow(7, 10));
+    expect(s).toHaveLength(1);
+    expect(s[0].value).toBe('8 AM');
+    expect(s[0].day).toBe('today');
+  });
+
+  it('never offers a slot in the past', () => {
+    for (const h of [0, 5, 7, 8, 12, 16, 20, 23]) {
+      const now = istNow(h, 30);
+      for (const slot of cutoffSlots(now)) {
+        expect(new Date(slot.ts).getTime()).toBeGreaterThan(now.getTime());
+      }
+    }
+  });
+
+  it('marks slots past midnight as tomorrow', () => {
+    const s = cutoffSlots(istNow(22, 0)); // 10 PM
+    expect(s.find((x) => x.value === '11 PM')!.day).toBe('today');
+    expect(s.find((x) => x.value === '1 AM')!.day).toBe('tomorrow');
+  });
+
+  /* The whole point of the rewrite: the device is not consulted. Two machines in
+   * different zones at the same INSTANT must produce identical slots. */
+  it('is identical regardless of the device timezone', () => {
+    const instant = istNow(16, 30);
+    const a = cutoffSlots(instant);
+    const b = cutoffSlots(new Date(instant.getTime()));
+    expect(a.map((x) => x.value + x.ts)).toEqual(b.map((x) => x.value + x.ts));
+    expect(a[0].value).toBe('5 PM');
+    expect(istHourOf(a[0].ts)).toBe(17); // 5 PM IST, whatever the host zone is
+  });
+
+  it('walks across a month end without a gap', () => {
+    const endOfMonth = new Date(Date.UTC(2026, 6, 31, 22, 0) - 330 * 60_000); // 31 Jul, 10 PM IST
+    const s = cutoffSlots(endOfMonth);
+    expect(s[0].value).toBe('11 PM');
+    expect(s.at(-1)!.value).toBe('8 AM');
+    // consecutive, one hour apart, no duplicates
+    for (let i = 1; i < s.length; i++) {
+      expect(new Date(s[i].ts).getTime() - new Date(s[i - 1].ts).getTime()).toBe(3_600_000);
+    }
+  });
+});
+
 describe('cutoffTimestamp', () => {
-  const at = (iso: string) => new Date(iso);
-
-  it('resolves to the next occurrence of that hour', () => {
-    const d = new Date(cutoffTimestamp('8 PM', at('2026-07-09T10:00:00'))!);
-    expect(d.getHours()).toBe(20);
-    expect(d.getDate()).toBe(9);
+  it('resolves a chosen slot to its exact IST instant', () => {
+    const ts = cutoffTimestamp('5 PM', istNow(16, 30))!;
+    expect(istHourOf(ts)).toBe(17);
   });
 
-  it('rolls to tomorrow when the hour has already passed', () => {
-    expect(new Date(cutoffTimestamp('8 AM', at('2026-07-09T10:00:00'))!).getDate()).toBe(10);
+  it('refuses a time that is no longer on offer rather than booking the past', () => {
+    // Noon at half four in the afternoon: already gone, and the window ends at
+    // 8 AM, so it does not come round again. (6 AM WOULD resolve — the window
+    // runs overnight, so 6 AM tomorrow morning is still ahead.)
+    expect(cutoffTimestamp('12 PM', istNow(16, 30))).toBeNull();
+    expect(cutoffTimestamp('6 AM', istNow(16, 30))).not.toBeNull();
   });
 
-  it('rolls over at exactly the cutoff hour, never landing in the past', () => {
-    const now = at('2026-07-09T08:00:00');
-    expect(new Date(cutoffTimestamp('8 AM', now)!).getTime()).toBeGreaterThan(now.getTime());
+  it('refuses a legacy value whose meaning no longer exists', () => {
+    expect(cutoffTimestamp('8 PM (today)', istNow(16, 30))).not.toBeNull(); // hour still parses
+    expect(cutoffTimestamp('8 PM', istNow(21, 0))).toBeNull(); // 8 PM already gone
   });
 
   it('returns null for an unreadable value', () => {
     expect(cutoffTimestamp('whenever')).toBeNull();
   });
 
-  it('every offered option resolves', () => {
-    CUTOFF_OPTIONS.forEach((o) => expect(cutoffTimestamp(o.value)).not.toBeNull());
+  it('every offered slot resolves to its own timestamp', () => {
+    const now = istNow(16, 30);
+    for (const slot of cutoffSlots(now)) {
+      expect(cutoffTimestamp(slot.value, now)).toBe(slot.ts);
+    }
   });
 
-  it('the default is one of the options', () => {
-    expect(CUTOFF_OPTIONS.some((o) => o.value === DEFAULT_CUTOFF)).toBe(true);
+  it('the default is always available — it is the slot the window ends on', () => {
+    for (const h of [0, 7, 8, 9, 16, 23]) {
+      const now = istNow(h, 30);
+      expect(cutoffSlots(now).some((s) => s.value === DEFAULT_CUTOFF)).toBe(true);
+      expect(cutoffTimestamp(DEFAULT_CUTOFF, now)).not.toBeNull();
+    }
   });
 });
 
 describe('cutoffLabel', () => {
-  it('maps a stored value to what the seller reads', () => {
-    expect(cutoffLabel('8 PM')).toBe('8 PM (previous evening)');
-    expect(cutoffLabel('8 PM (today)')).toBe('8 PM (current day)');
-  });
-  it('falls back to the raw value for anything unknown', () => {
+  /* Slots are now plain clock times, so the stored value already IS the label.
+   * The old "(previous evening)" / "(current day)" qualifiers existed only to
+   * disambiguate a fixed list that straddled two days; a rolling window that
+   * spans at most 24 hours contains each hour exactly once, so nothing is
+   * ambiguous and there is nothing left to decorate. */
+  it('reads back a stored value unchanged', () => {
+    expect(cutoffLabel('8 PM')).toBe('8 PM');
     expect(cutoffLabel('3 AM')).toBe('3 AM');
+  });
+  it('shows a legacy value as-stored rather than inventing a new meaning', () => {
+    expect(cutoffLabel('8 PM (today)')).toBe('8 PM (today)');
   });
 });
 
@@ -579,5 +667,54 @@ describe('farmerWeeklyEarnings — the earnings trend', () => {
       NOW,
     );
     expect(rows[rows.length - 1].amount).toBe(250);
+  });
+});
+
+describe('validateShopHours — the retailer trading band', () => {
+  it('accepts a window inside 8 AM – 8 PM', () => {
+    expect(validateShopHours(9, 19)).toBeNull();
+    expect(validateShopHours(8, 20)).toBeNull(); // both ends inclusive
+  });
+
+  // Not-yet-chosen is a PROBLEM, not an empty success: a retailer must state
+  // their hours before they can trade.
+  it('treats unset hours as required, not as valid', () => {
+    expect(validateShopHours(null, null)).toBe('required');
+    expect(validateShopHours(9, null)).toBe('required');
+    expect(validateShopHours(undefined, 19)).toBe('required');
+  });
+
+  it('rejects anything outside the band', () => {
+    expect(validateShopHours(7, 19)).toBe('band');
+    expect(validateShopHours(9, 21)).toBe('band');
+    expect(validateShopHours(9.5, 19)).toBe('band');
+  });
+
+  it('rejects an inverted or empty window', () => {
+    expect(validateShopHours(19, 9)).toBe('order');
+    expect(validateShopHours(9, 9)).toBe('order'); // opens and shuts at once = shut
+  });
+});
+
+describe('shopHourOptions / shopHoursLabel', () => {
+  it('offers every hour across the band inclusive', () => {
+    const o = shopHourOptions();
+    expect(o).toHaveLength(13); // 8..20
+    expect(o[0].label).toBe('8 AM');
+    expect(o.at(-1)!.label).toBe('8 PM');
+  });
+
+  it('reads back a window, or nothing when unset', () => {
+    expect(shopHoursLabel(9, 19)).toBe('9 AM – 7 PM');
+    expect(shopHoursLabel(null, null)).toBeNull();
+  });
+});
+
+describe('formatHour12', () => {
+  it('names the awkward hours the way a clock does', () => {
+    expect(formatHour12(0)).toBe('12 AM');
+    expect(formatHour12(12)).toBe('12 PM');
+    expect(formatHour12(13)).toBe('1 PM');
+    expect(formatHour12(23)).toBe('11 PM');
   });
 });
