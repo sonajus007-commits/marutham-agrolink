@@ -36,7 +36,10 @@ export function VerifySheet({
     setAgentId('');
     setBusy(false); // the sheet stays mounted between orders — a finished verify
     // would otherwise leave the next order's button stuck on "Verifying…"
-    Promise.all([api.getOrder(orderId), api.getEligibleAgents(orderId, 'collection')])
+    // 'delivery' leg: the agent list is matched against the CONSUMER's delivery
+    // village, because on a direct order this is the person who runs the parcel to
+    // the door. Agents opt into villages via service_villages in their own profile.
+    Promise.all([api.getOrder(orderId), api.getEligibleAgents(orderId, 'delivery')])
       .then(([ord, elig]) => {
         if (!active) return;
         setOrder(ord.order);
@@ -77,7 +80,10 @@ export function VerifySheet({
       // discarding the route and agent they chose.
       await api.verifyOrderOffline(orderId, stage, {
         route,
-        agent_id: agentId || undefined,
+        // Never send an agent on a hub order: the picker is hidden for hub, but
+        // agentId is auto-seeded from the village match on load, so switching the
+        // toggle to hub would otherwise silently submit a stale pre-selection.
+        agent_id: route === 'hub' ? undefined : agentId || undefined,
         coords,
       });
       /* Our own wording, not res.message: the server's is English prose composed
@@ -151,68 +157,99 @@ export function VerifySheet({
             </button>
           </div>
 
-          <div
-            style={{ fontSize: 12, fontWeight: 700, color: 'var(--forest)', margin: '6px 0 8px' }}
-          >
-            {t('agent.verify.collectionAgent', 'Collection agent')}
-          </div>
-          {matched.length ? (
+          {/* A hub order gets its agent from the Hub Incharge once it has ARRIVED —
+              until then nobody knows who will run the last mile, so asking the VCO
+              to guess now would only produce an assignment the hub has to redo. */}
+          {route === 'hub' ? (
             <div
               style={{
                 fontSize: 11,
-                color: 'var(--success-fg)',
-                background: 'var(--success-bg)',
-                border: '1px solid var(--border-subtle)',
+                color: 'var(--gray)',
+                background: 'var(--surface-muted)',
                 borderRadius: 8,
-                padding: '8px 10px',
-                marginBottom: 8,
+                padding: '10px 12px',
+                margin: '6px 0 14px',
               }}
             >
-              ✓ {t('agent.verify.matched', { count: matched.length })}
+              {t(
+                'agent.verify.hubAgentNote',
+                'This order travels to the hub first. The Hub Incharge assigns the delivery agent when it arrives.',
+              )}
             </div>
           ) : (
-            <div
-              style={{
-                fontSize: 11,
-                color: 'var(--warning-fg)',
-                background: 'var(--warning-bg)',
-                border: '1px solid var(--gold2)',
-                borderRadius: 8,
-                padding: '8px 10px',
-                marginBottom: 8,
-              }}
-            >
-              {t('agent.verify.noMatch', 'No agent is tagged to this village. Pick one manually.')}
-            </div>
+            <>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: 'var(--forest)',
+                  margin: '6px 0 8px',
+                }}
+              >
+                {t('agent.verify.deliveryAgent', 'Delivery agent')}
+              </div>
+              {matched.length ? (
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--success-fg)',
+                    background: 'var(--success-bg)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 8,
+                    padding: '8px 10px',
+                    marginBottom: 8,
+                  }}
+                >
+                  ✓ {t('agent.verify.matched', { count: matched.length })}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--warning-fg)',
+                    background: 'var(--warning-bg)',
+                    border: '1px solid var(--gold2)',
+                    borderRadius: 8,
+                    padding: '8px 10px',
+                    marginBottom: 8,
+                  }}
+                >
+                  {t(
+                    'agent.verify.noMatch',
+                    'No agent is tagged to this village. Pick one manually.',
+                  )}
+                </div>
+              )}
+              <select
+                className="a-select"
+                value={agentId}
+                onChange={(e) => setAgentId(e.target.value)}
+                aria-label={t('agent.verify.deliveryAgent', 'Delivery agent')}
+              >
+                <option value="">— {t('agent.verify.assignLater', 'Assign later')} —</option>
+                {matched.length ? (
+                  <optgroup label={t('agent.verify.covers', 'Covers this village')}>
+                    {matched.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                        {a.vehicle ? ` · ${a.vehicle}` : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+                {others.length ? (
+                  <optgroup label={t('agent.verify.others', 'Other agents in district')}>
+                    {others.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                        {a.vehicle ? ` · ${a.vehicle}` : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+              </select>
+            </>
           )}
-          <select
-            className="a-select"
-            value={agentId}
-            onChange={(e) => setAgentId(e.target.value)}
-            aria-label={t('agent.verify.collectionAgent', 'Collection agent')}
-          >
-            <option value="">— {t('agent.verify.assignLater', 'Assign later')} —</option>
-            {matched.length ? (
-              <optgroup label={t('agent.verify.covers', 'Covers this village')}>
-                {matched.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                    {a.vehicle ? ` · ${a.vehicle}` : ''}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-            {others.length ? (
-              <optgroup label={t('agent.verify.others', 'Other agents in district')}>
-                {others.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                    {a.vehicle ? ` · ${a.vehicle}` : ''}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-          </select>
 
           <button
             className="confirm-btn"

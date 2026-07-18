@@ -25,17 +25,26 @@ const STAGE_MAP = {
     'Out for Delivery', // 4
     'Delivered',        // 5
   ],
+  // The hub lane collects the parcel to the hub FIRST and only names a last-mile
+  // agent once it has arrived, so 'Picked Up' sits AFTER 'At Hub' here — it is the
+  // delivery agent taking custody at the hub, not the collection from the village.
+  // That is why stage integers are not comparable across routes (see PATCH /route).
   hub: [
     'Order Placed',     // 0
     'Packaged',         // 1
     'VCO Verified',     // 2
-    'Picked Up',        // 3
-    'In Transit',       // 4
-    'At Hub',           // 5
+    'In Transit',       // 3
+    'At Hub',           // 4
+    'Picked Up',        // 5
     'Out for Delivery', // 6
     'Delivered',        // 7
   ],
 };
+
+// Who may do what. A Delivery Agent and a VCO are NOT hub staff.
+const SENIOR_ADMIN_ROLES = ['Head Office', 'State Head', 'Regional Manager', 'District Manager'];
+const isSeniorAdmin = (r) => SENIOR_ADMIN_ROLES.includes(r);
+const isHubStaff = (r) => r === 'Hub Incharge' || isSeniorAdmin(r);
 
 // Before route is decided, use direct as the reference for stages 0-3
 function resolveRoute(order) {
@@ -282,14 +291,20 @@ router.post('/:id/scan', async (req, res) => {
   if (coords.error) return res.status(400).json({ error: coords.error });
 
   const adminRole = u.admin_role;
-  const { stage } = order;
+  const isAgent = adminRole === 'Delivery Agent';
+  // Branches key off the STATUS, not the stage index. The two routes no longer
+  // agree on what a given stage number means ('Picked Up' is 3 on direct and 5 on
+  // hub), so a stage-number branch would fire on the wrong transition.
+  const status = order.status;
   let result;
 
   // VCO scans a Packaged order → VCO Verified.
-  // At verification the VCO also chooses the route (direct / hub) and, optionally,
-  // assigns the collection Delivery Agent (auto-matched by village, manual fallback).
-  if ((adminRole === 'VCO' || u.role === 'admin') && stage === 1) {
-    if (adminRole !== 'VCO' && adminRole !== 'Head Office' && adminRole !== 'State Head' && adminRole !== 'Regional Manager' && adminRole !== 'District Manager') {
+  // At verification the VCO chooses the route (direct / hub). On a DIRECT order they
+  // also name the delivery agent — auto-matched against the consumer's delivery
+  // village. A hub order gets its agent later, from the Hub Incharge, because until
+  // the parcel reaches the hub nobody knows who will run the last mile.
+  if (status === 'Packaged') {
+    if (adminRole !== 'VCO' && !isSeniorAdmin(adminRole)) {
       // Delivery Agents should not do VCO verify
       return res.status(403).json({ error: 'Only VCO or senior admins can verify packaged orders.' });
     }
@@ -348,78 +363,70 @@ router.post('/:id/scan', async (req, res) => {
       if (histErr) console.error(`Order ${order.id}: agent-assigned history entry failed:`, histErr.message);
     }
 
-  // Delivery Agent (or admin) scans VCO Verified → Picked Up.
-  // Preserve the VCO-chosen route and any pre-assigned agent.
-  } else if (stage === 2) {
+  // A verified order leaves the village. Where it goes next is the VCO's route
+  // choice: DIRECT hands it to the assigned agent (→ Picked Up), HUB starts the
+  // line-haul to the hub (→ In Transit). Either way the stage map does the work —
+  // both land on index 3, they just spell it differently.
+  } else if (status === 'VCO Verified') {
     const keepRoute = order.route || 'direct';
-    result = await advanceStage(order, `Agent ${req.user.fname}`, {
-      agent_id:     order.agent_id   || u.id,
-      agent_name:   order.agent_name || `${u.fname}${u.lname ? ' ' + u.lname : ''}`,
-      agent_phone:  order.agent_phone || u.phone,
+    // A hub-bound parcel is a bulk movement; no individual agent takes custody of it
+    // until the hub assigns one, so it must not inherit the scanner as its agent.
+    const claimAgent = keepRoute === 'hub' ? {} : {
+      agent_id:      order.agent_id    || u.id,
+      agent_name:    order.agent_name  || `${u.fname}${u.lname ? ' ' + u.lname : ''}`,
+      agent_phone:   order.agent_phone || u.phone,
       agent_vehicle: order.agent_vehicle || u.agent_vehicle || null,
-      route:        keepRoute,
-      route_auto:   order.route_auto || keepRoute,
+    };
+    result = await advanceStage(order, `Agent ${req.user.fname}`, {
+      ...claimAgent,
+      route:      keepRoute,
+      route_auto: order.route_auto || keepRoute,
     });
 
-  // Hub dispatch: an order At Hub (hub route, stage 5) → Out for Delivery.
-  // The Hub Incharge assigns the last-mile Delivery Agent (auto-matched to the
-  // consumer's delivery village, manual fallback) before dispatching.
-  } else if (order.route === 'hub' && stage === 5) {
-    const isHubStaff = adminRole === 'Hub Incharge' || adminRole === 'Head Office'
-      || adminRole === 'State Head' || adminRole === 'Regional Manager' || adminRole === 'District Manager';
-    if (!isHubStaff) {
-      return res.status(403).json({ error: 'Only the Hub Incharge or senior admins can dispatch from the hub.' });
+  // Hub check-in: In Transit → At Hub. The Hub Incharge ACCEPTING the parcel into
+  // the hub is a custody event, so it is theirs alone — a delivery agent must not be
+  // able to book a parcel into a hub they are not standing in.
+  } else if (status === 'In Transit') {
+    if (!isHubStaff(adminRole)) {
+      return res.status(403).json({ error: 'Only the Hub Incharge or senior admins can receive orders at the hub.' });
+    }
+    result = await advanceStage(order, `Hub ${req.user.fname}`);
+
+  // Last-mile pickup: At Hub → Picked Up. The Hub Incharge has already named the
+  // agent via POST /assign (which does not move the status); this is that agent
+  // taking physical custody. An unassigned parcel is claimed by whoever scans it,
+  // matching the direct lane's behaviour.
+  } else if (status === 'At Hub') {
+    if (!isAgent && !isHubStaff(adminRole)) {
+      return res.status(403).json({ error: 'Only the assigned Delivery Agent or hub staff can pick up from the hub.' });
+    }
+    // Guard the assignment: once a hub names an agent, another agent walking past
+    // must not be able to take the parcel off them.
+    if (isAgent && order.agent_id && order.agent_id !== u.id) {
+      return res.status(403).json({ error: 'This order is assigned to another Delivery Agent.' });
     }
 
-    const { agent_id } = req.body;
-    const extra = {};
-
-    // Where the hub dispatched from. This branch only ever produces 'Out for
-    // Delivery', so it is stored unconditionally (like the VCO verify branch).
+    const extra = {
+      agent_id:      order.agent_id    || u.id,
+      agent_name:    order.agent_name  || `${u.fname}${u.lname ? ' ' + u.lname : ''}`,
+      agent_phone:   order.agent_phone || u.phone,
+      agent_vehicle: order.agent_vehicle || u.agent_vehicle || null,
+    };
+    // Where the parcel left the hub. This branch only ever produces 'Picked Up',
+    // so it is stored unconditionally (like the VCO verify branch).
     if (coords.coords) {
       extra.dispatched_lat = coords.coords.lat;
       extra.dispatched_lng = coords.coords.lng;
     }
+    result = await advanceStage(order, `Agent ${req.user.fname}`, extra);
 
-    let assignedName = null;
-    if (agent_id) {
-      // maybeSingle + a read error check: unread, a database fault made `agent` null
-      // and the caller was told the person they picked "is not a Delivery Agent" —
-      // a wrong answer about someone who is one.
-      const { data: agent, error: agentErr } = await supabase
-        .from('users')
-        .select('id, fname, lname, phone, agent_vehicle, role, admin_role')
-        .eq('id', agent_id)
-        .is('deleted_at', null)          // a removed agent cannot take a delivery
-        .maybeSingle();
-      if (agentErr) {
-        console.error('Delivery agent lookup failed:', agentErr.message);
-        return res.status(500).json({ error: 'Could not look up that agent. Please try again.' });
-      }
-      if (!agent || agent.role !== 'admin' || agent.admin_role !== 'Delivery Agent') {
-        return res.status(400).json({ error: 'Selected user is not a Delivery Agent.' });
-      }
-      assignedName = agent.fname + (agent.lname ? ' ' + agent.lname : '');
-      extra.agent_id      = agent.id;
-      extra.agent_name    = assignedName;
-      extra.agent_phone   = agent.phone;
-      extra.agent_vehicle = agent.agent_vehicle || null;
-    }
+  // The agent confirms the round has started: Picked Up → Out for Delivery.
+  } else if (status === 'Picked Up') {
+    result = await advanceStage(order, `Agent ${req.user.fname}`);
 
-    result = await advanceStage(order, `Hub ${req.user.fname}`, extra);
-
-    if (!result.error && assignedName) {
-      const { error: histErr } = await supabase.from('order_history').insert({
-        order_id: order.id,
-        label:    'Delivery Agent Assigned',
-        note:     `${assignedName} assigned for last-mile by ${req.user.fname} (${req.user.admin_role}).`,
-      });
-      if (histErr) console.error(`Order ${order.id}: last-mile history entry failed:`, histErr.message);
-    }
-
-  // Delivery Agent (or admin) advances an in-progress order. This is the branch that
-  // reaches Delivered, so the proof-of-delivery coordinates ride along here.
-  } else if (stage >= 3) {
+  // Out for Delivery → Delivered. The only branch that reaches Delivered, so the
+  // proof-of-delivery coordinates ride along here.
+  } else if (status === 'Out for Delivery') {
     result = await advanceStage(order, `Agent ${req.user.fname}`, {}, coords.coords);
 
   } else {
@@ -458,13 +465,27 @@ router.patch('/:id/route', async (req, res) => {
     return res.status(400).json({ error: 'Route cannot be changed once the order is out for delivery.' });
   }
 
+  // `stage` is an INDEX INTO THE ROUTE'S OWN MAP, and the two maps disagree about
+  // what a given index means ('Picked Up' is 3 on direct, 5 on hub). Writing `route`
+  // alone would therefore leave the stage pointing at a different status than the one
+  // the order is actually in — silently relabelling it without anything moving. So
+  // re-derive the stage from the CURRENT STATUS in the target map, and refuse when
+  // that status has no counterpart there (an At Hub order cannot become direct).
+  const targetMap = STAGE_MAP[route];
+  const remappedStage = targetMap.indexOf(currentStatus);
+  if (remappedStage === -1) {
+    return res.status(400).json({
+      error: `An order at "${currentStatus}" cannot be switched to the ${route} route.`,
+    });
+  }
+
   // Recalculate ETA: direct = +2h, hub = +4h from now
   const etaHours = route === 'hub' ? 4 : 2;
   const eta_ts = new Date(Date.now() + etaHours * 60 * 60 * 1000).toISOString();
 
   const { data: updated, error } = await supabase
     .from('orders')
-    .update({ route, eta_ts, updated_at: new Date().toISOString() })
+    .update({ route, stage: remappedStage, eta_ts, updated_at: new Date().toISOString() })
     .eq('id', order.id)
     .select()
     .single();

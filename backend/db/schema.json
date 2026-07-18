@@ -26,32 +26,34 @@
     },
     "device_tokens": {
       "columns": {
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
         "id": {
           "type": "uuid",
           "notNull": true,
+          "default": "gen_random_uuid()",
           "primaryKey": true
-        },
-        "user_id": {
-          "type": "uuid",
-          "notNull": true
-        },
-        "token": {
-          "type": "text",
-          "notNull": true
-        },
-        "platform": {
-          "type": "text",
-          "notNull": true
         },
         "last_seen_at": {
           "type": "timestamp with time zone",
           "notNull": true,
           "default": "now()"
         },
-        "created_at": {
-          "type": "timestamp with time zone",
+        "platform": {
+          "type": "text",
+          "notNull": true
+        },
+        "token": {
+          "type": "text",
+          "notNull": true
+        },
+        "user_id": {
+          "type": "uuid",
           "notNull": true,
-          "default": "now()"
+          "references": "users.id"
         }
       }
     },

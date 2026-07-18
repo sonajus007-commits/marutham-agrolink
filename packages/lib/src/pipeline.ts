@@ -1,13 +1,17 @@
 /* Order pipeline state — ported verbatim in logic from frontend/js/dashboard/common.js.
  * Pure computation; the rendering lives in @marutham/ui <OrderPipeline>. */
 
+/* This is the HUB map from backend/routes/delivery.js, verbatim — the longer of the
+ * two routes, so a direct order is the same list with the hub-only nodes skipped.
+ * The relative order still reads correctly for direct: VCO Verified → (skip) →
+ * (skip) → Picked Up → Out for Delivery. Keep it in step with the backend map. */
 export const PIPELINE_STAGES = [
   'Order Placed',
   'Packaged',
   'VCO Verified',
-  'Picked Up',
   'In Transit',
   'At Hub',
+  'Picked Up',
   'Out for Delivery',
   'Delivered',
 ] as const;

@@ -28,6 +28,32 @@ describe('buildPipeline', () => {
     expect(nodes.filter((n) => n.skipped)).toHaveLength(0);
   });
 
+  /* The ORDER is load-bearing and easy to break silently: 'Picked Up' is the agent
+   * collecting from the HUB, so on this route it comes AFTER 'At Hub' — not before
+   * 'In Transit' as it once did. Must stay identical to STAGE_MAP.hub in
+   * backend/routes/delivery.js, or the pipeline draws a journey nobody takes. */
+  it('the hub sequence matches the backend stage map exactly', () => {
+    expect(buildPipeline('hub', 'At Hub').map((n) => n.label)).toEqual([
+      'Order Placed',
+      'Packaged',
+      'VCO Verified',
+      'In Transit',
+      'At Hub',
+      'Picked Up',
+      'Out for Delivery',
+      'Delivered',
+    ]);
+  });
+
+  it('a parcel at the hub has not yet been picked up', () => {
+    const byLabel = Object.fromEntries(
+      buildPipeline('hub', 'At Hub').map((n) => [n.label, n.status]),
+    );
+    expect(byLabel['In Transit']).toBe('done');
+    expect(byLabel['At Hub']).toBe('active');
+    expect(byLabel['Picked Up']).toBe('pending');
+  });
+
   it('a direct route bypasses In Transit and At Hub', () => {
     const nodes = buildPipeline('direct', 'Picked Up');
     expect(nodes.filter((n) => n.skipped).map((n) => n.label)).toEqual(['In Transit', 'At Hub']);

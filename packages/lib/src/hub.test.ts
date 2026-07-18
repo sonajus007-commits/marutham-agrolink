@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  groupHubQueue,
-  canCheckInAtHub,
-  canDispatchFromHub,
-  isHubStaff,
-  HUB_STAFF_ROLES,
-} from './hub';
+import { groupHubQueue, canCheckInAtHub, canAssignAtHub, isHubStaff, HUB_STAFF_ROLES } from './hub';
 import type { Order } from './orders';
 
 const order = (o: Partial<Order>): Order => ({ id: 'o1', status: 'At Hub', route: 'hub', ...o });
@@ -54,7 +48,7 @@ describe('hub queue grouping', () => {
   });
 });
 
-describe('canCheckInAtHub / canDispatchFromHub — mirror the /scan stage rules', () => {
+describe('canCheckInAtHub / canAssignAtHub — mirror the /scan stage rules', () => {
   it('checks in only an In Transit hub order', () => {
     expect(canCheckInAtHub(order({ status: 'In Transit' }))).toBe(true);
     expect(canCheckInAtHub(order({ status: 'At Hub' }))).toBe(false);
@@ -62,10 +56,10 @@ describe('canCheckInAtHub / canDispatchFromHub — mirror the /scan stage rules'
   });
 
   it('dispatches only an At Hub order (stage 5, hub route — the server insists)', () => {
-    expect(canDispatchFromHub(order({ status: 'At Hub' }))).toBe(true);
-    expect(canDispatchFromHub(order({ status: 'In Transit' }))).toBe(false);
-    expect(canDispatchFromHub(order({ status: 'At Hub', route: 'direct' }))).toBe(false);
-    expect(canDispatchFromHub(order({ status: 'At Hub', cancelled: true }))).toBe(false);
+    expect(canAssignAtHub(order({ status: 'At Hub' }))).toBe(true);
+    expect(canAssignAtHub(order({ status: 'In Transit' }))).toBe(false);
+    expect(canAssignAtHub(order({ status: 'At Hub', route: 'direct' }))).toBe(false);
+    expect(canAssignAtHub(order({ status: 'At Hub', cancelled: true }))).toBe(false);
   });
 });
 

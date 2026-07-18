@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, EmptyState, Modal, Select, Spinner, StatTile } from '@marutham/ui';
-import { api, OfflineQueuedError, type EligibleAgent } from '@marutham/api-client';
+import { api, type EligibleAgent } from '@marutham/api-client';
 import { fmtDate, fmtMoney, groupHubQueue, payMethodKey, type Order } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
-import { getCurrentPosition } from '../../native/geolocation';
 
 /* Hub Incharge queue — the last section the legacy console still owned.
  *
- * A hub-routed order meets the hub twice: it ARRIVES (In Transit → At Hub, a
- * plain scan) and it LEAVES (At Hub → Out for Delivery, which also picks the
- * last-mile agent). Two lists, two buttons — the whole job.
+ * A hub-routed order meets the hub twice. It ARRIVES: the Incharge accepts it
+ * into the hub (In Transit → At Hub), a custody event only hub staff may do. Then
+ * it is HANDED OVER, which is deliberately two acts by two people — the Incharge
+ * NAMES the last-mile agent (POST /assign, no status change) and that agent scans
+ * their own pickup (At Hub → Picked Up) out in the agent app. So the second button
+ * here assigns; it does not advance the order.
  *
  * The list is fetched with ?route=hub and scoped server-side, so a District
  * Manager sees their district's hub and a Hub Incharge sees theirs. Stage rules
@@ -47,7 +49,8 @@ export function HubQueuePage() {
 
   const { arriving, ready } = groupHubQueue(orders);
 
-  /** Check-in is a bare scan: the stage (4 → 5) is what gives it meaning. */
+  /** Accepting a parcel into the hub is a scan; its STATUS (In Transit) is what
+   *  gives it meaning server-side, and the server refuses it for non-hub staff. */
   async function checkIn(order: Order) {
     setBusyId(order.id);
     try {
@@ -117,7 +120,10 @@ export function HubQueuePage() {
                   toneLabel={t('admin.hub.readyToDispatch')}
                   action={
                     <Button block onClick={() => setDispatching(o)}>
-                      🚀 {t('admin.hub.dispatch')}
+                      🛵{' '}
+                      {o.agent_name
+                        ? t('admin.hub.reassign', 'Reassign Agent')
+                        : t('admin.hub.assign', 'Assign Agent')}
                     </Button>
                   }
                 />
@@ -249,30 +255,20 @@ function DispatchModal({
 
   async function confirm() {
     if (!order) return;
-    const stage = order.stage;
-    // The scan asserts the stage it saw, so without one there is nothing safe to
-    // send. The list endpoint selects stage explicitly, so this cannot happen in
-    // practice — but a silent weaker request is worse than saying so.
-    if (typeof stage !== 'number') {
-      toast(t('admin.hub.stageUnknown'), 'er');
+    // Assignment is not a status change, so there is no stage to assert and nothing
+    // a replay could mis-advance — the risk that made the old dispatch call assert
+    // its stage is gone with the dispatch. An agent is required: "assign later"
+    // would leave the parcel with no one able to scan it out of the hub.
+    if (!agentId) {
+      toast(t('admin.hub.agentRequired', 'Pick a delivery agent.'), 'er');
       return;
     }
     setBusy(true);
     try {
-      // Best-effort hub location at dispatch; a declined permission never blocks it.
-      const coords = (await getCurrentPosition()) ?? undefined;
-      // Queued if the hub's link is down. The stage guard earns its keep here: this
-      // same body replayed at stage 6 would miss the hub branch, fall through to the
-      // generic advance, and mark the order Delivered — banking COD cash nobody took.
-      const res = await api.dispatchFromHubOffline(order.id, stage, agentId || undefined, coords);
-      toast(res.message || t('admin.hub.dispatched'), 'ok');
+      const res = await api.assignAgent(order.id, agentId);
+      toast(res.message || t('admin.hub.assigned', 'Delivery agent assigned.'), 'ok');
       onDone();
     } catch (e) {
-      if (e instanceof OfflineQueuedError) {
-        toast(t('admin.hub.queuedOffline'), 'ok');
-        onDone();
-        return;
-      }
       toast(e instanceof Error ? e.message : t('admin.hub.actionFailed'), 'er');
     } finally {
       setBusy(false);
@@ -282,7 +278,7 @@ function DispatchModal({
   return (
     <Modal
       open={!!order}
-      title={`🚀 ${t('admin.hub.dispatchTitle')}`}
+      title={`🛵 ${t('admin.hub.assignTitle', 'Assign Delivery Agent')}`}
       subtitle={order?.code || undefined}
       onClose={onClose}
       footer={
@@ -291,7 +287,7 @@ function DispatchModal({
             {t('admin.hub.cancel')}
           </Button>
           <Button onClick={() => void confirm()} disabled={busy || loading}>
-            {busy ? '…' : `🚀 ${t('admin.hub.dispatch')}`}
+            {busy ? '…' : `🛵 ${t('admin.hub.assign', 'Assign Agent')}`}
           </Button>
         </>
       }
@@ -324,7 +320,7 @@ function DispatchModal({
             {t('admin.hub.agent')}
           </label>
           <Select id="hub-agent" value={agentId} onChange={(e) => setAgentId(e.target.value)}>
-            <option value="">{t('admin.hub.assignLater')}</option>
+            <option value="">— {t('admin.hub.pickAgent', 'Select an agent')} —</option>
             {matched.length ? (
               <optgroup label={t('admin.hub.covers', { village: village || '' })}>
                 {matched.map((a) => (

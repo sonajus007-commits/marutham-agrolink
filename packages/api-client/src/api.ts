@@ -234,18 +234,13 @@ export const api = {
     const { coords, route, agent_id } = data || {};
     return queuedScan(id, fromStage, { route, agentId: agent_id, coords });
   },
-  /* Hub dispatch: At Hub → Out for Delivery, assigning the last-mile agent.
-   * Same /scan endpoint as every other advance — the stage decides what it means
-   * (backend/routes/delivery.js). `agentId` is optional: "Assign later" is a
-   * real choice the server accepts. `coords` is the hub's location at dispatch
-   * (stored as dispatched_lat/lng). */
-  dispatchFromHubOffline(
-    id: string,
-    fromStage: number,
-    agentId?: string,
-    coords?: { lat: number; lng: number },
-  ): Promise<ScanResponse> {
-    return queuedScan(id, fromStage, { agentId, coords });
+  /* Name the last-mile Delivery Agent on an order sitting At Hub.
+   * NOT a scan and NOT a status change — POST /assign only writes the agent
+   * fields. The parcel moves when that agent scans it themselves (At Hub →
+   * Picked Up), so the hub records the handover and the agent confirms it.
+   * Online-only: a hub has signal, and there is no stage to assert. */
+  assignAgent(id: string, agentId: string): Promise<{ message?: string }> {
+    return apiFetch('POST', '/orders/' + id + '/assign', { agent_id: agentId });
   },
   /** Proof-of-delivery scan, offline-capable: the agent is at a doorstep, which is
    *  exactly where signal dies. `coords` is the delivery fix (geofenced server-side). */

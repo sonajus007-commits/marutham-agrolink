@@ -168,20 +168,6 @@ describe('queued scans', () => {
     expect(bodies(sent)[0]).toEqual({ route: 'hub', agent_id: 'a9', from_stage: 1 });
   });
 
-  it('carries the hub’s last-mile agent into the parked write', async () => {
-    setOnline(false);
-    await expect(api.dispatchFromHubOffline('o1', 5, 'a9')).rejects.toBeInstanceOf(
-      OfflineQueuedError,
-    );
-
-    const sent: QueuedRequest[] = [];
-    await flushQueue(async (e) => {
-      sent.push(e);
-      return 200;
-    });
-    expect(bodies(sent)[0]).toEqual({ agent_id: 'a9', from_stage: 5 });
-  });
-
   it('collapses a double-tap at the same stage into one write', async () => {
     setOnline(false);
     await expect(api.deliverOffline('o1', 4)).rejects.toBeInstanceOf(OfflineQueuedError);

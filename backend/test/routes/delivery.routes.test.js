@@ -171,41 +171,103 @@ test('VCO verify without a location still succeeds and stores no coordinates', a
   assert.ok(!('verified_lat' in update), 'no lat when none was sent');
 });
 
-// ── Hub dispatch location ───────────────────────────────────────────────────────
-// Dispatching an At-Hub order (hub route, stage 5 → Out for Delivery) stamps the
-// hub's location.
+// ── The hub lane ────────────────────────────────────────────────────────────────
+// The hub map is  … VCO Verified(2) → In Transit(3) → At Hub(4) → Picked Up(5) →
+// Out for Delivery(6) → Delivered(7). Note 'Picked Up' sits AFTER 'At Hub' here and
+// at 3 on the direct map, so stage NUMBERS are not comparable across routes — the
+// scan branches key off the status for exactly that reason.
 const HUB = { id: 'h1', role: 'admin', admin_role: 'Hub Incharge', fname: 'Hub' };
 
-function atHub() {
-  return { id: 'o1', code: 'ORD1', stage: 5, status: 'At Hub', route: 'hub', cancelled: false, pay_method: 'UPI' };
+function inTransit() {
+  return { id: 'o1', code: 'ORD1', stage: 3, status: 'In Transit', route: 'hub', cancelled: false, pay_method: 'UPI' };
 }
 
-test('hub dispatch stores the hub location as dispatched_lat/lng', async () => {
-  const db = fakeSupabase({
-    'orders:select': { data: [atHub()] },
-    'orders:update': { data: { id: 'o1', status: 'Out for Delivery' } },
-  });
-  app = await mountRoute('delivery', { supabase: db, user: HUB });
-  const res = await app.post('/o1/scan', { lat: 10.5, lng: 78.8 });
+function atHub(extra = {}) {
+  return { id: 'o1', code: 'ORD1', stage: 4, status: 'At Hub', route: 'hub', cancelled: false, pay_method: 'UPI', ...extra };
+}
 
-  assert.equal(res.status, 200);
-  const update = db.callsTo('orders', 'update')[0].payload;
-  assert.equal(update.status, 'Out for Delivery');
-  assert.equal(update.dispatched_lat, 10.5);
-  assert.equal(update.dispatched_lng, 78.8);
-});
-
-test('hub dispatch without a location still succeeds and stores no coordinates', async () => {
+test('the Hub Incharge accepts an In Transit order into the hub', async () => {
   const db = fakeSupabase({
-    'orders:select': { data: [atHub()] },
-    'orders:update': { data: { id: 'o1', status: 'Out for Delivery' } },
+    'orders:select': { data: [inTransit()] },
+    'orders:update': { data: { id: 'o1', status: 'At Hub' } },
   });
   app = await mountRoute('delivery', { supabase: db, user: HUB });
   const res = await app.post('/o1/scan', {});
 
   assert.equal(res.status, 200);
+  assert.equal(db.callsTo('orders', 'update')[0].payload.status, 'At Hub');
+});
+
+// Accepting a parcel into a hub is a custody claim. An agent must not be able to
+// book an order into a hub they are not standing in.
+test('a Delivery Agent cannot accept an order into the hub', async () => {
+  const db = fakeSupabase({ 'orders:select': { data: [inTransit()] } });
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', {});
+
+  assert.equal(res.status, 403);
+  assert.match(res.body.error, /Hub Incharge/);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+test('hub pickup stores the hub location as dispatched_lat/lng', async () => {
+  const db = fakeSupabase({
+    'orders:select': { data: [atHub()] },
+    'orders:update': { data: { id: 'o1', status: 'Picked Up' } },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', { lat: 10.5, lng: 78.8 });
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.equal(update.status, 'Picked Up');
+  assert.equal(update.dispatched_lat, 10.5);
+  assert.equal(update.dispatched_lng, 78.8);
+});
+
+test('hub pickup without a location still succeeds and stores no coordinates', async () => {
+  const db = fakeSupabase({
+    'orders:select': { data: [atHub()] },
+    'orders:update': { data: { id: 'o1', status: 'Picked Up' } },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', {});
+
+  assert.equal(res.status, 200);
   const update = db.callsTo('orders', 'update')[0].payload;
   assert.ok(!('dispatched_lat' in update), 'no lat when none was sent');
+});
+
+// The Hub Incharge names the agent via POST /assign, which does not move the status.
+// Another agent walking past must not be able to take the parcel off them.
+test('an agent cannot pick up an order assigned to a different agent', async () => {
+  const db = fakeSupabase({ 'orders:select': { data: [atHub({ agent_id: 'someone-else' })] } });
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', {});
+
+  assert.equal(res.status, 403);
+  assert.match(res.body.error, /another Delivery Agent/);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+// A hub-bound parcel is a bulk movement to the hub; the last mile is assigned later.
+// Claiming the scanner as its agent here would put the wrong name on the order.
+test('a hub-routed order leaving the village does not claim the scanner as its agent', async () => {
+  const verified = {
+    id: 'o1', code: 'ORD1', stage: 2, status: 'VCO Verified', route: 'hub',
+    cancelled: false, pay_method: 'UPI',
+  };
+  const db = fakeSupabase({
+    'orders:select': { data: [verified] },
+    'orders:update': { data: { id: 'o1', status: 'In Transit' } },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', {});
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.equal(update.status, 'In Transit');
+  assert.ok(!('agent_id' in update), 'the hub assigns the agent, not this scan');
 });
 
 // ── from_stage: the guard that makes a DELAYED scan safe ────────────────────────
@@ -253,11 +315,12 @@ test('a non-integer from_stage is rejected as a bad request', async () => {
   assert.equal(db.callsTo('orders', 'update').length, 0);
 });
 
-// THE ONE THAT MATTERS. A hub dispatch (stage 5) replayed after the order reached
-// Out for Delivery (6) misses the hub branch and falls through to `stage >= 3`,
-// which advances 6 → 7 = Delivered — and advanceStage marks a COD order PAID on
-// delivery. That is cash recorded as collected that nobody collected.
-test('a hub dispatch replayed one stage late cannot deliver a COD order', async () => {
+// THE ONE THAT MATTERS. A hub pickup (stage 5) replayed after the order reached
+// Out for Delivery (6) no longer matches the branch it was written for — it lands on
+// the Out-for-Delivery branch, which advances to Delivered, and advanceStage marks a
+// COD order PAID on delivery. That is cash recorded as collected that nobody
+// collected. from_stage is what stops it.
+test('a hub pickup replayed one stage late cannot deliver a COD order', async () => {
   const movedOn = {
     id: 'o1', code: 'ORD1', stage: 6, status: 'Out for Delivery', route: 'hub',
     cancelled: false, pay_method: 'Cash on Delivery',
@@ -510,5 +573,42 @@ test('confirmation is refused before the order is Out for Delivery', async () =>
 
   assert.equal(res.status, 400);
   assert.match(res.body.error, /Cannot confirm receipt yet/);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+// ── PATCH /route — the stage must be re-derived, not left dangling ──────────────
+// `stage` is an index into the ROUTE'S OWN map, and the two maps disagree about what
+// an index means ('Picked Up' is 3 on direct, 5 on hub). Writing `route` alone would
+// leave the stage pointing at a different status than the order is actually in —
+// silently relabelling it without anything having moved.
+
+const SENIOR = { id: 's1', role: 'admin', admin_role: 'District Manager', fname: 'Dm' };
+
+test('switching a Picked Up order to the hub route re-derives its stage', async () => {
+  const pickedUpDirect = {
+    id: 'o1', code: 'ORD1', stage: 3, status: 'Picked Up', route: 'direct',
+    cancelled: false, pay_method: 'UPI',
+  };
+  const db = fakeSupabase({
+    'orders:select': { data: [pickedUpDirect] },
+    'orders:update': { data: { id: 'o1', route: 'hub' } },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: SENIOR });
+  const res = await app.patch('/o1/route', { route: 'hub' });
+
+  assert.equal(res.status, 200);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.equal(update.route, 'hub');
+  // 'Picked Up' is index 5 on the hub map — NOT the 3 it was on direct.
+  assert.equal(update.stage, 5, 'the stage must follow the status into the new map');
+});
+
+test('an At Hub order cannot be switched to the direct route', async () => {
+  const db = fakeSupabase({ 'orders:select': { data: [atHub()] } });
+  app = await mountRoute('delivery', { supabase: db, user: SENIOR });
+  const res = await app.patch('/o1/route', { route: 'direct' });
+
+  assert.equal(res.status, 400);
+  assert.match(res.body.error, /cannot be switched/);
   assert.equal(db.callsTo('orders', 'update').length, 0);
 });
