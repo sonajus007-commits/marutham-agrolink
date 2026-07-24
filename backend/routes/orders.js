@@ -7,6 +7,13 @@ const { validateBody, z } = require('../middleware/validate');
 const { generateOrderCode } = require('../utils/codeGen');
 const { getFeeForSeller } = require('../utils/fees');
 const { payoutByOrder } = require('../utils/payouts');
+const {
+  SPLIT_ROUTE,
+  groupItemsBySeller,
+  sellerTotals,
+  childCode,
+} = require('../utils/orderSplit');
+const { rollupToParent } = require('../utils/orderRollup');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -127,7 +134,11 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
     }
     if (!farmer) return res.status(404).json({ error: `Farmer ${farmer_id} not found.` });
 
-    // Use first item's farmer village as fulfilment village
+    // Fulfilment village for an UNSPLIT (single-seller) order. A multi-seller cart
+    // does not have one — each seller's goods sit in their own village — so it is
+    // split into per-seller child orders below and each child carries its own
+    // location. Taking the first seller's village for the whole order was the bug
+    // that made the second seller's produce invisible to its own VCO.
     if (!fulfilmentVillage) {
       fulfilmentVillage = farmer.village_town;
       fulfilmentDistrict = farmer.district;
@@ -186,6 +197,9 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
       _handling: handling,
       _exotic: !!product.exotic,
       _saved: savedLine,
+      // Where THIS seller's goods are, for the per-seller child order
+      _sellerVillage: farmer.village_town,
+      _sellerDistrict: farmer.district,
     });
   }
 
@@ -229,22 +243,39 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
   // fulfilment `village` above.
   const deliveryVillage = (delivery_address && delivery_address.village_town) || req.user.village_town || null;
 
-  // ── 4. Insert order ───────────────────────────────────────────────────────
+  // ── 4. Insert order — one row, or a parent + one child per seller ─────────
+  // A cart from a single seller stays exactly one row, as it always has. A cart
+  // spanning sellers becomes a parent (what the customer pays for and tracks) plus
+  // a child per seller (what actually travels): each seller's goods are verified by
+  // their OWN village's VCO and routed Direct-or-Hub separately.
+  const sellerGroups = groupItemsBySeller(resolvedItems);
+  const isSplit = sellerGroups.length >= 2;
+
+  const consumerName = `${req.user.fname}${req.user.lname ? ' ' + req.user.lname : ''}`;
+  const payStatus = pay_method === 'Cash on Delivery' ? 'pending' : 'paid';
+
   const { data: order, error: orderErr } = await supabase
     .from('orders')
     .insert({
       code,
       consumer_id:   req.user.id,
-      consumer_name: `${req.user.fname}${req.user.lname ? ' ' + req.user.lname : ''}`,
-      district:      fulfilmentDistrict,
-      village:       fulfilmentVillage,
+      consumer_name: consumerName,
+      // A split parent has no single fulfilment village — its parcels are in
+      // several. It must stay NULL: the VCO queue matches on `village`, so a value
+      // here would put the container in a VCO's list alongside the real parcel.
+      // District still comes from the consumer (the same district the code encodes)
+      // so revenue-by-district keeps bucketing the order.
+      district:      isSplit ? req.user.district : fulfilmentDistrict,
+      village:       isSplit ? null : fulfilmentVillage,
       delivery_village: deliveryVillage,
       item_total, handling, market_fee, delivery, total, saved,
       pay_method,
-      pay_status:    pay_method === 'Cash on Delivery' ? 'pending' : 'paid',
+      pay_status:    payStatus,
       stage:         0,
       status:        'Order Placed',
-      route:         '',
+      // The container's own route, so its `stage` indexes into a map that can hold
+      // any rollup status. Every pipeline mutation refuses a row routed this way.
+      route:         isSplit ? SPLIT_ROUTE : '',
       ...(delivery_address ? { delivery_address } : {}),
     })
     .select()
@@ -255,24 +286,83 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
     return res.status(500).json({ error: 'Could not place order.' });
   }
 
+  /* Undo a half-built order. Deleting the parent cascades to its children (FK is
+   * ON DELETE CASCADE), and their items go with them. If the rollback ITSELF fails
+   * we are left with an order that counts on dashboards and in payouts but has no
+   * contents — there is no second compensating action, so at minimum it must be
+   * loud rather than the silent corruption this used to be. */
+  const rollback = async (what) => {
+    const { error: rollbackErr } = await supabase.from('orders').delete().eq('id', order.id);
+    if (rollbackErr) {
+      console.error(`ORPHANED ORDER ${code} (${order.id}) — ${what} failed AND the rollback ` +
+                    `failed. It must be removed by hand: ${rollbackErr.message}`);
+    }
+  };
+
+  // ── 4b. Child orders, one per seller ──────────────────────────────────────
+  // The charges the customer pays once (delivery, handling, multi-vendor fee) ride
+  // on the FIRST child so that sum(children.total) === parent.total exactly and each
+  // parcel's COD amount is collectable at the door. Everything else on a child is
+  // that seller's own lines.
+  let children = [];
+  if (isSplit) {
+    const childRows = sellerGroups.map((group, idx) => {
+      const seq = idx + 1;
+      const first = seq === 1;
+      const totals = sellerTotals(group.items);
+      return {
+        code:          childCode(code, seq),
+        parent_order_id: order.id,
+        split_seq:     seq,
+        seller_id:     group.seller_id,
+        seller_name:   group.seller_name,
+        consumer_id:   req.user.id,
+        consumer_name: consumerName,
+        district:      group.district,
+        village:       group.village,
+        delivery_village: deliveryVillage,
+        item_total:    totals.item_total,
+        market_fee:    totals.market_fee,
+        saved:         totals.saved,
+        handling:      first ? handling : 0,
+        delivery:      first ? delivery : 0,
+        total:         totals.item_total + (first ? handling + delivery + multiFarmerFee : 0),
+        pay_method,
+        pay_status:    payStatus,
+        stage:         0,
+        status:        'Order Placed',
+        route:         '',
+        ...(delivery_address ? { delivery_address } : {}),
+      };
+    });
+
+    const { data: inserted, error: childErr } = await supabase
+      .from('orders')
+      .insert(childRows)
+      .select();
+
+    if (childErr) {
+      console.error('POST /orders child insert error:', childErr);
+      await rollback('child orders');
+      return res.status(500).json({ error: 'Could not place order.' });
+    }
+    children = inserted;
+  }
+
   // ── 5. Insert order items (strip internal _fields) ────────────────────────
-  const itemRows = resolvedItems.map(({ _lineTotal, _lineFarmerTotal, _handling, _exotic, _saved, ...rest }) => ({
+  // Items belong to the CHILD that will actually carry them, never to the parent:
+  // farmer payouts group order_items by order_id, so a line copied onto the parent
+  // as well would pay its seller twice.
+  const childIdBySeller = new Map(children.map(c => [c.seller_id, c.id]));
+  const itemRows = resolvedItems.map(({ _lineTotal, _lineFarmerTotal, _handling, _exotic, _saved, _sellerVillage, _sellerDistrict, ...rest }) => ({
     ...rest,
-    order_id: order.id,
+    order_id: isSplit ? childIdBySeller.get(rest.farmer_id) : order.id,
   }));
 
   const { error: itemsErr } = await supabase.from('order_items').insert(itemRows);
   if (itemsErr) {
     console.error('POST /orders items insert error:', itemsErr);
-    // Roll back the order. If the ROLLBACK itself fails we have an order row with
-    // no items — an orphan that still counts in payouts and on every dashboard.
-    // There is no second compensating action available, so at minimum it must be
-    // loud: unread, this was a silent corruption.
-    const { error: rollbackErr } = await supabase.from('orders').delete().eq('id', order.id);
-    if (rollbackErr) {
-      console.error(`ORPHANED ORDER ${code} (${order.id}) — items failed AND the rollback failed. ` +
-                    `It has no order_items and must be removed by hand: ${rollbackErr.message}`);
-    }
+    await rollback('items');
     return res.status(500).json({ error: 'Could not save order items.' });
   }
 
@@ -280,11 +370,24 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
   // The order is already committed, so a failure here must NOT fail the request —
   // that would tell the customer their order failed when it did not. Log it; the
   // timeline is missing an entry, the order is fine.
-  const { error: historyErr } = await supabase.from('order_history').insert({
-    order_id: order.id,
-    label:    'Order Placed',
-    note:     `Order ${code} placed by ${order.consumer_name}.`,
-  });
+  // Each child gets its own opening entry: a parcel's timeline has to start
+  // somewhere, and the VCO/agent screens read the child's history, not the parent's.
+  const historyRows = [
+    {
+      order_id: order.id,
+      label:    'Order Placed',
+      note:     isSplit
+        ? `Order ${code} placed by ${consumerName}; split across ${sellerGroups.length} sellers.`
+        : `Order ${code} placed by ${consumerName}.`,
+    },
+    ...children.map(c => ({
+      order_id: c.id,
+      label:    'Order Placed',
+      note:     `Order ${code} placed by ${consumerName} — ${c.seller_name}'s items (${c.code}).`,
+    })),
+  ];
+
+  const { error: historyErr } = await supabase.from('order_history').insert(historyRows);
   if (historyErr) console.error(`Order ${code}: first history entry failed:`, historyErr.message);
 
   // ── 7. Reduce farmer listing quantities ──────────────────────────────────
@@ -333,7 +436,21 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
                   stockFailures.join('; '));
   }
 
-  res.status(201).json({ message: 'Order placed successfully.', order });
+  res.status(201).json({
+    message: 'Order placed successfully.',
+    order,
+    // Present only for a multi-seller order, so a client that has never heard of
+    // splitting sees exactly the response it always got.
+    ...(isSplit
+      ? {
+          parts: children.map(c => ({
+            id: c.id, code: c.code, split_seq: c.split_seq,
+            seller_id: c.seller_id, seller_name: c.seller_name,
+            village: c.village, total: c.total, status: c.status,
+          })),
+        }
+      : {}),
+  });
 });
 
 // ── GET /orders  (role-scoped) ────────────────────────────────────────────────
@@ -355,13 +472,26 @@ router.get('/', async (req, res) => {
    * for this, so no other role pays for the join. */
   const wantsItemCount = u.role === 'consumer';
 
+  /* A split order exists as a parent AND its children, so every list has to say
+   * which of the two it wants or it double-counts:
+   *   • CUSTOMER ORDERS (parents + unsplit) — `parent_order_id is null`. What the
+   *     customer placed and what the business bills. Money is summed over these.
+   *   • PARCELS (children + unsplit) — everything except the containers. What a VCO
+   *     verifies, an agent carries, a hub checks in.
+   * An unsplit order is BOTH, which is what makes the two filters safe to apply to a
+   * database that also holds every order placed before splitting existed. */
+  const customerOrdersOnly = (q) => q.is('parent_order_id', null);
+  const parcelsOnly        = (q) => q.neq('route', SPLIT_ROUTE);
+
   let query = supabase
     .from('orders')
     .select(wantsItemCount ? `${COLUMNS}, order_items(count)` : COLUMNS)
     .order('created_at', { ascending: false });
 
   if (u.role === 'consumer') {
-    query = query.eq('consumer_id', u.id);
+    // The customer tracks the order they placed, not its internal parcels; the
+    // parts hang off GET /orders/:id.
+    query = customerOrdersOnly(query.eq('consumer_id', u.id));
 
   } else if (u.role === 'farmer') {
     // Orders that contain this farmer's produce. The same query gives us what
@@ -390,6 +520,13 @@ router.get('/', async (req, res) => {
   } else if (u.role === 'admin') {
     const role = u.admin_role;
 
+    /* Which of the two views this role works in. Logistics roles handle physical
+     * parcels; management roles read money, and must see one row per customer
+     * order or every split total counts twice. `?parts=1` lets a management role
+     * drop into the parcel view to trace a split order's legs. */
+    const LOGISTICS_ROLES = ['VCO', 'Delivery Agent', 'Hub Incharge'];
+    const wantsParcels = LOGISTICS_ROLES.includes(role) || req.query.parts === '1';
+
     if (role === 'VCO') {
       // Match on the VCO's village. village_town is the canonical field (editable
       // in profile/admin edit); vco_city is a legacy fallback for older records.
@@ -407,6 +544,12 @@ router.get('/', async (req, res) => {
       // Head Office / State Head / Regional Manager — all orders
       if (district) query = query.eq('district', district);
     }
+
+    /* Applied last so it cannot be undone by a branch above. For the agent it is
+     * load-bearing, not hygiene: a parent whose children have all reached VCO
+     * Verified rolls up to stage 2 too, and would otherwise sit in the pickup queue
+     * as a parcel that does not physically exist. */
+    query = wantsParcels ? parcelsOnly(query) : customerOrdersOnly(query);
   }
 
   if (route)  query = query.eq('route',  route);
@@ -432,6 +575,35 @@ router.get('/', async (req, res) => {
       ...o,
       item_count: order_items?.[0]?.count ?? 0,
     }));
+
+    /* A split parent holds no order_items of its own — they belong to the children
+     * that carry them — so the aggregate above counts zero and the customer's
+     * Recent Orders table would read "0 items" for exactly the biggest baskets.
+     * Count across the children instead, in ONE query for the whole page, and only
+     * when this customer actually has a split order. */
+    const splitParents = orders.filter(o => o.route === SPLIT_ROUTE);
+    if (splitParents.length > 0) {
+      const { data: childCounts, error: childCountErr } = await supabase
+        .from('orders')
+        .select('parent_order_id, order_items(count)')
+        .in('parent_order_id', splitParents.map(o => o.id));
+
+      // Unread, this left every split order reading "0 items" — a wrong number is
+      // worse than a missing one, so say the load failed instead.
+      if (childCountErr) {
+        console.error('GET /orders split item count failed:', childCountErr.message);
+        return res.status(500).json({ error: 'Could not fetch orders.' });
+      }
+
+      const countByParent = new Map();
+      for (const row of childCounts || []) {
+        const n = row.order_items?.[0]?.count ?? 0;
+        countByParent.set(row.parent_order_id, (countByParent.get(row.parent_order_id) || 0) + n);
+      }
+      orders = orders.map(o =>
+        countByParent.has(o.id) ? { ...o, item_count: countByParent.get(o.id) } : o
+      );
+    }
   }
 
   res.json({ orders });
@@ -494,16 +666,66 @@ router.get('/:id', async (req, res) => {
     }
   }
 
+  /* A split order's contents live on its children, one parcel per seller. Load them
+   * so the parent can render both the full basket AND a per-seller breakdown, each
+   * part with its own status and its own pipeline — which is the whole reason the
+   * customer sees one order rather than N. */
+  let parts = [];
+  const isSplitParent = order.route === SPLIT_ROUTE;
+
+  if (isSplitParent) {
+    const { data: children, error: childErr } = await supabase
+      .from('orders')
+      .select('id, code, split_seq, seller_id, seller_name, village, district, status, stage, route, total, item_total, cancelled, cancel_reason, agent_id, agent_name, agent_phone, eta_ts, picked_up_at, delivered_at, pay_status')
+      .eq('parent_order_id', order.id)
+      .order('split_seq', { ascending: true });
+
+    // A split parent with no children is a corrupt order, not an empty one. Failing
+    // here is right: rendering it would show a paid order with an empty basket.
+    if (childErr) {
+      console.error('GET /orders/:id parts lookup failed:', childErr.message);
+      return res.status(500).json({ error: 'Could not load the order. Please try again.' });
+    }
+    parts = children || [];
+  }
+
   // Fetch items. An order that renders with no items is not a detail page, it is a
   // lie — fail instead of drawing an empty basket for an order that has contents.
+  // For a split parent the lines hang off the children, so ask for all of them at
+  // once and tag each with the part it belongs to.
+  const itemOwnerIds = isSplitParent ? parts.map(p => p.id) : [order.id];
   const { data: items, error: itemsErr } = await supabase
     .from('order_items')
     .select('*')
-    .eq('order_id', order.id);
+    .in('order_id', itemOwnerIds);
 
   if (itemsErr) {
     console.error('GET /orders/:id items lookup failed:', itemsErr.message);
     return res.status(500).json({ error: 'Could not load the order. Please try again.' });
+  }
+
+  // Hand each part its own lines, so a client can render the breakdown without
+  // re-grouping by seller and without a second round trip per part.
+  if (isSplitParent) {
+    for (const part of parts) {
+      part.items = (items || []).filter(i => i.order_id === part.id);
+    }
+  }
+
+  // The other direction: a child opened on its own (an agent scanning a parcel code)
+  // should be able to say which customer order it belongs to.
+  if (order.parent_order_id) {
+    const { data: parent, error: parentErr } = await supabase
+      .from('orders')
+      .select('id, code, total, status')
+      .eq('id', order.parent_order_id)
+      .maybeSingle();
+
+    if (parentErr) {
+      console.error('GET /orders/:id parent lookup failed:', parentErr.message);
+      return res.status(500).json({ error: 'Could not load the order. Please try again.' });
+    }
+    order.parent_code = parent ? parent.code : null;
   }
 
   // Fetch status timeline
@@ -560,7 +782,9 @@ router.get('/:id', async (req, res) => {
     console.error('QR generation failed:', e.message);
   }
 
-  res.json({ order, items, history, qr_token, qr_svg });
+  // `parts` only appears on a split order, so a client that predates splitting sees
+  // the response shape it has always seen.
+  res.json({ order, items, history, qr_token, qr_svg, ...(isSplitParent ? { parts } : {}) });
 });
 
 // ── POST /orders/:id/cancel  (consumer or admin) ──────────────────────────────
@@ -587,31 +811,73 @@ router.post('/:id/cancel', async (req, res) => {
     return res.status(400).json({ error: 'Order is already cancelled.' });
   }
 
-  if (!CANCELLABLE_STAGES.includes(order.stage)) {
-    return res.status(400).json({ error: 'Order cannot be cancelled once it has been picked up for delivery.' });
+  /* Cancelling a split order.
+   *
+   * A parcel that is already on the road cannot be recalled, and each seller's
+   * parcel moves independently — so "cancel" means different things depending on
+   * what was asked for:
+   *   • a CHILD  → drop that seller's parcel, leave the rest of the order running
+   *                and re-price the parent around what survives.
+   *   • a PARENT → cancel every part that is still cancellable, all together.
+   * An unsplit order behaves exactly as it always has. */
+  const isSplitParent = order.route === SPLIT_ROUTE;
+
+  let children = [];
+  if (isSplitParent) {
+    const { data: kids, error: kidsErr } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('parent_order_id', order.id)
+      .order('split_seq', { ascending: true });
+
+    if (kidsErr) {
+      console.error('Cancel order: could not read parts:', kidsErr.message);
+      return res.status(500).json({ error: 'Could not cancel order.' });
+    }
+    children = kids || [];
+  }
+
+  // The rows that will actually be cancelled: the parts of a split, or the order itself.
+  const targets = isSplitParent ? children.filter(c => !c.cancelled) : [order];
+
+  if (targets.length === 0) {
+    return res.status(400).json({ error: 'Order is already cancelled.' });
+  }
+
+  /* A parent can roll up to a cancellable stage while one of its parcels is already
+   * out for delivery — the rollup reports the LEAST advanced part. Checking the
+   * parent's own stage would therefore let a cancellation reach a parcel on the
+   * road, so each target is checked on its own. */
+  const uncancellable = targets.filter(t => !CANCELLABLE_STAGES.includes(t.stage));
+  if (uncancellable.length > 0) {
+    if (!isSplitParent) {
+      return res.status(400).json({ error: 'Order cannot be cancelled once it has been picked up for delivery.' });
+    }
+    return res.status(400).json({
+      error: `${uncancellable.length} of this order's parts have already been picked up for delivery ` +
+             `and cannot be cancelled (${uncancellable.map(t => t.code).join(', ')}). ` +
+             `Cancel the remaining parts individually.`,
+    });
   }
 
   const { cancel_reason } = req.body;
   const now = new Date().toISOString();
 
-  // Refund amount = full total if paid online
-  const refund_amt = order.pay_status === 'paid' ? order.total : null;
-  const refund_to  = refund_amt ? order.pay_method : null;
+  const cancelUpdates = {
+    cancelled:     true,
+    cancel_reason: cancel_reason || null,
+    cancelled_at:  now,
+    status:        'Cancelled',
+    updated_at:    now,
+  };
 
-  const { data: updated, error: updateErr } = await supabase
+  // Cancel the parts, or the single order. A split parent is closed alongside its
+  // parts — the customer's row has to read Cancelled too.
+  const targetIds = targets.map(t => t.id);
+  const { error: updateErr } = await supabase
     .from('orders')
-    .update({
-      cancelled:    true,
-      cancel_reason: cancel_reason || null,
-      cancelled_at:  now,
-      refund_amt,
-      refund_to,
-      status:        'Cancelled',
-      updated_at:    now,
-    })
-    .eq('id', order.id)
-    .select()
-    .single();
+    .update(cancelUpdates)
+    .in('id', isSplitParent ? [...targetIds, order.id] : targetIds);
 
   if (updateErr) {
     console.error('Cancel order error:', updateErr);
@@ -620,11 +886,20 @@ router.post('/:id/cancel', async (req, res) => {
 
   // History entry. The cancellation is already committed — a failed timeline row
   // must not report the cancellation as failed. Log it and move on.
-  const { error: historyErr } = await supabase.from('order_history').insert({
-    order_id: order.id,
+  const historyRows = targets.map(t => ({
+    order_id: t.id,
     label:    'Cancelled',
     note:     cancel_reason || 'Cancelled by ' + (u.role === 'consumer' ? 'consumer' : `admin (${u.admin_role})`),
-  });
+  }));
+  if (isSplitParent) {
+    historyRows.push({
+      order_id: order.id,
+      label:    'Cancelled',
+      note:     cancel_reason || 'Cancelled by ' + (u.role === 'consumer' ? 'consumer' : `admin (${u.admin_role})`),
+    });
+  }
+
+  const { error: historyErr } = await supabase.from('order_history').insert(historyRows);
   if (historyErr) console.error(`Order ${order.id}: cancellation history entry failed:`, historyErr.message);
 
   // ── Restore farmer listing quantities ─────────────────────────────────────
@@ -634,10 +909,14 @@ router.post('/:id/cancel', async (req, res) => {
   // cancelled and the inventory was simply gone.
   const restoreFailures = [];
 
+  // Read the lines off the rows actually being cancelled. On a split order the
+  // items hang off the CHILDREN, so asking the parent for them would return nothing
+  // and quietly restock no one — a cancelled multi-vendor order would take every
+  // seller's stock with it.
   const { data: orderItems, error: orderItemsErr } = await supabase
     .from('order_items')
     .select('farmer_id, product_id, qty')
-    .eq('order_id', order.id);
+    .in('order_id', targetIds);
 
   if (orderItemsErr) {
     restoreFailures.push(`could not read order items: ${orderItemsErr.message}`);
@@ -684,10 +963,80 @@ router.post('/:id/cancel', async (req, res) => {
                   `listing(s) did not get their quantity back: ${restoreFailures.join('; ')}`);
   }
 
+  /* ── Re-price the order and settle the refund ───────────────────────────────
+   *
+   * Cancelling ONE seller's parcel leaves the rest of the order running, so the
+   * parent has to be re-priced around what survives: its item total drops by that
+   * seller's lines, the ₹10 multi-vendor fee goes if only one seller is left, and
+   * the delivery/handling charges move onto a parcel that is still coming.
+   *
+   * The refund is the DROP in what the order costs — not the cancelled part's own
+   * total, which may include the delivery fee the customer still owes on the
+   * parcels still on their way. Refunding that figure would hand back a charge that
+   * is about to be re-applied to a sibling. */
+  let refund_amt = null;
+  let refund_to = null;
+
+  if (order.parent_order_id) {
+    const { data: parentBefore, error: beforeErr } = await supabase
+      .from('orders')
+      .select('total, pay_status, pay_method, refund_amt')
+      .eq('id', order.parent_order_id)
+      .maybeSingle();
+
+    if (beforeErr) console.error('Cancel order: parent re-price read failed:', beforeErr.message);
+
+    await rollupToParent(order.parent_order_id);
+
+    const { data: parentAfter, error: afterErr } = await supabase
+      .from('orders')
+      .select('total')
+      .eq('id', order.parent_order_id)
+      .maybeSingle();
+
+    if (afterErr) console.error('Cancel order: parent re-price read failed:', afterErr.message);
+
+    if (parentBefore && parentAfter && parentBefore.pay_status === 'paid') {
+      const drop = Math.max(0, parentBefore.total - parentAfter.total);
+      if (drop > 0) {
+        refund_amt = drop;
+        refund_to = parentBefore.pay_method;
+        // Accumulated, not overwritten: cancelling a second part later owes the
+        // customer that refund ON TOP of the first one.
+        const { error: refundErr } = await supabase
+          .from('orders')
+          .update({ refund_amt: (parentBefore.refund_amt || 0) + drop, refund_to })
+          .eq('id', order.parent_order_id);
+        if (refundErr) console.error('Cancel order: refund stamp failed:', refundErr.message);
+      }
+    }
+  } else if (order.pay_status === 'paid') {
+    // A whole order going: the customer gets all of it back.
+    refund_amt = order.total;
+    refund_to = order.pay_method;
+    const { error: refundErr } = await supabase
+      .from('orders')
+      .update({ refund_amt, refund_to })
+      .eq('id', order.id);
+    if (refundErr) console.error('Cancel order: refund stamp failed:', refundErr.message);
+  }
+
+  // Re-read so the caller sees the row as it now stands (status, refund, and — for
+  // a part cancellation — nothing on the order itself but its own closure).
+  const { data: updated, error: reReadErr } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('id', order.id)
+    .maybeSingle();
+
+  if (reReadErr) console.error('Cancel order: re-read failed:', reReadErr.message);
+
   res.json({
-    message: 'Order cancelled.',
-    order: updated,
-    ...(refund_amt && { refund: { amount_paise: refund_amt, to: refund_to } }),
+    message: order.parent_order_id
+      ? `${order.seller_name}'s items have been cancelled. The rest of your order is still on its way.`
+      : 'Order cancelled.',
+    order: updated || { ...order, ...cancelUpdates },
+    ...(refund_amt ? { refund: { amount_paise: refund_amt, to: refund_to } } : {}),
   });
 });
 

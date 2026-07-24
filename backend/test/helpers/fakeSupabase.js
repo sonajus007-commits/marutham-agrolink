@@ -60,11 +60,18 @@ function pgrst116(n) {
  *
  * Absent columns still pass, as before: a fixture row that never mentions deleted_at
  * is a live row, so tests written before this existed keep their meaning.
+ *
+ * `neq` joined for the same reason when multi-vendor order splitting landed. A split
+ * order is a parent row PLUS one child per seller, and `.neq('route', 'split')` is
+ * what keeps the container out of the lists that hold physical parcels — the agent's
+ * pickup queue most of all, where a fake that ignored it would let a test assert "the
+ * container is not in the queue" while the route was happily putting it there.
  */
 function applyFilters(rows, ctx) {
   if (!Array.isArray(rows)) return rows;
   return rows.filter((row) => ctx.filters.every(([op, col, val, val2]) => {
     if (op === 'eq') return row[col] === undefined || row[col] === val;
+    if (op === 'neq') return row[col] === undefined || row[col] !== val;
     if (op === 'in') return row[col] === undefined || (Array.isArray(val) && val.includes(row[col]));
     // .is(col, null) → IS NULL. Absent and explicit-null both count as null.
     if (op === 'is' && val === null) return row[col] === undefined || row[col] === null;

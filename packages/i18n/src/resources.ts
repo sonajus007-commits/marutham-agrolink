@@ -724,6 +724,13 @@ export const resources = {
       'consumer.order.placedOn': 'Placed On',
       'consumer.order.payment': 'Payment',
       'consumer.order.items': 'Items',
+      // Multi-vendor order: one basket, one payment, but a parcel per seller
+      'consumer.order.splitIntro':
+        'This order comes from {{count}} sellers. Each seller’s items travel separately and may arrive at different times — track each part below.',
+      'consumer.order.partSeller': 'Seller',
+      'consumer.order.partTotal': 'Part total',
+      'consumer.order.partNotCharged': 'Not charged',
+      'consumer.order.cancelPart': 'Cancel this part',
       'consumer.order.priceBreakdown': 'Price Breakdown',
       'consumer.order.marketFee': 'Market fee',
       'consumer.order.multipleFarmers': 'multiple farmers',
@@ -753,6 +760,10 @@ export const resources = {
       'consumer.cancel.title': 'Cancel this order?',
       'consumer.cancel.body': 'Order <1>{{code}}</1> will be cancelled.',
       'consumer.cancel.refund': 'Your payment will be refunded to the original payment method.',
+      'consumer.cancel.titlePart': 'Cancel this part?',
+      'consumer.cancel.bodyPart':
+        '<1>{{seller}}</1>’s items will be cancelled. The rest of your order is not affected and is still on its way.',
+      'consumer.cancel.refundPart': 'You will be refunded for this seller’s items.',
       'consumer.cancel.reason': 'Reason',
       'consumer.cancel.reasonPlaceholder': 'Why are you cancelling?',
       'consumer.cancel.keep': 'Keep order',
@@ -2439,6 +2450,13 @@ export const resources = {
       'consumer.order.placedOn': 'ஆர்டர் செய்த நாள்',
       'consumer.order.payment': 'பணம் செலுத்துதல்',
       'consumer.order.items': 'பொருட்கள்',
+      // Multi-vendor order: one basket, one payment, but a parcel per seller
+      'consumer.order.splitIntro':
+        'இந்த ஆர்டர் {{count}} விற்பனையாளர்களிடமிருந்து வருகிறது. ஒவ்வொரு விற்பனையாளரின் பொருட்களும் தனித்தனியாக வருகின்றன, வெவ்வேறு நேரங்களில் வந்து சேரலாம் — கீழே ஒவ்வொரு பகுதியையும் கண்காணிக்கவும்.',
+      'consumer.order.partSeller': 'விற்பனையாளர்',
+      'consumer.order.partTotal': 'பகுதி மொத்தம்',
+      'consumer.order.partNotCharged': 'கட்டணம் விதிக்கப்படவில்லை',
+      'consumer.order.cancelPart': 'இந்தப் பகுதியை ரத்து செய்',
       'consumer.order.priceBreakdown': 'விலை விவரம்',
       'consumer.order.marketFee': 'சந்தைக் கட்டணம்',
       'consumer.order.multipleFarmers': 'பல விவசாயிகள்',
@@ -2469,6 +2487,10 @@ export const resources = {
       'consumer.cancel.title': 'இந்த ஆர்டரை ரத்து செய்யவா?',
       'consumer.cancel.body': 'ஆர்டர் <1>{{code}}</1> ரத்து செய்யப்படும்.',
       'consumer.cancel.refund': 'உங்கள் பணம் அசல் பணம் செலுத்தும் முறைக்குத் திரும்ப வழங்கப்படும்.',
+      'consumer.cancel.titlePart': 'இந்தப் பகுதியை ரத்து செய்யவா?',
+      'consumer.cancel.bodyPart':
+        '<1>{{seller}}</1> அவர்களின் பொருட்கள் ரத்து செய்யப்படும். உங்கள் ஆர்டரின் மற்ற பகுதிகள் பாதிக்கப்படாமல் வந்து கொண்டிருக்கும்.',
+      'consumer.cancel.refundPart': 'இந்த விற்பனையாளரின் பொருட்களுக்கான பணம் திரும்ப வழங்கப்படும்.',
       'consumer.cancel.reason': 'காரணம்',
       'consumer.cancel.reasonPlaceholder': 'ஏன் ரத்து செய்கிறீர்கள்?',
       'consumer.cancel.keep': 'ஆர்டரை வைத்திரு',

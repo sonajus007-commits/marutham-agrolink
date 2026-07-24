@@ -22,6 +22,7 @@ import {
   statusKey,
   type OrderDetail,
   type OrderItem,
+  type OrderPart,
 } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
 import { CancelOrderModal } from './CancelOrderModal';
@@ -158,7 +159,11 @@ function OrderDetailBody({
   onGoToCart: () => void;
 }) {
   const { t, i18n } = useTranslation();
-  const { order: o, history, qr_svg } = data;
+  const { order: o, history, qr_svg, parts } = data;
+  /* A multi-vendor order: one basket, but each seller's goods travel as their own
+   * parcel and can arrive on different days. Only present when the order actually
+   * spans sellers. */
+  const isSplit = !!parts && parts.length > 0;
   const toast = useToast();
   const reorder = useReorder();
   const [items, setItems] = useState<OrderItem[]>(data.items);
@@ -226,10 +231,24 @@ function OrderDetailBody({
   return (
     <>
       <div className="ord-card" style={{ padding: '14px 10px' }}>
-        <OrderPipeline
-          nodes={buildPipeline(o.route || 'direct', effectiveStatus)}
-          labelFor={(l) => t(statusKey(l), l)}
-        />
+        {/* A split order has no single journey to draw — each parcel has its own,
+            shown per part below. Drawing one here would have to pick a route the
+            order does not have and would report only the slowest parcel. */}
+        {isSplit ? (
+          <div style={{ fontSize: 12, color: 'var(--neutral-700)', lineHeight: 1.6 }}>
+            {/* A split order always spans 2+ sellers, so there is no singular case. */}
+            {t(
+              'consumer.order.splitIntro',
+              'This order comes from {{count}} sellers. Each seller’s items travel separately and may arrive at different times — track each part below.',
+              { count: parts.length },
+            )}
+          </div>
+        ) : (
+          <OrderPipeline
+            nodes={buildPipeline(o.route || 'direct', effectiveStatus)}
+            labelFor={(l) => t(statusKey(l), l)}
+          />
+        )}
         {track?.agent || track?.eta ? (
           <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
             {track.agent ? (
@@ -356,22 +375,42 @@ function OrderDetailBody({
         </div>
       </div>
 
-      <div className="ord-card">
-        <h3>🌿 {t('consumer.order.items', 'Items')}</h3>
-        {items.map((item, idx) => (
-          <ItemRow
-            key={item.id || idx}
-            item={item}
-            orderId={o.id}
-            canRate={isDelivered}
-            onRated={(stars) =>
+      {isSplit ? (
+        parts.map((part) => (
+          <PartCard
+            key={part.id}
+            part={part}
+            items={items.filter((it) => it.order_id === part.id)}
+            onRated={(itemId, stars) =>
               setItems((prev) =>
-                prev.map((it, i) => (i === idx ? { ...it, rated: true, rating_value: stars } : it)),
+                prev.map((it) =>
+                  it.id === itemId ? { ...it, rated: true, rating_value: stars } : it,
+                ),
               )
             }
+            onChanged={onSilentRefresh}
           />
-        ))}
-      </div>
+        ))
+      ) : (
+        <div className="ord-card">
+          <h3>🌿 {t('consumer.order.items', 'Items')}</h3>
+          {items.map((item, idx) => (
+            <ItemRow
+              key={item.id || idx}
+              item={item}
+              orderId={o.id}
+              canRate={isDelivered}
+              onRated={(stars) =>
+                setItems((prev) =>
+                  prev.map((it, i) =>
+                    i === idx ? { ...it, rated: true, rating_value: stars } : it,
+                  ),
+                )
+              }
+            />
+          ))}
+        </div>
+      )}
 
       <div className="ord-card">
         <h3>💰 {t('consumer.order.priceBreakdown', 'Price Breakdown')}</h3>
@@ -492,6 +531,125 @@ function OrderDetailBody({
         onSubmitted={onChanged}
       />
     </>
+  );
+}
+
+/**
+ * One seller's parcel within a multi-vendor order.
+ *
+ * Everything here is scoped to the PART, not to the order as a whole: its own
+ * journey, its own status, and its own rating gate — a customer whose vegetables
+ * arrived today should be able to rate that seller without waiting on the parcel
+ * that is still two days out. Rating calls the part's id because the server checks
+ * the line against the order row it was asked about, and the lines live on the child.
+ */
+function PartCard({
+  part,
+  items,
+  onRated,
+  onChanged,
+}: {
+  part: OrderPart;
+  items: OrderItem[];
+  onRated: (itemId: string, stars: number) => void;
+  /** A part was cancelled — the rest of the order carries on, so refresh in place. */
+  onChanged: () => void;
+}) {
+  const { t } = useTranslation();
+  const [showCancel, setShowCancel] = useState(false);
+
+  const partStatus = isOrderCancelled(part) ? 'Cancelled' : String(part.status ?? '');
+  const partDelivered = partStatus === 'Delivered';
+
+  return (
+    <div className="ord-card">
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          flexWrap: 'wrap',
+          marginBottom: 10,
+        }}
+      >
+        <h3 style={{ margin: 0 }}>
+          📦 {part.seller_name || t('consumer.order.partSeller', 'Seller')}
+        </h3>
+        <span className="ord-status-pill" style={{ background: statusColor(partStatus) }}>
+          {t(statusKey(partStatus), partStatus)}
+        </span>
+      </div>
+
+      <div
+        style={{
+          fontFamily: 'monospace',
+          fontSize: 11,
+          color: 'var(--gray)',
+          marginBottom: 10,
+        }}
+      >
+        {part.code}
+        {part.village ? ` · ${part.village}` : ''}
+      </div>
+
+      {isOrderCancelled(part) ? null : (
+        <div style={{ padding: '4px 0 10px' }}>
+          <OrderPipeline
+            nodes={buildPipeline(part.route || 'direct', partStatus)}
+            labelFor={(l) => t(statusKey(l), l)}
+          />
+        </div>
+      )}
+
+      {items.map((item, idx) => (
+        <ItemRow
+          key={item.id || idx}
+          item={item}
+          orderId={part.id}
+          canRate={partDelivered}
+          onRated={(stars) => onRated(item.id || '', stars)}
+        />
+      ))}
+
+      {/* A cancelled part keeps the figure it was cancelled at — that is what the
+          refund was worked out from — but showing it here reads as money still
+          owed. Worse, it can include the delivery fee, which moves to a part that
+          is still coming, so the parts would appear to add up to more than the
+          order's total. Say it is not charged instead. */}
+      <div className="irow" style={{ marginTop: 8 }}>
+        <span className="ilbl">{t('consumer.order.partTotal', 'Part total')}</span>
+        <span className="ival">
+          {isOrderCancelled(part) ? (
+            <span style={{ color: 'var(--gray)', fontWeight: 600 }}>
+              {t('consumer.order.partNotCharged', 'Not charged')}
+            </span>
+          ) : (
+            fmtMoney(part.total)
+          )}
+        </span>
+      </div>
+
+      {canCancelOrder(part) ? (
+        <button
+          className="cons-btn-outline-danger"
+          style={{ marginTop: 10 }}
+          onClick={() => setShowCancel(true)}
+        >
+          {t('consumer.order.cancelPart', 'Cancel this part')}
+        </button>
+      ) : null}
+
+      <CancelOrderModal
+        order={part}
+        sellerName={part.seller_name}
+        open={showCancel}
+        onClose={() => setShowCancel(false)}
+        onCancelled={() => {
+          setShowCancel(false);
+          onChanged();
+        }}
+      />
+    </div>
   );
 }
 

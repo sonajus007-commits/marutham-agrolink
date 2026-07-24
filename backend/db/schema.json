@@ -613,6 +613,11 @@
           "notNull": true,
           "default": "0"
         },
+        "parent_order_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "orders.id"
+        },
         "pay_method": {
           "type": "text",
           "notNull": false
@@ -646,6 +651,19 @@
           "type": "integer",
           "notNull": true,
           "default": "0"
+        },
+        "seller_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "seller_name": {
+          "type": "text",
+          "notNull": false
+        },
+        "split_seq": {
+          "type": "smallint",
+          "notNull": false
         },
         "stage": {
           "type": "integer",

@@ -7,6 +7,13 @@ import type { AddressObject } from './format';
 export interface OrderItem {
   /** order_items row id — the handle the rating endpoint takes. */
   id?: string;
+  /**
+   * The order row this line belongs to. On a multi-vendor order that is the
+   * seller's CHILD order, not the parent the customer sees — which is the id the
+   * rating endpoint must be called with, since it checks the line against the order
+   * it was asked about.
+   */
+  order_id?: string;
   product_id?: string;
   product_code?: string;
   name: string;
@@ -73,11 +80,34 @@ export interface Order {
   [key: string]: unknown;
 }
 
+/**
+ * One seller's parcel within a multi-vendor order.
+ *
+ * A cart spanning sellers is stored as a parent order (what the customer paid for)
+ * plus one CHILD order per seller, because each seller's goods sit in their own
+ * village, are verified by that village's VCO, and take their own route to the door.
+ * The customer still sees a single order; this is what it is made of.
+ */
+export interface OrderPart extends Order {
+  /** 1-based position in the parent, and the suffix on this parcel's code. */
+  split_seq: number;
+  seller_id: string;
+  seller_name?: string;
+  /** This parcel's own lines. The parent's `items` is all of them together. */
+  items?: OrderItem[];
+}
+
 export interface OrderDetail {
   order: Order;
   items: OrderItem[];
   history: OrderHistoryEntry[];
   qr_svg?: string;
+  /**
+   * Present ONLY on a multi-vendor order, so an order placed with one seller has
+   * exactly the shape it always had. Each part tracks separately and may arrive on
+   * its own day.
+   */
+  parts?: OrderPart[];
 }
 
 export interface OrderQueues {

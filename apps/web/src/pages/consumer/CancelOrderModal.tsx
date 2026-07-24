@@ -7,11 +7,18 @@ import { useToast } from '../../components/Toast';
 
 export function CancelOrderModal({
   order,
+  sellerName,
   open,
   onClose,
   onCancelled,
 }: {
   order: Order;
+  /**
+   * Set when `order` is ONE seller's part of a multi-vendor order. The rest of the
+   * order keeps going, so the modal must not promise to cancel the whole thing —
+   * and the refund is only for this seller's goods.
+   */
+  sellerName?: string;
   open: boolean;
   onClose: () => void;
   onCancelled: () => void;
@@ -40,7 +47,11 @@ export function CancelOrderModal({
   return (
     <Modal
       open={open}
-      title={t('consumer.cancel.title', 'Cancel this order?')}
+      title={
+        sellerName
+          ? t('consumer.cancel.titlePart', 'Cancel this part?')
+          : t('consumer.cancel.title', 'Cancel this order?')
+      }
       closeLabel={t('common.close', 'Close')}
       onClose={onClose}
       footer={
@@ -57,14 +68,30 @@ export function CancelOrderModal({
       }
     >
       <p style={{ fontSize: 12, color: 'var(--gray)', lineHeight: 1.6, marginBottom: 12 }}>
-        <Trans
-          i18nKey="consumer.cancel.body"
-          values={{ code: order.code || order.id.slice(0, 8).toUpperCase() }}
-          defaults="Order <1>{{code}}</1> will be cancelled."
-          components={{ 1: <strong /> }}
-        />
+        {sellerName ? (
+          <Trans
+            i18nKey="consumer.cancel.bodyPart"
+            values={{ seller: sellerName }}
+            defaults="<1>{{seller}}</1>'s items will be cancelled. The rest of your order is not affected and is still on its way."
+            components={{ 1: <strong /> }}
+          />
+        ) : (
+          <Trans
+            i18nKey="consumer.cancel.body"
+            values={{ code: order.code || order.id.slice(0, 8).toUpperCase() }}
+            defaults="Order <1>{{code}}</1> will be cancelled."
+            components={{ 1: <strong /> }}
+          />
+        )}
         {order.pay_status === 'paid'
-          ? ` ${t('consumer.cancel.refund', 'Your payment will be refunded to the original payment method.')}`
+          ? ` ${
+              sellerName
+                ? t('consumer.cancel.refundPart', 'You will be refunded for this seller’s items.')
+                : t(
+                    'consumer.cancel.refund',
+                    'Your payment will be refunded to the original payment method.',
+                  )
+            }`
           : ''}
       </p>
       <div className="fg">

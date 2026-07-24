@@ -2,6 +2,8 @@ const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { distanceMeters } = require('../utils/geo');
+const { SPLIT_ROUTE } = require('../utils/orderSplit');
+const { rollupToParent } = require('../utils/orderRollup');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -39,7 +41,37 @@ const STAGE_MAP = {
     'Out for Delivery', // 6
     'Delivered',        // 7
   ],
+  /* The container of a multi-vendor order. It is not a parcel and nothing advances
+   * it — its stage is a ROLLUP of its children (the least advanced one), which may
+   * be a hub-only status even when some parts are going direct. So its map is the
+   * superset, the only one that can hold every status a child might report.
+   *
+   * It is not selectable: PATCH /route whitelists 'hub' and 'direct' before it ever
+   * reaches this map. It exists so that reading a parent — GET /:id/track builds its
+   * routeMap straight from STAGE_MAP[route] — finds a list instead of undefined.
+   * Without it that read threw inside an async handler, and Express 4 does not catch
+   * async throws: the request never answered and the customer's order sheet spun
+   * for ever. */
+  split: [
+    'Order Placed',     // 0
+    'Packaged',         // 1
+    'VCO Verified',     // 2
+    'In Transit',       // 3
+    'At Hub',           // 4
+    'Picked Up',        // 5
+    'Out for Delivery', // 6
+    'Delivered',        // 7
+  ],
 };
+
+/* The parent of a multi-vendor order is a container, not a parcel: its goods are in
+ * several villages and travel as separate child orders. Nothing in this file may act
+ * on one — there is no single thing to verify, pick up, or hand over. The parent's
+ * status is derived from its children instead (utils/orderRollup). */
+const isSplitParent = (order) => order.route === SPLIT_ROUTE;
+const SPLIT_PARENT_MESSAGE =
+  'This order is split across several sellers. Scan the individual parcel code ' +
+  '(the one ending in -1, -2, …) — the whole order is not handled as one item.';
 
 // Who may do what. A Delivery Agent and a VCO are NOT hub staff.
 const SENIOR_ADMIN_ROLES = ['Head Office', 'State Head', 'Regional Manager', 'District Manager'];
@@ -134,6 +166,17 @@ async function advanceStage(order, actorLabel, extraUpdates = {}, deliveryCoords
     if (geoErr) console.error(`Order ${order.id}: geofence note failed:`, geoErr.message);
   }
 
+  /* If this was one parcel of a multi-vendor order, the customer's view of that
+   * order just changed: its headline status is the least-advanced parcel, and a COD
+   * order is only paid once every parcel has been handed over. A no-op for an
+   * ordinary order, which has no parent.
+   *
+   * Deliberately not part of the compare-and-swap above and deliberately not fatal:
+   * the parcel HAS moved and the agent must be told so. A parent left briefly stale
+   * is repaired by the next child event; a scan rejected because a summary row
+   * failed to update is a delivery stopped for no reason. */
+  await rollupToParent(order.parent_order_id);
+
   return { updated, newStatus };
 }
 
@@ -156,6 +199,7 @@ async function fetchActiveOrder(id, res) {
   if (error || !order) { res.status(404).json({ error: 'Order not found.' }); return null; }
   if (order.cancelled)  { res.status(400).json({ error: 'Order is cancelled.' }); return null; }
   if (order.status === 'Delivered') { res.status(400).json({ error: 'Order is already delivered.' }); return null; }
+  if (isSplitParent(order)) { res.status(400).json({ error: SPLIT_PARENT_MESSAGE }); return null; }
   return order;
 }
 
@@ -556,6 +600,14 @@ router.post('/:id/status', async (req, res) => {
   if (fErr) return res.status(500).json({ error: 'Could not load order.' });
   if (!order) return res.status(404).json({ error: 'Order not found.' });
   if (order.cancelled) return res.status(400).json({ error: 'Order is cancelled.' });
+  // A container has no status of its own to set — it reports what its parcels are
+  // doing. Setting one here would be overwritten by the next rollup anyway.
+  if (isSplitParent(order)) {
+    return res.status(400).json({
+      error: 'This order is split across several sellers. Set the status on the individual part instead — ' +
+             'the overall order follows its parts.',
+    });
+  }
 
   const route = resolveRoute(order);
   const map = STAGE_MAP[route] || STAGE_MAP.direct;
@@ -605,6 +657,10 @@ router.post('/:id/status', async (req, res) => {
   });
   if (histErr) console.error(`Order ${order.id}: manual status history entry failed:`, histErr.message);
 
+  // An override on one parcel changes what the customer's order reads overall —
+  // including backwards, which is the point of this tool.
+  await rollupToParent(order.parent_order_id);
+
   res.json({ ok: true, message: `Order set to: ${target}.`, newStatus: target, order: updated });
 });
 
@@ -640,10 +696,20 @@ router.post('/:id/assign', async (req, res) => {
       updated_at:    new Date().toISOString(),
     })
     .eq('id', req.params.id)
+    // No agent carries a container. Each parcel of a split order gets its own
+    // agent — often a different one, since they start in different villages.
+    // Filtering here rather than fetching first keeps it one round trip; a parent
+    // matches nothing and falls into the 404 below.
+    .neq('route', SPLIT_ROUTE)
     .select()
-    .single();
+    .maybeSingle();
 
   if (ue) return res.status(500).json({ error: ue.message });
+  if (!updated) {
+    return res.status(404).json({
+      error: 'Order not found, or it is a multi-seller order — assign an agent to each part instead.',
+    });
+  }
 
   // Log assignment in order history
   const { error: histErr } = await supabase.from('order_history').insert({
@@ -739,7 +805,10 @@ router.get('/:id/track', async (req, res) => {
   }
 
   const route  = resolveRoute(order);
-  const stages = STAGE_MAP[route];
+  // Defensive: an unrecognised route must not throw here. This handler is async, and
+  // an async throw in Express 4 is not caught — the response never goes out and the
+  // caller hangs rather than getting an error.
+  const stages = STAGE_MAP[route] || STAGE_MAP.direct;
 
   // Build the route map — each node shows whether it's done, active, or pending
   const routeMap = stages.map((label, i) => ({
