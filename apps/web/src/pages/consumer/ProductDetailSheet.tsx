@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Sheet, QtyStepper } from '@marutham/ui';
 import {
   offerConsumerPrice,
+  offersByRating,
   getProductEmoji,
   unitStep,
   unitAllowsDecimal,
@@ -148,7 +149,7 @@ export function ProductDetailSheet({
           >
             {t('consumer.detail.offerCount', { count: offers.length })}
           </div>
-          {offers.map((o, k) => (
+          {offersByRating(offers, ratingsByFP, product.id).map((o, k) => (
             <OfferRow
               key={o.id || k}
               product={product}

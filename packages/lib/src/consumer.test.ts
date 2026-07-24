@@ -4,6 +4,8 @@ import {
   offerConsumerPrice,
   bestOffer,
   offersForSeller,
+  offersByRating,
+  filterProducts,
   unitStep,
   unitAllowsDecimal,
   FREE_DELIVERY_MIN,
@@ -11,6 +13,7 @@ import {
   type CartItem,
   type Product,
   type Offer,
+  type Rating,
 } from './consumer';
 
 const product = (over: Partial<Product> = {}): Product => ({
@@ -212,6 +215,62 @@ describe('bestOffer', () => {
   it('returns null when nothing matches', () => {
     expect(bestOffer([], 'Farmer')).toBeNull();
     expect(offersForSeller([cheap], 'Retailer')).toEqual([]);
+  });
+});
+
+describe('filterProducts — only confirmed-for-selling products show', () => {
+  const tomato = product({ id: 'tom', name: 'Tomato', product_group: 'Vegetables' });
+  const brinjal = product({ id: 'brj', name: 'Brinjal', product_group: 'Vegetables' });
+  const anOffer = { id: 'o1', farmer_price: '10', farmer: { seller_type: 'Farmer' } } as Offer;
+  const noFilter = {
+    group: 'All',
+    cat: 'All',
+    sub: 'All',
+    seller: 'All',
+    city: '',
+    search: '',
+  } as const;
+
+  it('hides a product no seller has a live offer for', () => {
+    const out = filterProducts([tomato, brinjal], { tom: [anOffer] }, { ...noFilter });
+    expect(out.map((p) => p.id)).toEqual(['tom']); // brinjal has no offer → dropped
+  });
+
+  it('keeps hiding an offer-less product even under a matching search', () => {
+    const out = filterProducts([brinjal], {}, { ...noFilter, search: 'brinj' });
+    expect(out).toEqual([]);
+  });
+
+  it('shows a product once it has at least one offer', () => {
+    const out = filterProducts([brinjal], { brj: [anOffer] }, { ...noFilter, search: 'brinj' });
+    expect(out.map((p) => p.id)).toEqual(['brj']);
+  });
+});
+
+describe('offersByRating — sellers ordered for rating-based selection', () => {
+  const mk = (id: string, farmerId: string, price: number): Offer =>
+    ({ id, farmer_price: String(price), farmer: { id: farmerId, seller_type: 'Farmer' } }) as Offer;
+  const rated = (avg: number, n = 3): Rating => ({ avg_rating: avg, num_ratings: n });
+
+  it('puts the highest-rated seller first and unrated sellers last', () => {
+    const offers = [mk('a', 'f1', 10), mk('b', 'f2', 20), mk('c', 'f3', 30)];
+    const ratings = { f1_p1: rated(3.0), f2_p1: rated(4.8) }; // f3 unrated
+    const out = offersByRating(offers, ratings, 'p1').map((o) => o.id);
+    expect(out).toEqual(['b', 'a', 'c']);
+  });
+
+  it('breaks a rating tie by cheaper price and does not mutate the input', () => {
+    const offers = [mk('dear', 'f1', 30), mk('cheap', 'f2', 10)];
+    const ratings = { f1_p1: rated(4.0), f2_p1: rated(4.0) };
+    const out = offersByRating(offers, ratings, 'p1').map((o) => o.id);
+    expect(out).toEqual(['cheap', 'dear']);
+    expect(offers.map((o) => o.id)).toEqual(['dear', 'cheap']); // original order intact
+  });
+
+  it('treats a zero-count rating as unrated', () => {
+    const offers = [mk('a', 'f1', 10), mk('b', 'f2', 20)];
+    const ratings = { f1_p1: rated(5, 0), f2_p1: rated(2, 4) };
+    expect(offersByRating(offers, ratings, 'p1').map((o) => o.id)).toEqual(['b', 'a']);
   });
 });
 

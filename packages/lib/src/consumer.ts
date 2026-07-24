@@ -162,6 +162,28 @@ export function bestOffer(offers: Offer[], seller: SellerFilter = 'All'): Offer 
   return relevant.reduce((best, o) => (offerRank(o) < offerRank(best) ? o : best));
 }
 
+/**
+ * Offers for one product, ordered so the consumer can pick by rating: the
+ * highest-rated seller first, unrated sellers last, cheaper offer breaking a tie.
+ * Ratings are keyed by `${farmer_id}_${product_id}` in `ratingsByFP` (the same
+ * map the offer rows read), so the seller behind each offer is looked up there.
+ * Pure and non-mutating — returns a new array.
+ */
+export function offersByRating(
+  offers: Offer[],
+  ratingsByFP: Record<string, Rating>,
+  productId: string,
+): Offer[] {
+  const ratingOf = (o: Offer): number => {
+    const r = ratingsByFP[`${o.farmer?.id || o.farmer_id || ''}_${productId}`];
+    return r && r.num_ratings > 0 ? r.avg_rating : -1; // unrated sinks below any rated seller
+  };
+  return [...offers].sort((a, b) => {
+    const diff = ratingOf(b) - ratingOf(a);
+    return diff !== 0 ? diff : offerRank(a) - offerRank(b);
+  });
+}
+
 export interface ProductFilter {
   group: string;
   cat: string;
@@ -180,11 +202,16 @@ export function filterProducts(
   const search = f.search.trim().toLowerCase();
   const city = f.city.trim().toLowerCase();
   return products.filter((p) => {
+    // Only list a product a seller has actually confirmed for selling today.
+    // offersByProduct is built from the confirmed + active listings feed, so an
+    // empty list here means no farmer/retailer has this product live — hide it,
+    // even under a search, so the browse page only ever shows orderable items.
+    const offers = offersByProduct[p.id] || [];
+    if (offers.length === 0) return false;
     if (search) return (p.name || '').toLowerCase().includes(search);
     if (f.group !== 'All' && p.product_group !== f.group) return false;
     if (f.cat !== 'All' && p.category !== f.cat) return false;
     if (f.sub !== 'All' && p.sub_type !== f.sub) return false;
-    const offers = offersByProduct[p.id] || [];
     if (f.seller === 'Farmer' && offersForSeller(offers, 'Farmer').length === 0) return false;
     if (f.seller === 'Retailer' && offersForSeller(offers, 'Retailer').length === 0) return false;
     if (
