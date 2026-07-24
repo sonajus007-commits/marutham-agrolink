@@ -158,20 +158,21 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
           <span className="ilbl">{t('consumer.cart.itemTotal', 'Item Total')}</span>
           <span className="ival">{fmtMoney(bill.itemSubtotal)}</span>
         </div>
-        {bill.handling > 0 ? (
-          <div className="irow">
-            <span className="ilbl">{t('consumer.cart.handling', 'Handling charges')}</span>
-            <span className="ival">{fmtMoney(bill.handling)}</span>
-          </div>
-        ) : null}
-        {bill.marketFee > 0 ? (
-          <div className="irow">
-            <span className="ilbl">
-              {t('consumer.cart.marketFee', 'Market fee (multiple farmers)')}
-            </span>
-            <span className="ival">{fmtMoney(bill.marketFee)}</span>
-          </div>
-        ) : null}
+        {/* Every charge keeps its row even at zero. A line that appears only when it
+            costs something makes the bill change SHAPE between one basket and the
+            next, so a customer cannot learn what they are being charged for — and a
+            charge they have never seen listed reads as a surprise the first time it
+            does apply. ₹0.00 answers "am I paying this?" outright. */}
+        <div className="irow">
+          <span className="ilbl">{t('consumer.cart.handling', 'Handling charges')}</span>
+          <span className="ival">{fmtMoney(bill.handling)}</span>
+        </div>
+        <div className="irow">
+          <span className="ilbl">
+            {t('consumer.cart.marketFee', 'Market fee (multiple farmers)')}
+          </span>
+          <span className="ival">{fmtMoney(bill.marketFee)}</span>
+        </div>
         <div className="irow">
           <span className="ilbl">{t('consumer.cart.delivery', 'Delivery')}</span>
           <span className="ival">

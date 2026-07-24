@@ -418,23 +418,22 @@ function OrderDetailBody({
           <span className="ilbl">{t('consumer.cart.itemTotal', 'Item Total')}</span>
           <span className="ival">{fmtMoney(charges.itemTotal)}</span>
         </div>
-        {charges.handling > 0 ? (
-          <div className="irow">
-            <span className="ilbl">{t('consumer.cart.handling', 'Handling charges')}</span>
-            <span className="ival">{fmtMoney(charges.handling)}</span>
-          </div>
-        ) : null}
-        {charges.marketFee > 0 ? (
-          <div className="irow">
-            <span className="ilbl">
-              {t('consumer.order.marketFee', 'Market fee')}{' '}
-              <span style={{ fontSize: 10, color: 'var(--gray)' }}>
-                ({t('consumer.order.multipleFarmers', 'multiple farmers')})
-              </span>
+        {/* Every charge keeps its row even at zero — see the note in CartTab. The
+            receipt has to list the same lines the cart quoted, or a customer checking
+            one against the other finds rows that came and went. */}
+        <div className="irow">
+          <span className="ilbl">{t('consumer.cart.handling', 'Handling charges')}</span>
+          <span className="ival">{fmtMoney(charges.handling)}</span>
+        </div>
+        <div className="irow">
+          <span className="ilbl">
+            {t('consumer.order.marketFee', 'Market fee')}{' '}
+            <span style={{ fontSize: 10, color: 'var(--gray)' }}>
+              ({t('consumer.order.multipleFarmers', 'multiple farmers')})
             </span>
-            <span className="ival">{fmtMoney(charges.marketFee)}</span>
-          </div>
-        ) : null}
+          </span>
+          <span className="ival">{fmtMoney(charges.marketFee)}</span>
+        </div>
         <div className="irow">
           <span className="ilbl">{t('consumer.cart.delivery', 'Delivery')}</span>
           <span className="ival">

@@ -94,23 +94,22 @@ export function PaymentSheet({
           <span className="ilbl">{t('consumer.cart.itemTotal', 'Item Total')}</span>
           <span className="ival">{fmtMoney(bill.itemSubtotal)}</span>
         </div>
-        {bill.handling > 0 ? (
-          <div className="irow">
-            <span className="ilbl">{t('consumer.cart.handling', 'Handling charges')}</span>
-            <span className="ival">{fmtMoney(bill.handling)}</span>
-          </div>
-        ) : null}
-        {bill.marketFee > 0 ? (
-          <div className="irow">
-            <span className="ilbl">
-              {t('consumer.order.marketFee', 'Market fee')}{' '}
-              <span style={{ fontSize: 10, color: 'var(--gray)' }}>
-                ({t('consumer.order.multipleFarmers', 'multiple farmers')})
-              </span>
+        {/* Every charge keeps its row even at zero — see the note in CartTab. This is
+            the last screen before Pay Now, so it is the worst possible place for a
+            charge to appear for the first time. */}
+        <div className="irow">
+          <span className="ilbl">{t('consumer.cart.handling', 'Handling charges')}</span>
+          <span className="ival">{fmtMoney(bill.handling)}</span>
+        </div>
+        <div className="irow">
+          <span className="ilbl">
+            {t('consumer.order.marketFee', 'Market fee')}{' '}
+            <span style={{ fontSize: 10, color: 'var(--gray)' }}>
+              ({t('consumer.order.multipleFarmers', 'multiple farmers')})
             </span>
-            <span className="ival">{fmtMoney(bill.marketFee)}</span>
-          </div>
-        ) : null}
+          </span>
+          <span className="ival">{fmtMoney(bill.marketFee)}</span>
+        </div>
         <div className="irow">
           <span className="ilbl">{t('consumer.cart.delivery', 'Delivery')}</span>
           <span className="ival">
