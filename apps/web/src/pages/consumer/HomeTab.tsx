@@ -38,7 +38,7 @@ export function HomeTab({
   const recommended = products
     .map((p) => {
       const best = bestOffer(offersByProduct[p.id] || []);
-      return best ? { product: p, price: offerConsumerPrice(best, p) } : null;
+      return best ? { product: p, price: offerConsumerPrice(best) } : null;
     })
     .filter((x): x is { product: Product; price: number } => x !== null)
     .slice(0, 8);

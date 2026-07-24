@@ -192,7 +192,7 @@ function OfferRow({
   const step = offer.qty_type === 'SPQ' ? parseFloat(String(offer.qty_value)) || defStep : defStep;
   const [qty, setQty] = useState(minQty);
 
-  const custPrice = offerConsumerPrice(offer, product);
+  const custPrice = offerConsumerPrice(offer);
   const f = offer.farmer || {};
   const soldOut = (offer.qty_available ?? 0) <= 0;
   const perSave = mktPrice > 0 ? mktPrice - custPrice : 0;

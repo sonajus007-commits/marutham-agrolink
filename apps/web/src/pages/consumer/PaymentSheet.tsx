@@ -2,23 +2,23 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sheet } from '@marutham/ui';
 import { api, type PlaceOrderItem } from '@marutham/api-client';
-import { fmtMoney } from '@marutham/lib';
+import { fmtMoney, type CartBill } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
 
 export function PaymentSheet({
   open,
-  amount,
+  bill,
   items,
   address,
-  deliveryFee,
   onClose,
   onPlaced,
 }: {
   open: boolean;
-  amount: number;
+  /** The whole bill, not just the total — the charges are itemised below the amount
+   *  so the customer can see what they are agreeing to pay before they commit. */
+  bill: CartBill;
   items: PlaceOrderItem[];
   address: Record<string, unknown> | null;
-  deliveryFee: number;
   onClose: () => void;
   onPlaced: () => void;
 }) {
@@ -56,7 +56,7 @@ export function PaymentSheet({
       const res = await api.placeOrder({
         items,
         pay_method: method,
-        delivery_fee: deliveryFee,
+        delivery_fee: bill.delivery,
         delivery_address: address,
       });
       toast(
@@ -77,12 +77,59 @@ export function PaymentSheet({
       onClose={onClose}
       backLabel={t('common.back', 'Back')}
     >
-      <div style={{ textAlign: 'center', marginBottom: 16 }}>
+      <div style={{ textAlign: 'center', marginBottom: 12 }}>
         <div style={{ fontSize: 11, color: 'var(--gray)' }}>
           {t('consumer.pay.amountPayable', 'Amount payable')}
         </div>
         <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--forest-soft)' }}>
-          {fmtMoney(amount)}
+          {fmtMoney(bill.total)}
+        </div>
+      </div>
+
+      {/* What that figure is made of. The charges beyond the goods — handling and
+          delivery — are named here rather than absorbed into the amount, so nobody
+          reaches the payment screen wondering where the difference came from. */}
+      <div className="ord-card" style={{ marginBottom: 16 }}>
+        <div className="irow">
+          <span className="ilbl">{t('consumer.cart.itemTotal', 'Item Total')}</span>
+          <span className="ival">{fmtMoney(bill.itemSubtotal)}</span>
+        </div>
+        {bill.handling > 0 ? (
+          <div className="irow">
+            <span className="ilbl">{t('consumer.cart.handling', 'Handling charges')}</span>
+            <span className="ival">{fmtMoney(bill.handling)}</span>
+          </div>
+        ) : null}
+        {bill.marketFee > 0 ? (
+          <div className="irow">
+            <span className="ilbl">
+              {t('consumer.order.marketFee', 'Market fee')}{' '}
+              <span style={{ fontSize: 10, color: 'var(--gray)' }}>
+                ({t('consumer.order.multipleFarmers', 'multiple farmers')})
+              </span>
+            </span>
+            <span className="ival">{fmtMoney(bill.marketFee)}</span>
+          </div>
+        ) : null}
+        <div className="irow">
+          <span className="ilbl">{t('consumer.cart.delivery', 'Delivery')}</span>
+          <span className="ival">
+            {bill.delivery === 0 ? (
+              <span style={{ color: 'var(--success)', fontWeight: 700 }}>
+                {t('consumer.cart.free', 'FREE')}
+              </span>
+            ) : (
+              fmtMoney(bill.delivery)
+            )}
+          </span>
+        </div>
+        <div className="irow" style={{ fontWeight: 800 }}>
+          <span className="ilbl" style={{ color: 'var(--forest)', fontWeight: 800 }}>
+            {t('consumer.cart.grandTotal', 'Grand Total')}
+          </span>
+          <span className="ival" style={{ color: 'var(--forest)', fontWeight: 800 }}>
+            {fmtMoney(bill.total)}
+          </span>
         </div>
       </div>
 

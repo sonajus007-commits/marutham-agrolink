@@ -175,10 +175,9 @@ export function Checkout({ bill, onOrderPlaced }: { bill: CartBill; onOrderPlace
 
       <PaymentSheet
         open={!!pending}
-        amount={bill.total}
+        bill={bill}
         items={pending?.items || []}
         address={pending?.address || null}
-        deliveryFee={bill.delivery}
         onClose={() => setPending(null)}
         onPlaced={() => {
           setPending(null);

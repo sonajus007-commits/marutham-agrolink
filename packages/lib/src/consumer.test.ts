@@ -133,60 +133,80 @@ describe('cartBill — handling and savings', () => {
     const b = cartBill([line({ qty: 2 })], byId);
     expect(b.total).toBeCloseTo(b.itemSubtotal + b.handling + b.marketFee + b.delivery);
   });
+
+  it('the item subtotal equals the line totals the customer can SEE', () => {
+    /* The cart draws each row as price x qty. The subtotal used to subtract handling
+     * out of every line, so those visible numbers did not add up to the Item Total
+     * printed underneath them — on a handling-bearing product the bill simply looked
+     * wrong. This is the property that guarantees the arithmetic on screen reads. */
+    const byId = {
+      p1: product({ exotic: true, district_price: { handling: '8', market_price: '60' } }),
+      p2: product({
+        id: 'p2',
+        exotic: true,
+        district_price: { handling: '5', market_price: '60' },
+      }),
+    };
+    const cart = [line({ price: 35, qty: 2 }), line({ product_id: 'p2', price: 20, qty: 3 })];
+
+    const b = cartBill(cart, byId);
+    const whatTheRowsShow = 35 * 2 + 20 * 3;
+
+    expect(b.itemSubtotal).toBe(whatTheRowsShow);
+    // ...and handling is still charged once, at the highest exotic rate, on its own line.
+    expect(b.handling).toBe(8);
+    expect(b.total).toBe(whatTheRowsShow + 8 + b.marketFee + b.delivery);
+  });
 });
 
 describe('offerConsumerPrice', () => {
   it('prefers the seller-aware consumer_price, which the API sends in paise', () => {
-    const p = product({ district_price: { handling: '2', market_price: '35' } });
-    expect(offerConsumerPrice({ farmer_price: '20', consumer_price: 2500 } as Offer, p)).toBe(27); // 25 + 2
+    expect(offerConsumerPrice({ farmer_price: '20', consumer_price: 2500 } as Offer)).toBe(25);
+  });
+
+  it('is the ITEM price — handling is an order charge and is NOT folded in', () => {
+    /* It used to return 27 here (25 + 2 handling), so the shelf price was a figure
+     * no purchase ever matched: handling is charged once per ORDER, and the server
+     * stores the line without it. cartBill then had to subtract it back out of every
+     * line, which is why the cart's visible line totals did not add up to the Item
+     * Total printed under them. */
+    const offer = { farmer_price: '20', consumer_price: 2500 } as Offer;
+    expect(offerConsumerPrice(offer)).toBe(25);
   });
 
   // The fallback uses the SELLER's fee. `product.platform_fee_pct` is ignored —
   // the server never reads it, and it says 5% even for Retailers who pay 10%.
   // This test previously asserted the opposite, and so pinned the bug in place.
   it('ignores product.platform_fee_pct when falling back', () => {
-    const p = product({
-      platform_fee_pct: 10,
-      district_price: { handling: '0', market_price: '35' },
-    });
     const offer = {
       farmer_price: '20',
       consumer_price: null,
       farmer: { seller_type: 'Farmer' },
     } as Offer;
-    expect(offerConsumerPrice(offer, p)).toBeCloseTo(21); // 20 + 5%, not + 10%
+    expect(offerConsumerPrice(offer)).toBeCloseTo(21); // 20 + 5%, not + 10%
   });
 
   it('falls back to 5% for a farmer', () => {
-    const p = product({
-      platform_fee_pct: undefined,
-      district_price: { handling: '0', market_price: '35' },
-    });
     const offer = {
       farmer_price: '100',
       consumer_price: null,
       farmer: { seller_type: 'Farmer' },
     } as Offer;
-    expect(offerConsumerPrice(offer, p)).toBeCloseTo(105);
+    expect(offerConsumerPrice(offer)).toBeCloseTo(105);
   });
 
   it('falls back to 10% for a retailer', () => {
-    const p = product({
-      platform_fee_pct: 5,
-      district_price: { handling: '0', market_price: '35' },
-    });
     const offer = {
       farmer_price: '100',
       consumer_price: null,
       farmer: { seller_type: 'Retailer' },
     } as Offer;
-    expect(offerConsumerPrice(offer, p)).toBeCloseTo(110);
+    expect(offerConsumerPrice(offer)).toBeCloseTo(110);
   });
 
   it('treats a seller with no seller_type as a farmer', () => {
-    const p = product({ district_price: { handling: '0', market_price: '35' } });
     const offer = { farmer_price: '100', consumer_price: null } as Offer;
-    expect(offerConsumerPrice(offer, p)).toBeCloseTo(105);
+    expect(offerConsumerPrice(offer)).toBeCloseTo(105);
   });
 });
 

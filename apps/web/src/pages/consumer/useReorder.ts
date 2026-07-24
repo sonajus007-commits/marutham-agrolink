@@ -49,7 +49,7 @@ export function useReorder(): (items: OrderItem[]) => ReorderResult {
           product_id: product.id,
           product_name: product.name,
           unit: product.unit,
-          price: offerConsumerPrice(offer, product),
+          price: offerConsumerPrice(offer),
           qty,
           farmer_id: farmer.id || null,
           farmer_name: (farmer.fname || '') + (farmer.lname ? ' ' + farmer.lname : ''),

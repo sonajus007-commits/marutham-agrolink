@@ -9,13 +9,32 @@ import {
 } from 'react';
 import type { CartItem } from '@marutham/lib';
 
-const CART_KEY = 'ma_cart';
+/* The stored line carries a `price`, and what that price MEANS changed: it used to
+ * include the per-order handling charge, which the bill then subtracted back out.
+ * Now it is the item price alone. A cart saved under the old meaning would be
+ * re-totalled under the new one and quietly overcharge by the handling on every
+ * line, so the key is versioned — an old cart is dropped rather than mis-priced. */
+const CART_KEY = 'ma_cart_v2';
+const LEGACY_CART_KEYS = ['ma_cart'];
 
 function load(): CartItem[] {
   try {
-    return JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+    const parsed = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+    // A hand-edited or half-written value must not crash the shop.
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
+  }
+}
+
+/** Clear carts written under a previous pricing meaning. Runs once, on mount. */
+function dropLegacyCarts(): void {
+  for (const key of LEGACY_CART_KEYS) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      /* storage unavailable (private mode) — nothing to clean up */
+    }
   }
 }
 
@@ -35,7 +54,10 @@ const CartContext = createContext<CartState | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => load());
 
-  // Persist to the same key the legacy site uses (interop during migration).
+  useEffect(() => {
+    dropLegacyCarts();
+  }, []);
+
   useEffect(() => {
     localStorage.setItem(CART_KEY, JSON.stringify(items));
   }, [items]);

@@ -29,7 +29,7 @@ import {
 } from './farmer';
 import type { Order } from './orders';
 import { sellerFeePct, FARMER_FEE_PCT, RETAILER_FEE_PCT } from './fees';
-import { offerConsumerPrice, type Offer, type Product } from './consumer';
+import { offerConsumerPrice, type Offer } from './consumer';
 
 describe('sellerFeePct — mirrors backend/utils/fees.js', () => {
   it('charges farmers 5%', () => {
@@ -98,20 +98,13 @@ describe('projectBulkPrice', () => {
 });
 
 describe('offerConsumerPrice falls back to the seller fee, not platform_fee_pct', () => {
-  const product = {
-    id: 'p1',
-    name: 'x',
-    district_price: { handling: '0' },
-    platform_fee_pct: 5,
-  } as Product;
-
   it('prefers the server-computed consumer_price (paise)', () => {
     const offer = {
       farmer_price: '100',
       consumer_price: 11000,
       farmer: { seller_type: 'Retailer' },
     } as Offer;
-    expect(offerConsumerPrice(offer, product)).toBe(110);
+    expect(offerConsumerPrice(offer)).toBe(110);
   });
 
   it("a retailer offer without consumer_price falls back to 10%, not the product's 5%", () => {
@@ -120,7 +113,7 @@ describe('offerConsumerPrice falls back to the seller fee, not platform_fee_pct'
       consumer_price: null,
       farmer: { seller_type: 'Retailer' },
     } as Offer;
-    expect(offerConsumerPrice(offer, product)).toBeCloseTo(110); // 100 * 1.1 has float dust
+    expect(offerConsumerPrice(offer)).toBeCloseTo(110); // 100 * 1.1 has float dust
   });
 
   it('a farmer offer falls back to 5%', () => {
@@ -129,7 +122,7 @@ describe('offerConsumerPrice falls back to the seller fee, not platform_fee_pct'
       consumer_price: null,
       farmer: { seller_type: 'Farmer' },
     } as Offer;
-    expect(offerConsumerPrice(offer, product)).toBeCloseTo(105);
+    expect(offerConsumerPrice(offer)).toBeCloseTo(105);
   });
 });
 

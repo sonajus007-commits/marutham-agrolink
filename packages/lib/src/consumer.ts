@@ -123,22 +123,25 @@ export function unitStep(u?: string): number {
 }
 
 /**
- * Consumer price (rupees) for an offer: seller-aware price + handling.
+ * What one unit of this offer costs the customer, in rupees.
+ *
+ * This is the ITEM price and nothing else. Handling is deliberately NOT folded in:
+ * it is charged once per ORDER (the highest rate among the cart's exotic items), not
+ * per unit, so burying it in a unit price made the shelf price a number that was
+ * true of no actual purchase — and it did not survive to the order, because the
+ * server stores the line at fee-adjusted price with no handling. The charge is shown
+ * on its own line in the cart bill, where the customer can see what it is.
  *
  * The server sends `consumer_price` (paise), already fee-adjusted, and that is
  * authoritative. The fallback recomputes it from the SELLER's fee — not from
  * `product.platform_fee_pct`, which the server ignores entirely and which reads
  * 5% even for Retailers, who are charged 10%.
  */
-export function offerConsumerPrice(offer: Offer, product: Product): number {
-  const dp = product.district_price;
-  const handling = dp ? parseFloat(String(dp.handling)) || 0 : 0;
+export function offerConsumerPrice(offer: Offer): number {
   const farmerPrice = parseFloat(String(offer.farmer_price));
-  const base =
-    offer.consumer_price != null
-      ? offer.consumer_price / 100
-      : farmerPrice * (1 + sellerFeePct(offer.farmer?.seller_type) / 100);
-  return base + handling;
+  return offer.consumer_price != null
+    ? offer.consumer_price / 100
+    : farmerPrice * (1 + sellerFeePct(offer.farmer?.seller_type) / 100);
 }
 
 /** Comparable price used to pick the cheapest offer (mirrors legacy exactly). */
@@ -232,17 +235,24 @@ export interface CartBill {
   total: number;
 }
 
-/** The order bill. Ported verbatim from consumer.html cartBill(). */
+/**
+ * The order bill: the item lines, then each charge on its own line.
+ *
+ * `i.price` is the ITEM price alone (see offerConsumerPrice), so the subtotal is a
+ * plain sum — what the customer sees against each row is what those rows add up to.
+ * It used to subtract handling back out of every line, because the price it was
+ * given had handling baked into it; the two together meant the visible line totals
+ * did not sum to the Item Total printed underneath them.
+ */
 export function cartBill(cart: CartItem[], productById: Record<string, Product>): CartBill {
   const prodOf = (i: CartItem) => productById[i.product_id] || ({} as Product);
   const hdlOf = (i: CartItem) => {
     const dp = prodOf(i).district_price;
     return dp ? parseFloat(String(dp.handling)) || 0 : 0;
   };
-  const itemSubtotal = cart.reduce(
-    (s, i) => s + Math.max(0, parseFloat(String(i.price || 0)) - hdlOf(i)) * i.qty,
-    0,
-  );
+  const itemSubtotal = cart.reduce((s, i) => s + parseFloat(String(i.price || 0)) * i.qty, 0);
+  // Charged ONCE for the whole order — the highest district handling among the
+  // cart's exotic items. Not per line, not per unit. Mirrors POST /orders.
   const handling = cart.reduce((mx, i) => (prodOf(i).exotic ? Math.max(mx, hdlOf(i)) : mx), 0);
   const farmers: Record<string, 1> = {};
   cart.forEach((i) => {
@@ -250,11 +260,14 @@ export function cartBill(cart: CartItem[], productById: Record<string, Product>)
   });
   const marketFee = Object.keys(farmers).length >= 2 ? 10 : 0;
   const delivery = itemSubtotal <= 0 ? 0 : itemSubtotal >= FREE_DELIVERY_MIN ? 0 : DELIVERY_FLAT;
+  // Savings compare like with like: the market rate for the goods against what the
+  // customer pays for the goods. Handling is a service charge on the order, not part
+  // of what the produce costs, so it does not belong on either side.
   const savings = cart.reduce((s, i) => {
     const dp = prodOf(i).district_price;
     if (!dp) return s;
-    const paidNoHdl = parseFloat(String(i.price)) - hdlOf(i);
-    return s + Math.max(0, parseFloat(String(dp.market_price)) - paidNoHdl) * i.qty;
+    const paid = parseFloat(String(i.price));
+    return s + Math.max(0, parseFloat(String(dp.market_price)) - paid) * i.qty;
   }, 0);
   return {
     itemSubtotal,

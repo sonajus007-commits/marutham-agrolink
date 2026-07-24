@@ -34,10 +34,8 @@ export function ProductCard({
 }) {
   const { t } = useTranslation();
   const dp = product.district_price;
-  const handling = dp ? parseFloat(String(dp.handling)) || 0 : 0;
   const best = bestOffer(offers, seller);
-  const custPrice = best ? offerConsumerPrice(best, product) : null;
-  const farmerPrice = best ? parseFloat(String(best.farmer_price)) : null;
+  const custPrice = best ? offerConsumerPrice(best) : null;
   const hasStock = !!(best && (best.qty_available ?? 0) > 0);
   const image = best?.images?.[0];
   const f = best?.farmer;
@@ -98,17 +96,11 @@ export function ProductCard({
         </div>
         <div className="prod-price-box">
           {custPrice != null ? (
-            <>
-              <div className="prod-price">{fmtMoney(custPrice)}</div>
-              <div style={{ fontSize: 9, color: 'var(--gray)' }}>
-                {t('consumer.card.seller', 'seller')} {fmtMoney(farmerPrice!)}
-              </div>
-              {handling > 0 ? (
-                <div style={{ fontSize: 9, color: 'var(--gray)' }}>
-                  +{fmtMoney(handling)} {t('consumer.card.handling', 'hdl')}
-                </div>
-              ) : null}
-            </>
+            /* The price the customer will pay for the item, and nothing else. What
+               the seller is paid is between us and the seller, and handling is an
+               order-level charge that is itemised in the cart — showing either here
+               made the shelf price look like a sum the customer had to work out. */
+            <div className="prod-price">{fmtMoney(custPrice)}</div>
           ) : dp ? (
             <>
               <div className="prod-price" style={{ fontSize: 12, color: 'var(--gray)' }}>
