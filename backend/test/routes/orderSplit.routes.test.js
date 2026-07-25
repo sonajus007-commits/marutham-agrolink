@@ -21,7 +21,17 @@ const F2 = 'farmer-2';
 const P1 = 'product-1';
 const P2 = 'product-2';
 
-const PARENT_CODE = 'ORDPDK260724000001';
+// Order codes embed today's IST date (see backend/utils/codeGen.js), so the expected
+// parent code has to track the day the test runs — hardcoding a date made this fail
+// every time the calendar rolled past it.
+function istDateYYMMDD() {
+  const ist = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+  const yy = String(ist.getUTCFullYear()).slice(-2);
+  const mm = String(ist.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(ist.getUTCDate()).padStart(2, '0');
+  return `${yy}${mm}${dd}`;
+}
+const PARENT_CODE = `ORDPDK${istDateYYMMDD()}000001`;
 
 /** Reads the value a route filtered a column on, e.g. which farmer it asked for. */
 function filterValue(ctx, col) {

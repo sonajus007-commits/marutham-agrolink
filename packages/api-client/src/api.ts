@@ -1,6 +1,6 @@
 /* Typed API surface — endpoint names mirror frontend/js/api.js for an easy
  * mental map. Grows per-role as each role migrates. */
-import { apiFetch } from './client';
+import { apiFetch, apiFetchBlob } from './client';
 import { apiFetchOffline } from './offlineSync';
 import type {
   LoginResponse,
@@ -193,6 +193,10 @@ export const api = {
   /** Live agent + ETA. Separate from getOrder so it can be polled cheaply. */
   trackOrder(id: string): Promise<TrackResponse> {
     return apiFetch<TrackResponse>('GET', '/orders/' + id + '/track');
+  },
+  /** The order's PDF invoice as a Blob (the caller triggers the browser download). */
+  getInvoice(id: string): Promise<Blob> {
+    return apiFetchBlob('/orders/' + id + '/invoice.pdf');
   },
   cancelOrder(id: string, reason?: string): Promise<{ message?: string }> {
     return apiFetch('POST', '/orders/' + id + '/cancel', { cancel_reason: reason || null });

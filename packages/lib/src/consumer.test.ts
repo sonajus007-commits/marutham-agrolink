@@ -49,7 +49,11 @@ describe('cartBill — delivery threshold', () => {
   });
 
   it('is free above the threshold', () => {
-    expect(cartBill([line({ price: 200 })], byId).delivery).toBe(0);
+    expect(cartBill([line({ price: FREE_DELIVERY_MIN + 50 })], byId).delivery).toBe(0);
+  });
+
+  it('still charges just below the threshold', () => {
+    expect(cartBill([line({ price: FREE_DELIVERY_MIN - 1 })], byId).delivery).toBe(DELIVERY_FLAT);
   });
 
   it('an empty cart is charged nothing', () => {
@@ -98,12 +102,11 @@ describe('cartBill — multi-farmer market fee', () => {
 });
 
 describe('cartBill — handling and savings', () => {
-  it('charges handling once, at the highest exotic rate', () => {
+  it('charges handling once, at the highest rate in the cart', () => {
     const byId = {
-      p1: product({ exotic: true, district_price: { handling: '5', market_price: '35' } }),
+      p1: product({ district_price: { handling: '5', market_price: '35' } }),
       p2: product({
         id: 'p2',
-        exotic: true,
         district_price: { handling: '8', market_price: '35' },
       }),
     };
@@ -111,9 +114,16 @@ describe('cartBill — handling and savings', () => {
     expect(bill.handling).toBe(8);
   });
 
-  it('charges no handling for non-exotic items', () => {
+  it('charges handling on any product that has one — not only exotic', () => {
     const byId = {
       p1: product({ exotic: false, district_price: { handling: '5', market_price: '35' } }),
+    };
+    expect(cartBill([line({ price: 35 })], byId).handling).toBe(5);
+  });
+
+  it('charges no handling when no product carries a handling amount', () => {
+    const byId = {
+      p1: product({ district_price: { handling: '0', market_price: '35' } }),
     };
     expect(cartBill([line({ price: 35 })], byId).handling).toBe(0);
   });

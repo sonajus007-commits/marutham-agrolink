@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sheet, QtyStepper } from '@marutham/ui';
 import {
@@ -34,31 +34,54 @@ export function ProductDetailSheet({
   onAdd: (item: CartItem) => void;
 }) {
   const { t } = useTranslation();
+  // Which vendor's photos the top gallery shows. null = default to the first
+  // (highest-rated) offer. Reset whenever the sheet switches to another product.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const productId = product?.id ?? null;
+  useEffect(() => setSelectedId(null), [productId]);
   if (!product) return null;
   const dp = product.district_price;
   const mktPrice = dp ? parseFloat(String(dp.market_price)) : 0;
-  const photos = Array.from(new Set(offers.map((o) => o.images?.[0]).filter(Boolean))) as string[];
+  // Offers ordered by rating (highest first) — the same order the rows render in, so
+  // the gallery and the list agree on which vendor is "first".
+  const sortedOffers = offersByRating(offers, ratingsByFP, product.id);
+  const selectedOffer =
+    sortedOffers.find((o) => (o.id ?? '') === selectedId) ?? sortedOffers[0] ?? null;
+  const selectedSeller = selectedOffer?.farmer;
+  const selectedSellerName = selectedSeller
+    ? `${selectedSeller.fname || ''}${selectedSeller.lname ? ' ' + selectedSeller.lname : ''}`.trim()
+    : '';
+  // Only the SELECTED vendor's photos — vendors are never mixed together, and the
+  // product's own standard image (the emoji hero below) is never replaced by them.
+  const photos = (selectedOffer?.images ?? []).filter(Boolean) as string[];
 
   return (
     <Sheet open={open} title={product.name} onClose={onClose} backLabel={t('common.back', 'Back')}>
       {photos.length ? (
-        <div
-          style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 14, paddingBottom: 4 }}
-        >
-          {photos.map((src) => (
-            <img
-              key={src}
-              src={src}
-              alt=""
-              style={{
-                width: 160,
-                height: 120,
-                objectFit: 'cover',
-                borderRadius: 12,
-                flexShrink: 0,
-              }}
-            />
-          ))}
+        <div style={{ marginBottom: 14 }}>
+          {selectedSellerName ? (
+            <div style={{ fontSize: 11, color: 'var(--gray)', marginBottom: 6 }}>
+              {t('consumer.detail.photosFrom', 'Photos from {{name}}', {
+                name: selectedSellerName,
+              })}
+            </div>
+          ) : null}
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+            {photos.map((src) => (
+              <img
+                key={src}
+                src={src}
+                alt=""
+                style={{
+                  width: 160,
+                  height: 120,
+                  objectFit: 'cover',
+                  borderRadius: 12,
+                  flexShrink: 0,
+                }}
+              />
+            ))}
+          </div>
         </div>
       ) : null}
 
@@ -84,18 +107,11 @@ export function ProductDetailSheet({
             justifyContent: 'center',
             fontSize: 34,
             flexShrink: 0,
-            overflow: 'hidden',
           }}
         >
-          {photos[0] ? (
-            <img
-              src={photos[0]}
-              alt=""
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          ) : (
-            getProductEmoji(product.name)
-          )}
+          {/* The product's standard identity — the seller's own photos are the gallery
+              above, chosen per vendor, and never replace this. */}
+          {getProductEmoji(product.name)}
         </div>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--forest)' }}>
@@ -149,13 +165,15 @@ export function ProductDetailSheet({
           >
             {t('consumer.detail.offerCount', { count: offers.length })}
           </div>
-          {offersByRating(offers, ratingsByFP, product.id).map((o, k) => (
+          {sortedOffers.map((o, k) => (
             <OfferRow
               key={o.id || k}
               product={product}
               offer={o}
               mktPrice={mktPrice}
               ratingsByFP={ratingsByFP}
+              selected={(o.id ?? '') === (selectedOffer?.id ?? '')}
+              onSelect={() => setSelectedId(o.id ?? null)}
               onAdd={onAdd}
               onAdded={onClose}
             />
@@ -171,6 +189,8 @@ function OfferRow({
   offer,
   mktPrice,
   ratingsByFP,
+  selected,
+  onSelect,
   onAdd,
   onAdded,
 }: {
@@ -178,6 +198,10 @@ function OfferRow({
   offer: Offer;
   mktPrice: number;
   ratingsByFP: Record<string, Rating>;
+  /** This vendor's photos are the ones shown in the top gallery. */
+  selected: boolean;
+  /** Make this vendor the selected one (swaps the top gallery to their photos). */
+  onSelect: () => void;
   onAdd: (item: CartItem) => void;
   onAdded: () => void;
 }) {
@@ -198,7 +222,7 @@ function OfferRow({
   const perSave = mktPrice > 0 ? mktPrice - custPrice : 0;
   const fpKey = `${f.id || ''}_${product.id}`;
   const farmerRating = ratingsByFP[fpKey];
-  const initial = ((f.fname || 'F').charAt(0) + ((f.lname || '').charAt(0) || '')).toUpperCase();
+  const photoCount = (offer.images ?? []).filter(Boolean).length;
 
   const qtyRule =
     offer.qty_type === 'MOQ'
@@ -269,7 +293,8 @@ function OfferRow({
   return (
     <div
       style={{
-        border: '1.5px solid var(--surface-muted)',
+        border: selected ? '1.5px solid var(--leaf)' : '1.5px solid var(--surface-muted)',
+        background: selected ? 'var(--success-bg)' : undefined,
         borderRadius: 14,
         padding: 14,
         marginBottom: 12,
@@ -284,38 +309,43 @@ function OfferRow({
           marginBottom: 8,
         }}
       >
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          {offer.images?.[0] ? (
-            <img
-              src={offer.images[0]}
-              alt=""
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                objectFit: 'cover',
-                flexShrink: 0,
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                background: 'var(--forest)',
-                color: 'var(--white)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 12,
-                fontWeight: 700,
-                flexShrink: 0,
-              }}
-            >
-              {initial}
-            </div>
-          )}
+        <button
+          type="button"
+          onClick={onSelect}
+          aria-pressed={selected}
+          aria-label={t('consumer.detail.viewSellerPhotos', "View {{name}}'s photos", {
+            name: `${f.fname || ''}${f.lname ? ' ' + f.lname : ''}`.trim() || 'seller',
+          })}
+          style={{
+            display: 'flex',
+            gap: 10,
+            alignItems: 'center',
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            margin: 0,
+            textAlign: 'left',
+            cursor: photoCount > 0 ? 'pointer' : 'default',
+            font: 'inherit',
+          }}
+        >
+          {/* Standard product image, not the seller's upload — their photos are shown
+              only in the gallery above, and only once this vendor is tapped. */}
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: 'var(--surface-muted)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 18,
+              flexShrink: 0,
+            }}
+          >
+            {getProductEmoji(product.name)}
+          </div>
           <div>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)' }}>
               {f.fname || t('consumer.detail.seller', 'Seller')}
@@ -324,13 +354,29 @@ function OfferRow({
             <div style={{ fontSize: 10, color: 'var(--gray)' }}>
               {f.village_town || f.district || ''}
             </div>
+            {photoCount > 0 ? (
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: selected ? 'var(--success)' : 'var(--leaf)',
+                  marginTop: 2,
+                }}
+              >
+                {selected
+                  ? t('consumer.detail.showingPhotos', '📷 Showing photos above')
+                  : t('consumer.detail.tapForPhotos', '📷 {{n}} photos — tap to view', {
+                      n: photoCount,
+                    })}
+              </div>
+            ) : null}
             {farmerRating ? (
               <div style={{ marginTop: 2 }}>
                 <Stars value={farmerRating.avg_rating} count={farmerRating.num_ratings} />
               </div>
             ) : null}
           </div>
-        </div>
+        </button>
         <div style={{ textAlign: 'right' }}>
           {mktPrice > 0 && custPrice < mktPrice ? (
             <div style={{ fontSize: 10, color: 'var(--gray)', textDecoration: 'line-through' }}>

@@ -7,6 +7,7 @@ const { validateBody, z } = require('../middleware/validate');
 const { generateOrderCode } = require('../utils/codeGen');
 const { getFeeForSeller } = require('../utils/fees');
 const { payoutByOrder } = require('../utils/payouts');
+const { streamInvoice } = require('../utils/invoice');
 const {
   SPLIT_ROUTE,
   groupItemsBySeller,
@@ -206,9 +207,11 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
   // ── 2. Aggregate order totals (all paise) ──────────────────────────────────
   const item_total = resolvedItems.reduce((s, i) => s + i._lineTotal, 0);
 
-  // Handling: charged ONCE per order — the highest district handling among the
-  // cart's exotic items (not per-line, not per-unit). Non-exotic items = no handling.
-  const handling = resolvedItems.reduce((mx, i) => (i._exotic ? Math.max(mx, i._handling) : mx), 0);
+  // Handling: charged ONCE per order — the highest handling amount among the cart's
+  // items (not per-line, not per-unit). Any product the admin gave a handling amount
+  // carries it; the old rule only counted it on products flagged `exotic`, so a
+  // handling charge set on an ordinary product was silently dropped.
+  const handling = resolvedItems.reduce((mx, i) => Math.max(mx, i._handling), 0);
 
   // Platform-fee revenue (consumer markup over farmer price). Already baked into
   // item_total via consumerPrice — recorded here for revenue reporting only.
@@ -219,9 +222,9 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
   const distinctFarmers  = new Set(resolvedItems.map(i => i.farmer_id)).size;
   const multiFarmerFee   = distinctFarmers >= 2 ? 1000 : 0;
 
-  // Delivery: computed on the SERVER (client value ignored) — flat ₹25 below ₹150,
-  // FREE at ₹150 and above.
-  const delivery = item_total === 0 ? 0 : (item_total >= 15000 ? 0 : 2500);
+  // Delivery: computed on the SERVER (client value ignored) — flat ₹25 below ₹400,
+  // FREE at ₹400 and above.
+  const delivery = item_total === 0 ? 0 : (item_total >= 40000 ? 0 : 2500);
 
   const saved = resolvedItems.reduce((s, i) => s + i._saved, 0);
   const total = item_total + handling + delivery + multiFarmerFee;
@@ -785,6 +788,107 @@ router.get('/:id', async (req, res) => {
   // `parts` only appears on a split order, so a client that predates splitting sees
   // the response shape it has always seen.
   res.json({ order, items, history, qr_token, qr_svg, ...(isSplitParent ? { parts } : {}) });
+});
+
+// ── GET /orders/:id/invoice.pdf  (consumer owner or staff) ────────────────────
+// A downloadable PDF invoice for the whole customer order. For a split order the
+// invoice covers the PARENT (the thing the customer paid for), with each seller's
+// lines grouped under that seller. Money is read straight from the row in paise —
+// this response bypasses the res.json money conversion, so invoice.js divides.
+router.get('/:id/invoice.pdf', async (req, res) => {
+  const identifier = req.params.id;
+  const isCode = identifier.startsWith('ORD');
+
+  let q = supabase.from('orders').select('*');
+  q = isCode ? q.eq('code', identifier) : q.eq('id', identifier);
+  const { data: order, error } = await q.maybeSingle();
+
+  if (error) {
+    console.error('GET invoice order lookup failed:', error.message);
+    return res.status(500).json({ error: 'Could not generate the invoice. Please try again.' });
+  }
+  if (!order) return res.status(404).json({ error: 'Order not found.' });
+
+  // Consumers may only invoice their own orders; staff/admin may invoice any.
+  if (req.user.role === 'consumer' && order.consumer_id !== req.user.id) {
+    return res.status(403).json({ error: 'You can only view your own orders.' });
+  }
+
+  // Phone + a registered-address fallback, exactly as GET /:id does, so the invoice
+  // always carries a deliverable address even for orders placed before addresses
+  // were captured on the order itself.
+  if (order.consumer_id) {
+    const { data: consumer, error: consumerErr } = await supabase
+      .from('users')
+      .select('phone, country_code, house_no, street1, street2, landmark, village_town, city, district, pincode, state')
+      .eq('id', order.consumer_id)
+      .maybeSingle();
+    if (consumerErr) {
+      console.error('GET invoice consumer lookup failed:', consumerErr.message);
+      return res.status(500).json({ error: 'Could not generate the invoice. Please try again.' });
+    }
+    if (consumer) {
+      order.consumer_phone = `${consumer.country_code || '+91'} ${consumer.phone}`;
+      if (!order.delivery_address) {
+        order.delivery_address = {
+          house_no: consumer.house_no, street1: consumer.street1, street2: consumer.street2,
+          landmark: consumer.landmark, village_town: consumer.village_town, city: consumer.city,
+          district: consumer.district, pincode: consumer.pincode, state: consumer.state,
+        };
+      }
+    }
+  }
+
+  // Build the line groups. A split parent's lines live on its children, one group
+  // per seller; a plain order is a single unlabelled group.
+  let sellerGroups = [];
+  if (order.route === SPLIT_ROUTE) {
+    const { data: children, error: childErr } = await supabase
+      .from('orders')
+      .select('id, seller_name, split_seq')
+      .eq('parent_order_id', order.id)
+      .order('split_seq', { ascending: true });
+    if (childErr) {
+      console.error('GET invoice parts lookup failed:', childErr.message);
+      return res.status(500).json({ error: 'Could not generate the invoice. Please try again.' });
+    }
+    const kids = children || [];
+    const { data: items, error: itemsErr } = await supabase
+      .from('order_items')
+      .select('name, qty, unit, price, order_id')
+      .in('order_id', kids.map((c) => c.id));
+    if (itemsErr) {
+      console.error('GET invoice items lookup failed:', itemsErr.message);
+      return res.status(500).json({ error: 'Could not generate the invoice. Please try again.' });
+    }
+    sellerGroups = kids.map((c) => ({
+      seller_name: c.seller_name,
+      items: (items || []).filter((i) => i.order_id === c.id),
+    }));
+  } else {
+    const { data: items, error: itemsErr } = await supabase
+      .from('order_items')
+      .select('name, qty, unit, price')
+      .eq('order_id', order.id);
+    if (itemsErr) {
+      console.error('GET invoice items lookup failed:', itemsErr.message);
+      return res.status(500).json({ error: 'Could not generate the invoice. Please try again.' });
+    }
+    sellerGroups = [{ seller_name: order.seller_name || null, items: items || [] }];
+  }
+
+  // Everything is loaded — from here we stream, so a later error would arrive after
+  // the PDF headers. streamInvoice only formats in-memory data, so that is safe.
+  try {
+    streamInvoice(res, order, sellerGroups);
+  } catch (e) {
+    console.error('GET invoice PDF generation failed:', e.message);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Could not generate the invoice. Please try again.' });
+    } else {
+      res.end();
+    }
+  }
 });
 
 // ── POST /orders/:id/cancel  (consumer or admin) ──────────────────────────────

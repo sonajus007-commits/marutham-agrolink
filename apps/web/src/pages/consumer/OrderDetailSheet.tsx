@@ -169,6 +169,7 @@ function OrderDetailBody({
   const [items, setItems] = useState<OrderItem[]>(data.items);
   const [showCancel, setShowCancel] = useState(false);
   const [showReturn, setShowReturn] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   // Optimistic status after the customer confirms receipt: the prop order is not
   // mutated, but the pipeline, the status pill and the rating gate all read this.
   const [confirmedStatus, setConfirmedStatus] = useState<string | null>(null);
@@ -209,6 +210,30 @@ function OrderDetailBody({
       );
     } finally {
       setConfirming(false);
+    }
+  }
+
+  async function downloadInvoice() {
+    setDownloading(true);
+    try {
+      const blob = await api.getInvoice(o.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${o.code || 'order'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast(
+        e instanceof Error
+          ? e.message
+          : t('consumer.order.invoiceFailed', 'Could not download the invoice'),
+        'er',
+      );
+    } finally {
+      setDownloading(false);
     }
   }
 
@@ -426,12 +451,7 @@ function OrderDetailBody({
           <span className="ival">{fmtMoney(charges.handling)}</span>
         </div>
         <div className="irow">
-          <span className="ilbl">
-            {t('consumer.order.marketFee', 'Market fee')}{' '}
-            <span style={{ fontSize: 10, color: 'var(--gray)' }}>
-              ({t('consumer.order.multipleFarmers', 'multiple farmers')})
-            </span>
-          </span>
+          <span className="ilbl">{t('consumer.order.marketFee', 'Multiple Seller Fees')}</span>
           <span className="ival">{fmtMoney(charges.marketFee)}</span>
         </div>
         <div className="irow">
@@ -465,6 +485,18 @@ function OrderDetailBody({
           </div>
         ) : null}
       </div>
+
+      <Button
+        variant="ghost"
+        block
+        onClick={downloadInvoice}
+        disabled={downloading}
+        style={{ marginBottom: 12 }}
+      >
+        {downloading
+          ? t('consumer.order.invoicePreparing', 'Preparing invoice…')
+          : `🧾 ${t('consumer.order.downloadInvoice', 'Download Invoice (PDF)')}`}
+      </Button>
 
       {isDelivered ? (
         <Button variant="ghost" block onClick={handleReorder} style={{ marginBottom: 12 }}>

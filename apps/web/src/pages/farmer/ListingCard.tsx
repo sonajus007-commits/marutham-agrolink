@@ -46,12 +46,11 @@ export function ListingCard({
   return (
     <article className="listing">
       <div className="listing__top">
+        {/* The product's standard image. The photos this listing carries are the
+            seller's own uploads — shown where they are managed (the listing form) and
+            reviewed (admin), not as the product's thumbnail here. */}
         <div className="listing__thumb" aria-hidden="true">
-          {listing.images?.[0] ? (
-            <img src={listing.images[0]} alt="" />
-          ) : (
-            getProductEmoji(p?.name || '')
-          )}
+          {getProductEmoji(p?.name || '')}
         </div>
         <div className="listing__id">
           <div className="listing__name">{p?.name || '—'}</div>

@@ -78,7 +78,7 @@ export interface Rating {
   num_ratings: number;
 }
 
-export const FREE_DELIVERY_MIN = 150; // ₹ — free delivery at/above this item total
+export const FREE_DELIVERY_MIN = 400; // ₹ — free delivery at/above this item total
 export const DELIVERY_FLAT = 25; // ₹ — charged below the threshold
 
 const PRODUCT_EMOJI: Record<string, string> = {
@@ -251,9 +251,10 @@ export function cartBill(cart: CartItem[], productById: Record<string, Product>)
     return dp ? parseFloat(String(dp.handling)) || 0 : 0;
   };
   const itemSubtotal = cart.reduce((s, i) => s + parseFloat(String(i.price || 0)) * i.qty, 0);
-  // Charged ONCE for the whole order — the highest district handling among the
-  // cart's exotic items. Not per line, not per unit. Mirrors POST /orders.
-  const handling = cart.reduce((mx, i) => (prodOf(i).exotic ? Math.max(mx, hdlOf(i)) : mx), 0);
+  // Charged ONCE for the whole order — the highest handling amount among the cart's
+  // items. Any product the admin gave a handling amount carries it (no longer gated
+  // on `exotic`). Not per line, not per unit. Mirrors POST /orders.
+  const handling = cart.reduce((mx, i) => Math.max(mx, hdlOf(i)), 0);
   const farmers: Record<string, 1> = {};
   cart.forEach((i) => {
     if (i.farmer_id) farmers[i.farmer_id] = 1;

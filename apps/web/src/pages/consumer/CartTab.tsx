@@ -7,6 +7,7 @@ import {
   unitStep,
   unitAllowsDecimal,
   fmtMoney,
+  FREE_DELIVERY_MIN,
   type Offer,
 } from '@marutham/lib';
 import { useConsumerData } from './ConsumerDataContext';
@@ -82,6 +83,8 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
                   flexShrink: 0,
                 }}
               >
+                {/* The product's standard image — seller uploads are shown only in the
+                    product detail sheet, per vendor, on tap. */}
                 {getProductEmoji(item.product_name)}
               </div>
               <div style={{ flex: 1 }}>
@@ -168,9 +171,7 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
           <span className="ival">{fmtMoney(bill.handling)}</span>
         </div>
         <div className="irow">
-          <span className="ilbl">
-            {t('consumer.cart.marketFee', 'Market fee (multiple farmers)')}
-          </span>
+          <span className="ilbl">{t('consumer.cart.marketFee', 'Multiple Seller Fees')}</span>
           <span className="ival">{fmtMoney(bill.marketFee)}</span>
         </div>
         <div className="irow">
@@ -185,10 +186,10 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
             )}
           </span>
         </div>
-        {bill.itemSubtotal > 0 && bill.itemSubtotal < 150 ? (
+        {bill.itemSubtotal > 0 && bill.itemSubtotal < FREE_DELIVERY_MIN ? (
           <div style={{ fontSize: 10, color: 'var(--warning-fg)', marginTop: 2 }}>
             {t('consumer.cart.freeDeliveryNudge', 'Add {{amount}} more for FREE delivery', {
-              amount: fmtMoney(150 - bill.itemSubtotal),
+              amount: fmtMoney(FREE_DELIVERY_MIN - bill.itemSubtotal),
             })}
           </div>
         ) : null}
@@ -196,7 +197,7 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
           <div className="irow" style={{ color: 'var(--success)', fontWeight: 700 }}>
             <span className="ilbl">🎉 {t('consumer.cart.youSave', 'You Save')}</span>
             <span className="ival">
-              {t('consumer.cart.vsGovtRate', '{{amount}} vs Govt Rate', {
+              {t('consumer.cart.vsGovtRate', '{{amount}} vs Market Rate', {
                 amount: fmtMoney(bill.savings),
               })}
             </span>

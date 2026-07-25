@@ -59,3 +59,27 @@ export async function apiFetch<T = unknown>(
   }
   return data as T;
 }
+
+/**
+ * GET a binary response (e.g. a generated PDF) as a Blob, carrying auth. The plain
+ * apiFetch always parses JSON, which a PDF body is not — so file endpoints use this.
+ * An error response IS JSON, so its `error` is read back out for the thrown message.
+ */
+export async function apiFetchBlob(path: string): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+
+  const res = await fetch(API_BASE + path, { method: 'GET', headers });
+  if (!res.ok) {
+    let msg = `Request failed (${res.status})`;
+    try {
+      const data = await res.json();
+      if (data && typeof data === 'object' && 'error' in data) msg = String(data.error);
+    } catch {
+      /* non-JSON error body — keep the status message */
+    }
+    throw new ApiError(msg, res.status);
+  }
+  return res.blob();
+}

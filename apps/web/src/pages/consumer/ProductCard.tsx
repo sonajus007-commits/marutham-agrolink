@@ -37,7 +37,6 @@ export function ProductCard({
   const best = bestOffer(offers, seller);
   const custPrice = best ? offerConsumerPrice(best) : null;
   const hasStock = !!(best && (best.qty_available ?? 0) > 0);
-  const image = best?.images?.[0];
   const f = best?.farmer;
   const availLeft =
     best?.qty_available != null ? Math.max(0, Number(best.qty_available) - cartQty) : null;
@@ -46,9 +45,10 @@ export function ProductCard({
   return (
     <div className="prod-card">
       <div className="prod-top">
-        <div className="prod-thumb">
-          {image ? <img src={image} alt="" /> : getProductEmoji(product.name)}
-        </div>
+        {/* The product's own standard identity (emoji). The seller's own photos are
+            shown in the product detail sheet, per vendor, when choosing who to buy
+            from — not here, where they would replace the product's standard image. */}
+        <div className="prod-thumb">{getProductEmoji(product.name)}</div>
         <div style={{ flex: 1 }}>
           <div className="prod-name">{product.name}</div>
           {product.regional_name ? (
