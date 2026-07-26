@@ -8,6 +8,9 @@ const { generateOrderCode } = require('../utils/codeGen');
 const { getFeeForSeller } = require('../utils/fees');
 const { payoutByOrder } = require('../utils/payouts');
 const { streamInvoice } = require('../utils/invoice');
+const platformConfig = require('../config/platform');
+const invoiceModel = require('../utils/invoiceModel');
+const { renderInvoiceHtml } = require('../utils/invoiceHtml');
 const {
   SPLIT_ROUTE,
   groupItemsBySeller,
@@ -888,6 +891,211 @@ router.get('/:id/invoice.pdf', async (req, res) => {
     } else {
       res.end();
     }
+  }
+});
+
+// ── GET /orders/:id/invoice  (consumer owner or staff) ────────────────────────
+// The full HTML invoice for a customer order: one A4 page per seller plus a
+// Marutham AgroLink platform-services page for the delivery / handling / fee
+// charges (with GST). Money is read raw in paise and divided to rupees here.
+router.get('/:id/invoice', async (req, res) => {
+  const identifier = req.params.id;
+  const isCode = identifier.startsWith('ORD');
+
+  let q = supabase.from('orders').select('*');
+  q = isCode ? q.eq('code', identifier) : q.eq('id', identifier);
+  const { data: order, error } = await q.maybeSingle();
+  if (error) {
+    console.error('GET invoice(html) order lookup failed:', error.message);
+    return res.status(500).json({ error: 'Could not generate the invoice. Please try again.' });
+  }
+  if (!order) return res.status(404).json({ error: 'Order not found.' });
+  if (req.user.role === 'consumer' && order.consumer_id !== req.user.id) {
+    return res.status(403).json({ error: 'You can only view your own orders.' });
+  }
+
+  const paise = (v) => Number(v || 0) / 100;
+  const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata',
+  }) : '');
+  const fmtDateTime = (iso) => (iso ? new Date(iso).toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    timeZone: 'Asia/Kolkata',
+  }) : '');
+
+  try {
+    // ── Consumer (login id + phone + address, with a registered-address fallback) ─
+    let consumer = { name: order.consumer_name || '—', login: null, phone: null, address: {} };
+    if (order.consumer_id) {
+      const { data: cu, error: cErr } = await supabase
+        .from('users')
+        .select('login_id, phone, country_code, house_no, street1, street2, landmark, village_town, city, district, pincode, state')
+        .eq('id', order.consumer_id)
+        .maybeSingle();
+      if (cErr) throw cErr;
+      if (cu) {
+        consumer.login = cu.login_id;
+        consumer.phone = `${cu.country_code || '+91'} ${cu.phone}`;
+        const da = order.delivery_address || {};
+        const src = order.delivery_address ? da : cu;
+        consumer.address = {
+          house: src.house_no,
+          street: [src.street1, src.street2].filter(Boolean).join(', '),
+          landmark: src.landmark,
+          city: src.city || src.village_town,
+          district: src.district,
+          state: src.state,
+          pincode: src.pincode,
+        };
+      }
+    }
+
+    // ── Seller groups: a split parent → one group per child; else one group ──────
+    let groups = [];
+    if (order.route === SPLIT_ROUTE) {
+      const { data: children, error: kErr } = await supabase
+        .from('orders')
+        .select('id, seller_id, seller_name, split_seq, village, district')
+        .eq('parent_order_id', order.id)
+        .order('split_seq', { ascending: true });
+      if (kErr) throw kErr;
+      const kids = children || [];
+      const { data: items, error: iErr } = await supabase
+        .from('order_items')
+        .select('name, qty, unit, price, farmer_id, order_id')
+        .in('order_id', kids.map((c) => c.id));
+      if (iErr) throw iErr;
+      groups = kids.map((c) => ({
+        seller_id: c.seller_id,
+        seller_name: c.seller_name,
+        village: c.village, district: c.district,
+        items: (items || []).filter((it) => it.order_id === c.id),
+      }));
+    } else {
+      const { data: items, error: iErr } = await supabase
+        .from('order_items')
+        .select('name, qty, unit, price, farmer_id')
+        .eq('order_id', order.id);
+      if (iErr) throw iErr;
+      groups = [{
+        seller_id: (items && items[0] && items[0].farmer_id) || null,
+        seller_name: order.seller_name,
+        village: order.village, district: order.district,
+        items: items || [],
+      }];
+    }
+
+    // ── Seller user rows (login id, business name, GST, address) ─────────────────
+    const sellerIds = [...new Set(groups.map((g) => g.seller_id).filter(Boolean))];
+    let sellerUsers = {};
+    if (sellerIds.length) {
+      const { data: su, error: sErr } = await supabase
+        .from('users')
+        .select('id, login_id, business_name, seller_type, gst_number, fname, lname, village_town, city, district, state, pincode')
+        .in('id', sellerIds);
+      if (sErr) throw sErr;
+      (su || []).forEach((u) => { sellerUsers[u.id] = u; });
+    }
+
+    const sellerParties = groups.map((g) => {
+      const u = g.seller_id ? sellerUsers[g.seller_id] : null;
+      const name = (u && (u.business_name || [u.fname, u.lname].filter(Boolean).join(' '))) || g.seller_name || 'Seller';
+      return {
+        isPlatform: false,
+        type: (u && u.seller_type) || 'Farmer',
+        name,
+        login: u ? u.login_id : null,
+        gstin: (u && u.gst_number) || null,
+        fssai: null, // not captured on the seller record yet
+        pan: null,
+        address: {
+          village: (u && u.village_town) || g.village,
+          district: (u && u.district) || g.district,
+          state: (u && u.state) || 'Tamil Nadu',
+          pincode: u && u.pincode,
+        },
+        roundOff: 0,
+        lines: (g.items || []).map((it) => ({
+          name: it.name,
+          unit: it.unit,
+          qty: Number(it.qty),
+          rate: paise(it.price), // consumer price in rupees; no HSN yet ⇒ exempt
+          discount: 0,
+        })),
+      };
+    });
+
+    // ── Platform-services party: delivery / handling / multi-seller fee + GST ─────
+    const handling = paise(order.handling);
+    const delivery = paise(order.delivery);
+    const residual = paise(Number(order.total) - Number(order.item_total) - Number(order.handling) - Number(order.delivery));
+    const marketFee = residual > 0.005 ? Math.round(residual * 100) / 100 : 0;
+    const gstRate = platformConfig.serviceGst;
+    const charge = (name, variant, sac, rate) => ({
+      name, variant, sac, unit: 'order', qty: 1, rate, discount: 0, gstRate, inclusive: true,
+    });
+    const platformLines = [];
+    if (handling > 0) platformLines.push(charge('Order handling charges', 'Per order', '999799', handling));
+    if (marketFee > 0) platformLines.push(charge('Multiple-seller convenience fee', 'Multi-vendor order', '999799', marketFee));
+    if (delivery > 0) platformLines.push(charge('Delivery charges', 'Logistics service', '996812', delivery));
+
+    const parties = [...sellerParties];
+    if (platformLines.length) {
+      parties.push({
+        isPlatform: true,
+        type: 'Platform',
+        name: platformConfig.name,
+        login: invoiceModel.platformLogin(platformConfig),
+        gstin: platformConfig.gstin,
+        fssai: platformConfig.fssai,
+        pan: null,
+        address: platformConfig.address,
+        roundOff: 0,
+        lines: platformLines,
+      });
+    }
+
+    const ymd = invoiceModel.ymdIST(order.created_at);
+    const seq = invoiceModel.seqFromCode(order.code);
+    const platformRef = invoiceModel.platformInvoiceRef(platformConfig, ymd, seq);
+
+    const payStatus = order.cancelled ? 'CANCELLED'
+      : String(order.pay_status).toLowerCase() === 'paid' ? 'PAID'
+        : String(order.pay_status).toLowerCase() === 'refunded' ? 'REFUNDED' : 'UNPAID';
+
+    let qrDataUri = null;
+    try {
+      qrDataUri = await QRCode.toDataURL(`Marutham Invoice ${platformRef} | Order ${order.code}`, {
+        margin: 0, width: 144, color: { dark: '#16211b', light: '#ffffff' },
+      });
+    } catch (_) { /* QR is optional — fall back to the placeholder */ }
+
+    const ctx = {
+      platform: platformConfig,
+      consumer,
+      order: {
+        code: order.code,
+        date: fmtDateTime(order.created_at),
+        invoiceDate: fmtDate(order.created_at),
+        payMethod: order.pay_method || '—',
+        payStatus,
+        payStatusLabel: order.pay_status || '—',
+        agent: order.agent_name || '—',
+        deliveredOn: order.delivered_at ? fmtDateTime(order.delivered_at) : '—',
+        deliveryWaived: delivery === 0,
+      },
+      parties,
+      ymd,
+      seq,
+      platformRef,
+      qrDataUri,
+    };
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.send(renderInvoiceHtml(ctx));
+  } catch (e) {
+    console.error('GET invoice(html) generation failed:', e.message);
+    return res.status(500).json({ error: 'Could not generate the invoice. Please try again.' });
   }
 });
 

@@ -198,6 +198,11 @@ export const api = {
   getInvoice(id: string): Promise<Blob> {
     return apiFetchBlob('/orders/' + id + '/invoice.pdf');
   },
+  /** The order's full HTML invoice as a Blob (one A4 page per seller + a platform
+   *  charges page). The caller opens it in a new tab where it can be printed/saved. */
+  getInvoiceHtml(id: string): Promise<Blob> {
+    return apiFetchBlob('/orders/' + id + '/invoice');
+  },
   cancelOrder(id: string, reason?: string): Promise<{ message?: string }> {
     return apiFetch('POST', '/orders/' + id + '/cancel', { cancel_reason: reason || null });
   },

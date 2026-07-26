@@ -214,22 +214,31 @@ function OrderDetailBody({
   }
 
   async function downloadInvoice() {
+    // Open the tab synchronously on the click so the pop-up blocker allows it,
+    // then point it at the fetched invoice (Print → Save as PDF from there).
+    const win = window.open('', '_blank');
     setDownloading(true);
     try {
-      const blob = await api.getInvoice(o.id);
+      const blob = await api.getInvoiceHtml(o.id);
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `invoice-${o.code || 'order'}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      if (win) {
+        win.location.href = url;
+      } else {
+        // Pop-up blocked — fall back to a direct download of the invoice page.
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `invoice-${o.code || 'order'}.html`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (e) {
+      if (win) win.close();
       toast(
         e instanceof Error
           ? e.message
-          : t('consumer.order.invoiceFailed', 'Could not download the invoice'),
+          : t('consumer.order.invoiceFailed', 'Could not open the invoice'),
         'er',
       );
     } finally {
@@ -494,8 +503,8 @@ function OrderDetailBody({
         style={{ marginBottom: 12 }}
       >
         {downloading
-          ? t('consumer.order.invoicePreparing', 'Preparing invoice…')
-          : `🧾 ${t('consumer.order.downloadInvoice', 'Download Invoice (PDF)')}`}
+          ? t('consumer.order.invoicePreparing', 'Opening invoice…')
+          : `🧾 ${t('consumer.order.downloadInvoice', 'View / Print Invoice')}`}
       </Button>
 
       {isDelivered ? (
