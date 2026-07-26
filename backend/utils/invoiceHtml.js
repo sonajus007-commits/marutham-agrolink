@@ -119,7 +119,7 @@ function InvoiceInfoCard(ctx, party) {
   return `
   <div class="card">
     <h4><span class="ic">🧾</span> Invoice information</h4>
-    <dl class="kv">
+    <dl class="kv stack">
       ${line(sellerLabel, invoiceNumber(party, ctx.ymd, ctx.seq))}
       ${line('Platform Invoice Ref.', ctx.platformRef)}
       ${line('Invoice Date', ctx.order.invoiceDate)}
@@ -383,8 +383,16 @@ const STYLE = `
   .card h4 .ic{ font-size:11px; }
   .who{ font-size:13px; font-weight:700; color:var(--ink); line-height:1.25; }
   .sub{ font-size:11px; color:var(--muted); line-height:1.5; margin-top:2px; }
-  .kv{ display:grid; grid-template-columns:auto 1fr; gap:1px 8px; margin-top:7px; font-size:10.5px; }
-  .kv dt{ color:var(--faint); } .kv dd{ margin:0; color:var(--ink); text-align:right; font-weight:600; }
+  .kv{ display:grid; grid-template-columns:auto 1fr; gap:2px 8px; margin-top:7px; font-size:10px; }
+  .kv dt{ color:var(--faint); white-space:nowrap; }
+  .kv dd{ margin:0; color:var(--ink); text-align:right; font-weight:600; white-space:nowrap; }
+  /* Stacked variant — label on its own line, value on a single full-width line
+     below it, so long invoice / reference numbers stay on one line without
+     squeezing the label into a wrapped, gappy column. */
+  .kv.stack{ display:block; }
+  .kv.stack dt{ margin-top:5px; font-size:9px; }
+  .kv.stack dt:first-child{ margin-top:0; }
+  .kv.stack dd{ text-align:left; margin-top:0; font-size:10px; font-variant-numeric:tabular-nums; }
   .taglet{ display:inline-block; font-size:9px; font-weight:700; letter-spacing:.4px; padding:2px 7px;
     border-radius:5px; background:var(--leaf-soft); color:var(--forest); margin-top:6px; }
   .taglet.retail{ background:var(--amber-soft); color:var(--amber-ink); }
