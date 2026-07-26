@@ -962,7 +962,7 @@ router.get('/:id/invoice', async (req, res) => {
       const kids = children || [];
       const { data: items, error: iErr } = await supabase
         .from('order_items')
-        .select('name, qty, unit, price, farmer_id, order_id')
+        .select('name, qty, unit, price, base_farmer_price, farmer_id, order_id')
         .in('order_id', kids.map((c) => c.id));
       if (iErr) throw iErr;
       groups = kids.map((c) => ({
@@ -974,7 +974,7 @@ router.get('/:id/invoice', async (req, res) => {
     } else {
       const { data: items, error: iErr } = await supabase
         .from('order_items')
-        .select('name, qty, unit, price, farmer_id')
+        .select('name, qty, unit, price, base_farmer_price, farmer_id')
         .eq('order_id', order.id);
       if (iErr) throw iErr;
       groups = [{
@@ -1000,6 +1000,9 @@ router.get('/:id/invoice', async (req, res) => {
     const sellerParties = groups.map((g) => {
       const u = g.seller_id ? sellerUsers[g.seller_id] : null;
       const name = (u && (u.business_name || [u.fname, u.lname].filter(Boolean).join(' '))) || g.seller_name || 'Seller';
+      // The same fee formula used at checkout, so the reconstructed list price
+      // matches what the customer saw when browsing (round(farmer × (1 + fee%))).
+      const feePct = getFeeForSeller(u && u.seller_type);
       return {
         isPlatform: false,
         type: (u && u.seller_type) || 'Farmer',
@@ -1015,13 +1018,24 @@ router.get('/:id/invoice', async (req, res) => {
           pincode: u && u.pincode,
         },
         roundOff: 0,
-        lines: (g.items || []).map((it) => ({
-          name: it.name,
-          unit: it.unit,
-          qty: Number(it.qty),
-          rate: paise(it.price), // consumer price in rupees; no HSN yet ⇒ exempt
-          discount: 0,
-        })),
+        lines: (g.items || []).map((it) => {
+          const qty = Number(it.qty);
+          // If a bulk (quantity) discount reduced the price, reconstruct the
+          // pre-discount list price so the invoice shows Rate = list and the
+          // saving on the Discount column. Line total (qty×rate − discount) is
+          // unchanged, so the invoice total still equals what was charged.
+          const listUnit = it.base_farmer_price
+            ? Math.round(Number(it.base_farmer_price) * (1 + feePct / 100))
+            : Number(it.price);
+          const perUnitDisc = Math.max(0, listUnit - Number(it.price));
+          return {
+            name: it.name,
+            unit: it.unit,
+            qty,
+            rate: paise(perUnitDisc > 0 ? listUnit : it.price), // consumer price; no HSN yet ⇒ exempt
+            discount: paise(perUnitDisc * qty),
+          };
+        }),
       };
     });
 
