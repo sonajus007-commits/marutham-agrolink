@@ -445,7 +445,10 @@
 /* KPI dashboard row — 4 across on desktop, 2 on phones (mockup's consumer header). */
 .cons-kpis {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* Five tiles now (Active, Completed, This month, Spent, Saved). auto-fit lets the
+     row reflow from 5-up on desktop to 2-up on a phone without a breakpoint per
+     count — add a sixth KPI later and it wraps cleanly instead of overflowing. */
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
 @media (max-width: 640px) {
@@ -1040,4 +1043,243 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--accent);
+}
+
+/* ── Quick Actions ─────────────────────────────────────────────────────────── */
+.cons-qa {
+  margin: 14px 0;
+}
+.cons-qa__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+@media (max-width: 640px) {
+  .cons-qa__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.cons-qa__card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition:
+    border-color var(--duration-base) ease,
+    transform var(--duration-base) ease,
+    box-shadow var(--duration-base) ease;
+}
+.cons-qa__card:hover:not(:disabled) {
+  border-color: var(--leaf);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(31, 107, 59, 0.1);
+}
+.cons-qa__card:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+/* No opacity dimming on the label itself (that is what axe caught on the exec
+   dashboard); a disabled action loses its pointer and its lift, not its legibility. */
+.cons-qa__card:disabled {
+  cursor: not-allowed;
+  background: var(--tint-25);
+}
+.cons-qa__icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.cons-qa__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.cons-qa__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--forest);
+}
+.cons-qa__sub {
+  font-size: 11px;
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Fresh Arrivals (local-farmer discovery) ───────────────────────────────── */
+.cons-fresh {
+  margin: 14px 0;
+}
+.cons-fresh__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.cons-fresh__title {
+  margin-bottom: 2px;
+}
+.cons-fresh__sub {
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+.cons-fresh__strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 168px;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+}
+.cons-fresh__card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition:
+    border-color var(--duration-base) ease,
+    transform var(--duration-base) ease,
+    box-shadow var(--duration-base) ease;
+}
+.cons-fresh__card:hover {
+  border-color: var(--leaf);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(31, 107, 59, 0.1);
+}
+.cons-fresh__card:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+.cons-fresh__media {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88px;
+  border-radius: 10px;
+  background: var(--tint-25);
+  overflow: hidden;
+}
+.cons-fresh__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cons-fresh__emoji {
+  font-size: 40px;
+  line-height: 1;
+}
+.cons-fresh__tag {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--forest);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.cons-fresh__name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cons-fresh__seller {
+  font-size: 11px;
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cons-fresh__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 2px;
+}
+.cons-fresh__new {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--leaf);
+}
+.cons-fresh__price {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* ── Shopping Insights (ECharts grid) ──────────────────────────────────────── */
+.cons-insights {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 720px) {
+  .cons-insights {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Coming Soon (dashed, no fabricated numbers) ───────────────────────────── */
+.cons-cs__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+@media (max-width: 640px) {
+  .cons-cs__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.cons-cs__tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px;
+  border: 1px dashed var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+.cons-cs__icon {
+  font-size: 18px;
+  line-height: 1;
+}
+.cons-cs__value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--fg-muted);
+}
+.cons-cs__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fg-muted);
+}
+.cons-cs__note {
+  font-size: 10px;
+  font-style: italic;
+  color: var(--fg-muted);
 }

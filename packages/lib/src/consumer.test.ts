@@ -8,6 +8,7 @@ import {
   filterProducts,
   unitStep,
   unitAllowsDecimal,
+  consumerMonthlySeries,
   FREE_DELIVERY_MIN,
   DELIVERY_FLAT,
   type CartItem,
@@ -15,6 +16,7 @@ import {
   type Offer,
   type Rating,
 } from './consumer';
+import type { Order } from './orders';
 
 const product = (over: Partial<Product> = {}): Product => ({
   id: 'p1',
@@ -313,5 +315,60 @@ describe('quantity rules', () => {
   it.each(['piece', 'dozen', 'packet', undefined])('%s is whole-number only', (unit) => {
     expect(unitAllowsDecimal(unit)).toBe(false);
     expect(unitStep(unit)).toBe(1);
+  });
+});
+
+describe('consumerMonthlySeries', () => {
+  const NOW = new Date('2026-07-15T10:00:00Z');
+  const ord = (o: Partial<Order>): Order => ({ id: 'o', status: 'Order Placed', ...o }) as Order;
+
+  it('returns `months` buckets, oldest first, ending in the current month', () => {
+    const s = consumerMonthlySeries([], 6, NOW, 'en');
+    expect(s).toHaveLength(6);
+    expect(s.map((m) => m.label)).toEqual(['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul']);
+  });
+
+  it('buckets spend + saved on the DELIVERED month and counts orders on the PLACED month', () => {
+    const orders = [
+      // Placed in June, delivered in July: counts as a June order, July spend.
+      ord({
+        status: 'Delivered',
+        created_at: '2026-06-28T00:00:00Z',
+        delivered_at: '2026-07-01T00:00:00Z',
+        total: 500,
+        saved: 40,
+      }),
+      // Placed and delivered in July.
+      ord({
+        status: 'Delivered',
+        created_at: '2026-07-05T00:00:00Z',
+        delivered_at: '2026-07-06T00:00:00Z',
+        total: 300,
+        saved: 10,
+      }),
+    ];
+    const s = consumerMonthlySeries(orders, 6, NOW, 'en');
+    const jun = s.find((m) => m.label === 'Jun')!;
+    const jul = s.find((m) => m.label === 'Jul')!;
+    expect(jun.orders).toBe(1);
+    expect(jun.spent).toBe(0);
+    expect(jul.orders).toBe(1);
+    expect(jul.spent).toBe(800);
+    expect(jul.saved).toBe(50);
+  });
+
+  it('excludes cancelled orders from every series', () => {
+    const orders = [
+      ord({ cancelled: true, status: 'Delivered', created_at: '2026-07-05T00:00:00Z', total: 999 }),
+    ];
+    const jul = consumerMonthlySeries(orders, 6, NOW, 'en').find((m) => m.label === 'Jul')!;
+    expect(jul.orders).toBe(0);
+    expect(jul.spent).toBe(0);
+  });
+
+  it('ignores orders outside the window', () => {
+    const orders = [ord({ status: 'Delivered', created_at: '2026-01-01T00:00:00Z', total: 100 })];
+    const s = consumerMonthlySeries(orders, 6, NOW, 'en');
+    expect(s.every((m) => m.orders === 0 && m.spent === 0)).toBe(true);
   });
 });

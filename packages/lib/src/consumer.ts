@@ -2,6 +2,8 @@
  * Ported verbatim in logic from frontend/consumer.html so charges match exactly.
  * Pure + framework-agnostic → testable and reusable by a future React Native app. */
 import { sellerFeePct } from './fees';
+import { isOrderCancelled, type Order } from './orders';
+import { dateLocale } from './format';
 
 export interface DistrictPrice {
   handling?: string | number;
@@ -290,4 +292,78 @@ export interface OrderingWindowStatus {
  * avoid a behaviour change; re-enable time-gating here when the business does. */
 export function orderingWindowStatus(): OrderingWindowStatus {
   return { open: true, msg: 'Ordering open (no time restriction)' };
+}
+
+/** One month of the buyer's shopping history — the unit of the dashboard trends. */
+export interface ConsumerMonthPoint {
+  /** ISO of the first of the month — a stable key, never shown. */
+  monthStart: string;
+  /** Localised short month, e.g. "Jul" / "ஜூலை". Follows the UI language. */
+  label: string;
+  /** ₹ paid on orders DELIVERED in this month (delivered basis, like the KPI). */
+  spent: number;
+  /** ₹ saved on those same delivered orders. */
+  saved: number;
+  /** Orders PLACED this month (placement basis) — activity, not spend. */
+  orders: number;
+}
+
+/**
+ * Bucket a buyer's orders into the last `months` calendar months for the
+ * dashboard's spend / savings / order-count trends. Pure and framework-agnostic,
+ * twin of `farmerWeeklyEarnings`, so it is unit-testable and a future React
+ * Native shop can reuse it.
+ *
+ * Two bases on purpose, each documented on its series: `spent`/`saved` count
+ * orders DELIVERED in the month (money actually left the pocket, matching the
+ * Total Spent KPI), while `orders` counts orders PLACED in the month (shopping
+ * activity). Cancelled orders are excluded from all three — a cancelled order is
+ * neither spend nor activity the buyer would recognise as an order.
+ */
+export function consumerMonthlySeries(
+  orders: Order[],
+  months = 6,
+  now: Date = new Date(),
+  lang?: string | null,
+): ConsumerMonthPoint[] {
+  const num = (v: unknown) => parseFloat(String(v ?? 0)) || 0;
+  const base = new Date(now.getFullYear(), now.getMonth(), 1);
+  const buckets = Array.from({ length: months }, (_, i) => {
+    const start = new Date(base);
+    start.setMonth(start.getMonth() - (months - 1 - i));
+    return { start, spent: 0, saved: 0, orders: 0 };
+  });
+  // A month key that never collides across years (2026-00 ≠ 2025-00).
+  const key = (d: Date) => d.getFullYear() * 12 + d.getMonth();
+  const idx = new Map(buckets.map((b, i) => [key(b.start), i]));
+
+  for (const o of orders) {
+    if (isOrderCancelled(o)) continue;
+
+    if (o.created_at) {
+      const placed = new Date(o.created_at);
+      const i = idx.get(key(placed));
+      if (i != null) buckets[i].orders += 1;
+    }
+
+    if (o.status === 'Delivered') {
+      const when = o.delivered_at || o.created_at;
+      if (when) {
+        const d = new Date(when);
+        const i = idx.get(key(d));
+        if (i != null) {
+          buckets[i].spent += num(o.total);
+          buckets[i].saved += num(o.saved);
+        }
+      }
+    }
+  }
+
+  return buckets.map((b) => ({
+    monthStart: b.start.toISOString(),
+    label: b.start.toLocaleDateString(dateLocale(lang), { month: 'short' }),
+    spent: b.spent,
+    saved: b.saved,
+    orders: b.orders,
+  }));
 }
