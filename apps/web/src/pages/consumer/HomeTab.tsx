@@ -1,18 +1,20 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { api, type SpendByCategory } from '@marutham/api-client';
 import {
   Button,
   EmptyState,
+  Modal,
   OrderProgress,
   Skeleton,
   Spinner,
   StatTile,
-  StatusBadge,
 } from '@marutham/ui';
 import {
   buildPipeline,
   fmtDateShort,
   fmtMoney,
+  isOrderCancelled,
   payMethodKey,
   statusColor,
   statusKey,
@@ -34,11 +36,8 @@ import { FadeIn } from '../../components/FadeIn';
 // only loads once a buyer with order history scrolls the insights into being.
 const ShoppingInsights = lazy(() => import('./ShoppingInsights'));
 
-/** Past orders shown on Home before the user has to open the Orders tab. */
-const PAST_PREVIEW = 4;
-
-/** Which KPI tile is driving the orders panel. */
-type OrderFilter = 'active' | 'completed' | 'month';
+/** Which KPI tile's detail popup is open, if any. */
+type TileView = 'active' | 'completed' | 'month' | 'spent' | 'saved';
 
 export function HomeTab({
   onOpenOrder,
@@ -53,10 +52,25 @@ export function HomeTab({
   const { orders, groups, loading, error } = useOrders();
   const { products, offersByProduct } = useConsumerData();
 
-  // Which tile is selected. The orders panel below the tiles shows ONLY this
-  // slice — clicking a KPI tile is now a filter, not a dead statistic. Active is
-  // the default so the dashboard opens on in-flight orders, as it always did.
-  const [filter, setFilter] = useState<OrderFilter>('active');
+  // Which tile's detail popup is open, or null when the dashboard is at rest.
+  // Every KPI tile opens a <Modal> with its slice — the page itself never swaps
+  // content, so the buyer can close and open another tile without losing place.
+  const [view, setView] = useState<TileView | null>(null);
+
+  // Total-Spent popup: this month's spend by product category. Fetched lazily the
+  // first time that tile is opened (the orders list carries no line items), then
+  // cached for the session. `null` = not loaded yet, [] = loaded and empty.
+  const [spendCats, setSpendCats] = useState<SpendByCategory[] | null>(null);
+  const [spendLoading, setSpendLoading] = useState(false);
+  useEffect(() => {
+    if (view !== 'spent' || spendCats !== null || spendLoading) return;
+    setSpendLoading(true);
+    api
+      .getSpendByCategory()
+      .then((r) => setSpendCats(r.categories))
+      .catch(() => setSpendCats([]))
+      .finally(() => setSpendLoading(false));
+  }, [view, spendCats, spendLoading]);
 
   // Recommended = products currently buyable (they have a live offer), with their best
   // consumer price via the same helpers the Shop uses (so the fee maths matches exactly).
@@ -81,6 +95,10 @@ export function HomeTab({
   // Real money the buyer kept vs. the pre-discount price — the `saved` column the
   // order detail and cart already show, summed. Never fabricated.
   const totalSaved = orders.reduce((s, o) => s + (Number(o.saved) || 0), 0);
+  // Saved popup: THIS month's orders (excluding cancelled), each shown with its
+  // own saving — the "details from each order for the month" breakdown. The tile
+  // above stays an all-time running total; only the popup is month-scoped.
+  const savedThisMonth = thisMonthOrders.filter((o) => !isOrderCancelled(o));
 
   // Quick actions all route to real, existing surfaces. Buy Again opens the most
   // recent past order (where the reorder button lives); Track opens the live order.
@@ -125,25 +143,25 @@ export function HomeTab({
   return (
     <>
       <FadeIn>
-        {/* The first three tiles are filters — clicking one drives the orders
-            panel below. Spent & Saved are running totals, not order lists, so
-            they stay read-only. */}
+        {/* Every tile is a button now — clicking one opens its detail popup.
+            The page behind it never changes, so closing the popup returns the
+            buyer to exactly this view, ready to open another tile. */}
         <div className="cons-kpis">
           <StatTile
             icon="🚚"
             label={t('consumer.home.activeOrders')}
             value={groups.active.length}
             hint={t('consumer.home.inProgress')}
-            onClick={() => setFilter('active')}
-            selected={filter === 'active'}
+            onClick={() => setView('active')}
+            selected={view === 'active'}
           />
           <StatTile
             icon="✅"
             label={t('consumer.home.completed')}
             value={groups.delivered.length}
             hint={t('consumer.home.delivered')}
-            onClick={() => setFilter('completed')}
-            selected={filter === 'completed'}
+            onClick={() => setView('completed')}
+            selected={view === 'completed'}
           />
           <StatTile
             icon="📅"
@@ -155,8 +173,8 @@ export function HomeTab({
               month: now.toLocaleString(i18n.language, { month: 'long' }),
             })}
             accent="var(--accent)"
-            onClick={() => setFilter('month')}
-            selected={filter === 'month'}
+            onClick={() => setView('month')}
+            selected={view === 'month'}
           />
           <StatTile
             icon="💰"
@@ -164,6 +182,8 @@ export function HomeTab({
             value={fmtMoney(totalSpent)}
             hint={t('consumer.home.totalSpentHint', 'On delivered orders')}
             accent="var(--info)"
+            onClick={() => setView('spent')}
+            selected={view === 'spent'}
           />
           <StatTile
             icon="🎉"
@@ -171,6 +191,8 @@ export function HomeTab({
             value={fmtMoney(totalSaved)}
             hint={t('consumer.home.totalSavedHint', 'Across your orders')}
             accent="var(--forest)"
+            onClick={() => setView('saved')}
+            selected={view === 'saved'}
           />
         </div>
       </FadeIn>
@@ -184,19 +206,10 @@ export function HomeTab({
             </Button>
           </EmptyState>
         </FadeIn>
-      ) : (
-        <FadeIn delay={0.04}>
-          <OrdersPanel
-            filter={filter}
-            active={groups.active}
-            completed={groups.delivered}
-            month={thisMonthOrders}
-            onOpenOrder={onOpenOrder}
-            onGoToOrders={onGoToOrders}
-          />
-        </FadeIn>
-      )}
+      ) : null}
 
+      {/* The dashboard body is always fully visible — the KPI tiles open their
+          detail in a popup, so nothing here has to move or hide to make room. */}
       <FadeIn delay={0.08}>
         <QuickActions actions={quickActions} />
       </FadeIn>
@@ -250,167 +263,222 @@ export function HomeTab({
       <FadeIn delay={0.28}>
         <ComingSoon />
       </FadeIn>
+
+      <TileModal
+        view={view}
+        onClose={() => setView(null)}
+        active={groups.active}
+        delivered={groups.delivered}
+        month={thisMonthOrders}
+        savedThisMonth={savedThisMonth}
+        spendCats={spendCats}
+        spendLoading={spendLoading}
+        onOpenOrder={(id) => {
+          setView(null);
+          onOpenOrder(id);
+        }}
+        onGoToOrders={() => {
+          setView(null);
+          onGoToOrders();
+        }}
+      />
     </>
   );
 }
 
-/**
- * A titled orders table — used for the Completed and This-month tile views.
- *
- * The SAME orders rendered twice, and never both at once — the table from 1024px,
- * the phone's existing row list below that. Five columns do not fit a 390px phone
- * without a sideways scrollbar or type too small to read, and this portal is
- * phone-first while the mockup is a desktop comp; the sidebar drew the line in the
- * same place. Because CSS hides one outright, the reader gets one set of tab stops
- * rather than each order twice.
- */
-function OrdersTable({
-  orders,
-  title,
-  emptyText,
-  onOpenOrder,
-  onGoToOrders,
-}: {
-  orders: Order[];
-  title: string;
-  emptyText: string;
-  onOpenOrder: (id: string) => void;
-  onGoToOrders: () => void;
-}) {
-  const { t, i18n } = useTranslation();
-
+/** A green savings row: order code + date on the left, the amount kept on the right. */
+function SavedRow({ order: o, onOpen }: { order: Order; onOpen: (id: string) => void }) {
+  const { i18n } = useTranslation();
+  const saved = Number(o.saved) || 0;
   return (
-    <section className="cons-recent">
-      <div className="cons-recent__head">
-        <h2 className="cons-section-title">{title}</h2>
-        <button type="button" className="cons-recent__all" onClick={onGoToOrders}>
-          {t('consumer.home.viewAllOrders', 'View all orders')} <span aria-hidden="true">→</span>
-        </button>
-      </div>
+    <button type="button" className="ord-item" onClick={() => onOpen(o.id)}>
+      <span className="ord-item__bar" style={{ background: 'var(--forest)' }} aria-hidden="true" />
+      <span className="ord-item__main">
+        <span className="ord-id">{orderLabel(o)}</span>
+        <span className="ord-loc">{fmtDateShort(o.created_at, i18n.language)}</span>
+      </span>
+      <span className="ord-item__right">
+        <span className="ord-amt" style={{ color: saved > 0 ? 'var(--forest)' : 'inherit' }}>
+          {saved > 0 ? `−${fmtMoney(o.saved)}` : fmtMoney(0)}
+        </span>
+      </span>
+    </button>
+  );
+}
 
-      {orders.length === 0 ? <EmptyState icon="📭">{emptyText}</EmptyState> : null}
-
-      <div className="cons-recent__table" hidden={orders.length === 0}>
-        <table>
-          <caption className="sr-only">
-            {t('consumer.home.recentOrdersCaption', 'Your most recent orders')}
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">{t('consumer.home.col.order', 'Order ID')}</th>
-              <th scope="col">{t('consumer.home.col.date', 'Date')}</th>
-              {/* The unit is the heading, so the cell is a bare number: it keeps the
-                  column aligned, and it sidesteps pluralising "item" in two languages. */}
-              <th scope="col" className="cons-recent__num">
-                {t('consumer.home.col.items', 'Items')}
-              </th>
-              <th scope="col" className="cons-recent__num">
-                {t('consumer.home.col.amount', 'Amount')}
-              </th>
-              <th scope="col">{t('consumer.home.col.status', 'Status')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((o) => (
-              <tr key={o.id}>
-                <td>
-                  {/* The control is the order code rather than the whole row: a <tr>
-                      cannot be a button, and a click handler on one is invisible to a
-                      keyboard — the same reason OrderRow is a real <button>. */}
-                  <button
-                    type="button"
-                    className="cons-recent__id"
-                    onClick={() => onOpenOrder(o.id)}
-                  >
-                    {orderLabel(o)}
-                  </button>
-                </td>
-                <td className="cons-recent__date">{fmtDateShort(o.created_at, i18n.language)}</td>
-                {/* An em-dash, not 0: item_count is absent for a role that did not ask
-                    for it, and "0 items" would be a claim rather than a gap. */}
-                <td className="cons-recent__num">{o.item_count ?? '—'}</td>
-                <td className="cons-recent__num">{fmtMoney(o.total)}</td>
-                <td>
-                  <StatusBadge order={o} labelFor={(s) => t(statusKey(s), s)} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+/** One ranked category bar for the Total-Spent breakdown. Single hue by design. */
+function CategoryBar({ category, amount, max }: { category: string; amount: number; max: number }) {
+  const pct = max > 0 ? Math.max(2, Math.round((amount / max) * 100)) : 0;
+  return (
+    <div style={{ padding: '8px 0' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: 12,
+          fontSize: 14,
+          marginBottom: 5,
+        }}
+      >
+        <span style={{ fontWeight: 600 }}>{category}</span>
+        <span>{fmtMoney(amount)}</span>
       </div>
-
-      <div className="cons-recent__list" hidden={orders.length === 0}>
-        {orders.map((o) => (
-          <OrderRow key={o.id} order={o} onOpen={onOpenOrder} />
-        ))}
+      <div
+        style={{ height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.08)', overflow: 'hidden' }}
+        role="presentation"
+      >
+        <div style={{ height: '100%', width: `${pct}%`, background: 'var(--forest)' }} />
       </div>
-    </section>
+    </div>
   );
 }
 
 /**
- * The tile-driven orders panel. Shows ONLY the slice for the selected KPI tile —
- * Active renders in-flight tracking cards, Completed and This-month render the
- * titled table. This is the whole point of the redesign: a tile is a filter, and
- * the page shows one list at a time instead of stacking active + recent together.
+ * The tile detail popup. Every KPI tile opens this <Modal> with its own slice:
+ *
+ *  - active     → in-flight tracking cards
+ *  - completed  → delivered orders (compact rows)
+ *  - month      → orders placed this calendar month
+ *  - spent      → THIS MONTH's item spend, ranked by product category
+ *  - saved      → THIS MONTH's orders, each showing the money it kept
+ *
+ * The tiles behind the popup stay all-time running totals; only Spent & Saved's
+ * popups narrow to the current month (that was the buyer's ask). The list is the
+ * phone-style card/row layout throughout — the dialog is a narrow (≤420px)
+ * column, so the five-column desktop table has no room here. Opening an order
+ * closes the popup first (the parent switches surface); the footer's "View all
+ * orders" jumps to the Orders tab. Closing (✕ / Escape / backdrop) just returns
+ * to the untouched dashboard, ready for the next tile.
  */
-function OrdersPanel({
-  filter,
+function TileModal({
+  view,
+  onClose,
   active,
-  completed,
+  delivered,
   month,
+  savedThisMonth,
+  spendCats,
+  spendLoading,
   onOpenOrder,
   onGoToOrders,
 }: {
-  filter: OrderFilter;
+  view: TileView | null;
+  onClose: () => void;
   active: Order[];
-  completed: Order[];
+  delivered: Order[];
   month: Order[];
+  savedThisMonth: Order[];
+  spendCats: SpendByCategory[] | null;
+  spendLoading: boolean;
   onOpenOrder: (id: string) => void;
   onGoToOrders: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const monthLabel = new Date().toLocaleString(i18n.language, { month: 'long', year: 'numeric' });
+  const monthSub = t('consumer.home.monthScopeSub', 'This month · {{month}}', {
+    month: monthLabel,
+  });
 
-  if (filter === 'active') {
-    return (
-      <section>
-        <div className="cons-recent__head">
-          <h2 className="cons-section-title">{t('consumer.home.activeOrders')}</h2>
-          <button type="button" className="cons-recent__all" onClick={onGoToOrders}>
-            {t('consumer.home.viewAllOrders', 'View all orders')} <span aria-hidden="true">→</span>
-          </button>
-        </div>
-        {active.length === 0 ? (
-          <EmptyState icon="🌿">
-            {t('consumer.home.noActive', 'No active orders right now.')}
-          </EmptyState>
-        ) : (
-          active.map((o) => (
-            <TrackingCard
-              key={o.id}
-              order={o}
-              onOpen={onOpenOrder}
-              trackLabel={t('consumer.home.track')}
-            />
-          ))
-        )}
-      </section>
+  // Per-view title, supporting line, and body. Computed even when closed is cheap
+  // and keeps the Modal mounted so its open/close transition can play.
+  let title = '';
+  let subtitle: string | undefined;
+  let body: ReactNode = null;
+  // Order-list views get a "View all orders" shortcut in the footer; the category
+  // breakdown does not (it isn't a list of orders to open).
+  let showViewAll = false;
+
+  const emptyList = (icon: string, text: string) => <EmptyState icon={icon}>{text}</EmptyState>;
+  const rowList = (rows: Order[], icon: string, empty: string) =>
+    rows.length === 0 ? (
+      emptyList(icon, empty)
+    ) : (
+      <div className="cons-recent__list">
+        {rows.map((o) => (
+          <OrderRow key={o.id} order={o} onOpen={onOpenOrder} />
+        ))}
+      </div>
     );
+
+  switch (view) {
+    case 'active':
+      title = t('consumer.home.activeOrders');
+      showViewAll = true;
+      body =
+        active.length === 0
+          ? emptyList('🌿', t('consumer.home.noActive', 'No active orders right now.'))
+          : active.map((o) => (
+              <TrackingCard
+                key={o.id}
+                order={o}
+                onOpen={onOpenOrder}
+                trackLabel={t('consumer.home.track')}
+              />
+            ));
+      break;
+    case 'completed':
+      title = t('consumer.home.completed');
+      showViewAll = true;
+      body = rowList(delivered, '📭', t('consumer.home.noCompleted', 'No completed orders yet.'));
+      break;
+    case 'month':
+      title = t('consumer.home.thisMonth', 'Orders this month');
+      showViewAll = true;
+      body = rowList(month, '📭', t('consumer.home.noMonth', 'No orders placed this month.'));
+      break;
+    case 'spent': {
+      title = t('consumer.home.totalSpent', 'Total spent');
+      subtitle = monthSub;
+      const cats = spendCats ?? [];
+      const max = cats.reduce((m, c) => Math.max(m, Number(c.amount) || 0), 0);
+      body = spendLoading ? (
+        <Spinner />
+      ) : cats.length === 0 ? (
+        emptyList('🧺', t('consumer.home.noSpend', 'No spending this month yet.'))
+      ) : (
+        <div>
+          {cats.map((c) => (
+            <CategoryBar
+              key={c.category}
+              category={c.category}
+              amount={Number(c.amount) || 0}
+              max={max}
+            />
+          ))}
+        </div>
+      );
+      break;
+    }
+    case 'saved':
+      title = t('consumer.home.totalSaved', 'Total saved');
+      subtitle = monthSub;
+      showViewAll = true;
+      body =
+        savedThisMonth.length === 0
+          ? emptyList('🌱', t('consumer.home.noSaved', 'No savings recorded yet.'))
+          : savedThisMonth.map((o) => <SavedRow key={o.id} order={o} onOpen={onOpenOrder} />);
+      break;
+    default:
+      break;
   }
 
-  const isCompleted = filter === 'completed';
   return (
-    <OrdersTable
-      orders={(isCompleted ? completed : month).slice(0, PAST_PREVIEW)}
-      title={isCompleted ? t('consumer.home.completed') : t('consumer.home.thisMonth')}
-      emptyText={
-        isCompleted
-          ? t('consumer.home.noCompleted', 'No completed orders yet.')
-          : t('consumer.home.noMonth', 'No orders placed this month.')
+    <Modal
+      open={view !== null}
+      title={title}
+      subtitle={subtitle}
+      onClose={onClose}
+      closeLabel={t('common.close', 'Close')}
+      footer={
+        showViewAll ? (
+          <Button variant="ghost" onClick={onGoToOrders}>
+            {t('consumer.home.viewAllOrders', 'View all orders')} →
+          </Button>
+        ) : undefined
       }
-      onOpenOrder={onOpenOrder}
-      onGoToOrders={onGoToOrders}
-    />
+    >
+      {body}
+    </Modal>
   );
 }
 

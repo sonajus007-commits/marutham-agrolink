@@ -50,6 +50,7 @@ import type {
   RegisterResponse,
   UserAuditResponse,
   LoginHistoryResponse,
+  SpendByCategory,
 } from './types';
 import type {
   Order,
@@ -189,6 +190,14 @@ export const api = {
   },
   getOrder(id: string): Promise<OrderDetail> {
     return apiFetch<OrderDetail>('GET', '/orders/' + id);
+  },
+  /**
+   * This month's item spend grouped by product category, for the buyer
+   * dashboard's Total-Spent popup. `amount` is a rupee string (the API converts
+   * from paise), ranked highest-first by the backend.
+   */
+  getSpendByCategory(): Promise<{ categories: SpendByCategory[] }> {
+    return apiFetch<{ categories: SpendByCategory[] }>('GET', '/orders/spend-by-category');
   },
   /** Live agent + ETA. Separate from getOrder so it can be polled cheaply. */
   trackOrder(id: string): Promise<TrackResponse> {

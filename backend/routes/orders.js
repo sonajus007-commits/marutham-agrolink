@@ -489,9 +489,13 @@ router.get('/', async (req, res) => {
   const customerOrdersOnly = (q) => q.is('parent_order_id', null);
   const parcelsOnly        = (q) => q.neq('route', SPLIT_ROUTE);
 
+  // Consumers also get `saved` (per-order savings vs. the district market rate),
+  // for the dashboard's Total-Saved KPI and its this-month breakdown popup. It is
+  // a real column; it was simply never in the list's projection, so the tile read
+  // zero. res.json's money middleware converts it (paise → rupees) on the way out.
   let query = supabase
     .from('orders')
-    .select(wantsItemCount ? `${COLUMNS}, order_items(count)` : COLUMNS)
+    .select(wantsItemCount ? `${COLUMNS}, saved, order_items(count)` : COLUMNS)
     .order('created_at', { ascending: false });
 
   if (u.role === 'consumer') {
@@ -613,6 +617,77 @@ router.get('/', async (req, res) => {
   }
 
   res.json({ orders });
+});
+
+// ── GET /orders/spend-by-category  (consumer only) ────────────────────────────
+// This calendar month's item spend, grouped by product category, for the
+// dashboard's Total-Spent popup. MUST be declared before `/:id`, or Express
+// routes it there with id="spend-by-category".
+//
+// Summed over the buyer's PARCELS (route ≠ split): a split order's parent is an
+// empty container — its children carry the lines — so `neq(route, SPLIT_ROUTE)`
+// counts every line exactly once. Cancelled parcels are excluded (the "all
+// placed this month except cancelled" scope). Category lives on `products`, not
+// on the line, so it's a second lookup — order_items has no products embed.
+// Amounts stay in paise; res.json's money middleware turns `amount` into rupees.
+router.get('/spend-by-category', consumersOnly, async (req, res) => {
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
+  const { data: parcels, error: parcelsErr } = await supabase
+    .from('orders')
+    .select('id')
+    .eq('consumer_id', req.user.id)
+    .neq('route', SPLIT_ROUTE)
+    .neq('status', 'Cancelled')
+    .gte('created_at', monthStart.toISOString());
+
+  if (parcelsErr) {
+    console.error('GET /orders/spend-by-category parcels lookup failed:', parcelsErr.message);
+    return res.status(500).json({ error: 'Could not load your spending breakdown.' });
+  }
+
+  const orderIds = (parcels || []).map((o) => o.id);
+  if (orderIds.length === 0) return res.json({ categories: [] });
+
+  const { data: items, error: itemsErr } = await supabase
+    .from('order_items')
+    .select('product_id, qty, price')
+    .in('order_id', orderIds);
+
+  if (itemsErr) {
+    console.error('GET /orders/spend-by-category items lookup failed:', itemsErr.message);
+    return res.status(500).json({ error: 'Could not load your spending breakdown.' });
+  }
+
+  const productIds = [...new Set((items || []).map((i) => i.product_id).filter(Boolean))];
+  const catByProduct = new Map();
+  if (productIds.length > 0) {
+    const { data: prods, error: prodsErr } = await supabase
+      .from('products')
+      .select('id, category')
+      .in('id', productIds);
+    if (prodsErr) {
+      console.error('GET /orders/spend-by-category product lookup failed:', prodsErr.message);
+      return res.status(500).json({ error: 'Could not load your spending breakdown.' });
+    }
+    for (const p of prods || []) catByProduct.set(p.id, p.category || 'Other');
+  }
+
+  const byCategory = new Map();
+  for (const it of items || []) {
+    const category = catByProduct.get(it.product_id) || 'Other';
+    const line = Number(it.price) * Number(it.qty); // paise
+    if (!Number.isFinite(line)) continue;
+    byCategory.set(category, (byCategory.get(category) || 0) + line);
+  }
+
+  const categories = [...byCategory.entries()]
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((a, b) => b.amount - a.amount);
+
+  res.json({ categories });
 });
 
 // ── GET /orders/:id  (full detail) ───────────────────────────────────────────

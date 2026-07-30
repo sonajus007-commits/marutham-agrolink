@@ -131,6 +131,15 @@ export interface TrackAgent {
   vehicle?: string | null;
 }
 
+/**
+ * One product-category slice of the buyer's spend this month.
+ * `amount` is a rupee string — the API converts it from paise on the way out.
+ */
+export interface SpendByCategory {
+  category: string;
+  amount: string | number;
+}
+
 export interface TrackResponse {
   order: {
     id: string;
