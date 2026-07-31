@@ -177,6 +177,7 @@ function ConsumerInner() {
                 onOpenOrder={setOpenOrderId}
                 onGoToShop={() => setTab('shop')}
                 onGoToOrders={() => setTab('orders')}
+                onGoToCart={() => setTab('cart')}
               />
             ) : tab === 'shop' ? (
               <ShopTab onGoToCart={() => setTab('cart')} />

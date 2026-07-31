@@ -690,6 +690,84 @@ router.get('/spend-by-category', consumersOnly, async (req, res) => {
   res.json({ categories });
 });
 
+// ── GET /orders/frequent-items  (consumer only) ───────────────────────────────
+// Products this buyer has ordered on 2+ separate CUSTOMER orders — the "Buy Again"
+// candidates. Ranked by how many orders contained each. The client then keeps only
+// those with a live offer in its district today and re-prices them, so this returns
+// just the tally (product_id, name, order_count, last_qty), never a price or seller.
+//
+// MUST be declared before `/:id`, or Express routes it there with id="frequent-items".
+//
+// Counted over the buyer's PARCELS (route ≠ split): a split order's parent is an
+// empty container — its children carry the lines. Each parcel is mapped back to the
+// CUSTOMER order it belongs to (parent_order_id ?? id) so a single multi-vendor order
+// counts once, not once per seller. Cancelled parcels are excluded.
+router.get('/frequent-items', consumersOnly, async (req, res) => {
+  const { data: parcels, error: parcelsErr } = await supabase
+    .from('orders')
+    .select('id, parent_order_id, created_at')
+    .eq('consumer_id', req.user.id)
+    .neq('route', SPLIT_ROUTE)
+    .neq('status', 'Cancelled');
+
+  if (parcelsErr) {
+    console.error('GET /orders/frequent-items parcels lookup failed:', parcelsErr.message);
+    return res.status(500).json({ error: 'Could not load your reorder items.' });
+  }
+
+  if (!parcels || parcels.length === 0) return res.json({ items: [] });
+
+  // parcel id → the customer order it rolls up to, and when that order was placed.
+  const customerOf = new Map();
+  const placedAt = new Map();
+  for (const o of parcels) {
+    customerOf.set(o.id, o.parent_order_id || o.id);
+    placedAt.set(o.id, o.created_at ? new Date(o.created_at).getTime() : 0);
+  }
+
+  const { data: items, error: itemsErr } = await supabase
+    .from('order_items')
+    .select('order_id, product_id, name, qty')
+    .in('order_id', parcels.map((o) => o.id));
+
+  if (itemsErr) {
+    console.error('GET /orders/frequent-items items lookup failed:', itemsErr.message);
+    return res.status(500).json({ error: 'Could not load your reorder items.' });
+  }
+
+  // Per product: the set of distinct customer orders it appeared on, plus the qty
+  // from the most recent of those orders (to prefill the reorder line).
+  const agg = new Map();
+  for (const it of items || []) {
+    if (!it.product_id) continue;
+    const custId = customerOf.get(it.order_id);
+    const ts = placedAt.get(it.order_id) || 0;
+    let a = agg.get(it.product_id);
+    if (!a) {
+      a = { name: it.name, orders: new Set(), latestTs: -1, latestQty: 0 };
+      agg.set(it.product_id, a);
+    }
+    a.orders.add(custId);
+    if (ts >= a.latestTs) {
+      a.latestTs = ts;
+      a.latestQty = Number(it.qty) || 0;
+      if (it.name) a.name = it.name;
+    }
+  }
+
+  const result = [...agg.entries()]
+    .map(([product_id, a]) => ({
+      product_id,
+      name: a.name,
+      order_count: a.orders.size,
+      last_qty: a.latestQty,
+    }))
+    .filter((r) => r.order_count >= 2)
+    .sort((x, y) => y.order_count - x.order_count);
+
+  res.json({ items: result });
+});
+
 // ── GET /orders/:id  (full detail) ───────────────────────────────────────────
 router.get('/:id', async (req, res) => {
   const identifier = req.params.id;

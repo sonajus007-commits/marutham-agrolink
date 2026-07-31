@@ -51,6 +51,7 @@ import type {
   UserAuditResponse,
   LoginHistoryResponse,
   SpendByCategory,
+  FrequentItem,
 } from './types';
 import type {
   Order,
@@ -198,6 +199,14 @@ export const api = {
    */
   getSpendByCategory(): Promise<{ categories: SpendByCategory[] }> {
     return apiFetch<{ categories: SpendByCategory[] }>('GET', '/orders/spend-by-category');
+  },
+  /**
+   * Products this buyer has ordered on 2+ separate orders — the "Buy Again"
+   * candidates, ranked most-ordered first. Carries only the tally; the caller
+   * filters to what's buyable in its district today and re-prices at today's rate.
+   */
+  getFrequentItems(): Promise<{ items: FrequentItem[] }> {
+    return apiFetch<{ items: FrequentItem[] }>('GET', '/orders/frequent-items');
   },
   /** Live agent + ETA. Separate from getOrder so it can be polled cheaply. */
   trackOrder(id: string): Promise<TrackResponse> {

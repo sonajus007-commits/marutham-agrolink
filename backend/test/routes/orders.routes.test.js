@@ -386,3 +386,84 @@ describe('GET /orders — the consumer item count', () => {
     assert.ok(!('item_count' in res.body.orders[0]));
   });
 });
+
+// GET /orders/frequent-items — the "Buy Again" tally. These pin the two things
+// that are easy to get wrong: a multi-vendor order must count ONCE (not once per
+// seller child), and a product must be in 2+ orders to qualify.
+describe('GET /orders/frequent-items', () => {
+  let app, mute;
+  beforeEach(() => { mute = muteConsoleError(); });
+  afterEach(async () => { mute.restore(); if (app) await app.close(); });
+
+  // A single seed that exercises the whole rule at once:
+  //   • order A (unsplit, day 1): Tomato, Potato
+  //   • order B (unsplit, day 2): Tomato, Potato
+  //   • order C (SPLIT: parent C + children C1, C2, day 3): C1 has Tomato, C2 has Onion
+  //   • order D (CANCELLED, day 4): Tomato   ← must not count at all
+  // Tomato → orders {A, B, C} = 3 (the two split children collapse to one order).
+  // Potato → orders {A, B} = 2. Onion → {C} = 1 (dropped, < 2).
+  function seed() {
+    return fakeSupabase({
+      'orders:select': { data: [
+        { id: 'A',  parent_order_id: null, created_at: '2026-07-01T00:00:00Z', consumer_id: CONSUMER.id, route: 'direct', status: 'Delivered' },
+        { id: 'B',  parent_order_id: null, created_at: '2026-07-02T00:00:00Z', consumer_id: CONSUMER.id, route: 'hub',    status: 'Delivered' },
+        { id: 'C',  parent_order_id: null, created_at: '2026-07-03T00:00:00Z', consumer_id: CONSUMER.id, route: 'split',  status: 'Order Placed' },
+        { id: 'C1', parent_order_id: 'C',  created_at: '2026-07-03T00:00:00Z', consumer_id: CONSUMER.id, route: 'direct', status: 'Order Placed' },
+        { id: 'C2', parent_order_id: 'C',  created_at: '2026-07-03T00:00:00Z', consumer_id: CONSUMER.id, route: 'direct', status: 'Order Placed' },
+        { id: 'D',  parent_order_id: null, created_at: '2026-07-04T00:00:00Z', consumer_id: CONSUMER.id, route: 'direct', status: 'Cancelled' },
+      ] },
+      'order_items:select': { data: [
+        { order_id: 'A',  product_id: 'p-tom', name: 'Tomato', qty: 2 },
+        { order_id: 'A',  product_id: 'p-pot', name: 'Potato', qty: 1 },
+        { order_id: 'B',  product_id: 'p-tom', name: 'Tomato', qty: 5 },
+        { order_id: 'B',  product_id: 'p-pot', name: 'Potato', qty: 4 },
+        { order_id: 'C1', product_id: 'p-tom', name: 'Tomato', qty: 3 },
+        { order_id: 'C2', product_id: 'p-oni', name: 'Onion',  qty: 1 },
+        { order_id: 'D',  product_id: 'p-tom', name: 'Tomato', qty: 9 },
+      ] },
+    });
+  }
+
+  test('counts distinct customer orders, collapses a split, ranks by frequency', async () => {
+    app = await mountRoute('orders', { supabase: seed(), user: CONSUMER });
+
+    const res = await app.get('/frequent-items');
+
+    assert.equal(res.status, 200);
+    // Onion (1 order) is gone; Tomato before Potato (3 > 2).
+    assert.deepEqual(res.body.items.map((i) => i.name), ['Tomato', 'Potato']);
+
+    const tomato = res.body.items[0];
+    // Three distinct orders even though Tomato is in FOUR parcels (A, B, C1) —
+    // the split children C1/C2 belong to one customer order, C.
+    assert.equal(tomato.order_count, 3);
+    // last_qty is from the most recent qualifying order (C, day 3), not the
+    // cancelled day-4 order, which must be excluded entirely.
+    assert.equal(tomato.last_qty, 3);
+
+    assert.equal(res.body.items[1].order_count, 2);
+  });
+
+  test('a buyer with no parcels gets an empty list, not an error', async () => {
+    app = await mountRoute('orders', {
+      supabase: fakeSupabase({ 'orders:select': { data: [] } }),
+      user: CONSUMER,
+    });
+
+    const res = await app.get('/frequent-items');
+
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body.items, []);
+  });
+
+  test('surfaces a failed parcels read as a 500, never a partial list', async () => {
+    app = await mountRoute('orders', {
+      supabase: fakeSupabase({ 'orders:select': { error: { message: 'boom' } } }),
+      user: CONSUMER,
+    });
+
+    const res = await app.get('/frequent-items');
+
+    assert.equal(res.status, 500);
+  });
+});

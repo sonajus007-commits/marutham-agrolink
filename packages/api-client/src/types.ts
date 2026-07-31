@@ -140,6 +140,19 @@ export interface SpendByCategory {
   amount: string | number;
 }
 
+/**
+ * A "Buy Again" candidate: a product the buyer has ordered on `order_count`
+ * separate orders (always ≥ 2). `last_qty` is the quantity from the most recent
+ * of those orders, used to prefill the reorder line. No price or seller — the
+ * client re-matches the product to today's cheapest live offer.
+ */
+export interface FrequentItem {
+  product_id: string;
+  name: string;
+  order_count: number;
+  last_qty: number;
+}
+
 export interface TrackResponse {
   order: {
     id: string;

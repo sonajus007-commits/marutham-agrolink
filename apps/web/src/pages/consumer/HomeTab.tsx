@@ -26,10 +26,13 @@ import {
 } from '@marutham/lib';
 import { useOrders } from './OrdersContext';
 import { useConsumerData } from './ConsumerDataContext';
+import { useCart } from './CartContext';
 import { OrderRow, orderLabel } from './OrderRow';
 import { QuickActions, type QuickAction } from './QuickActions';
 import { FreshArrivals } from './FreshArrivals';
 import { ComingSoon } from './ComingSoon';
+import { BuyAgainModal } from './BuyAgainModal';
+import { TrackPickerModal } from './TrackPickerModal';
 import { FadeIn } from '../../components/FadeIn';
 
 // Lazy so the ~1 MB ECharts bundle stays off the dashboard's first paint — it
@@ -43,19 +46,25 @@ export function HomeTab({
   onOpenOrder,
   onGoToShop,
   onGoToOrders,
+  onGoToCart,
 }: {
   onOpenOrder: (id: string) => void;
   onGoToShop: () => void;
   onGoToOrders: () => void;
+  onGoToCart: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const { orders, groups, loading, error } = useOrders();
   const { products, offersByProduct } = useConsumerData();
+  const cart = useCart();
 
   // Which tile's detail popup is open, or null when the dashboard is at rest.
   // Every KPI tile opens a <Modal> with its slice — the page itself never swaps
   // content, so the buyer can close and open another tile without losing place.
   const [view, setView] = useState<TileView | null>(null);
+
+  // Which Quick-Action popup is open (Buy Again / Track picker), or null.
+  const [qa, setQa] = useState<'again' | 'track' | null>(null);
 
   // Total-Spent popup: this month's spend by product category. Fetched lazily the
   // first time that tile is opened (the orders list carries no line items), then
@@ -100,33 +109,40 @@ export function HomeTab({
   // above stays an all-time running total; only the popup is month-scoped.
   const savedThisMonth = thisMonthOrders.filter((o) => !isOrderCancelled(o));
 
-  // Quick actions all route to real, existing surfaces. Buy Again opens the most
-  // recent past order (where the reorder button lives); Track opens the live order.
-  const firstActive = groups.active[0];
-  const lastPast = groups.past[0];
+  // Quick actions all route to real, existing surfaces, and each is disabled
+  // when it has nothing to act on:
+  //  • Continue Shopping → the cart, only when the cart holds items.
+  //  • Buy Again → a popup of the buyer's repeatedly-ordered items that are
+  //    buyable today; needs at least some order history to have candidates.
+  //  • Track Order → a popup to pick which live order to track.
+  //  • Browse Categories → the shop (always available).
+  const hasCart = cart.count > 0;
   const quickActions: QuickAction[] = [
     {
       id: 'shop',
       icon: '🛒',
       title: t('consumer.home.qa.shop'),
-      subtitle: t('consumer.home.qa.shopSub'),
-      onClick: onGoToShop,
+      subtitle: hasCart
+        ? t('consumer.home.qa.shopCount', '{{count}} items in your cart', { count: cart.count })
+        : t('consumer.home.qa.shopSub'),
+      onClick: onGoToCart,
+      disabled: !hasCart,
     },
     {
       id: 'again',
       icon: '🔁',
       title: t('consumer.home.qa.buyAgain'),
       subtitle: t('consumer.home.qa.buyAgainSub'),
-      onClick: () => lastPast && onOpenOrder(lastPast.id),
-      disabled: !lastPast,
+      onClick: () => setQa('again'),
+      disabled: groups.past.length === 0,
     },
     {
       id: 'track',
       icon: '🛵',
       title: t('consumer.home.qa.track'),
       subtitle: t('consumer.home.qa.trackSub'),
-      onClick: () => (firstActive ? onOpenOrder(firstActive.id) : onGoToOrders()),
-      disabled: !firstActive,
+      onClick: () => setQa('track'),
+      disabled: groups.active.length === 0,
     },
     {
       id: 'browse',
@@ -280,6 +296,18 @@ export function HomeTab({
         onGoToOrders={() => {
           setView(null);
           onGoToOrders();
+        }}
+      />
+
+      <BuyAgainModal open={qa === 'again'} onClose={() => setQa(null)} onGoToCart={onGoToCart} />
+
+      <TrackPickerModal
+        open={qa === 'track'}
+        onClose={() => setQa(null)}
+        active={groups.active}
+        onPick={(id) => {
+          setQa(null);
+          onOpenOrder(id);
         }}
       />
     </>
