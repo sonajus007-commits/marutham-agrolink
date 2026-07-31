@@ -966,21 +966,17 @@
   outline-offset: 2px;
 }
 
-/* The phone rendering: the row list this section has always used. */
+/* The order-row list. Once the phone rendering of an on-page "Recent Orders"
+   section that swapped to a desktop table at ≥1024px; that section was removed
+   in the dashboard redesign, and the list now only renders inside the KPI-tile
+   popup (Completed / This month). The old desktop swap must NOT hide it — the
+   popup has no table sibling, so `display:none` there left the list blank on
+   desktop even though the tile counted the orders. */
 .cons-recent__list {
   background: var(--surface);
   border: 1px solid var(--surface-muted);
   border-radius: 14px;
   padding: 4px 16px;
-}
-
-@media (min-width: 1024px) {
-  .cons-recent__table {
-    display: block;
-  }
-  .cons-recent__list {
-    display: none;
-  }
 }
 
 /* Recommended-for-you strip (mockup's consumer dashboard). Horizontal scroll on
