@@ -45,6 +45,8 @@ import type {
   EmployeePayload,
   RemoveEmployeeResponse,
   RestoreEmployeeResponse,
+  CreateStaffBody,
+  CreateStaffResponse,
   OtpSendResponse,
   RegisterPayload,
   RegisterResponse,
@@ -169,6 +171,12 @@ export const api = {
   },
   patchMe(data: Record<string, unknown>): Promise<{ user: User }> {
     return apiFetch<{ user: User }>('PATCH', '/auth/me', data);
+  },
+  /** Provision the login account for an approved, active employee. Admin-only; the
+   *  server derives the login role from the employee's designation and enforces which
+   *  roles the caller may create. */
+  createStaff(body: CreateStaffBody): Promise<CreateStaffResponse> {
+    return apiFetch<CreateStaffResponse>('POST', '/auth/create-staff', body);
   },
   changePassword(current_password: string, new_password: string): Promise<{ message: string }> {
     return apiFetch('POST', '/auth/change-password', { current_password, new_password });

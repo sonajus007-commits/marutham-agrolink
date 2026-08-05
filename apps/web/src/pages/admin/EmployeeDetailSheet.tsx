@@ -119,6 +119,30 @@ function Body({
   // undefined = not known yet (or the lookup failed), and the copy stays generic.
   const [hasLogin, setHasLogin] = useState<boolean | undefined>(undefined);
 
+  // The staff login bound to this Employee ID: a string when one exists, null when the
+  // employee has none yet, undefined while the lookup is in flight. Resolved on open —
+  // an Employee ID does NOT imply a login, which is exactly what trips admins up.
+  const [loginId, setLoginId] = useState<string | null | undefined>(undefined);
+  const [showCreate, setShowCreate] = useState(false);
+  const [pw, setPw] = useState('');
+  const [pw2, setPw2] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    if (!emp.emp_id) {
+      setLoginId(null);
+      return;
+    }
+    setLoginId(undefined);
+    api
+      .lookupEmployee(String(emp.emp_id))
+      .then((r) => active && setLoginId(r.existing_login_id))
+      .catch(() => active && setLoginId(undefined));
+    return () => {
+      active = false;
+    };
+  }, [emp.emp_id]);
+
   const status = String(emp.approval_status || 'pending');
   // A removed employee is read-only: no edit, no approve, no reject. The server 404s
   // all three, so offering them would only produce a confusing error.
@@ -158,6 +182,63 @@ function Body({
       setBusy(false);
     }
   }
+
+  // Provision the login for this employee. Unlike run(), this deliberately does NOT
+  // close the sheet — the admin needs to see the new login ID (and the temporary
+  // password they just set) to hand it over. The profile fields ride off the employee
+  // master; the server derives the login role from the designation.
+  async function createLogin() {
+    if (pw.length < 6) {
+      toast(t('admin.emp.login.pwShort', 'Password must be at least 6 characters.'), 'er');
+      return;
+    }
+    if (pw !== pw2) {
+      toast(t('admin.emp.login.pwMismatch', 'Passwords do not match.'), 'er');
+      return;
+    }
+    const str = (v: unknown) => (v ? String(v) : undefined);
+    setBusy(true);
+    try {
+      const res = await api.createStaff({
+        emp_id: String(emp.emp_id),
+        fname: String(emp.fname || ''),
+        lname: str(emp.lname),
+        phone: String(emp.phone || ''),
+        password: pw,
+        gender: str(emp.gender),
+        state: str(emp.state),
+        district: str(emp.district),
+        taluk: str(emp.taluk),
+        city: str(emp.city),
+        pincode: str(emp.pincode),
+        aadhar: str(emp.aadhar),
+        village_town: str(emp.village_town),
+      });
+      toast(t('admin.emp.login.created', 'Login created: {{id}}', { id: res.login_id }), 'ok');
+      setLoginId(res.login_id);
+      setShowCreate(false);
+      setPw('');
+      setPw2('');
+    } catch (e) {
+      toast(
+        e instanceof Error ? e.message : t('admin.emp.login.failed', 'Could not create login'),
+        'er',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // A login can be provisioned only for an approved, active, non-removed employee that
+  // does not already have one. The server re-checks all of this (and whether the
+  // caller's role may create this designation), so this is UX, not the guard.
+  const canCreateLogin =
+    canManage &&
+    !removed &&
+    status === 'approved' &&
+    String(emp.status) === 'active' &&
+    !!emp.emp_id &&
+    loginId === null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -287,6 +368,40 @@ function Body({
         ) : null}
       </Section>
 
+      {/* Login account — an approved employee still needs a login provisioned before
+          they can sign in (by password OR OTP). This section makes that state visible
+          and lets an authorised admin create it, instead of the silent gap that made
+          "active in the tracker" look like "able to log in". */}
+      <Section title={`🔐 ${t('admin.emp.login.title', 'Login Account')}`}>
+        {loginId === undefined ? (
+          <p className="py-1.5 text-sm text-fg-muted">
+            {t('admin.emp.login.checking', 'Checking…')}
+          </p>
+        ) : loginId ? (
+          <>
+            <Row label={t('admin.emp.login.id', 'Login ID')} value={loginId} mono />
+            <p className="pt-1.5 text-2xs text-success">
+              {t('admin.emp.login.can', 'This employee can sign in with password or OTP.')}
+            </p>
+          </>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-fg-muted">
+              {t('admin.emp.login.none', 'No login account yet — this employee cannot sign in.')}
+            </p>
+            {canCreateLogin ? (
+              <Button onClick={() => setShowCreate(true)} disabled={busy}>
+                {t('admin.emp.login.create', 'Create Login')}
+              </Button>
+            ) : !removed && (status !== 'approved' || String(emp.status) !== 'active') ? (
+              <p className="text-2xs text-fg-muted">
+                {t('admin.emp.login.needApproved', 'Approve & activate the employee first.')}
+              </p>
+            ) : null}
+          </div>
+        )}
+      </Section>
+
       {/* Was hand-rolled here and rendered every diff blank: the trigger writes
           changed_fields as an object, not the string[] this sheet assumed. Same
           renderer as the user audit trail now. */}
@@ -363,6 +478,56 @@ function Body({
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder={t('admin.emp.rejectReasonPlaceholder')}
+        />
+      </Modal>
+
+      <Modal
+        open={showCreate}
+        title={t('admin.emp.login.create', 'Create Login')}
+        subtitle={`${name}${emp.emp_id ? ` · ${emp.emp_id}` : ''}`}
+        onClose={() => setShowCreate(false)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setShowCreate(false)} disabled={busy}>
+              {t('admin.emp.cancel')}
+            </Button>
+            <Button onClick={createLogin} disabled={busy}>
+              {busy
+                ? t('admin.emp.login.creating', 'Creating…')
+                : t('admin.emp.login.create', 'Create Login')}
+            </Button>
+          </>
+        }
+      >
+        <p className="mb-3 text-2xs text-fg-muted">
+          {t(
+            'admin.emp.login.hint',
+            'The login role is set from the designation ({{role}}). The sign-in phone is {{phone}}. Set an initial password to share — the employee can change it after first sign-in.',
+            { role: String(emp.designation || '—'), phone: String(emp.phone || '—') },
+          )}
+        </p>
+        <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-fg-muted">
+          {t('admin.emp.login.pw', 'Initial password')}
+        </label>
+        <input
+          className={INPUT_CLASS}
+          type="password"
+          autoComplete="new-password"
+          aria-label={t('admin.emp.login.pw', 'Initial password')}
+          value={pw}
+          onChange={(e) => setPw(e.target.value)}
+          placeholder={t('admin.emp.login.pwPlaceholder', 'At least 6 characters')}
+        />
+        <label className="mb-1 mt-3 block text-2xs font-bold uppercase tracking-wide text-fg-muted">
+          {t('admin.emp.login.pwConfirm', 'Confirm password')}
+        </label>
+        <input
+          className={INPUT_CLASS}
+          type="password"
+          autoComplete="new-password"
+          aria-label={t('admin.emp.login.pwConfirm', 'Confirm password')}
+          value={pw2}
+          onChange={(e) => setPw2(e.target.value)}
         />
       </Modal>
     </div>

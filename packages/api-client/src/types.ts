@@ -54,6 +54,32 @@ export interface OtpSendResponse {
   otp?: string;
 }
 
+/** POST /auth/create-staff — provision the login account for an approved employee.
+ *  The login role is derived server-side from the employee's designation; the profile
+ *  fields come straight off the employee master record. */
+export interface CreateStaffBody {
+  emp_id: string;
+  fname: string;
+  lname?: string;
+  phone: string;
+  password: string;
+  gender?: string;
+  state?: string;
+  district?: string;
+  taluk?: string;
+  city?: string;
+  pincode?: string;
+  aadhar?: string;
+  /** Required only for VCO / Delivery Agent (decides which orders they handle). */
+  village_town?: string;
+}
+
+export interface CreateStaffResponse {
+  message: string;
+  login_id: string;
+  user: User;
+}
+
 export interface MeResponse {
   user: User;
 }
