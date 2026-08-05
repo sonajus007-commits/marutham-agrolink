@@ -1,43 +1,29 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, Spinner } from '@marutham/ui';
-import { api } from '@marutham/api-client';
 import { groupConsumerOrders, type Order } from '@marutham/lib';
 import { FarmerOrderRow } from './FarmerOrderRow';
 import { FarmerOrderSheet } from './FarmerOrderSheet';
 
 /**
  * The seller's Orders tab — every order that contains their produce, split into
- * in-flight and past. GET /orders already scopes to the farmer and attaches the
- * per-order payout, so there is no farmer-specific endpoint to add.
+ * in-flight and past. The order list itself is owned by FarmerPage (so the tab
+ * badge can count orders awaiting packing even while another tab is showing);
+ * this component only renders it and opens the detail sheet.
  */
-export function FarmerOrdersTab() {
+export function FarmerOrdersTab({
+  orders,
+  loading,
+  error,
+  reload,
+}: {
+  orders: Order[];
+  loading: boolean;
+  error: string | null;
+  reload: () => void;
+}) {
   const { t } = useTranslation();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<Order | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.getOrders();
-      setOrders(res.orders || []);
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : t('consumer.orders.loadFailed', 'Could not load orders'),
-      );
-    } finally {
-      setLoading(false);
-    }
-    // `t` is a dependency: without it this closure keeps the language it was
-    // created in, and the fallback would still be English after a switch.
-  }, [t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   if (loading && orders.length === 0) return <Spinner />;
   if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
@@ -73,7 +59,7 @@ export function FarmerOrdersTab() {
         order={open}
         open={open !== null}
         onClose={() => setOpen(null)}
-        onChanged={load}
+        onChanged={reload}
       />
     </>
   );

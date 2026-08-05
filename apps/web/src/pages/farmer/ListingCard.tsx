@@ -202,7 +202,7 @@ function Actions({
       return (
         <>
           <Button onClick={onConfirm} disabled={busy} style={{ padding: '6px 12px', fontSize: 11 }}>
-            {t('farmer.listing.confirmTomorrow', 'Confirm for tomorrow')}
+            {t('farmer.listing.confirmTomorrow', 'Confirm')}
           </Button>
           <button className="listing__link" onClick={onEdit} disabled={busy}>
             {t('consumer.addr.edit', 'Edit')}

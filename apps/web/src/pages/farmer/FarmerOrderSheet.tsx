@@ -145,7 +145,7 @@ export function FarmerOrderSheet({
             <Button variant="primary" onClick={pack} disabled={packing}>
               {packing
                 ? t('farmer.orders.packing', 'Marking…')
-                : `📦 ${t('farmer.orders.markPackaged', 'Mark as Packaged')}`}
+                : `📦 ${t('farmer.orders.markPackaged', 'Pack ordered Item')}`}
             </Button>
           ) : null}
 
