@@ -413,9 +413,24 @@ export function farmerEarnings(orders: Order[], payouts: Payout[]): FarmerEarnin
 export interface WeekEarning {
   /** ISO date of that week's Monday — a stable key. */
   weekStart: string;
-  /** Short axis label, e.g. "7 Jul". */
+  /** ISO date of that week's Sunday (weekStart + 6 days). */
+  weekEnd: string;
+  /** Short axis label for the week's start, e.g. "7 Jul". */
   label: string;
+  /** Start–end range label, e.g. "7–13 Jul" (or "28 Jun – 4 Jul" across months). */
+  rangeLabel: string;
   amount: number;
+}
+
+/** "7–13 Jul" when the week sits in one month, "28 Jun – 4 Jul" when it spans two. */
+function weekRangeLabel(start: Date, end: Date, lang?: string | null): string {
+  const locale = dateLocale(lang);
+  const endLabel = end.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+  if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+    return `${start.toLocaleDateString(locale, { day: 'numeric' })}–${endLabel}`;
+  }
+  const startLabel = start.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+  return `${startLabel} – ${endLabel}`;
 }
 
 /** Monday 00:00 of the week containing `d` (weeks run Mon–Sun, as the market does). */
@@ -464,11 +479,17 @@ export function farmerWeeklyEarnings(
     if (bucket) bucket.amount += rs(o.farmer_payout);
   }
 
-  return buckets.map((b) => ({
-    weekStart: b.start.toISOString(),
-    label: b.start.toLocaleDateString(dateLocale(lang), { day: 'numeric', month: 'short' }),
-    amount: b.amount,
-  }));
+  return buckets.map((b) => {
+    const end = new Date(b.start);
+    end.setDate(end.getDate() + 6);
+    return {
+      weekStart: b.start.toISOString(),
+      weekEnd: end.toISOString(),
+      label: b.start.toLocaleDateString(dateLocale(lang), { day: 'numeric', month: 'short' }),
+      rangeLabel: weekRangeLabel(b.start, end, lang),
+      amount: b.amount,
+    };
+  });
 }
 
 /* ── Subscription ─────────────────────────────────────────────────────────── */

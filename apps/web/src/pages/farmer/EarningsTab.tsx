@@ -1,20 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, ChartContainer, EmptyState, Spinner, StatTile } from '@marutham/ui';
+import { Button, ChartContainer, EmptyState, Modal, Spinner, StatTile } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import {
   farmerEarnings,
   farmerWeeklyEarnings,
+  isOrderActive,
+  isOrderCancelled,
   payStatusKey,
   payoutMethodKey,
   subscriptionStatus,
   fmtMoney,
   fmtMoneyInt,
   fmtDateShort,
+  type FarmerEarnings,
   type Order,
   type Payout,
   type SubscriptionStatus,
 } from '@marutham/lib';
+import { FarmerOrderSheet } from './FarmerOrderSheet';
 import type { MyRatingsResponse } from '@marutham/api-client';
 import { chartPalette, colors } from '@marutham/tokens';
 import type { EChartsOption } from 'echarts';
@@ -58,6 +62,44 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
   const earnings = useMemo(() => farmerEarnings(orders, payouts), [orders, payouts]);
   const sub = useMemo(() => subscriptionStatus(user || {}), [user]);
 
+  // Which earnings tile's per-order breakdown popup is open, or null at rest.
+  const [view, setView] = useState<EarnBucket | null>(null);
+  // Which order's detail sheet is open (opened from a breakdown row).
+  const [openOrder, setOpenOrder] = useState<Order | null>(null);
+
+  // The four earnings buckets, each resolved to the orders that make up its total
+  // — so a tile is not just a number but a distribution the seller can drill into.
+  // Paid/pending come off the payout records; awaiting/in-flight off the orders.
+  const breakdown = useMemo(() => {
+    const rs = (v: unknown) => parseFloat(String(v ?? 0)) || 0;
+    const ordersById = new Map(orders.map((o) => [o.id, o]));
+    const settled = new Set(payouts.map((p) => p.order?.id).filter(Boolean));
+
+    const fromPayout = (p: Payout): EarnRow => ({
+      key: p.id,
+      code: p.order?.code || (p.order?.id ? p.order.id.slice(0, 8).toUpperCase() : '—'),
+      dateISO: p.paid_at || p.created_at,
+      amount: rs(p.amount),
+      order: p.order?.id ? ordersById.get(p.order.id) : undefined,
+    });
+    const fromOrder = (o: Order, when?: string | null): EarnRow => ({
+      key: o.id,
+      code: o.code || o.id.slice(0, 8).toUpperCase(),
+      dateISO: when || o.created_at,
+      amount: rs(o.farmer_payout),
+      order: o,
+    });
+
+    return {
+      paid: payouts.filter((p) => p.status === 'paid').map(fromPayout),
+      pending: payouts.filter((p) => p.status === 'pending').map(fromPayout),
+      awaiting: orders
+        .filter((o) => o.status === 'Delivered' && !isOrderCancelled(o) && !settled.has(o.id))
+        .map((o) => fromOrder(o, o.delivered_at)),
+      inflight: orders.filter(isOrderActive).map((o) => fromOrder(o)),
+    } satisfies Record<EarnBucket, EarnRow[]>;
+  }, [orders, payouts]);
+
   // The bar labels follow the UI language — the axis was English on a Tamil page.
   const weekly = useMemo(
     () => farmerWeeklyEarnings(orders, 8, undefined, i18n.language),
@@ -72,7 +114,8 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
       grid: { left: 56, right: 16, top: 20, bottom: 28 },
       xAxis: {
         type: 'category',
-        data: weekly.map((w) => w.label),
+        data: weekly.map((w) => w.rangeLabel),
+        axisLabel: { interval: 0, fontSize: 10, hideOverlap: true },
         axisLine: { lineStyle: { color: colors.border } },
       },
       yAxis: {
@@ -104,23 +147,32 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
           label={t('farmer.earn.paid')}
           value={fmtMoney(earnings.paid)}
           hint={t('farmer.earn.paidHint')}
+          accent="var(--forest)"
+          onClick={() => setView('paid')}
+          selected={view === 'paid'}
         />
         <StatTile
           label={t('farmer.earn.pending')}
           value={fmtMoney(earnings.pending)}
           hint={t('farmer.earn.pendingHint')}
           accent="var(--warning-strong)"
+          onClick={() => setView('pending')}
+          selected={view === 'pending'}
         />
         <StatTile
           label={t('farmer.earn.awaiting')}
           value={fmtMoney(earnings.awaiting)}
           hint={t('farmer.earn.awaitingHint')}
+          onClick={() => setView('awaiting')}
+          selected={view === 'awaiting'}
         />
         <StatTile
           label={t('farmer.earn.inFlight')}
           value={fmtMoney(earnings.inFlight)}
           hint={t('farmer.earn.inFlightHint')}
           accent="var(--info)"
+          onClick={() => setView('inflight')}
+          selected={view === 'inflight'}
         />
       </div>
 
@@ -202,7 +254,123 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
           </ul>
         )}
       </section>
+
+      <EarnBreakdownModal
+        view={view}
+        rows={view ? breakdown[view] : []}
+        total={view ? earnings[EARN_TOTAL_KEY[view]] : 0}
+        onClose={() => setView(null)}
+        onOpenOrder={(o) => {
+          setView(null);
+          setOpenOrder(o);
+        }}
+      />
+
+      <FarmerOrderSheet
+        order={openOrder}
+        open={openOrder !== null}
+        onClose={() => setOpenOrder(null)}
+        onChanged={load}
+      />
     </>
+  );
+}
+
+/** The four settlement buckets a tile can drill into. */
+type EarnBucket = 'paid' | 'pending' | 'awaiting' | 'inflight';
+
+/** One order's contribution to a bucket's total. */
+interface EarnRow {
+  key: string;
+  code: string;
+  dateISO?: string | null;
+  amount: number;
+  /** The full order, when known — lets the row open the detail sheet. */
+  order?: Order;
+}
+
+/** Bucket → the matching total field on FarmerEarnings. */
+const EARN_TOTAL_KEY: Record<EarnBucket, keyof FarmerEarnings> = {
+  paid: 'paid',
+  pending: 'pending',
+  awaiting: 'awaiting',
+  inflight: 'inFlight',
+};
+
+/** Bucket → its popup title i18n key. */
+const EARN_TITLE_KEY: Record<EarnBucket, string> = {
+  paid: 'farmer.earn.bk.paid',
+  pending: 'farmer.earn.bk.pending',
+  awaiting: 'farmer.earn.bk.awaiting',
+  inflight: 'farmer.earn.bk.inflight',
+};
+
+/**
+ * The per-order breakdown popup for an earnings tile — the money in that bucket
+ * distributed across the orders that make it up, each row showing the order code,
+ * its date, and the amount. Rows backed by a known order open its detail sheet.
+ */
+function EarnBreakdownModal({
+  view,
+  rows,
+  total,
+  onClose,
+  onOpenOrder,
+}: {
+  view: EarnBucket | null;
+  rows: EarnRow[];
+  total: number;
+  onClose: () => void;
+  onOpenOrder: (o: Order) => void;
+}) {
+  const { t, i18n } = useTranslation();
+  return (
+    <Modal
+      open={view !== null}
+      title={view ? t(EARN_TITLE_KEY[view]) : ''}
+      subtitle={t('farmer.earn.bk.total', 'Total {{amount}}', { amount: fmtMoney(total) })}
+      onClose={onClose}
+      closeLabel={t('common.close', 'Close')}
+    >
+      {rows.length === 0 ? (
+        <EmptyState icon="🌾">
+          {t('farmer.earn.bk.empty', 'No orders in this bucket yet.')}
+        </EmptyState>
+      ) : (
+        <div className="fm-recent__list">
+          {rows.map((r) => {
+            const inner = (
+              <>
+                <span className="flex min-w-0 flex-1 flex-col justify-center">
+                  <span className="text-sm font-bold text-primary">{r.code}</span>
+                  <span className="text-2xs text-fg-muted">
+                    {fmtDateShort(r.dateISO, i18n.language)}
+                  </span>
+                </span>
+                <span className="text-sm font-bold">{fmtMoney(r.amount)}</span>
+              </>
+            );
+            return r.order ? (
+              <button
+                key={r.key}
+                type="button"
+                onClick={() => r.order && onOpenOrder(r.order)}
+                className="flex w-full items-center gap-3 rounded-base border border-border-subtle bg-surface p-3 text-left transition-colors hover:bg-surface-muted"
+              >
+                {inner}
+              </button>
+            ) : (
+              <div
+                key={r.key}
+                className="flex w-full items-center gap-3 rounded-base border border-border-subtle bg-surface p-3"
+              >
+                {inner}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Modal>
   );
 }
 

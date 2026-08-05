@@ -41,7 +41,7 @@ export default function FarmerInsights({
     [orders, i18n.language],
   );
   const earnEmpty = weekly.every((w) => w.amount === 0);
-  const weekLabels = useMemo(() => weekly.map((w) => w.label), [weekly]);
+  const weekLabels = useMemo(() => weekly.map((w) => w.rangeLabel), [weekly]);
 
   // Orders placed per month — consumerMonthlySeries counts orders regardless of
   // side, so only its `orders` field is used here (spend/saved are consumer-only).
@@ -60,6 +60,7 @@ export default function FarmerInsights({
       xAxis: {
         type: 'category',
         data: weekLabels,
+        axisLabel: { interval: 0, fontSize: 10, hideOverlap: true },
         axisLine: { lineStyle: { color: colors.border } },
       },
       yAxis: {
