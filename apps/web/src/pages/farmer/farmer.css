@@ -691,3 +691,294 @@
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* ── Home dashboard (farmer-side twin of the consumer HomeTab) ─────────────── */
+.fm-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--fg-muted);
+  margin-bottom: 8px;
+}
+.fm-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+@media (max-width: 640px) {
+  .fm-kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Quick Actions */
+.fm-qa {
+  margin: 14px 0;
+}
+.fm-qa__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+@media (max-width: 640px) {
+  .fm-qa__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.fm-qa__card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition:
+    border-color var(--duration-base) ease,
+    transform var(--duration-base) ease,
+    box-shadow var(--duration-base) ease;
+}
+.fm-qa__card:hover:not(:disabled) {
+  border-color: var(--leaf);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(31, 107, 59, 0.1);
+}
+.fm-qa__card:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+.fm-qa__card:disabled {
+  cursor: not-allowed;
+  background: var(--tint-25);
+}
+.fm-qa__icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.fm-qa__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.fm-qa__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--forest);
+}
+.fm-qa__sub {
+  font-size: 11px;
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Your Listings strip */
+.fm-reco {
+  margin: 14px 0;
+}
+.fm-reco__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.fm-reco__all {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: var(--forest);
+  font-weight: 700;
+  font-size: 12px;
+}
+.fm-reco__all:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+.fm-reco__strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 130px;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+}
+.fm-reco__card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color var(--duration-base) ease,
+    transform var(--duration-base) ease;
+}
+.fm-reco__card:hover {
+  border-color: var(--leaf);
+  transform: translateY(-2px);
+}
+.fm-reco__emoji {
+  font-size: 30px;
+  line-height: 1;
+}
+.fm-reco__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.fm-reco__price {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--forest);
+}
+
+/* Insights grid */
+.fm-insights {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 720px) {
+  .fm-insights {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Popup order/listing lists */
+.fm-recent__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fm-listrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+}
+.fm-listrow__emoji {
+  font-size: 22px;
+  line-height: 1;
+}
+.fm-listrow__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fm-listrow__price {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--forest);
+  white-space: nowrap;
+}
+
+/* ── Body: desktop sidebar + main pane (twin of the consumer layout) ────────
+ * Phone-first: the sidebar is a >=1024px enhancement and the tab bar stays on
+ * narrow screens. Only one navigation is ever visible, so no duplicate tab stop. */
+.fm-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.fm-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.fm-side {
+  display: none;
+}
+.fm-side__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fm-side__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.fm-side__item:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+}
+.fm-side__item.is-active {
+  background: var(--forest-dark);
+  color: var(--white);
+  font-weight: 600;
+}
+.fm-side__icon {
+  font-size: 15px;
+  line-height: 1;
+}
+.fm-side__label {
+  flex: 1;
+}
+.fm-side__badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.fm-side__item.is-active .fm-side__badge {
+  background: var(--white);
+  color: var(--forest-dark);
+}
+.fm-side__logout {
+  margin-top: auto;
+}
+@media (min-width: 1024px) {
+  .fm-side {
+    display: flex;
+    flex-direction: column;
+    width: 216px;
+    flex-shrink: 0;
+    padding: 14px 10px;
+    background: var(--white);
+    border-right: 1px solid var(--border-subtle);
+  }
+  .fm-tabbar {
+    display: none;
+  }
+}
