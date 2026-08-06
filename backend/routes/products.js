@@ -1,18 +1,18 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 const { syncPrices, getLastSync } = require('../utils/priceSync');
 const { publicFarmer } = require('../utils/publicShape');
 
 const router = express.Router();
 
-// ── Guard: Head Office admins only ────────────────────────────────────────────
-function requireHeadOffice(req, res, next) {
-  if (req.user.role !== 'admin' || req.user.admin_role !== 'Head Office') {
-    return res.status(403).json({ error: 'Only Head Office admins can perform this action.' });
-  }
-  next();
-}
+// The product master catalog (produce types + government prices) is central master
+// data. Writes are gated on the Product Approval module's strong actions, which only
+// Admin holds ('edit'/'delete') — reproducing the old Head-Office-only rule. The
+// tiered managers keep 'approve' (for seller listings), not master-catalog edit.
+const requireCatalogEdit = requirePermission('product_approval', 'edit');
+const requireCatalogDelete = requirePermission('product_approval', 'delete');
 
 // ── GET /products ─────────────────────────────────────────────────────────────
 // Filters: ?group=  ?district=  ?available=true|false
@@ -129,7 +129,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
 });
 
 // ── POST /products  (Head Office only) ────────────────────────────────────────
-router.post('/', requireAuth, requireHeadOffice, async (req, res) => {
+router.post('/', requireCatalogEdit, async (req, res) => {
   const {
     code, product_group, category, sub_type, name, regional_name,
     unit, exotic, platform_fee_pct, available, price_date,
@@ -161,7 +161,7 @@ router.post('/', requireAuth, requireHeadOffice, async (req, res) => {
 });
 
 // ── PATCH /products/:id  (Head Office only) ───────────────────────────────────
-router.patch('/:id', requireAuth, requireHeadOffice, async (req, res) => {
+router.patch('/:id', requireCatalogEdit, async (req, res) => {
   const ALLOWED = [
     'product_group', 'category', 'sub_type', 'name', 'regional_name',
     'unit', 'exotic', 'platform_fee_pct', 'available', 'price_date',
@@ -191,7 +191,7 @@ router.patch('/:id', requireAuth, requireHeadOffice, async (req, res) => {
 // ── PUT /products/:id/prices  (Head Office only) ─────────────────────────────
 // Body: [{ district, market_price_rs, handling_rs }]
 // Converts rupees to paise and upserts into product_district_prices.
-router.put('/:id/prices', requireAuth, requireHeadOffice, async (req, res) => {
+router.put('/:id/prices', requireCatalogEdit, async (req, res) => {
   const prices = req.body.prices;
   if (!Array.isArray(prices) || prices.length === 0) {
     return res.status(400).json({ error: 'prices array is required.' });
@@ -225,7 +225,7 @@ router.put('/:id/prices', requireAuth, requireHeadOffice, async (req, res) => {
 // ── DELETE /products/:id/prices/:district  (Head Office only) ─────────────────
 // Removes one district's govt price. PUT only upserts, so this is the only way to
 // take a district off a product. District arrives URL-encoded (Express decodes it).
-router.delete('/:id/prices/:district', requireAuth, requireHeadOffice, async (req, res) => {
+router.delete('/:id/prices/:district', requireCatalogEdit, async (req, res) => {
   const { id, district } = req.params;
 
   const { error } = await supabase
@@ -243,13 +243,12 @@ router.delete('/:id/prices/:district', requireAuth, requireHeadOffice, async (re
 });
 
 // ── GET /products/sync-prices/status  (admin only) ───────────────────────────
-router.get('/sync-prices/status', requireAuth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
+router.get('/sync-prices/status', requirePermission('product_approval','view'), async (req, res) => {
   res.json({ sync: getLastSync() });
 });
 
 // ── POST /products/sync-prices  (Head Office only — manual trigger) ───────────
-router.post('/sync-prices', requireAuth, requireHeadOffice, async (req, res) => {
+router.post('/sync-prices', requireCatalogEdit, async (req, res) => {
   try {
     const result = await syncPrices();
     res.json(result);
@@ -259,7 +258,7 @@ router.post('/sync-prices', requireAuth, requireHeadOffice, async (req, res) => 
 });
 
 // ── DELETE /products/:id  (Head Office only) ──────────────────────────────────
-router.delete('/:id', requireAuth, requireHeadOffice, async (req, res) => {
+router.delete('/:id', requireCatalogDelete, async (req, res) => {
   const { error } = await supabase
     .from('products')
     .delete()

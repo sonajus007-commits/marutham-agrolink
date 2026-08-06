@@ -1,163 +1,58 @@
-/* Navigation model for the Admin / management console. Kept as plain data so it
- * stays declarative and testable: AdminPage turns it into <Sidebar> sections,
- * role-filtering with filterNavByRole and wiring each item for SPA navigation.
+/* Navigation model for the Admin / management console.
  *
- * `to` is the router path (no basename); the sidebar href is APP_BASE + to so a
- * real anchor / middle-click still resolves under the /app mount. */
+ * RBAC-DRIVEN. Every item declares what CAPABILITY it needs — a module+action, or
+ * a composite dashboard flag — and filterAdminNav() hides the items the signed-in
+ * user's permission map (from GET /auth/me) does not grant. There are no admin_role
+ * lists here any more: the backend seeds the matrix, ships each user their resolved
+ * permissions, and this file simply reflects them, so the two can never drift.
+ */
 
-import { HUB_STAFF_ROLES } from '@marutham/lib';
+import type { User } from '@marutham/api-client';
+import { can, canSeeDashboard, isManagementUser } from '@marutham/lib';
 
 // Matches the router basename (Vite's base without its trailing slash): '/app' on
 // the web, '' in a native Capacitor build served from the webview root.
 export const APP_BASE = import.meta.env.BASE_URL.replace(/\/+$/, '');
 
-/** admin_role values that use THIS console. Delivery Agent + VCO have /agent.
- *
- * This list is the DOOR to /admin/*, so anything missing from it is not merely
- * hidden — it is locked out. CEO/MD/CFO/CTO were missing while `roleHome()` sent
- * them to /admin/executive and the backend's EXECUTIVE_ROLES let them read it:
- * they would have been bounced straight back to /login with nowhere to land.
- * Zonal Manager was missing while the backend's OPS_REGION_ROLES let them read
- * the operations dashboard. No such user exists in the DB yet, which is the only
- * reason nobody has hit this.
- *
- * Rule: if a backend dashboard guard admits an admin_role, that role belongs
- * here. */
-export const MANAGEMENT_ADMIN_ROLES = [
-  'Head Office',
-  'State Head',
-  'Regional Manager',
-  'District Manager',
-  'Hub Incharge',
-  'Board of Director',
-  'Zonal Manager',
-  'CEO',
-  'Managing Director',
-  'CFO',
-  'CTO',
-  // Technical Admin, HR Admin and HR Manager were the next casualties of the same
-  // bug: the backend's ADMINHEAD_ROLES has always served them a dashboard, but
-  // they were absent here — so they could sign in and were bounced straight back
-  // to /login, locked out of the console entirely. They are not a hypothetical
-  // like Zonal Manager was: HR Admin/Manager are the roles the whole employee
-  // onboarding workflow is built around.
-  'Technical Admin',
-  'HR Admin',
-  'HR Manager',
-] as const;
+/** A capability requirement for a nav item / route. */
+export type NavRequirement =
+  | { module: string; action?: string } // default action: 'view'
+  | { dashboard: 'executive' | 'operations' | 'adminhead' };
 
-/* Who may read a record's audit trail and login history. Mirrors the backend's
- * isHeadOffice() (routes/users.js), which — despite the name — admits State
- * Head as well; anyone else gets a 403. Gate the UI with this so a scoped admin
- * never opens a tab that can only fail. */
-export const AUDIT_ADMIN_ROLES = ['Head Office', 'State Head'] as const;
-
-export function canSeeAudit(adminRole?: string | null): boolean {
-  return AUDIT_ADMIN_ROLES.includes(adminRole as (typeof AUDIT_ADMIN_ROLES)[number]);
+/** Does the user satisfy a requirement? */
+export function meetsRequirement(user: User | null | undefined, req?: NavRequirement): boolean {
+  if (!req) return isManagementUser(user); // no requirement = any management user
+  if ('dashboard' in req) return canSeeDashboard(user, req.dashboard);
+  return can(user, req.module, req.action || 'view');
 }
 
-/* Who may open the executive dashboard. MIRRORS the backend's EXECUTIVE_ROLES
- * (routes/dashboard.js) exactly — anyone else gets a 403, so showing them the
- * nav item would only offer a door that cannot open.
- *
- * Head Office is on the list for PREVIEW: they are not the audience, but they
- * run the company and legacy let them look. The pure executive roles below are
- * the ones the dashboard is FOR, and the ones roleHome() lands there. */
-export const EXECUTIVE_ADMIN_ROLES = [
-  'Board of Director',
-  'CEO',
-  'Managing Director',
-  'CFO',
-  'CTO',
-  'Head Office',
-] as const;
-
-export function canSeeExecutive(adminRole?: string | null): boolean {
-  return EXECUTIVE_ADMIN_ROLES.includes(adminRole as (typeof EXECUTIVE_ADMIN_ROLES)[number]);
+/** Where a user may read a record's audit trail + login history. */
+export function canSeeAudit(user: User | null | undefined): boolean {
+  return can(user, 'audit_logs', 'view');
 }
 
-/* Roles whose HOME is the executive dashboard — EXECUTIVE_ADMIN_ROLES minus Head
- * Office. The board's job IS the business overview, so signing in should land
- * them on it, exactly as legacy admin.html did. Head Office runs every section
- * and keeps the operational Overview as their home; they reach this one from the
- * sidebar. */
-export const EXECUTIVE_HOME_ROLES = [
-  'Board of Director',
-  'CEO',
-  'Managing Director',
-  'CFO',
-  'CTO',
-] as const;
+/* Landing route per canonical role. Replaces the old homesOn* helpers: the server
+ * hands us role_key, so the home is a single lookup. Board lands on the executive
+ * dashboard; the operational tiers on operations; Hub Incharge on the hub floor;
+ * Technical Head / HR on the Head-Office control panel; Admin on the generic
+ * Overview (they run every section and reach the specialist dashboards from the
+ * sidebar). VCO / Delivery Agent live in the separate /agent app. */
+const HOME_BY_ROLE_KEY: Record<string, string> = {
+  board_of_directors: '/admin/executive',
+  state_head: '/admin/operations',
+  zonal_manager: '/admin/operations',
+  regional_manager: '/admin/operations',
+  district_manager: '/admin/operations',
+  hub_incharge: '/admin/hub',
+  technical_head: '/admin/adminhead',
+  hr: '/admin/adminhead',
+  admin: '/admin',
+};
 
-export function homesOnExecutive(adminRole?: string | null): boolean {
-  return EXECUTIVE_HOME_ROLES.includes(adminRole as (typeof EXECUTIVE_HOME_ROLES)[number]);
-}
-
-/* Who may open the operations dashboard. MIRRORS the backend's OPS_DISTRICT_ROLES
- * ∪ OPS_REGION_ROLES ∪ OPS_ALL_ROLES (routes/dashboard.js). The SERVER decides the
- * scope from the signed-in user — a District Manager sees their district, a
- * Regional/State/Zonal their state, Head Office everything — so the client never
- * passes a scope and cannot widen its own. */
-export const OPERATIONS_ADMIN_ROLES = [
-  'District Manager',
-  'Hub Incharge',
-  'Regional Manager',
-  'State Head',
-  'Zonal Manager',
-  'Head Office',
-] as const;
-
-export function canSeeOperations(adminRole?: string | null): boolean {
-  return OPERATIONS_ADMIN_ROLES.includes(adminRole as (typeof OPERATIONS_ADMIN_ROLES)[number]);
-}
-
-/* Roles whose HOME is the operations dashboard. Legacy admin.html dispatched
- * these roles' Overview to the operations screen, so this restores where they
- * used to land.
- *
- * Two deliberate omissions: HUB INCHARGE keeps /admin/hub (their job is the hub
- * queue, and that landing predates this dashboard), and HEAD OFFICE keeps the
- * generic Overview — they run every section and reach this from the sidebar,
- * exactly as with the executive dashboard. */
-export const OPERATIONS_HOME_ROLES = [
-  'District Manager',
-  'Regional Manager',
-  'State Head',
-  'Zonal Manager',
-] as const;
-
-export function homesOnOperations(adminRole?: string | null): boolean {
-  return OPERATIONS_HOME_ROLES.includes(adminRole as (typeof OPERATIONS_HOME_ROLES)[number]);
-}
-
-/* Who may open the Admin Head dashboard. MIRRORS the backend's ADMINHEAD_ROLES
- * (routes/dashboard.js) exactly. The Head Office control panel: employees,
- * org-wide approvals, staff by role, audit + login activity. */
-export const ADMINHEAD_ADMIN_ROLES = [
-  'Head Office',
-  'Technical Admin',
-  'HR Admin',
-  'HR Manager',
-] as const;
-
-export function canSeeAdminHead(adminRole?: string | null): boolean {
-  return ADMINHEAD_ADMIN_ROLES.includes(adminRole as (typeof ADMINHEAD_ADMIN_ROLES)[number]);
-}
-
-/* Roles whose HOME is the Admin Head dashboard — ADMINHEAD_ADMIN_ROLES minus Head
- * Office, for the same reason Head Office is excluded from the executive and
- * operations home lists: they run every section, so they keep the generic Overview
- * (business KPIs) as their landing page and reach the specialist dashboards from
- * the sidebar. That is a deliberate departure from legacy admin.html, which
- * dispatched Head Office's Overview to this dashboard.
- *
- * For the other three it is not a preference but the only dashboard they can read
- * — an HR Admin has no business on the executive or operations screens, and the
- * backend would 403 them there. */
-export const ADMINHEAD_HOME_ROLES = ['Technical Admin', 'HR Admin', 'HR Manager'] as const;
-
-export function homesOnAdminHead(adminRole?: string | null): boolean {
-  return ADMINHEAD_HOME_ROLES.includes(adminRole as (typeof ADMINHEAD_HOME_ROLES)[number]);
+/** Admin-console landing path for a management user (null if not one). */
+export function adminHome(user: User | null | undefined): string | null {
+  if (!user?.role_key) return null;
+  return HOME_BY_ROLE_KEY[user.role_key] || '/admin';
 }
 
 export interface AdminNavItem {
@@ -165,8 +60,8 @@ export interface AdminNavItem {
   labelKey: string;
   icon: string;
   to: string;
-  /** admin_roles that may see this. Omitted = every management role. */
-  roles?: readonly string[];
+  /** Capability needed to see this item. Omitted = any management user. */
+  requires?: NavRequirement;
 }
 
 export interface AdminNavSection {
@@ -179,45 +74,71 @@ export const ADMIN_NAV: AdminNavSection[] = [
   {
     id: 'operations',
     items: [
+      // The generic business Overview — any management user.
       { id: 'overview', labelKey: 'admin.nav.overview', icon: '📊', to: '/admin' },
-      // The board's dashboard. Existed only in legacy admin.html until now, so
-      // every admin_role — the Board included — was landing on Overview instead.
       {
         id: 'executive',
         labelKey: 'admin.nav.executive',
         icon: '🏛️',
         to: '/admin/executive',
-        roles: [...EXECUTIVE_ADMIN_ROLES],
+        requires: { dashboard: 'executive' },
       },
-      // The operational managers' dashboard — district/region scoped by the server.
       {
         id: 'operations',
         labelKey: 'admin.nav.operations',
         icon: '🚚',
         to: '/admin/operations',
-        roles: [...OPERATIONS_ADMIN_ROLES],
+        requires: { dashboard: 'operations' },
       },
-      // The Head Office control panel — the last dashboard to leave legacy.
       {
         id: 'adminhead',
         labelKey: 'admin.nav.adminhead',
         icon: '🏢',
         to: '/admin/adminhead',
-        roles: [...ADMINHEAD_ADMIN_ROLES],
+        requires: { dashboard: 'adminhead' },
       },
-      { id: 'orders', labelKey: 'admin.nav.orders', icon: '📦', to: '/admin/orders' },
-      // Hub floor work. Board of Director is management, not operations — and the
-      // /scan endpoint would refuse them, so they do not get the item.
+      {
+        id: 'orders',
+        labelKey: 'admin.nav.orders',
+        icon: '📦',
+        to: '/admin/orders',
+        requires: { module: 'orders' },
+      },
       {
         id: 'hub',
         labelKey: 'admin.nav.hub',
         icon: '🏭',
         to: '/admin/hub',
-        roles: [...HUB_STAFF_ROLES],
+        requires: { module: 'warehouse_hub', action: 'edit' },
       },
-      { id: 'returns', labelKey: 'admin.nav.returns', icon: '↩️', to: '/admin/returns' },
-      { id: 'payouts', labelKey: 'admin.nav.payouts', icon: '💸', to: '/admin/payouts' },
-      { id: 'users', labelKey: 'admin.nav.users', icon: '👥', to: '/admin/users' },
+      {
+        id: 'returns',
+        labelKey: 'admin.nav.returns',
+        icon: '↩️',
+        to: '/admin/returns',
+        requires: { module: 'returns_refunds' },
+      },
+      {
+        id: 'payouts',
+        labelKey: 'admin.nav.payouts',
+        icon: '💸',
+        to: '/admin/payouts',
+        requires: { module: 'settlement_sellers' },
+      },
+      {
+        id: 'users',
+        labelKey: 'admin.nav.users',
+        icon: '👥',
+        to: '/admin/users',
+        requires: { module: 'user_management' },
+      },
+      {
+        id: 'roles',
+        labelKey: 'admin.nav.roles',
+        icon: '🔐',
+        to: '/admin/roles',
+        requires: { module: 'role_permission_management' },
+      },
     ],
   },
   {
@@ -229,19 +150,21 @@ export const ADMIN_NAV: AdminNavSection[] = [
         labelKey: 'admin.nav.registrations',
         icon: '📋',
         to: '/admin/registrations',
+        requires: { module: 'seller_management', action: 'edit' },
       },
-      // Seller product requests. No `roles` — the backend guards these endpoints on
-      // role === 'admin' alone (no admin_role check), so every management role that
-      // can reach this console can already review a listing.
-      { id: 'listings', labelKey: 'admin.nav.listings', icon: '🌾', to: '/admin/listings' },
-      // Approving a change request writes bank/GST fields, so it is Head Office only
-      // — matching backend isHeadOffice on POST /users/change-requests/:id/approve.
+      {
+        id: 'listings',
+        labelKey: 'admin.nav.listings',
+        icon: '🌾',
+        to: '/admin/listings',
+        requires: { module: 'product_approval', action: 'approve' },
+      },
       {
         id: 'change-requests',
         labelKey: 'admin.nav.changeRequests',
         icon: '📝',
         to: '/admin/change-requests',
-        roles: ['Head Office'],
+        requires: { module: 'seller_management', action: 'approve' },
       },
     ],
   },
@@ -249,21 +172,36 @@ export const ADMIN_NAV: AdminNavSection[] = [
     id: 'people',
     labelKey: 'admin.nav.people',
     items: [
-      // The employee tracker is HR-owned. Head Office / State Head always have it;
-      // a Board of Director does too. HR-Admin-flagged staff with another role reach
-      // it by deep link (the page and backend both enforce the real authority).
       {
         id: 'employees',
         labelKey: 'admin.nav.employees',
         icon: '🧑‍💼',
         to: '/admin/employees',
-        roles: ['Head Office', 'State Head', 'Board of Director'],
+        requires: { module: 'employee_management' },
       },
     ],
   },
   {
     id: 'catalog',
     labelKey: 'admin.nav.catalog',
-    items: [{ id: 'products', labelKey: 'admin.nav.products', icon: '🌾', to: '/admin/products' }],
+    items: [
+      {
+        id: 'products',
+        labelKey: 'admin.nav.products',
+        icon: '🌾',
+        to: '/admin/products',
+        requires: { module: 'product_approval', action: 'edit' },
+      },
+    ],
   },
 ];
+
+/** Drop the sections/items the user's permissions do not grant. */
+export function filterAdminNav(
+  sections: AdminNavSection[],
+  user: User | null | undefined,
+): AdminNavSection[] {
+  return sections
+    .map((s) => ({ ...s, items: s.items.filter((i) => meetsRequirement(user, i.requires)) }))
+    .filter((s) => s.items.length > 0);
+}

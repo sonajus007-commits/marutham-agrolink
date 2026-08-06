@@ -1,6 +1,6 @@
 const express = require('express');
 const supabase = require('../db/supabase');
-const { requireRole } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 
 const router = express.Router();
 
@@ -8,7 +8,7 @@ const DISTRICT_ROLES = new Set(['District Manager', 'VCO', 'Delivery Agent', 'Hu
 const REGION_ROLES   = new Set(['Regional Manager']);
 
 // ── GET /consumers ────────────────────────────────────────────────────────────
-router.get('/', requireRole('admin'), async (req, res) => {
+router.get('/', requirePermission('consumer_management','view'), async (req, res) => {
   try {
     const u = req.user;
 
@@ -82,7 +82,7 @@ router.get('/', requireRole('admin'), async (req, res) => {
 });
 
 // ── PATCH /consumers/:id/block ────────────────────────────────────────────────
-router.patch('/:id/block', requireRole('admin'), async (req, res) => {
+router.patch('/:id/block', requirePermission('consumer_management','edit'), async (req, res) => {
   const { data, error } = await supabase
     .from('users')
     .update({ status: 'blocked', updated_at: new Date().toISOString() })
@@ -93,7 +93,7 @@ router.patch('/:id/block', requireRole('admin'), async (req, res) => {
 });
 
 // ── PATCH /consumers/:id/unblock ──────────────────────────────────────────────
-router.patch('/:id/unblock', requireRole('admin'), async (req, res) => {
+router.patch('/:id/unblock', requirePermission('consumer_management','edit'), async (req, res) => {
   const { data, error } = await supabase
     .from('users')
     .update({ status: 'active', updated_at: new Date().toISOString() })
@@ -106,7 +106,7 @@ router.patch('/:id/unblock', requireRole('admin'), async (req, res) => {
 // ── GET /consumers/:id/frequent ───────────────────────────────────────────────
 // Products this consumer has ordered 2+ times, most-ordered first (top 6).
 // "Ordered N times" = number of distinct orders that contain the product.
-router.get('/:id/frequent', requireRole('admin'), async (req, res) => {
+router.get('/:id/frequent', requirePermission('consumer_management','view'), async (req, res) => {
   try {
     const consumerId = req.params.id;
 
@@ -148,7 +148,7 @@ router.get('/:id/frequent', requireRole('admin'), async (req, res) => {
 
 // ── GET /consumers/:id/activity ───────────────────────────────────────────────
 // Order + return history for the profile popup's stat-detail pane.
-router.get('/:id/activity', requireRole('admin'), async (req, res) => {
+router.get('/:id/activity', requirePermission('consumer_management','view'), async (req, res) => {
   try {
     const id = req.params.id;
 

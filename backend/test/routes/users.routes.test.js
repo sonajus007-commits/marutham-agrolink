@@ -37,19 +37,21 @@ test('GET /users — Head Office sees an unscoped list', async () => {
     'HO list must not be region-scoped');
 });
 
-test('GET /users — a District Manager only sees their own district', async () => {
+test('GET /users — a District Manager has no User Management access (403)', async () => {
+  // RBAC matrix: User Management is Admin / HR / Board / Technical Head only; the
+  // tiered managers hold NO user-management permission, so the endpoint is closed
+  // to them entirely (it is not merely geo-scoped as it was before RBAC).
   const db = fakeSupabase({ 'users:select': { data: [] } });
   app = await mountRoute('users', { supabase: db, user: DM });
   const res = await app.get('/');
-  assert.equal(res.status, 200);
-  assert.ok(hasFilter(find(db.calls, 'users', 'select')[0], ['eq', 'district', 'Pudukkottai']));
+  assert.equal(res.status, 403);
 });
 
-test('GET /users — a Regional Manager is scoped to their state', async () => {
+test('GET /users — a Regional Manager has no User Management access (403)', async () => {
   const db = fakeSupabase({ 'users:select': { data: [] } });
   app = await mountRoute('users', { supabase: db, user: RM });
-  await app.get('/');
-  assert.ok(hasFilter(find(db.calls, 'users', 'select')[0], ['eq', 'state', 'TN']));
+  const res = await app.get('/');
+  assert.equal(res.status, 403);
 });
 
 test('GET /users — role/admin_role/district query params become filters', async () => {

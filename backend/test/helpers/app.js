@@ -20,10 +20,45 @@ const path = require('path');
 const express = require('express');
 const { convertTimestamps } = require('../../utils/time');
 const { convertMoney } = require('../../utils/money');
+const rbac = require('../../config/rbac');
 
 const SUPABASE_MODULE = path.join(__dirname, '..', '..', 'db', 'supabase.js');
 const AUTH_MODULE     = path.join(__dirname, '..', '..', 'middleware', 'auth.js');
+const PERMS_MODULE    = path.join(__dirname, '..', '..', 'middleware', 'permissions.js');
 const NOTIFY_MODULE   = path.join(__dirname, '..', '..', 'utils', 'notify.js');
+
+// The RBAC permission map, resolved once from config/rbac.js. In tests the rbac_*
+// tables aren't in the fake DB, so middleware/permissions.js is stubbed with an
+// in-memory version that DERIVES a user's permissions from their role — using
+// user.role_key if present, else mapping the legacy admin_role. This keeps every
+// existing route test (which sets `user: { role, admin_role }`) working unchanged,
+// while enforcing exactly the same matrix the production tables are seeded from.
+const RESOLVED = rbac.resolveMatrix();
+
+function permsForUser(user) {
+  const map = {};
+  if (!user) return map;
+  const roleKey = user.role_key || rbac.ADMIN_ROLE_TO_ROLE[user.admin_role] || null;
+  const add = (rk) => {
+    for (const r of RESOLVED) {
+      if (r.roleKey !== rk) continue;
+      const cur = map[r.moduleKey] || (map[r.moduleKey] = { actions: [], scope: 'none' });
+      for (const a of r.actions) if (!cur.actions.includes(a)) cur.actions.push(a);
+      if (r.scope !== 'none') cur.scope = r.scope;
+    }
+  };
+  if (roleKey) add(roleKey);
+  if (user.is_board_director) add('board_of_directors');
+  if (user.is_hr_admin) add('hr');
+  return map;
+}
+
+function makeCan(user) {
+  return (u, module, action) => {
+    const p = permsForUser(u || user)[module];
+    return !!p && p.actions.includes(action);
+  };
+}
 
 function stub(modulePath, exports) {
   require.cache[modulePath] = {
@@ -51,13 +86,46 @@ async function mountRoute(routeModule, { supabase, user = null }) {
   // Anything that closes over the fake must be re-required, not reused from a
   // previous test's cache. Purge the route and everything it reaches that touches
   // the client.
-  for (const p of [routePath, SUPABASE_MODULE, AUTH_MODULE, NOTIFY_MODULE,
+  for (const p of [routePath, SUPABASE_MODULE, AUTH_MODULE, PERMS_MODULE, NOTIFY_MODULE,
                    path.join(__dirname, '..', '..', 'utils', 'employeeValidation.js')]) {
     delete require.cache[p];
   }
 
   stub(SUPABASE_MODULE, supabase);
   stub(NOTIFY_MODULE, silentNotifier);
+
+  // Permission model, derived in-memory from the signed-in user (see permsForUser).
+  const can = makeCan(user);
+  const scopeFor = (u, module) => {
+    const p = permsForUser(u || user)[module];
+    return (p && p.scope) || 'none';
+  };
+  const attachUser = (req, res, next) => {
+    if (!user) return res.status(401).json({ error: 'Authentication required.' });
+    req.user = { ...user, permissions: permsForUser(user), role_key: user.role_key || rbac.ADMIN_ROLE_TO_ROLE[user.admin_role] || null };
+    next();
+  };
+  stub(PERMS_MODULE, {
+    can,
+    scopeFor,
+    requirePermission: (module, action) => [
+      attachUser,
+      (req, res, next) => {
+        if (can(req.user, module, action)) return next();
+        return res.status(403).json({ error: `Access denied. Need '${action}' on ${module}.` });
+      },
+    ],
+    resolveUserPermissions: async (u) => permsForUser(u),
+    roleKeyFor: async () => (user ? (user.role_key || rbac.ADMIN_ROLE_TO_ROLE[user.admin_role] || null) : null),
+    roleIdForAdminRole: async () => null,
+    permissionPayload: async (u) => ({
+      role_key: u ? (u.role_key || rbac.ADMIN_ROLE_TO_ROLE[u.admin_role] || null) : null,
+      permissions: permsForUser(u),
+      dashboards: {},
+    }),
+    dashboardsFor: () => ({}),
+    invalidatePermissionCache: () => {},
+  });
 
   // A faithful-enough auth: attaches the user, enforces the role. The REAL
   // middleware is tested separately, against the fake, in auth.middleware.test.js.

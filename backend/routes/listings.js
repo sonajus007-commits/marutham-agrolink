@@ -1,6 +1,7 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { can } = require('../middleware/permissions');
 const { validateBody, z } = require('../middleware/validate');
 const { getFeeForSeller } = require('../utils/fees');
 const { validateImages } = require('../utils/listings');
@@ -18,9 +19,11 @@ function farmersOnly(req, res, next) {
   }
   next();
 }
-function adminsOnly(req, res, next) {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin access required.' });
+// Reviewing seller product listings is the Product Approval module: Admin + the
+// tiered managers (Hub/District/Regional/Zonal/State) hold 'approve'.
+function canApproveListings(req, res, next) {
+  if (!can(req.user, 'product_approval', 'approve')) {
+    return res.status(403).json({ error: 'Product approval permission required.' });
   }
   next();
 }
@@ -315,10 +318,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // ── GET /listings/admin/pending  (admin only) ────────────────────────────────
-router.get('/admin/pending', async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin access required.' });
-  }
+router.get('/admin/pending', canApproveListings, async (req, res) => {
   const status = req.query.status || 'pending';
   const { data, error } = await supabase
     .from('farmer_listings')
@@ -334,7 +334,7 @@ router.get('/admin/pending', async (req, res) => {
 });
 
 // ── PATCH /listings/:id/status  (admin only) ─────────────────────────────────
-router.patch('/:id/status', adminsOnly, validateBody(listingStatusSchema), async (req, res) => {
+router.patch('/:id/status', canApproveListings, validateBody(listingStatusSchema), async (req, res) => {
   const { status } = req.body;
 
   // A rejection MUST say why.

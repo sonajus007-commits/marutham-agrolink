@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const QRCode = require('qrcode');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { can } = require('../middleware/permissions');
 const { validateBody, z } = require('../middleware/validate');
 const { generateOrderCode } = require('../utils/codeGen');
 const { getFeeForSeller } = require('../utils/fees');
@@ -528,6 +529,11 @@ router.get('/', async (req, res) => {
     farmerPayouts = payoutByOrder(myItems); // { order_id: paise }
 
   } else if (u.role === 'admin') {
+    // Orders module 'view'. Technical Head / HR have no orders access and are
+    // refused here rather than falling through to an unfiltered company-wide list.
+    if (!can(u, 'orders', 'view')) {
+      return res.status(403).json({ error: 'Orders view permission required.' });
+    }
     const role = u.admin_role;
 
     /* Which of the two views this role works in. Logistics roles handle physical
@@ -1271,6 +1277,11 @@ router.post('/:id/cancel', async (req, res) => {
   const u = req.user;
   if (u.role === 'farmer') {
     return res.status(403).json({ error: 'Farmers cannot cancel orders.' });
+  }
+  // A staff cancellation is an Orders 'edit' (Admin, Hub Incharge, the assigned
+  // agent). A consumer cancels their own order below.
+  if (u.role === 'admin' && !can(u, 'orders', 'edit')) {
+    return res.status(403).json({ error: 'Orders edit permission required to cancel an order.' });
   }
 
   const { data: order, error } = await supabase

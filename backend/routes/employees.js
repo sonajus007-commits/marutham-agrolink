@@ -1,27 +1,19 @@
 const express = require('express');
 const supabase = require('../db/supabase');
-const { requireRole } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
+const { requirePermission, can } = require('../middleware/permissions');
 const { stateCode } = require('../utils/codeGen');
 
 const router = express.Router();
 
-function isHeadOffice(user) {
-  return user.admin_role === 'Head Office' || user.admin_role === 'State Head';
-}
-// Who may open the employee tracker: Head Office / State Head, plus the delegated
-// trust roles (HR Admin, Board of Director) so they can approve requests.
-function canAccessTracker(user) {
-  return isHeadOffice(user) || user.is_hr_admin === true || user.is_board_director === true;
-}
-// Who may mint the trust roles themselves (Board of Director / HR Admin flags):
-// only the root of trust — Head Office (bootstrap) or an existing Board of Director.
+// The employee tracker is the Employee Management module. Access is gated per-route
+// by requirePermission('employee_management', <action>): HR holds Full Control
+// (via role or the is_hr_admin trust flag); Board/Admin/managers hold View. The one
+// finer control that a module action can't express is who may MINT the trust flags
+// themselves (is_board_director / is_hr_admin) — a privilege-elevation act reserved
+// for Admin (role_permission_management edit) or an existing Board Director.
 function canMintTrustRoles(user) {
-  return isHeadOffice(user) || user.is_board_director === true;
-}
-// Who may approve/reject a pending employee request: the HR Admin (delegated),
-// a Board of Director, or Head Office (safety-valve fallback).
-function canApprove(user) {
-  return isHeadOffice(user) || user.is_hr_admin === true || user.is_board_director === true;
+  return can(user, 'role_permission_management', 'edit') || user.is_board_director === true;
 }
 
 const truthy = (v) => v === true || v === 'true' || v === '1';
@@ -80,7 +72,7 @@ function pickFields(body) {
 // The logged-in staff member's OWN employee master record (read-only). Read live
 // so any HO update (e.g. a promotion) reflects on the employee's next profile view.
 // Returns { employee: null } for contract / unlinked staff.
-router.get('/me', requireRole('admin'), async (req, res) => {
+router.get('/me', requireAuth, async (req, res) => {
   const empId = req.user.emp_id;
   if (!empId) return res.json({ employee: null });
   const { data, error } = await supabase
@@ -96,10 +88,7 @@ router.get('/me', requireRole('admin'), async (req, res) => {
 // Removed employees are hidden by default. `?deleted=1` lists ONLY the removed ones —
 // which is what makes the restore endpoint usable: you cannot restore somebody you
 // have no way to see.
-router.get('/', requireRole('admin'), async (req, res) => {
-  if (!canAccessTracker(req.user)) {
-    return res.status(403).json({ error: 'Head Office / HR Admin access required to view the employee tracker.' });
-  }
+router.get('/', requirePermission('employee_management', 'view'), async (req, res) => {
   try {
     let q = supabase.from('employees').select('*').order('created_at', { ascending: false });
     q = truthy(req.query.deleted)
@@ -125,7 +114,7 @@ router.get('/', requireRole('admin'), async (req, res) => {
 
 // ── GET /employees/lookup/:empId ──────────────────────────────────────────────
 // Quick existence/validity check used by the staff forms.
-router.get('/lookup/:empId', requireRole('admin'), async (req, res) => {
+router.get('/lookup/:empId', requirePermission('employee_management', 'view'), async (req, res) => {
   const { data, error } = await supabase
     .from('employees')
     .select('id, emp_id, fname, lname, gender, phone, email, aadhar, ' +
@@ -157,10 +146,7 @@ router.get('/lookup/:empId', requireRole('admin'), async (req, res) => {
 // Employees flagged as Manager, for the Reporting-Manager picker. Restricted to
 // the org unit the employee belongs to: same Work District + same Department.
 // Both filters are required so the popup only ever shows valid reporting lines.
-router.get('/managers', requireRole('admin'), async (req, res) => {
-  if (!canAccessTracker(req.user)) {
-    return res.status(403).json({ error: 'Head Office / HR Admin access required.' });
-  }
+router.get('/managers', requirePermission('employee_management', 'view'), async (req, res) => {
   const district   = (req.query.district || '').trim();
   const department = (req.query.department || '').trim();
   if (!district || !department) {
@@ -184,7 +170,7 @@ router.get('/managers', requireRole('admin'), async (req, res) => {
 });
 
 // ── GET /employees/:id ────────────────────────────────────────────────────────
-router.get('/:id', requireRole('admin'), async (req, res) => {
+router.get('/:id', requirePermission('employee_management', 'view'), async (req, res) => {
   const { data, error } = await supabase
     .from('employees').select('*').eq('id', req.params.id).single();
   if (error) return res.status(404).json({ error: 'Employee not found.' });
@@ -193,8 +179,7 @@ router.get('/:id', requireRole('admin'), async (req, res) => {
 
 // ── GET /employees/:id/history ────────────────────────────────────────────────
 // Full change history from the DB audit trigger. Head Office / State Head only.
-router.get('/:id/history', requireRole('admin'), async (req, res) => {
-  if (!canAccessTracker(req.user)) return res.status(403).json({ error: 'Head Office / HR Admin access required.' });
+router.get('/:id/history', requirePermission('employee_management', 'view'), async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 100, 500);
   const { data, error } = await supabase
     .from('employee_audit_log')
@@ -210,10 +195,7 @@ router.get('/:id/history', requireRole('admin'), async (req, res) => {
 // Creates an employee. Board of Director / HR Admin records are AUTO-APPROVED
 // (bootstrap) and get their Employee ID immediately. Every other employee is
 // created as a PENDING request with NO Employee ID until an HR Admin approves.
-router.post('/', requireRole('admin'), async (req, res) => {
-  if (!canAccessTracker(req.user)) {
-    return res.status(403).json({ error: 'Head Office / HR Admin access required to manage the employee tracker.' });
-  }
+router.post('/', requirePermission('employee_management', 'create'), async (req, res) => {
   // nextEmpId THROWS if its lookup fails (an Employee ID can't be minted from an unread
   // sequence). Express 4 does not catch throws from an async handler — the rejection
   // is unhandled and Node's default kills the process. A try/catch keeps one bad
@@ -262,10 +244,7 @@ router.post('/', requireRole('admin'), async (req, res) => {
 });
 
 // ── PATCH /employees/:id ──────────────────────────────────────────────────────
-router.patch('/:id', requireRole('admin'), async (req, res) => {
-  if (!canAccessTracker(req.user)) {
-    return res.status(403).json({ error: 'Head Office / HR Admin access required to manage the employee tracker.' });
-  }
+router.patch('/:id', requirePermission('employee_management', 'edit'), async (req, res) => {
   const updates = pickFields(req.body);
 
   // Employee ID is permanent once generated — never editable after creation.
@@ -297,10 +276,7 @@ router.patch('/:id', requireRole('admin'), async (req, res) => {
 // ── PATCH /employees/:id/approve ──────────────────────────────────────────────
 // Approve a pending employee → issue the Employee ID and mark active. Only an
 // HR Admin / Board of Director / Head Office may approve.
-router.patch('/:id/approve', requireRole('admin'), async (req, res) => {
-  if (!canApprove(req.user)) {
-    return res.status(403).json({ error: 'HR Admin (or Board of Director / Head Office) approval authority required.' });
-  }
+router.patch('/:id/approve', requirePermission('employee_management', 'approve'), async (req, res) => {
   // Same class as POST / above: the await on nextEmpId can throw, and an uncaught throw
   // in an Express 4 async handler is an unhandled rejection that kills the process.
   try {
@@ -333,10 +309,7 @@ router.patch('/:id/approve', requireRole('admin'), async (req, res) => {
 });
 
 // ── PATCH /employees/:id/reject ───────────────────────────────────────────────
-router.patch('/:id/reject', requireRole('admin'), async (req, res) => {
-  if (!canApprove(req.user)) {
-    return res.status(403).json({ error: 'HR Admin (or Board of Director / Head Office) approval authority required.' });
-  }
+router.patch('/:id/reject', requirePermission('employee_management', 'approve'), async (req, res) => {
   const { data, error } = await supabase
     .from('employees')
     .update({
@@ -365,10 +338,7 @@ router.patch('/:id/reject', requireRole('admin'), async (req, res) => {
 // employee is locked out but still visible — a state HR can see and retry. Doing it
 // the other way round, a failure would leave them hidden from the tracker with their
 // login still live: an account nobody can see and nobody will think to revoke.
-router.delete('/:id', requireRole('admin'), async (req, res) => {
-  if (!canApprove(req.user)) {
-    return res.status(403).json({ error: 'HR Admin (or Board of Director / Head Office) authority required to remove an employee.' });
-  }
+router.delete('/:id', requirePermission('employee_management', 'delete'), async (req, res) => {
 
   const { data: emp, error: findErr } = await supabase
     .from('employees').select('id, emp_id, fname, lname, deleted_at').eq('id', req.params.id).maybeSingle();
@@ -427,10 +397,7 @@ router.delete('/:id', requireRole('admin'), async (req, res) => {
 // Reverse order to the delete, for the same reason: bring the record BACK into view
 // first, then re-enable the login. A half-failure then leaves them visible but still
 // locked out, which is safe and obvious — never signed-in but invisible.
-router.post('/:id/restore', requireRole('admin'), async (req, res) => {
-  if (!canApprove(req.user)) {
-    return res.status(403).json({ error: 'HR Admin (or Board of Director / Head Office) authority required to restore an employee.' });
-  }
+router.post('/:id/restore', requirePermission('employee_management', 'edit'), async (req, res) => {
 
   const { data: emp, error: findErr } = await supabase
     .from('employees').select('id, emp_id, fname, deleted_at').eq('id', req.params.id).maybeSingle();

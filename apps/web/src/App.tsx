@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { ProtectedRoute, roleHome } from './auth/ProtectedRoute';
-import { MANAGEMENT_ADMIN_ROLES } from './pages/admin/adminNav';
 import { Login } from './pages/Login';
 
 // Code-split per role so each user only downloads their screen's bundle.
@@ -90,7 +89,7 @@ export function App() {
             <Route
               path="/agent"
               element={
-                <ProtectedRoute role="admin" adminRoles={['Delivery Agent', 'VCO']}>
+                <ProtectedRoute role="admin" roleKeys={['delivery_agent', 'vco']}>
                   <AgentPage />
                 </ProtectedRoute>
               }
@@ -120,7 +119,7 @@ export function App() {
             <Route
               path="/admin/*"
               element={
-                <ProtectedRoute role="admin" adminRoles={[...MANAGEMENT_ADMIN_ROLES]}>
+                <ProtectedRoute role="admin" management>
                   <AdminPage />
                 </ProtectedRoute>
               }

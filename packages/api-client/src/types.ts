@@ -15,12 +15,41 @@ export type AdminRole =
   | 'Delivery Agent'
   | (string & {});
 
+/** RBAC actions a role may hold on a module (mirrors backend/config/rbac.js). */
+export type PermissionAction =
+  'view' | 'create' | 'edit' | 'delete' | 'approve' | 'assign' | 'export';
+
+/** The resolved permission for one module: what you may DO + which ROWS. */
+export interface ModulePermission {
+  actions: PermissionAction[];
+  scope: 'none' | 'self' | 'assigned' | 'team' | 'geo' | 'all' | 'employees';
+}
+
+/** module key → resolved permission. Empty for consumers/farmers. */
+export type PermissionMap = Record<string, ModulePermission>;
+
+/** Which composite dashboards the signed-in user may open (server-computed). */
+export interface DashboardAccess {
+  executive: boolean;
+  operations: boolean;
+  adminhead: boolean;
+}
+
 export interface User {
   id: string;
   login_id: string;
   phone: string;
   role: UserRole;
   admin_role?: AdminRole | null;
+  /** Canonical RBAC role key (e.g. 'district_manager'); null for consumers/farmers. */
+  role_key?: string | null;
+  /** Resolved permission matrix for this user, from GET /auth/me. */
+  permissions?: PermissionMap;
+  /** Composite-dashboard visibility, computed server-side. */
+  dashboards?: DashboardAccess;
+  /** Delegated trust flags from the employee record (union extra permissions). */
+  is_hr_admin?: boolean;
+  is_board_director?: boolean;
   status: 'active' | 'suspended' | 'blocked';
   approval_status?: string | null;
   fname?: string | null;
@@ -46,6 +75,29 @@ export interface LoginResponse {
   token: string;
   user: User;
   needs_payment?: boolean;
+}
+
+/* ── Role & Permission Management (GET/PATCH /api/roles) ── */
+export interface RbacRole {
+  id: number;
+  key: string;
+  label: string;
+  tier: number;
+  is_system: boolean;
+}
+export interface RbacModule {
+  key: string;
+  label: string;
+  sort: number;
+}
+/** matrix[roleId][moduleKey] = { actions, scope } */
+export type RbacMatrix = Record<number, Record<string, ModulePermission>>;
+export interface RolesResponse {
+  roles: RbacRole[];
+  modules: RbacModule[];
+  actions: PermissionAction[];
+  scopes: ModulePermission['scope'][];
+  matrix: RbacMatrix;
 }
 
 /** POST /auth/send-otp. `otp` is echoed back in the sandbox only (no SMS wired). */

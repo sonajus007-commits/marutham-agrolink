@@ -1,6 +1,7 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { requirePermission, can } = require('../middleware/permissions');
 const { validateBody, z } = require('../middleware/validate');
 const { generateReturnCode } = require('../utils/codeGen');
 const {
@@ -15,10 +16,11 @@ const {
 const router = express.Router();
 router.use(requireAuth);
 
-// Only admins decide returns — guard first, so 403 precedes any 400.
+// Deciding a return is the Returns & Refunds 'approve' authority (Admin + the
+// tiered managers and Hub Incharge). VCO can only INITIATE a return, not decide it.
 function decidersOnly(req, res, next) {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Only admins can decide on returns.' });
+  if (!can(req.user, 'returns_refunds', 'approve')) {
+    return res.status(403).json({ error: 'Returns approval permission required.' });
   }
   next();
 }
@@ -166,11 +168,7 @@ router.post('/:id/return', async (req, res) => {
 });
 
 // ── GET /returns  (VCO/admin scoped) ─────────────────────────────────────────
-router.get('/', async (req, res) => {
-  if (req.user.role === 'consumer' || req.user.role === 'farmer') {
-    return res.status(403).json({ error: 'Only admins can list returns.' });
-  }
-
+router.get('/', requirePermission('returns_refunds', 'view'), async (req, res) => {
   const scoped = req.user.admin_role === 'VCO'
     || ['District Manager', 'Hub Incharge'].includes(req.user.admin_role);
 
@@ -238,7 +236,11 @@ router.patch('/:id/decide', decidersOnly, validateBody(decideSchema), async (req
 // Marks goods collected and triggers the refund record
 router.patch('/:id/collect', async (req, res) => {
   const u = req.user;
-  if (u.role !== 'admin') return res.status(403).json({ error: 'Only admins can mark returns as collected.' });
+  // Collecting the goods + triggering the refund is a Returns update: the agent who
+  // physically collects ('edit') or a manager/hub who can approve the refund.
+  if (!(can(u, 'returns_refunds', 'edit') || can(u, 'returns_refunds', 'approve'))) {
+    return res.status(403).json({ error: 'Returns update permission required.' });
+  }
 
   // The refund is issued off the back of this read. A failed lookup reported the
   // return as simply "not found", which is a strange thing to tell an admin about

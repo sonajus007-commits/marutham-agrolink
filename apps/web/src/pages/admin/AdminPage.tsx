@@ -10,11 +10,10 @@ import {
   EmptyState,
   type SidebarSection,
 } from '@marutham/ui';
-import { filterNavByRole } from '@marutham/lib';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
 import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider } from '../../components/Toast';
-import { ADMIN_NAV, APP_BASE } from './adminNav';
+import { ADMIN_NAV, APP_BASE, filterAdminNav } from './adminNav';
 import { AdminGeoProvider } from './AdminGeoContext';
 import { OverviewPage } from './OverviewPage';
 import { ExecutivePage } from './ExecutivePage';
@@ -24,6 +23,7 @@ import { OrdersPage } from './OrdersPage';
 import { ReturnsPage } from './ReturnsPage';
 import { PayoutsPage } from './PayoutsPage';
 import { UsersPage } from './UsersPage';
+import { RolesPage } from './RolesPage';
 import { RegistrationsPage } from './RegistrationsPage';
 import { ListingsPage } from './ListingsPage';
 import { ChangeRequestsPage } from './ChangeRequestsPage';
@@ -57,17 +57,17 @@ export function AdminPage() {
     navigate(to);
   };
 
-  const sections: SidebarSection[] = ADMIN_NAV.map((section) => ({
+  const sections: SidebarSection[] = filterAdminNav(ADMIN_NAV, user).map((section) => ({
     id: section.id,
     label: section.labelKey ? t(section.labelKey) : undefined,
-    items: filterNavByRole(section.items, user.admin_role).map((item) => ({
+    items: section.items.map((item) => ({
       id: item.id,
       label: t(item.labelKey),
       icon: item.icon,
       href: APP_BASE + item.to,
       onClick: go(item.to),
     })),
-  })).filter((s) => s.items.length > 0);
+  }));
 
   const brand = (
     <a
@@ -137,6 +137,7 @@ export function AdminPage() {
               <Route path="returns" element={<ReturnsPage />} />
               <Route path="payouts" element={<PayoutsPage />} />
               <Route path="users" element={<UsersPage />} />
+              <Route path="roles" element={<RolesPage />} />
               <Route path="registrations" element={<RegistrationsPage />} />
               <Route path="listings" element={<ListingsPage />} />
               <Route path="change-requests" element={<ChangeRequestsPage />} />

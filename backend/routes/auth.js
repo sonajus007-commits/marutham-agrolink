@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { permissionPayload, roleIdForAdminRole } = require('../middleware/permissions');
 const { loginLimiter, otpLimiter, resetLimiter } = require('../middleware/rateLimit');
 const { distCode, stateCode } = require('../utils/codeGen');
 const notify = require('../utils/notify');
@@ -144,6 +145,13 @@ function safeUser(u) {
   // Strip password_hash before returning to client
   const { password_hash, ...rest } = u;
   return rest;
+}
+
+// safeUser + the resolved RBAC role_key and permission map, so the client always
+// receives the same shape whether it just logged in (no requireAuth) or called
+// /me. Consumers/farmers get role_key null and permissions {}.
+async function withPerms(u) {
+  return { ...safeUser(u), ...(await permissionPayload(u)) };
 }
 
 // If a seller's subscription has lapsed, drop them to 'suspended' so they can
@@ -331,7 +339,7 @@ router.post('/register', async (req, res) => {
   res.status(201).json({
     message,
     login_id: created.login_id,
-    user: safeUser(created),
+    user: await withPerms(created),
   });
 });
 
@@ -389,7 +397,7 @@ router.post('/login', loginLimiter, async (req, res) => {
   res.json({
     message: 'Login successful.',
     token,
-    user: safeUser(user),
+    user: await withPerms(user),
     needs_payment: access.needsPayment,
   });
 });
@@ -479,7 +487,7 @@ router.post('/verify-otp', async (req, res) => {
   res.json({
     message: 'OTP verified. Login successful.',
     token,
-    user: safeUser(user),
+    user: await withPerms(user),
     needs_payment: access.needsPayment,
   });
 });
@@ -668,9 +676,15 @@ router.post('/create-staff', requireAuth, async (req, res) => {
     return res.status(500).json({ error: 'Could not create the staff account. Please try again.' });
   }
 
+  // Attach the canonical RBAC role so the new staffer has permissions on their
+  // very first login — without waiting for a re-seed/backfill. A null here (an
+  // admin_role that maps to no canonical role) is left for the backfill to report.
+  const role_id = await roleIdForAdminRole(admin_role);
+
   const newUser = {
     login_id, phone, password_hash,
     role: 'admin', admin_role,
+    ...(role_id ? { role_id } : {}),
     fname, lname: lname || '',
     gender: gender || null,
     district: district || req.user.district,
@@ -703,7 +717,7 @@ router.post('/create-staff', requireAuth, async (req, res) => {
   res.status(201).json({
     message: 'Staff account created.',
     login_id: created.login_id,
-    user: safeUser(created),
+    user: await withPerms(created),
   });
 });
 
@@ -717,7 +731,7 @@ router.get('/me', requireAuth, async (req, res) => {
 
   if (error) return res.status(500).json({ error: 'Could not fetch profile.' });
 
-  res.json({ user: safeUser(user) });
+  res.json({ user: await withPerms(user) });
 });
 
 // ── PATCH /me ─────────────────────────────────────────────────────────────────
@@ -808,7 +822,7 @@ router.patch('/me', requireAuth, async (req, res) => {
     return res.status(500).json({ error: 'Could not update profile.' });
   }
 
-  res.json({ message: 'Profile updated.', user: safeUser(updated) });
+  res.json({ message: 'Profile updated.', user: await withPerms(updated) });
 });
 
 // ── POST /auth/profile-change-request ────────────────────────────────────────

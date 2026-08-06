@@ -1,6 +1,7 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { can } = require('../middleware/permissions');
 const { groupPayouts } = require('../utils/payouts');
 
 const router = express.Router();
@@ -19,7 +20,7 @@ router.get('/', async (req, res) => {
 
   if (req.user.role === 'farmer') {
     query = query.eq('farmer_id', req.user.id);
-  } else if (req.user.role === 'admin') {
+  } else if (req.user.role === 'admin' && can(req.user, 'settlement_sellers', 'view')) {
     // District-scoped admins see payouts for farmers in their district
     if (['District Manager', 'Hub Incharge'].includes(req.user.admin_role)) {
       const district = req.user.district_assign || req.user.district;
@@ -55,10 +56,11 @@ router.get('/', async (req, res) => {
 // Creates pending payout records for all delivered orders that don't have one yet.
 router.post('/run', async (req, res) => {
   // Settlement is a GLOBAL batch (every delivered order, all districts), so it is
-  // restricted to Head Office — a district-scoped admin has no business running a
-  // company-wide payout run. The list (GET /) stays open to scoped admins.
-  if (req.user.role !== 'admin' || req.user.admin_role !== 'Head Office') {
-    return res.status(403).json({ error: 'Only Head Office can run a settlement batch.' });
+  // the Settlement to Sellers 'approve' authority — Admin and State Head. A
+  // district-scoped manager (view only) has no business running a company-wide
+  // payout run. The list (GET /) stays open to any settlement-view role.
+  if (!can(req.user, 'settlement_sellers', 'approve')) {
+    return res.status(403).json({ error: 'Settlement approval permission required to run a payout batch.' });
   }
 
   // Fetch delivered order items that haven't been paid out yet

@@ -1,16 +1,13 @@
 const express = require('express');
 const supabase = require('../db/supabase');
-const { requireRole } = require('../middleware/auth');
+const { requirePermission, scopeFor } = require('../middleware/permissions');
 const notify = require('../utils/notify');
 const { validateStaffEmployment } = require('../utils/employeeValidation');
 
 const router = express.Router();
 
-function isHeadOffice(user) {
-  return user.admin_role === 'Head Office' || user.admin_role === 'State Head';
-}
-
-// Roles that are scoped to a district, region, or state
+// Roles that are geo-scoped to a district or region. Kept keyed on the (unchanged)
+// admin_role string — it still identifies the tier and only ever NARROWS the list.
 const DISTRICT_ROLES = new Set(['District Manager', 'VCO', 'Delivery Agent', 'Hub Incharge']);
 const REGION_ROLES   = new Set(['Regional Manager']);
 
@@ -21,12 +18,23 @@ function scopeQuery(query, user) {
   if (REGION_ROLES.has(user.admin_role)) {
     return query.eq('state', user.state);
   }
-  // State Head / Head Office see all
+  // State Head / Head Office / Admin see all
   return query;
 }
 
+// HR's user_management scope is 'employees': they may only act on STAFF logins
+// (role = 'admin'), never on consumers/sellers. Full-scope roles (Admin, Board,
+// Technical Head) pass unconditionally. Fail closed if the target can't be read.
+async function withinUserScope(user, targetId) {
+  if (scopeFor(user, 'user_management') !== 'employees') return true;
+  const { data, error } = await supabase
+    .from('users').select('role').eq('id', targetId).maybeSingle();
+  if (error || !data) return false;
+  return data.role === 'admin';
+}
+
 // ── GET /users ────────────────────────────────────────────────────────────────
-router.get('/', requireRole('admin'), async (req, res) => {
+router.get('/', requirePermission('user_management', 'view'), async (req, res) => {
   try {
     let q = supabase
       .from('users')
@@ -35,6 +43,9 @@ router.get('/', requireRole('admin'), async (req, res) => {
       .order('created_at', { ascending: false });
 
     q = scopeQuery(q, req.user);
+
+    // HR only manages staff logins.
+    if (scopeFor(req.user, 'user_management') === 'employees') q = q.eq('role', 'admin');
 
     if (req.query.admin_role) q = q.eq('admin_role', req.query.admin_role);
     if (req.query.district)   q = q.eq('district',   req.query.district);
@@ -88,13 +99,16 @@ async function changeUserStatus(adminId, targetId, newStatus, reason) {
 
 // ── PATCH /users/:id/status ───────────────────────────────────────────────────
 // Body: { status: 'active'|'suspended'|'blocked', reason }.  Reason required for block.
-router.patch('/:id/status', requireRole('admin'), async (req, res) => {
+router.patch('/:id/status', requirePermission('user_management', 'edit'), async (req, res) => {
+  if (!(await withinUserScope(req.user, req.params.id))) {
+    return res.status(403).json({ error: 'You may only manage staff accounts.' });
+  }
   const result = await changeUserStatus(req.user.id, req.params.id, req.body.status, req.body.reason);
   res.status(result.code).json(result.body);
 });
 
 // ── GET /users/:id/status-history ─────────────────────────────────────────────
-router.get('/:id/status-history', requireRole('admin'), async (req, res) => {
+router.get('/:id/status-history', requirePermission('user_management', 'view'), async (req, res) => {
   const { data, error } = await supabase
     .from('user_status_history')
     .select('id, old_status, new_status, reason, created_at, changer:users!user_status_history_changed_by_fkey (fname, lname, login_id)')
@@ -105,9 +119,9 @@ router.get('/:id/status-history', requireRole('admin'), async (req, res) => {
 });
 
 // ── GET /users/:id/audit-log ──────────────────────────────────────────────────
-// Full record-change history from the DB audit trigger. Head Office / State Head only.
-router.get('/:id/audit-log', requireRole('admin'), async (req, res) => {
-  if (!isHeadOffice(req.user)) return res.status(403).json({ error: 'Head Office access required.' });
+// Full record-change history from the DB audit trigger. Audit Logs: Board / Admin /
+// Technical Head (per the RBAC matrix — State Head no longer sees audit).
+router.get('/:id/audit-log', requirePermission('audit_logs', 'view'), async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 100, 500);
   const { data, error } = await supabase
     .from('user_audit_log')
@@ -120,9 +134,8 @@ router.get('/:id/audit-log', requireRole('admin'), async (req, res) => {
 });
 
 // ── GET /users/:id/login-history ──────────────────────────────────────────────
-// Login attempts (success + failure) for this user. Head Office / State Head only.
-router.get('/:id/login-history', requireRole('admin'), async (req, res) => {
-  if (!isHeadOffice(req.user)) return res.status(403).json({ error: 'Head Office access required.' });
+// Login attempts (success + failure) for this user. Audit Logs permission.
+router.get('/:id/login-history', requirePermission('audit_logs', 'view'), async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 100, 500);
   const { data, error } = await supabase
     .from('user_login_history')
@@ -135,21 +148,26 @@ router.get('/:id/login-history', requireRole('admin'), async (req, res) => {
 });
 
 // ── PATCH /users/:id/block  &  /unblock  (kept for backward compatibility) ─────
-router.patch('/:id/block', requireRole('admin'), async (req, res) => {
+router.patch('/:id/block', requirePermission('user_management', 'edit'), async (req, res) => {
+  if (!(await withinUserScope(req.user, req.params.id))) {
+    return res.status(403).json({ error: 'You may only manage staff accounts.' });
+  }
   const result = await changeUserStatus(req.user.id, req.params.id, 'blocked', req.body.reason);
   res.status(result.code).json(result.body);
 });
-router.patch('/:id/unblock', requireRole('admin'), async (req, res) => {
+router.patch('/:id/unblock', requirePermission('user_management', 'edit'), async (req, res) => {
+  if (!(await withinUserScope(req.user, req.params.id))) {
+    return res.status(403).json({ error: 'You may only manage staff accounts.' });
+  }
   const result = await changeUserStatus(req.user.id, req.params.id, 'active', req.body.reason);
   res.status(result.code).json(result.body);
 });
 
 // ── GET /users/change-requests ────────────────────────────────────────────────
-// Head Office only — list pending profile change requests
-router.get('/change-requests', requireRole('admin'), async (req, res) => {
-  if (!isHeadOffice(req.user)) {
-    return res.status(403).json({ error: 'Head Office access required.' });
-  }
+// Approving a seller's bank/GST/renewal change writes financial fields, so it is
+// the seller_management 'approve' authority (Admin) — not the 'manage' the tiered
+// managers hold. Listing shares the same gate: you only queue what you can decide.
+router.get('/change-requests', requirePermission('seller_management', 'approve'), async (req, res) => {
   const status = req.query.status || 'pending';
   const { data, error } = await supabase
     .from('profile_change_requests')
@@ -169,10 +187,7 @@ router.get('/change-requests', requireRole('admin'), async (req, res) => {
 });
 
 // ── POST /users/change-requests/:id/approve ───────────────────────────────────
-router.post('/change-requests/:id/approve', requireRole('admin'), async (req, res) => {
-  if (!isHeadOffice(req.user)) {
-    return res.status(403).json({ error: 'Head Office access required.' });
-  }
+router.post('/change-requests/:id/approve', requirePermission('seller_management', 'approve'), async (req, res) => {
   const { data: cr, error: crErr } = await supabase
     .from('profile_change_requests')
     .select('*')
@@ -248,10 +263,7 @@ router.post('/change-requests/:id/approve', requireRole('admin'), async (req, re
 });
 
 // ── POST /users/change-requests/:id/reject ────────────────────────────────────
-router.post('/change-requests/:id/reject', requireRole('admin'), async (req, res) => {
-  if (!isHeadOffice(req.user)) {
-    return res.status(403).json({ error: 'Head Office access required.' });
-  }
+router.post('/change-requests/:id/reject', requirePermission('seller_management', 'approve'), async (req, res) => {
   const { data: cr, error: crErr } = await supabase
     .from('profile_change_requests').select('*').eq('id', req.params.id).maybeSingle();
   if (crErr) return res.status(500).json({ error: 'Could not load the change request. Please try again.' });
@@ -286,10 +298,7 @@ router.post('/change-requests/:id/reject', requireRole('admin'), async (req, res
 });
 
 // ── POST /users/change-requests/:id/confirm-renewal-payment ──────────────────
-router.post('/change-requests/:id/confirm-renewal-payment', requireRole('admin'), async (req, res) => {
-  if (!isHeadOffice(req.user)) {
-    return res.status(403).json({ error: 'Head Office access required.' });
-  }
+router.post('/change-requests/:id/confirm-renewal-payment', requirePermission('seller_management', 'approve'), async (req, res) => {
   const { data: cr, error: crErr } = await supabase
     .from('profile_change_requests')
     .select('*')
@@ -353,8 +362,8 @@ router.post('/change-requests/:id/confirm-renewal-payment', requireRole('admin')
   res.json({ message: `Renewal confirmed. ${plan} subscription active until ${newExpiry.toDateString()}.` });
 });
 
-// ── GET /users/:id/listings  (admin only — farmer/retailer product listings) ──
-router.get('/:id/listings', requireRole('admin'), async (req, res) => {
+// ── GET /users/:id/listings  (a seller's product listings) ────────────────────
+router.get('/:id/listings', requirePermission('seller_management', 'view'), async (req, res) => {
   const { data, error } = await supabase
     .from('farmer_listings')
     .select(`
@@ -368,7 +377,10 @@ router.get('/:id/listings', requireRole('admin'), async (req, res) => {
 });
 
 // ── GET /users/:id ────────────────────────────────────────────────────────────
-router.get('/:id', requireRole('admin'), async (req, res) => {
+router.get('/:id', requirePermission('user_management', 'view'), async (req, res) => {
+  if (!(await withinUserScope(req.user, req.params.id))) {
+    return res.status(403).json({ error: 'You may only view staff accounts.' });
+  }
   const { data, error } = await supabase
     .from('users')
     .select('id,login_id,fname,lname,phone,alt_phone,email,role,admin_role,seller_type,gender,status,approval_status,district,state,village_town,city,taluk,pincode,street1,street2,house_no,landmark,bank_name,bank_account,ifsc,gst_number,business_name,business_type,aadhar,emp_id,employment_type,agent_vehicle,subscription_expires_at,subscription_plan,subscription_amount,created_at,updated_at')
@@ -379,7 +391,7 @@ router.get('/:id', requireRole('admin'), async (req, res) => {
 });
 
 // ── PATCH /users/:id ──────────────────────────────────────────────────────────
-// Admin direct edit — Head Office can update any field; others limited
+// Direct profile edit — user_management 'edit' (Admin; HR limited to staff logins).
 const ADMIN_EDITABLE = [
   'fname', 'lname', 'email', 'alt_phone', 'gender', 'phone',
   'house_no', 'street1', 'street2', 'landmark', 'village_town', 'city', 'taluk', 'district', 'pincode', 'state',
@@ -389,9 +401,9 @@ const ADMIN_EDITABLE = [
   'subscription_expires_at', 'subscription_plan',
 ];
 
-router.patch('/:id', requireRole('admin'), async (req, res) => {
-  if (!isHeadOffice(req.user)) {
-    return res.status(403).json({ error: 'Head Office access required to edit user profiles.' });
+router.patch('/:id', requirePermission('user_management', 'edit'), async (req, res) => {
+  if (!(await withinUserScope(req.user, req.params.id))) {
+    return res.status(403).json({ error: 'You may only edit staff accounts.' });
   }
   const updates = {};
   for (const key of ADMIN_EDITABLE) {

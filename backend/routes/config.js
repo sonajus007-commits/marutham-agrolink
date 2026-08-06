@@ -1,13 +1,13 @@
 const express = require('express');
 const supabase = require('../db/supabase');
-const { requireRole } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 const { validateBody, z } = require('../middleware/validate');
 
 const router = express.Router();
 
 // Both hours are coerced to integers in 0..23 and must differ. Replaces the manual
-// parseInt / isNaN / range dance; `requireRole('admin')` still runs first, so a
-// non-admin is 403'd before the body is ever inspected.
+// parseInt / isNaN / range dance; the system_configuration 'edit' guard still runs
+// first, so an unauthorised caller is 403'd before the body is ever inspected.
 const orderingWindowSchema = z
   .object({
     open_hour: z.coerce
@@ -36,7 +36,7 @@ router.get('/ordering-window', (req, res) => {
 });
 
 // ── PUT /config/ordering-window ───────────────────────────────────────────────
-router.put('/ordering-window', requireRole('admin'), validateBody(orderingWindowSchema), (req, res) => {
+router.put('/ordering-window', requirePermission('system_configuration', 'edit'), validateBody(orderingWindowSchema), (req, res) => {
   const { open_hour, close_hour } = req.body;   // validated integers 0–23, guaranteed to differ
   orderingWindow = { open_hour, close_hour };
   res.json({ message: 'Ordering window updated.', ordering_window: orderingWindow });

@@ -25,19 +25,10 @@ import {
   type OrderDetail,
   payMethodKey,
   payStatusKey,
+  can,
 } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../auth/AuthContext';
-
-// Mirrors the backend gate on POST /orders/:id/status. Only these roles get the
-// manual status-override control; everyone else sees the read-only sheet.
-const MANUAL_STATUS_ADMIN_ROLES = [
-  'Head Office',
-  'State Head',
-  'Regional Manager',
-  'District Manager',
-  'Hub Incharge',
-];
 
 /**
  * Admin order detail. Unlike the seller sheet this shows the FULL order — buyer
@@ -112,8 +103,7 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
   // Manual override: senior admins only, and never on a cancelled order (that
   // lifecycle is terminal). Offer the statuses valid for THIS order's route,
   // minus the one it is already at — matching the server's validation.
-  const canOverride =
-    !isOrderCancelled(o) && MANUAL_STATUS_ADMIN_ROLES.includes(user?.admin_role ?? '');
+  const canOverride = !isOrderCancelled(o) && can(user, 'delivery_assignment', 'assign');
   const isHub = (o.route || 'direct') === 'hub';
   const statusOptions = PIPELINE_STAGES.filter(
     (s) => (isHub || (s !== 'In Transit' && s !== 'At Hub')) && s !== o.status,

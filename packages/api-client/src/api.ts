@@ -54,6 +54,7 @@ import type {
   LoginHistoryResponse,
   SpendByCategory,
   FrequentItem,
+  RolesResponse,
 } from './types';
 import type {
   Order,
@@ -686,6 +687,20 @@ export const api = {
    *  the previous user's notifications. */
   unregisterPushToken(token: string): Promise<{ message: string }> {
     return apiFetch('DELETE', '/notifications/device', { token });
+  },
+
+  // ── Role & Permission Management ────────────────────────────────────────────
+  /** The full RBAC matrix + vocabulary, for the management screen. */
+  getRoles(): Promise<RolesResponse> {
+    return apiFetch<RolesResponse>('GET', '/roles');
+  },
+  /** Replace the given modules' permissions + scope for one role. Modules omitted
+   *  from `modules` are left unchanged. Busts the server permission cache. */
+  updateRolePermissions(
+    roleId: number,
+    modules: Record<string, { actions: string[]; scope: string }>,
+  ): Promise<{ message: string; role_id: number }> {
+    return apiFetch('PATCH', '/roles/' + roleId, { modules });
   },
 };
 

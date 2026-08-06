@@ -1,13 +1,13 @@
 const express = require('express');
 const supabase = require('../db/supabase');
-const { requireRole } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 
 const router = express.Router();
 
 // ── GET /farmers  ─────────────────────────────────────────────────────────────
 // Returns farmers in the admin's scope with aggregated performance stats.
 // Stats: listing_count, delivered_orders, total_revenue, avg_rating
-router.get('/', requireRole('admin'), async (req, res) => {
+router.get('/', requirePermission('farmer_management','view'), async (req, res) => {
   try {
     const u = req.user;
 
@@ -120,7 +120,7 @@ router.get('/', requireRole('admin'), async (req, res) => {
 
 // ── GET /farmers/:id/activity ─────────────────────────────────────────────────
 // Revenue line-items, fulfilled orders, and reviews for the stat-detail pane.
-router.get('/:id/activity', requireRole('admin'), async (req, res) => {
+router.get('/:id/activity', requirePermission('farmer_management','view'), async (req, res) => {
   try {
     const id = req.params.id;
 
@@ -173,7 +173,7 @@ router.get('/:id/activity', requireRole('admin'), async (req, res) => {
 });
 
 // ── PATCH /farmers/:id/block ──────────────────────────────────────────────────
-router.patch('/:id/block', requireRole('admin'), async (req, res) => {
+router.patch('/:id/block', requirePermission('farmer_management','edit'), async (req, res) => {
   const { data, error } = await supabase
     .from('users')
     .update({ status: 'blocked', updated_at: new Date().toISOString() })
@@ -186,7 +186,7 @@ router.patch('/:id/block', requireRole('admin'), async (req, res) => {
 });
 
 // ── PATCH /farmers/:id/unblock ────────────────────────────────────────────────
-router.patch('/:id/unblock', requireRole('admin'), async (req, res) => {
+router.patch('/:id/unblock', requirePermission('farmer_management','edit'), async (req, res) => {
   const { data, error } = await supabase
     .from('users')
     .update({ status: 'active', updated_at: new Date().toISOString() })

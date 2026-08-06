@@ -236,7 +236,7 @@ function Body({
 function HistorySection({ userId, status }: { userId: string; status: UserStatusHistoryEntry[] }) {
   const { t, i18n } = useTranslation();
   const { user: me } = useAuth();
-  const privileged = canSeeAudit(me?.admin_role);
+  const privileged = canSeeAudit(me);
 
   const [audit, setAudit] = useState<UserAuditEntry[]>([]);
   const [logins, setLogins] = useState<LoginHistoryEntry[]>([]);

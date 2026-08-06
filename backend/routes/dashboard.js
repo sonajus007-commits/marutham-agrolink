@@ -1,14 +1,15 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { can } = require('../middleware/permissions');
 
 const router = express.Router();
 router.use(requireAuth);
 
-// ── GET /dashboard  (admin only, role-tiered KPIs) ───────────────────────────
+// ── GET /dashboard  (any management role, role-tiered KPIs) ──────────────────
 router.get('/', async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Only admins can access the dashboard.' });
+  if (!can(req.user, 'dashboard', 'view')) {
+    return res.status(403).json({ error: 'Only management roles can access the dashboard.' });
   }
 
   const u = req.user;
@@ -232,10 +233,6 @@ router.get('/', async (req, res) => {
 // money middleware's MONEY_FIELDS set, so values pass through untouched.
 // Query params: ?trend=monthly|quarterly|yearly  (default monthly)
 // ═══════════════════════════════════════════════════════════════════════════════
-const EXECUTIVE_ROLES = new Set([
-  'Board of Director', 'CEO', 'Managing Director', 'CFO', 'CTO', 'Head Office',
-]);
-
 // Tiles with no data source yet — the UI greys these out as "Needs integration".
 const EXEC_PLACEHOLDERS = [
   'net_profit', 'ebitda', 'cash_flow', 'revenue_forecast',
@@ -288,8 +285,8 @@ async function resolveGeoDistricts(req) {
 
 router.get('/executive', async (req, res) => {
   const u = req.user;
-  if (u.role !== 'admin' || !EXECUTIVE_ROLES.has(u.admin_role)) {
-    return res.status(403).json({ error: 'Executive dashboard is restricted to Board/CEO/MD.' });
+  if (!u.dashboards.executive) {
+    return res.status(403).json({ error: 'Executive dashboard is restricted to Board / Admin.' });
   }
 
   // Optional state/district drill-down. Every executive role is unscoped, so the
@@ -530,27 +527,29 @@ function cancelledOrdersCount(orders) { return orders.filter(o => o.cancelled).l
 //   Head Office → everything (preview)
 // All figures aggregated live in JS. Money returned already-in-rupees.
 // ═══════════════════════════════════════════════════════════════════════════════
-const OPS_DISTRICT_ROLES = new Set(['District Manager', 'Hub Incharge']);
-const OPS_REGION_ROLES   = new Set(['Regional Manager', 'State Head', 'Zonal Manager']);
-const OPS_ALL_ROLES      = new Set(['Head Office']);
+// Operations dashboard geo-scope tiers, keyed off the consolidated role_key (the
+// replacement for the old OPS_*_ROLES admin_role sets). District tier sees one
+// district; region tier sees their state's districts; Admin is unscoped and may
+// drill via the console filter. Access itself is gated by u.dashboards.operations.
+const OPS_DISTRICT_KEYS = new Set(['district_manager', 'hub_incharge']);
+const OPS_REGION_KEYS   = new Set(['regional_manager', 'state_head', 'zonal_manager']);
 
 const OPS_PLACEHOLDERS = ['hub_stock', 'farmer_visits', 'vco_attendance', 'agents_online', 'transfer_stock'];
 
 router.get('/operations', async (req, res) => {
   const u = req.user;
-  if (u.role !== 'admin' ||
-      !(OPS_DISTRICT_ROLES.has(u.admin_role) || OPS_REGION_ROLES.has(u.admin_role) || OPS_ALL_ROLES.has(u.admin_role))) {
+  if (!u.dashboards.operations) {
     return res.status(403).json({ error: 'Operations dashboard is restricted to operational managers.' });
   }
 
   // ── Resolve scope ───────────────────────────────────────────────────────────
   let scope = { level: 'all', name: 'All Regions' };
   let districtSet = null;   // null = no district filter
-  if (OPS_DISTRICT_ROLES.has(u.admin_role)) {
+  if (OPS_DISTRICT_KEYS.has(u.role_key)) {
     const d = u.district_assign || u.district;
     scope = { level: 'district', name: d || 'Unassigned' };
     districtSet = new Set([d]);
-  } else if (OPS_REGION_ROLES.has(u.admin_role)) {
+  } else if (OPS_REGION_KEYS.has(u.role_key)) {
     scope = { level: 'region', name: u.state || 'Unassigned' };
     const { data: locs, error: locsErr } = await supabase.from('locations').select('district').eq('state', u.state);
     // An empty districtSet is not "no districts" — it silently scopes the whole
@@ -755,7 +754,7 @@ const FIELD_PLACEHOLDERS = {
 
 router.get('/field', async (req, res) => {
   const u = req.user;
-  if (u.role !== 'admin' || !['VCO', 'Delivery Agent'].includes(u.admin_role)) {
+  if (!['vco', 'delivery_agent'].includes(u.role_key)) {
     return res.status(403).json({ error: 'Field dashboard is for VCO and Delivery Agent only.' });
   }
 
@@ -858,13 +857,12 @@ router.get('/field', async (req, res) => {
 // Focus: employees, approvals across the org, staff-by-role, audit activity, master
 // data. Company-wide (no geo scope). Live aggregation in JS + count queries.
 // ═══════════════════════════════════════════════════════════════════════════════
-const ADMINHEAD_ROLES = new Set(['Head Office', 'Technical Admin', 'HR Admin', 'HR Manager']);
 const ADMINHEAD_PLACEHOLDERS = ['support_tickets', 'escalations', 'warehouse_utilization', 'inventory_stock'];
 
 router.get('/adminhead', async (req, res) => {
   const u = req.user;
-  if (u.role !== 'admin' || !ADMINHEAD_ROLES.has(u.admin_role)) {
-    return res.status(403).json({ error: 'Admin Head dashboard is restricted to Head Office / Admin.' });
+  if (!u.dashboards.adminhead) {
+    return res.status(403).json({ error: 'Admin Head dashboard is restricted to Admin / Technical Head / HR.' });
   }
 
   const nowIst = istParts(Date.now());

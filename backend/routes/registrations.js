@@ -1,13 +1,17 @@
 const express = require('express');
 const crypto  = require('crypto');
 const supabase = require('../db/supabase');
-const { requireAuth, requireRole } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 const notify = require('../utils/notify');
 
 const router = express.Router();
 
-// All endpoints require admin auth
-router.use(requireRole('admin'));
+// Seller onboarding queue: reviewing and approving a new seller's registration is
+// part of managing sellers. Managers hold seller_management 'manage' (which
+// includes edit) in their geo, so they keep approving registrations in their area;
+// Admin has full control. Gated on 'edit' — the in-handler geo filter below still
+// scopes each manager to their district/region.
+router.use(requirePermission('seller_management', 'edit'));
 
 function generatePaymentRef() {
   return 'PAY-' + crypto.randomBytes(4).toString('hex').toUpperCase();

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, EmptyState, FilterChips, Spinner, Table, type TableColumn } from '@marutham/ui';
 import { api, type Employee } from '@marutham/api-client';
-import { fmtDateShort } from '@marutham/lib';
+import { fmtDateShort, can } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { EmployeeDetailSheet, EMP_APPROVAL_TONE } from './EmployeeDetailSheet';
 import { EmployeeFormSheet } from './EmployeeFormSheet';
@@ -59,24 +59,12 @@ export function EmployeesPage() {
   }, [load]);
 
   useEffect(() => {
-    const isHrOwner = user?.admin_role === 'Head Office' || user?.admin_role === 'State Head';
-    if (isHrOwner) {
-      setCanApprove(true);
-      setCanMintTrust(true);
-      return;
-    }
-    api
-      .getMyEmployeeRecord()
-      .then((res) => {
-        const bod = !!res.employee?.is_board_director;
-        setCanApprove(bod || !!res.employee?.is_hr_admin);
-        setCanMintTrust(bod);
-      })
-      .catch(() => {
-        setCanApprove(false);
-        setCanMintTrust(false);
-      });
-  }, [user?.admin_role]);
+    // Straight from the RBAC map the server already resolved (HR full control on
+    // Employee Management → approve; Admin/Board's role-permission authority, or a
+    // Board trust flag, mints the trust roles). No extra round-trip needed.
+    setCanApprove(can(user, 'employee_management', 'approve'));
+    setCanMintTrust(can(user, 'role_permission_management', 'edit') || !!user?.is_board_director);
+  }, [user]);
 
   // Geo-scoped by the staff member's WORK district, so the chip counts and table
   // reflect the console-wide State/District pick.

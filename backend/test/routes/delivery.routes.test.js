@@ -582,7 +582,9 @@ test('confirmation is refused before the order is Out for Delivery', async () =>
 // leave the stage pointing at a different status than the order is actually in —
 // silently relabelling it without anything having moved.
 
-const SENIOR = { id: 's1', role: 'admin', admin_role: 'District Manager', fname: 'Dm' };
+// Rerouting hub↔direct is the Delivery Assignment authority — Hub Incharge (+ Admin)
+// under the RBAC matrix; the tiered managers are view-only here.
+const SENIOR = { id: 's1', role: 'admin', admin_role: 'Hub Incharge', fname: 'Hub' };
 
 test('switching a Picked Up order to the hub route re-derives its stage', async () => {
   const pickedUpDirect = {

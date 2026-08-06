@@ -21,7 +21,11 @@ const assert = require('node:assert/strict');
 const { fakeSupabase } = require('../helpers/fakeSupabase');
 const { mountRoute } = require('../helpers/app');
 
-const HR = { id: 'hr-1', role: 'admin', admin_role: 'Head Office', emp_id: 'MATN00001' };
+// The employee-tracker actor: Head Office (Admin) with the HR-Admin trust flag, so
+// they hold Admin's role-permission authority (to mint trust flags) UNION HR's
+// Employee Management full control (create/edit/approve/delete) — matching the RBAC
+// model where employee lifecycle is HR-owned and trust-minting is Admin/Board.
+const HR = { id: 'hr-1', role: 'admin', admin_role: 'Head Office', emp_id: 'MATN00001', is_hr_admin: true };
 const VCO = { id: 'vco-1', role: 'admin', admin_role: 'VCO', emp_id: 'MATN00099' };
 
 /** An employee with a login, as the tracker holds them. */

@@ -24,3 +24,4 @@ export * from './operations';
 export * from './adminhead';
 export * from './listings';
 export * from './offlineQueue';
+export * from './rbac';

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const supabase = require('../db/supabase');
+const { resolveUserPermissions, roleKeyFor, dashboardsFor } = require('./permissions');
 
 async function requireAuth(req, res, next) {
   const header = req.headers.authorization;
@@ -17,7 +18,7 @@ async function requireAuth(req, res, next) {
 
   const { data: user, error } = await supabase
     .from('users')
-    .select('id, login_id, phone, role, admin_role, status, block_reason, approval_status, payment_reference, payment_confirmed_at, seller_type, gender, subscription_plan, subscription_amount, subscription_expires_at, registration_charge, fname, lname, email, district, state, village_town, vco_city, district_assign, agent_vehicle, emp_id, employment_type, deleted_at')
+    .select('id, login_id, phone, role, admin_role, role_id, status, block_reason, approval_status, payment_reference, payment_confirmed_at, seller_type, gender, subscription_plan, subscription_amount, subscription_expires_at, registration_charge, fname, lname, email, district, state, village_town, vco_city, district_assign, agent_vehicle, emp_id, employment_type, deleted_at')
     .eq('id', payload.sub)
     .single();
 
@@ -79,6 +80,19 @@ async function requireAuth(req, res, next) {
       user.is_hr_admin = emp.is_hr_admin === true;
       user.is_board_director = emp.is_board_director === true;
     }
+  }
+
+  // Resolve the RBAC permission map (role UNION trust-flag roles) onto the user so
+  // every downstream route — and requirePermission — can gate without another read.
+  // Refuse rather than proceed permission-less: an unresolved map would either lock
+  // a legitimate user out of everything or, if a guard reads it wrong, let them in.
+  try {
+    user.permissions = await resolveUserPermissions(user);
+    user.role_key = await roleKeyFor(user.role_id);
+    user.dashboards = dashboardsFor(user, user.permissions, user.role_key);
+  } catch (e) {
+    console.error(`Permission resolution failed for ${user.login_id}:`, e.message);
+    return res.status(500).json({ error: 'Could not establish your permissions. Please try again.' });
   }
 
   req.user = user;

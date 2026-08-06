@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, EmptyState, FilterChips, Spinner, Table, type TableColumn } from '@marutham/ui';
 import { api, type AdminDistrictPrice } from '@marutham/api-client';
-import { fmtMoney, type Product } from '@marutham/lib';
+import { fmtMoney, can, type Product } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { ProductEditSheet } from './ProductEditSheet';
 import { useTableLabels } from './useTableLabels';
@@ -20,7 +20,7 @@ export function ProductsPage() {
   const { t } = useTranslation();
   const tableLabels = useTableLabels();
   const { user } = useAuth();
-  const canEdit = user?.admin_role === 'Head Office';
+  const canEdit = can(user, 'product_approval', 'edit');
 
   const [products, setProducts] = useState<Product[]>([]);
   const [districts, setDistricts] = useState<string[]>([]);

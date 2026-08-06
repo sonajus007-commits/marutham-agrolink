@@ -11,7 +11,7 @@ import {
   type TableColumn,
 } from '@marutham/ui';
 import { api, type AdminPayout } from '@marutham/api-client';
-import { fmtDateShort, fmtMoney, fmtMoneyInt } from '@marutham/lib';
+import { fmtDateShort, fmtMoney, fmtMoneyInt, can } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
 import { PayoutDetailSheet, PAYOUT_STATUS_TONE } from './PayoutDetailSheet';
@@ -28,7 +28,7 @@ export function PayoutsPage() {
   const tableLabels = useTableLabels();
   const { user } = useAuth();
   const toast = useToast();
-  const canSettle = user?.admin_role === 'Head Office';
+  const canSettle = can(user, 'settlement_sellers', 'approve');
 
   const [payouts, setPayouts] = useState<AdminPayout[]>([]);
   const [loading, setLoading] = useState(true);

@@ -1,6 +1,7 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { can } = require('../middleware/permissions');
 const { distanceMeters } = require('../utils/geo');
 const { SPLIT_ROUTE } = require('../utils/orderSplit');
 const { rollupToParent } = require('../utils/orderRollup');
@@ -489,10 +490,11 @@ router.post('/:id/scan', async (req, res) => {
 router.patch('/:id/route', async (req, res) => {
   const u = req.user;
   const isAgent = u.role === 'admin' && u.admin_role === 'Delivery Agent';
-  const isSeniorAdmin = u.role === 'admin' && ['Head Office','State Head','Regional Manager','District Manager','Hub Incharge'].includes(u.admin_role);
+  // Rerouting hub↔direct is a Delivery Assignment edit — Admin + Hub Incharge.
+  const canReroute = can(u, 'delivery_assignment', 'edit');
 
-  if (!isAgent && !isSeniorAdmin) {
-    return res.status(403).json({ error: 'Only Delivery Agents or admins can override the route.' });
+  if (!isAgent && !canReroute) {
+    return res.status(403).json({ error: 'Only the assigned agent, Hub Incharge or Admin can override the route.' });
   }
 
   const { route } = req.body;
@@ -548,8 +550,8 @@ router.patch('/:id/route', async (req, res) => {
 
 // ── POST /orders/:id/advance  (Admin only — manual override) ──────────────────
 router.post('/:id/advance', async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Only admins can manually advance orders.' });
+  if (!can(req.user, 'delivery_tracking', 'edit')) {
+    return res.status(403).json({ error: 'Delivery tracking edit permission required to manually advance an order.' });
   }
 
   const order = await fetchActiveOrder(req.params.id, res);
@@ -571,17 +573,13 @@ router.post('/:id/advance', async (req, res) => {
 // for when the physical flow and the record diverge. Restricted to senior admins,
 // audited in the timeline, and it touches the delivery/pickup stamps to match the
 // target so the record stays internally consistent.
-const MANUAL_STATUS_ADMIN_ROLES = [
-  'Head Office',
-  'State Head',
-  'Regional Manager',
-  'District Manager',
-  'Hub Incharge',
-];
-
 router.post('/:id/status', async (req, res) => {
-  if (req.user.role !== 'admin' || !MANUAL_STATUS_ADMIN_ROLES.includes(req.user.admin_role)) {
-    return res.status(403).json({ error: 'Only senior admins can manually set an order status.' });
+  // Setting an order to ANY status is a senior dispatch correction — the Delivery
+  // Assignment 'assign' authority (Admin + Hub Incharge). Deliberately stronger than
+  // /advance: a Delivery Agent may step their own order forward, but not jump it to
+  // an arbitrary status.
+  if (!can(req.user, 'delivery_assignment', 'assign')) {
+    return res.status(403).json({ error: 'Delivery assignment permission required to manually set an order status.' });
   }
 
   const target = req.body?.status;
@@ -666,8 +664,8 @@ router.post('/:id/status', async (req, res) => {
 
 // ── POST /orders/:id/assign  (Admin only — assign / reassign delivery agent) ──
 router.post('/:id/assign', async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Only admins can assign agents.' });
+  if (!can(req.user, 'delivery_assignment', 'assign')) {
+    return res.status(403).json({ error: 'Delivery assignment permission required to assign agents.' });
   }
 
   const { agent_id } = req.body;
@@ -728,8 +726,8 @@ router.post('/:id/assign', async (req, res) => {
 // `leg=collection` (default) matches the order's fulfilment village (farmer side);
 // `leg=delivery` matches the consumer's delivery village (hub → doorstep).
 router.get('/:id/eligible-agents', async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin access required.' });
+  if (!can(req.user, 'delivery_assignment', 'assign')) {
+    return res.status(403).json({ error: 'Delivery assignment permission required.' });
   }
 
   const { data: order, error: oe } = await supabase
