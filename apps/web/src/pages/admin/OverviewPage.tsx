@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChartContainer, StatTile } from '@marutham/ui';
 import { api, type DashboardResponse } from '@marutham/api-client';
@@ -16,6 +17,7 @@ import { EChart } from '../../components/EChart';
  */
 export function OverviewPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,6 +54,7 @@ export function OverviewPage() {
         type: 'category',
         data: trend.map((p) => p.day_label),
         axisLine: { lineStyle: { color: colors.border } },
+        axisLabel: { fontWeight: 'bold' },
       },
       yAxis: { type: 'value', splitLine: { lineStyle: { color: colors.muted } } },
       series: [
@@ -61,6 +64,14 @@ export function OverviewPage() {
           // daily_trend.revenue is paise — see the note above.
           data: trend.map((p) => Math.round(p.revenue / 100)),
           itemStyle: { borderRadius: [6, 6, 0, 0] },
+          // The value rides on top of every bar, not just on hover.
+          label: {
+            show: true,
+            position: 'top',
+            formatter: (p) => fmtMoneyInt(p.value),
+            fontSize: 10,
+            color: colors.gray,
+          },
         },
       ],
     };
@@ -78,7 +89,7 @@ export function OverviewPage() {
       xAxis: {
         type: 'category',
         data: entries.map(([s]) => s),
-        axisLabel: { interval: 0, fontSize: 10 },
+        axisLabel: { interval: 0, fontSize: 10, fontWeight: 'bold' },
         axisLine: { lineStyle: { color: colors.border } },
       },
       yAxis: { type: 'value', minInterval: 1, splitLine: { lineStyle: { color: colors.muted } } },
@@ -88,6 +99,8 @@ export function OverviewPage() {
           type: 'bar',
           data: entries.map(([, n]) => n),
           itemStyle: { borderRadius: [6, 6, 0, 0] },
+          // The count sits above each bar, always visible.
+          label: { show: true, position: 'top', fontSize: 11, color: colors.gray },
         },
       ],
     };
@@ -123,7 +136,7 @@ export function OverviewPage() {
         data: top.map((p) => p.name),
         axisLine: { lineStyle: { color: colors.border } },
         axisTick: { show: false },
-        axisLabel: { fontSize: 11, color: colors.gray },
+        axisLabel: { fontSize: 11, color: colors.gray, fontWeight: 'bold' },
       },
       series: [
         {
@@ -153,29 +166,53 @@ export function OverviewPage() {
   return (
     <>
       <h1 className="mb-1 text-xl font-bold text-primary">{t('admin.overview.title')}</h1>
-      <p className="mb-4 text-sm text-fg-muted">
+      <p className="mb-1 text-sm text-fg-muted">
         {t('admin.overview.scope')}:{' '}
         <span className="font-semibold text-fg">{data?.scope || '—'}</span>
       </p>
+      <p className="mb-4 text-xs text-fg-muted">{t('admin.overview.tapHint')}</p>
 
+      {/* Clickable KPI tiles — each opens the records behind the number, the same
+          way the consumer/farmer Home tiles drill into their lists. The tile is a
+          <button> whenever onClick is present (see StatTile). */}
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatTile
+          icon="📦"
           label={t('admin.overview.kpi.orders')}
           value={k?.total_orders ?? '—'}
           hint={t('admin.overview.kpi.ordersHint')}
+          onClick={() => navigate('/admin/orders')}
         />
         <StatTile
+          icon="💰"
           label={t('admin.overview.kpi.gmv')}
           value={k ? fmtMoney(k.gmv_rupees) : '—'}
+          hint={t('admin.overview.kpi.gmvHint')}
           accent="var(--success)"
+          onClick={() => navigate('/admin/payouts')}
         />
         <StatTile
+          icon="🚚"
           label={t('admin.overview.kpi.active')}
           value={k?.active_orders ?? '—'}
+          hint={t('admin.overview.kpi.activeHint')}
           accent="var(--info)"
+          onClick={() => navigate('/admin/orders')}
         />
-        <StatTile label={t('admin.overview.kpi.farmers')} value={k?.total_farmers ?? '—'} />
-        <StatTile label={t('admin.overview.kpi.consumers')} value={k?.total_consumers ?? '—'} />
+        <StatTile
+          icon="🌾"
+          label={t('admin.overview.kpi.farmers')}
+          value={k?.total_farmers ?? '—'}
+          hint={t('admin.overview.kpi.farmersHint')}
+          onClick={() => navigate('/admin/users?kind=farmer')}
+        />
+        <StatTile
+          icon="🛒"
+          label={t('admin.overview.kpi.consumers')}
+          value={k?.total_consumers ?? '—'}
+          hint={t('admin.overview.kpi.consumersHint')}
+          onClick={() => navigate('/admin/users?kind=consumer')}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

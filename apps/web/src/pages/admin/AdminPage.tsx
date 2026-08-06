@@ -74,8 +74,8 @@ export function AdminPage() {
       onClick={go('/admin')}
       className="flex items-center gap-2 no-underline"
     >
-      <img src="/img/logo-sm.jpg" alt="" className="h-7 w-7 rounded-sm" />
-      <span className="text-md font-bold text-primary">Marutham</span>
+      <img src="/img/logo-sm.jpg" alt="" className="h-7 w-7 shrink-0 rounded-sm" />
+      <span className="text-md font-bold leading-tight text-primary">Marutham AgroLink</span>
     </a>
   );
 

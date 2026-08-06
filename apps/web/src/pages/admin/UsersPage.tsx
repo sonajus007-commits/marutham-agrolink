@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button, EmptyState, FilterChips, Spinner, Table, type TableColumn } from '@marutham/ui';
 import { api, type User } from '@marutham/api-client';
@@ -19,7 +20,13 @@ export function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [kind, setKind] = useState('all');
+  // Honour a ?kind= deep link (the Overview KPI tiles land here pre-filtered).
+  // An unknown value falls back to 'all'; the chips still drive it from then on.
+  const [searchParams] = useSearchParams();
+  const initialKind = searchParams.get('kind');
+  const [kind, setKind] = useState(
+    ['consumer', 'farmer', 'admin'].includes(initialKind || '') ? (initialKind as string) : 'all',
+  );
   const [openId, setOpenId] = useState<string | null>(null);
 
   const load = useCallback(async () => {

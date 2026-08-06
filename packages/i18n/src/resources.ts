@@ -1057,9 +1057,14 @@ export const resources = {
       'admin.overview.kpi.orders': 'Orders',
       'admin.overview.kpi.ordersHint': 'All time',
       'admin.overview.kpi.gmv': 'GMV',
+      'admin.overview.kpi.gmvHint': 'Gross value',
       'admin.overview.kpi.active': 'Active',
+      'admin.overview.kpi.activeHint': 'In progress',
       'admin.overview.kpi.farmers': 'Farmers',
+      'admin.overview.kpi.farmersHint': 'Sellers',
       'admin.overview.kpi.consumers': 'Consumers',
+      'admin.overview.kpi.consumersHint': 'Buyers',
+      'admin.overview.tapHint': 'Tap any tile to view its records.',
 
       // ── Executive dashboard (Board / CEO / MD / CFO / CTO; HO previews) ──
       'admin.nav.executive': 'Executive',
@@ -2930,9 +2935,14 @@ export const resources = {
       'admin.overview.kpi.orders': 'ஆர்டர்கள்',
       'admin.overview.kpi.ordersHint': 'மொத்தம்',
       'admin.overview.kpi.gmv': 'GMV',
+      'admin.overview.kpi.gmvHint': 'மொத்த மதிப்பு',
       'admin.overview.kpi.active': 'செயலில்',
+      'admin.overview.kpi.activeHint': 'நடைபெறுகிறது',
       'admin.overview.kpi.farmers': 'விவசாயிகள்',
+      'admin.overview.kpi.farmersHint': 'விற்பனையாளர்கள்',
       'admin.overview.kpi.consumers': 'நுகர்வோர்',
+      'admin.overview.kpi.consumersHint': 'வாங்குபவர்கள்',
+      'admin.overview.tapHint': 'பதிவுகளைக் காண எந்த டைலையும் தட்டவும்.',
 
       // ── Executive dashboard ──
       'admin.nav.executive': 'நிர்வாகம்',
