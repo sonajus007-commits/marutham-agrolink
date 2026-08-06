@@ -15,6 +15,8 @@ import { fmtDateShort, fmtMoney, fmtMoneyInt } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
 import { PayoutDetailSheet, PAYOUT_STATUS_TONE } from './PayoutDetailSheet';
+import { useAdminGeo } from './AdminGeoContext';
+import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
 
 const farmerName = (p: AdminPayout) => `${p.farmer?.fname || ''} ${p.farmer?.lname || ''}`.trim();
@@ -53,21 +55,29 @@ export function PayoutsPage() {
     void load();
   }, [load]);
 
-  const paid = useMemo(() => payouts.filter((p) => p.status === 'paid'), [payouts]);
-  const pending = useMemo(() => payouts.filter((p) => p.status === 'pending'), [payouts]);
+  // Everything below is derived from the geo-scoped set so the tiles, chips and
+  // table all agree with the console-wide State/District pick.
+  const { inGeoScope } = useAdminGeo();
+  const scoped = useMemo(
+    () => payouts.filter((p) => inGeoScope(p.farmer?.district)),
+    [payouts, inGeoScope],
+  );
+
+  const paid = useMemo(() => scoped.filter((p) => p.status === 'paid'), [scoped]);
+  const pending = useMemo(() => scoped.filter((p) => p.status === 'pending'), [scoped]);
 
   const statusOptions = useMemo(
     () => [
-      { value: 'all', label: `${t('admin.pay.all')} (${payouts.length})` },
+      { value: 'all', label: `${t('admin.pay.all')} (${scoped.length})` },
       { value: 'pending', label: `${t('admin.pay.status.pending')} (${pending.length})` },
       { value: 'paid', label: `${t('admin.pay.status.paid')} (${paid.length})` },
     ],
-    [payouts.length, pending.length, paid.length, t],
+    [scoped.length, pending.length, paid.length, t],
   );
 
   const rows = useMemo(
-    () => (status === 'all' ? payouts : payouts.filter((p) => p.status === status)),
-    [payouts, status],
+    () => (status === 'all' ? scoped : scoped.filter((p) => p.status === status)),
+    [scoped, status],
   );
 
   const columns = useMemo<TableColumn<AdminPayout>[]>(
@@ -171,6 +181,8 @@ export function PayoutsPage() {
           accent="var(--warning-strong)"
         />
       </div>
+
+      <AdminGeoFilter className="mb-3" />
 
       <div className="mb-3">
         <FilterChips options={statusOptions} value={status} onChange={setStatus} />

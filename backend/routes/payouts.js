@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
     .from('payouts')
     .select(`
       id, amount, status, method, reference, created_at, paid_at,
-      farmer:users ( id, fname, lname, phone, bank_name, bank_account, ifsc ),
+      farmer:users ( id, fname, lname, phone, district, bank_name, bank_account, ifsc ),
       order:orders ( id, code )
     `)
     .order('created_at', { ascending: false });

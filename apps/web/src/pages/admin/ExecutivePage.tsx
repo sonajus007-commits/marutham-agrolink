@@ -24,6 +24,8 @@ import { EChart } from '../../components/EChart';
 import { TnDistrictMap, type MapState } from '../../components/TnDistrictMap';
 import { PlaceholderSection } from '../../components/PlaceholderSection';
 import { ToneDot } from '../../components/ToneDot';
+import { AdminGeoFilter } from './AdminGeoFilter';
+import { useAdminGeo } from './AdminGeoContext';
 
 /**
  * The executive dashboard — Board of Director / CEO / Managing Director / CFO /
@@ -48,19 +50,24 @@ export function ExecutivePage() {
   const [mapState, setMapState] = useState<MapState>('loading');
   const [drill, setDrill] = useState<DistrictPerf | null>(null);
 
+  const { canFilter, state, district } = useAdminGeo();
+
   const load = useCallback(
     async (mode: ExecutiveTrendMode) => {
       setLoading(true);
       setError(null);
       try {
-        setData(await api.getExecutiveDashboard(mode));
+        const params = canFilter
+          ? { state: state || undefined, district: district || undefined }
+          : undefined;
+        setData(await api.getExecutiveDashboard(mode, params));
       } catch (e) {
         setError(e instanceof Error ? e.message : t('admin.exec.error'));
       } finally {
         setLoading(false);
       }
     },
-    [t],
+    [t, canFilter, state, district],
   );
 
   useEffect(() => {
@@ -222,6 +229,10 @@ export function ExecutivePage() {
           {t('admin.exec.refresh')}
         </Button>
       </header>
+
+      {/* Console-wide State/District drill-down — scopes the whole board view
+          server-side. The TN district map/ranking still show every district. */}
+      <AdminGeoFilter />
 
       {error ? (
         <div

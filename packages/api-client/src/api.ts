@@ -426,8 +426,12 @@ export const api = {
    *  Every money value comes back in RUPEES already — see ExecutiveDashboardResponse. */
   getExecutiveDashboard(
     trend: ExecutiveTrendMode = 'monthly',
+    params?: { state?: string; district?: string },
   ): Promise<ExecutiveDashboardResponse> {
-    return apiFetch<ExecutiveDashboardResponse>('GET', `/dashboard/executive?trend=${trend}`);
+    const qs = new URLSearchParams({ trend });
+    if (params?.state) qs.set('state', params.state);
+    if (params?.district) qs.set('district', params.district);
+    return apiFetch<ExecutiveDashboardResponse>('GET', `/dashboard/executive?${qs.toString()}`);
   },
   /** District/region-scoped operations dashboard. 403s outside the OPS_* roles.
    *  The SERVER picks the scope from the caller — there is no scope parameter to

@@ -5,6 +5,8 @@ import { Button, EmptyState, FilterChips, Spinner, Table, type TableColumn } fro
 import { api, type User } from '@marutham/api-client';
 import { fmtDateShort, adminRoleKey, userRoleKey, userStatusKey } from '@marutham/lib';
 import { UserDetailSheet, USER_STATUS_TONE } from './UserDetailSheet';
+import { useAdminGeo } from './AdminGeoContext';
+import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
 
 const kindOf = (u: User) => (u.role === 'admin' ? 'admin' : u.role);
@@ -59,9 +61,10 @@ export function UsersPage() {
     ];
   }, [users, t]);
 
+  const { inGeoScope } = useAdminGeo();
   const rows = useMemo(
-    () => (kind === 'all' ? users : users.filter((u) => kindOf(u) === kind)),
-    [users, kind],
+    () => users.filter((u) => (kind === 'all' || kindOf(u) === kind) && inGeoScope(u.district)),
+    [users, kind, inGeoScope],
   );
 
   const columns = useMemo<TableColumn<User>[]>(
@@ -138,6 +141,8 @@ export function UsersPage() {
           ↻ {t('admin.users.refresh')}
         </Button>
       </div>
+
+      <AdminGeoFilter className="mb-3" />
 
       <div className="mb-3">
         <FilterChips options={kindOptions} value={kind} onChange={setKind} />

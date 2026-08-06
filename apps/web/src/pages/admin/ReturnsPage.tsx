@@ -4,6 +4,8 @@ import { Button, EmptyState, FilterChips, Spinner, Table, type TableColumn } fro
 import { api, type AdminReturn } from '@marutham/api-client';
 import { fmtDateShort, fmtMoney } from '@marutham/lib';
 import { ReturnDetailSheet, RETURN_STATUS_TONE, returnStatus } from './ReturnDetailSheet';
+import { useAdminGeo } from './AdminGeoContext';
+import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
 
 export function ReturnsPage() {
@@ -50,9 +52,13 @@ export function ReturnsPage() {
     ];
   }, [returns, t]);
 
+  const { inGeoScope } = useAdminGeo();
   const rows = useMemo(
-    () => (status === 'all' ? returns : returns.filter((r) => returnStatus(r) === status)),
-    [returns, status],
+    () =>
+      returns.filter(
+        (r) => (status === 'all' || returnStatus(r) === status) && inGeoScope(r.order?.district),
+      ),
+    [returns, status, inGeoScope],
   );
 
   const columns = useMemo<TableColumn<AdminReturn>[]>(
@@ -128,6 +134,8 @@ export function ReturnsPage() {
           ↻ {t('admin.ret.refresh')}
         </Button>
       </div>
+
+      <AdminGeoFilter className="mb-3" />
 
       <div className="mb-3">
         <FilterChips options={statusOptions} value={status} onChange={setStatus} />

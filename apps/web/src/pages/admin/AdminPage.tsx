@@ -15,6 +15,7 @@ import { changeLanguage, type AppLanguage } from '@marutham/i18n';
 import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider } from '../../components/Toast';
 import { ADMIN_NAV, APP_BASE } from './adminNav';
+import { AdminGeoProvider } from './AdminGeoContext';
 import { OverviewPage } from './OverviewPage';
 import { ExecutivePage } from './ExecutivePage';
 import { OperationsPage } from './OperationsPage';
@@ -120,32 +121,34 @@ export function AdminPage() {
 
   return (
     <ToastProvider>
-      <AppShell
-        currentPath={currentPath}
-        sidebar={sidebar}
-        header={({ openNav }) => <Header onMenuClick={openNav} brand={brand} actions={actions} />}
-      >
-        <div className="mx-auto w-full max-w-[1100px] p-4 sm:p-6">
-          <Routes>
-            <Route index element={<OverviewPage />} />
-            <Route path="executive" element={<ExecutivePage />} />
-            <Route path="operations" element={<OperationsPage />} />
-            <Route path="adminhead" element={<AdminHeadPage />} />
-            <Route path="orders" element={<OrdersPage />} />
-            <Route path="returns" element={<ReturnsPage />} />
-            <Route path="payouts" element={<PayoutsPage />} />
-            <Route path="users" element={<UsersPage />} />
-            <Route path="registrations" element={<RegistrationsPage />} />
-            <Route path="listings" element={<ListingsPage />} />
-            <Route path="change-requests" element={<ChangeRequestsPage />} />
-            <Route path="products" element={<ProductsPage />} />
-            <Route path="employees" element={<EmployeesPage />} />
-            <Route path="hub" element={<HubQueuePage />} />
-            <Route path="profile" element={<ProfilePage />} />
-            <Route path="*" element={<Placeholder titleKey="admin.nav.overview" />} />
-          </Routes>
-        </div>
-      </AppShell>
+      <AdminGeoProvider>
+        <AppShell
+          currentPath={currentPath}
+          sidebar={sidebar}
+          header={({ openNav }) => <Header onMenuClick={openNav} brand={brand} actions={actions} />}
+        >
+          <div className="mx-auto w-full max-w-[1100px] p-4 sm:p-6">
+            <Routes>
+              <Route index element={<OverviewPage />} />
+              <Route path="executive" element={<ExecutivePage />} />
+              <Route path="operations" element={<OperationsPage />} />
+              <Route path="adminhead" element={<AdminHeadPage />} />
+              <Route path="orders" element={<OrdersPage />} />
+              <Route path="returns" element={<ReturnsPage />} />
+              <Route path="payouts" element={<PayoutsPage />} />
+              <Route path="users" element={<UsersPage />} />
+              <Route path="registrations" element={<RegistrationsPage />} />
+              <Route path="listings" element={<ListingsPage />} />
+              <Route path="change-requests" element={<ChangeRequestsPage />} />
+              <Route path="products" element={<ProductsPage />} />
+              <Route path="employees" element={<EmployeesPage />} />
+              <Route path="hub" element={<HubQueuePage />} />
+              <Route path="profile" element={<ProfilePage />} />
+              <Route path="*" element={<Placeholder titleKey="admin.nav.overview" />} />
+            </Routes>
+          </div>
+        </AppShell>
+      </AdminGeoProvider>
     </ToastProvider>
   );
 }

@@ -263,6 +263,7 @@ export interface AdminPayout {
     fname?: string | null;
     lname?: string | null;
     phone?: string | null;
+    district?: string | null;
     bank_name?: string | null;
     bank_account?: string | null;
     ifsc?: string | null;
@@ -726,6 +727,10 @@ export type ExecutiveTrendMode = 'monthly' | 'quarterly' | 'yearly';
 export interface ExecutiveDashboardResponse {
   scope: string;
   generated_at: string;
+  /** Whether this dashboard may drill down by state/district (always true here). */
+  geo_filterable?: boolean;
+  /** The geo drill-down the server applied, echoed back. */
+  filter?: { state: string | null; district: string | null };
   summary: ExecutiveSummary;
   orders: {
     today: number;

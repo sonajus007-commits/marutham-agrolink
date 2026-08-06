@@ -4,6 +4,8 @@ import { Button, EmptyState, FilterChips, Spinner, Table, type TableColumn } fro
 import { api, type Registration } from '@marutham/api-client';
 import { fmtDateShort } from '@marutham/lib';
 import { RegistrationDetailSheet, REG_STATUS_TONE } from './RegistrationDetailSheet';
+import { useAdminGeo } from './AdminGeoContext';
+import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
 
 const statusOf = (r: Registration) => String(r.approval_status || 'pending_review');
@@ -56,9 +58,13 @@ export function RegistrationsPage() {
     ];
   }, [regs, t]);
 
+  const { inGeoScope } = useAdminGeo();
   const rows = useMemo(
-    () => (status === 'all' ? regs : regs.filter((r) => statusOf(r) === status)),
-    [regs, status],
+    () =>
+      regs.filter(
+        (r) => (status === 'all' || statusOf(r) === status) && inGeoScope(r.district as string),
+      ),
+    [regs, status, inGeoScope],
   );
 
   const columns = useMemo<TableColumn<Registration>[]>(
@@ -133,6 +139,8 @@ export function RegistrationsPage() {
           ↻ {t('admin.reg.refresh')}
         </Button>
       </div>
+
+      <AdminGeoFilter className="mb-3" />
 
       <div className="mb-3">
         <FilterChips options={statusOptions} value={status} onChange={setStatus} />

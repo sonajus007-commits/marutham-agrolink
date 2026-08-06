@@ -59,6 +59,8 @@ export interface Order {
   agent_name?: string;
   agent_vehicle?: string;
   village?: string;
+  /** Delivery district — returned by the admin orders list; used to geo-filter. */
+  district?: string | null;
   created_at?: string;
   delivered_at?: string | null;
   /**

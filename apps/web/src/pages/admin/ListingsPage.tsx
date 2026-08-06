@@ -11,6 +11,8 @@ import {
   type ListingReviewStatus,
 } from '@marutham/lib';
 import { ListingReviewSheet, LISTING_STATUS_TONE } from './ListingReviewSheet';
+import { useAdminGeo } from './AdminGeoContext';
+import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
 
 /**
@@ -67,12 +69,15 @@ export function ListingsPage() {
     ];
   }, [listings, t]);
 
+  const { inGeoScope } = useAdminGeo();
   const rows = useMemo(
     () =>
-      status === 'all'
-        ? listings
-        : listings.filter((l) => String(l.listing_status || 'pending') === status),
-    [listings, status],
+      listings.filter(
+        (l) =>
+          (status === 'all' || String(l.listing_status || 'pending') === status) &&
+          inGeoScope(l.farmer?.district),
+      ),
+    [listings, status, inGeoScope],
   );
 
   /* How many sellers have been waiting too long. Surfaced as a headline, not
@@ -221,6 +226,8 @@ export function ListingsPage() {
           ↻ {t('admin.lst.refresh')}
         </Button>
       </div>
+
+      <AdminGeoFilter className="mb-3" />
 
       <div className="mb-3">
         <FilterChips options={statusOptions} value={status} onChange={setStatus} />

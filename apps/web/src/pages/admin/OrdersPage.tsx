@@ -12,6 +12,8 @@ import {
   type Order,
 } from '@marutham/lib';
 import { AdminOrderSheet } from './AdminOrderSheet';
+import { useAdminGeo } from './AdminGeoContext';
+import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
 
 const statusOf = (o: Order) => (isOrderCancelled(o) ? 'Cancelled' : o.status);
@@ -55,9 +57,11 @@ export function OrdersPage() {
     ];
   }, [orders, t]);
 
+  const { inGeoScope } = useAdminGeo();
   const rows = useMemo(
-    () => (status === 'all' ? orders : orders.filter((o) => statusOf(o) === status)),
-    [orders, status],
+    () =>
+      orders.filter((o) => (status === 'all' || statusOf(o) === status) && inGeoScope(o.district)),
+    [orders, status, inGeoScope],
   );
 
   const columns = useMemo<TableColumn<Order>[]>(
@@ -133,6 +137,8 @@ export function OrdersPage() {
           ↻ {t('admin.orders.refresh')}
         </Button>
       </div>
+
+      <AdminGeoFilter className="mb-3" />
 
       <div className="mb-3">
         <FilterChips options={statusOptions} value={status} onChange={setStatus} />
