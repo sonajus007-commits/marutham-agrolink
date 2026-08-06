@@ -1065,6 +1065,9 @@ export const resources = {
       'admin.overview.kpi.consumers': 'Consumers',
       'admin.overview.kpi.consumersHint': 'Buyers',
       'admin.overview.tapHint': 'Tap any tile to view its records.',
+      'admin.overview.filter.state': 'State',
+      'admin.overview.filter.district': 'District',
+      'admin.overview.filter.allDistricts': 'All districts',
 
       // ── Executive dashboard (Board / CEO / MD / CFO / CTO; HO previews) ──
       'admin.nav.executive': 'Executive',
@@ -2943,6 +2946,9 @@ export const resources = {
       'admin.overview.kpi.consumers': 'நுகர்வோர்',
       'admin.overview.kpi.consumersHint': 'வாங்குபவர்கள்',
       'admin.overview.tapHint': 'பதிவுகளைக் காண எந்த டைலையும் தட்டவும்.',
+      'admin.overview.filter.state': 'மாநிலம்',
+      'admin.overview.filter.district': 'மாவட்டம்',
+      'admin.overview.filter.allDistricts': 'அனைத்து மாவட்டங்கள்',
 
       // ── Executive dashboard ──
       'admin.nav.executive': 'நிர்வாகம்',

@@ -409,9 +409,15 @@ export const api = {
   },
 
   // ── Dashboards ──
-  /** The admin Overview — role-scoped server-side from the caller's admin_role. */
-  getDashboard(): Promise<DashboardResponse> {
-    return apiFetch<DashboardResponse>('GET', '/dashboard');
+  /** The admin Overview — role-scoped server-side from the caller's admin_role.
+   *  Broad (unscoped) roles may drill down by state/district; the server ignores
+   *  these params for a geo-locked role. */
+  getDashboard(params?: { state?: string; district?: string }): Promise<DashboardResponse> {
+    const qs = new URLSearchParams();
+    if (params?.state) qs.set('state', params.state);
+    if (params?.district) qs.set('district', params.district);
+    const q = qs.toString();
+    return apiFetch<DashboardResponse>('GET', `/dashboard${q ? `?${q}` : ''}`);
   },
   getFieldDashboard(): Promise<FieldDashboardResponse> {
     return apiFetch<FieldDashboardResponse>('GET', '/dashboard/field');

@@ -635,6 +635,10 @@ export interface DashboardSubscriptionSummary {
 
 export interface DashboardResponse {
   scope: string;
+  /** Whether this role may drill down by state/district (false = geo-locked). */
+  geo_filterable?: boolean;
+  /** The geo drill-down the server applied, echoed back. */
+  filter?: { state: string | null; district: string | null };
   kpis: DashboardKpis;
   /** status label → order count. */
   status_breakdown: Record<string, number>;

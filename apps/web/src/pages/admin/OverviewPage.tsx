@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChartContainer, StatTile } from '@marutham/ui';
+import { ChartContainer, Select, StatTile } from '@marutham/ui';
 import { api, type DashboardResponse } from '@marutham/api-client';
 import { fmtMoney, fmtMoneyInt } from '@marutham/lib';
 import { chartPalette, colors } from '@marutham/tokens';
 import type { EChartsOption } from 'echarts';
+import { useAuth } from '../../auth/AuthContext';
 import { EChart } from '../../components/EChart';
+
+/* admin_roles whose Overview is locked to their own geography — they cannot pick
+ * a state/district, so the dropdowns are hidden (the server ignores their params
+ * too). Everyone else runs the whole company and may drill down. */
+const GEO_LOCKED_ROLES = ['District Manager', 'Hub Incharge', 'VCO', 'Delivery Agent'];
+/** The default state the Overview opens on — overridden if the DB lacks it. */
+const DEFAULT_STATE = 'Tamil Nadu';
 
 /**
  * The admin Overview. GET /dashboard is role-scoped server-side, so the same
@@ -18,25 +26,63 @@ import { EChart } from '../../components/EChart';
 export function OverviewPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Whether this role may drill down by state/district.
+  const canFilter = !GEO_LOCKED_ROLES.includes(user?.admin_role || '');
+
+  // State → District → taluk[] tree for the dropdowns, and the current picks.
+  // District '' means "all districts in the state" — the default overall view.
+  const [tree, setTree] = useState<Record<string, Record<string, string[]>>>({});
+  const [stateSel, setStateSel] = useState(DEFAULT_STATE);
+  const [districtSel, setDistrictSel] = useState('');
+
+  // Load the location tree once, for filterable roles only. If the default state
+  // is missing from the DB, fall back to the first one so the dropdown is valid.
+  useEffect(() => {
+    if (!canFilter) return;
+    let live = true;
+    api
+      .getLocations()
+      .then((r) => {
+        if (!live) return;
+        const tr = r.tree || {};
+        setTree(tr);
+        setStateSel((cur) => (tr[cur] ? cur : Object.keys(tr)[0] || cur));
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [canFilter]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      setData(await api.getDashboard());
+      const params = canFilter
+        ? { state: stateSel || undefined, district: districtSel || undefined }
+        : undefined;
+      setData(await api.getDashboard(params));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load the dashboard');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canFilter, stateSel, districtSel]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const states = useMemo(() => Object.keys(tree), [tree]);
+  const districts = useMemo(
+    () => (tree[stateSel] ? Object.keys(tree[stateSel]) : []),
+    [tree, stateSel],
+  );
 
   const k = data?.kpis;
 
@@ -166,10 +212,51 @@ export function OverviewPage() {
   return (
     <>
       <h1 className="mb-1 text-xl font-bold text-primary">{t('admin.overview.title')}</h1>
-      <p className="mb-1 text-sm text-fg-muted">
+      <p className="mb-3 text-sm text-fg-muted">
         {t('admin.overview.scope')}:{' '}
         <span className="font-semibold text-fg">{data?.scope || '—'}</span>
       </p>
+
+      {/* State / District drill-down — hidden for geo-locked roles, who only ever
+          see their own district. Changing a picker refetches the whole dashboard;
+          picking a new state resets the district back to "all". */}
+      {canFilter ? (
+        <div className="mb-4 flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-2xs font-bold uppercase tracking-wider text-fg-muted">
+            {t('admin.overview.filter.state')}
+            <Select
+              value={stateSel}
+              onChange={(e) => {
+                setStateSel(e.target.value);
+                setDistrictSel('');
+              }}
+              className="min-w-[160px]"
+            >
+              {states.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <label className="flex flex-col gap-1 text-2xs font-bold uppercase tracking-wider text-fg-muted">
+            {t('admin.overview.filter.district')}
+            <Select
+              value={districtSel}
+              onChange={(e) => setDistrictSel(e.target.value)}
+              className="min-w-[180px]"
+            >
+              <option value="">{t('admin.overview.filter.allDistricts')}</option>
+              {districts.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </Select>
+          </label>
+        </div>
+      ) : null}
+
       <p className="mb-4 text-xs text-fg-muted">{t('admin.overview.tapHint')}</p>
 
       {/* Clickable KPI tiles — each opens the records behind the number, the same
