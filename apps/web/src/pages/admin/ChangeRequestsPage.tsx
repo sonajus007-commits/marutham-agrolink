@@ -4,6 +4,8 @@ import { Button, EmptyState, FilterChips, Spinner, Table, type TableColumn } fro
 import { api, type ProfileChangeRequest } from '@marutham/api-client';
 import { fmtDateShort } from '@marutham/lib';
 import { ChangeRequestSheet, CR_STATUS_TONE, isRenewal } from './ChangeRequestSheet';
+import { useAdminGeo } from './AdminGeoContext';
+import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
 
 /* The server filters change requests by a single status and has no "all" mode,
@@ -39,9 +41,17 @@ export function ChangeRequestsPage() {
     void load();
   }, [load]);
 
+  // Geo-scoped by the requesting seller's district (joined server-side), so the
+  // chip counts and table reflect the console-wide State/District pick.
+  const { inGeoScope } = useAdminGeo();
+  const scoped = useMemo(
+    () => requests.filter((r) => inGeoScope(r.district)),
+    [requests, inGeoScope],
+  );
+
   const statusOptions = useMemo(() => {
     const counts: Record<string, number> = {};
-    requests.forEach((r) => {
+    scoped.forEach((r) => {
       const s = String(r.status);
       counts[s] = (counts[s] || 0) + 1;
     });
@@ -50,13 +60,13 @@ export function ChangeRequestsPage() {
         value: s,
         label: `${t('admin.cr.status.' + s)} (${counts[s] || 0})`,
       })),
-      { value: 'all', label: `${t('admin.cr.all')} (${requests.length})` },
+      { value: 'all', label: `${t('admin.cr.all')} (${scoped.length})` },
     ];
-  }, [requests, t]);
+  }, [scoped, t]);
 
   const rows = useMemo(
-    () => (status === 'all' ? requests : requests.filter((r) => String(r.status) === status)),
-    [requests, status],
+    () => (status === 'all' ? scoped : scoped.filter((r) => String(r.status) === status)),
+    [scoped, status],
   );
 
   const columns = useMemo<TableColumn<ProfileChangeRequest>[]>(
@@ -125,6 +135,8 @@ export function ChangeRequestsPage() {
           ↻ {t('admin.cr.refresh')}
         </Button>
       </div>
+
+      <AdminGeoFilter className="mb-3" />
 
       <div className="mb-3">
         <FilterChips options={statusOptions} value={status} onChange={setStatus} />

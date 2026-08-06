@@ -5,6 +5,8 @@ import { api, type EligibleAgent } from '@marutham/api-client';
 import { fmtDate, fmtMoney, groupHubQueue, payMethodKey, type Order } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
+import { useAdminGeo } from './AdminGeoContext';
+import { AdminGeoFilter } from './AdminGeoFilter';
 
 /* Hub Incharge queue — the last section the legacy console still owned.
  *
@@ -47,7 +49,12 @@ export function HubQueuePage() {
     void load();
   }, [load]);
 
-  const { arriving, ready } = groupHubQueue(orders);
+  // Filter the hub queue to the console-wide district pick. A Hub Incharge is
+  // already scoped to their own hub server-side (the bar is hidden for them);
+  // Head Office sees every hub and can drill into one district here.
+  const { inGeoScope } = useAdminGeo();
+  const scoped = orders.filter((o) => inGeoScope(o.district));
+  const { arriving, ready } = groupHubQueue(scoped);
 
   /** Accepting a parcel into the hub is a scan; its STATUS (In Transit) is what
    *  gives it meaning server-side, and the server refuses it for non-hub staff. */
@@ -72,6 +79,8 @@ export function HubQueuePage() {
           ? t('admin.hub.subDistrict', { district: user.district })
           : t('admin.hub.sub')}
       </p>
+
+      <AdminGeoFilter className="mb-4" />
 
       <div className="mb-4 grid grid-cols-2 gap-3">
         <StatTile label={t('admin.hub.arriving')} value={String(arriving.length)} icon="🚚" />

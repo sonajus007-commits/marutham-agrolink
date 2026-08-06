@@ -436,14 +436,28 @@ export const api = {
   /** District/region-scoped operations dashboard. 403s outside the OPS_* roles.
    *  The SERVER picks the scope from the caller — there is no scope parameter to
    *  pass, and none to tamper with. Money comes back in RUPEES already. */
-  getOperationsDashboard(): Promise<OperationsDashboardResponse> {
-    return apiFetch<OperationsDashboardResponse>('GET', '/dashboard/operations');
+  getOperationsDashboard(params?: {
+    state?: string;
+    district?: string;
+  }): Promise<OperationsDashboardResponse> {
+    const qs = new URLSearchParams();
+    if (params?.state) qs.set('state', params.state);
+    if (params?.district) qs.set('district', params.district);
+    const q = qs.toString();
+    return apiFetch<OperationsDashboardResponse>('GET', `/dashboard/operations${q ? `?${q}` : ''}`);
   },
   /** The Head Office control panel — employees, approvals, staff, audit activity.
    *  403s outside ADMINHEAD_ROLES (Head Office / Technical Admin / HR Admin / HR
    *  Manager). Company-wide, so there is no scope to pass. Returns no money. */
-  getAdminHeadDashboard(): Promise<AdminHeadDashboardResponse> {
-    return apiFetch<AdminHeadDashboardResponse>('GET', '/dashboard/adminhead');
+  getAdminHeadDashboard(params?: {
+    state?: string;
+    district?: string;
+  }): Promise<AdminHeadDashboardResponse> {
+    const qs = new URLSearchParams();
+    if (params?.state) qs.set('state', params.state);
+    if (params?.district) qs.set('district', params.district);
+    const q = qs.toString();
+    return apiFetch<AdminHeadDashboardResponse>('GET', `/dashboard/adminhead${q ? `?${q}` : ''}`);
   },
 
   // ── Admin: users ──

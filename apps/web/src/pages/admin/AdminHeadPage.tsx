@@ -20,6 +20,8 @@ import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
 import { PlaceholderSection } from '../../components/PlaceholderSection';
 import { ToneDot } from '../../components/ToneDot';
+import { AdminGeoFilter } from './AdminGeoFilter';
+import { useAdminGeo } from './AdminGeoContext';
 
 /**
  * The Admin Head dashboard — Head Office, Technical Admin, HR Admin, HR Manager.
@@ -38,6 +40,7 @@ import { ToneDot } from '../../components/ToneDot';
  */
 export function AdminHeadPage() {
   const { t } = useTranslation();
+  const { canFilter, state, district } = useAdminGeo();
   const [data, setData] = useState<AdminHeadDashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,13 +49,16 @@ export function AdminHeadPage() {
     setLoading(true);
     setError(null);
     try {
-      setData(await api.getAdminHeadDashboard());
+      const params = canFilter
+        ? { state: state || undefined, district: district || undefined }
+        : undefined;
+      setData(await api.getAdminHeadDashboard(params));
     } catch (e) {
       setError(e instanceof Error ? e.message : t('admin.head.error'));
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, canFilter, state, district]);
 
   useEffect(() => {
     void load();
@@ -178,6 +184,11 @@ export function AdminHeadPage() {
           {t('admin.head.refresh')}
         </Button>
       </header>
+
+      {/* Console-wide State/District drill-down. Scopes the geographic figures
+          (staff, employees, districts/states, approvals); the org-wide activity
+          and catalogue metrics stay company-wide. */}
+      <AdminGeoFilter />
 
       {error ? (
         <div

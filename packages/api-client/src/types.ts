@@ -547,6 +547,8 @@ export interface ProfileChangeRequest {
   /** Joined from the seller's user row for context in the review sheet. */
   subscription_plan?: string | null;
   subscription_expires_at?: string | null;
+  /** The seller's district — joined for the admin console's geo filter. */
+  district?: string | null;
 }
 
 /* ── Admin registrations (GET /registrations) ───────────────────────────────
@@ -799,6 +801,10 @@ export interface OperationsDistrict {
 
 export interface OperationsDashboardResponse {
   scope: OperationsScope;
+  /** Whether this role may drill down by state/district (false = geo-locked). */
+  geo_filterable?: boolean;
+  /** The geo drill-down the server applied, echoed back. */
+  filter?: { state: string | null; district: string | null };
   generated_at: string;
   summary: {
     orders_today: number;
@@ -891,6 +897,10 @@ export interface AdminHeadDept {
 
 export interface AdminHeadDashboardResponse {
   scope: { level: 'all'; name: string };
+  /** Whether this dashboard may drill down by state/district (always true here). */
+  geo_filterable?: boolean;
+  /** The geo drill-down the server applied, echoed back. */
+  filter?: { state: string | null; district: string | null };
   generated_at: string;
   summary: {
     employees_active: number;

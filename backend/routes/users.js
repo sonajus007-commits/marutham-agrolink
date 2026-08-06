@@ -153,7 +153,7 @@ router.get('/change-requests', requireRole('admin'), async (req, res) => {
   const status = req.query.status || 'pending';
   const { data, error } = await supabase
     .from('profile_change_requests')
-    .select('*, user:users!profile_change_requests_user_id_fkey(subscription_plan, subscription_expires_at)')
+    .select('*, user:users!profile_change_requests_user_id_fkey(subscription_plan, subscription_expires_at, district)')
     .eq('status', status)
     .order('requested_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
@@ -161,6 +161,8 @@ router.get('/change-requests', requireRole('admin'), async (req, res) => {
     ...r,
     subscription_plan:       r.user?.subscription_plan       || null,
     subscription_expires_at: r.user?.subscription_expires_at || null,
+    // The seller's district, for the admin console's geo filter.
+    district:                r.user?.district                || null,
     user: undefined,
   }));
   res.json({ requests: enriched });

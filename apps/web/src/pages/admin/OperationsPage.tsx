@@ -19,6 +19,8 @@ import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
 import { PlaceholderSection } from '../../components/PlaceholderSection';
 import { ToneDot } from '../../components/ToneDot';
+import { AdminGeoFilter } from './AdminGeoFilter';
+import { useAdminGeo } from './AdminGeoContext';
 
 /**
  * The operations dashboard — District Manager & Hub Incharge (their district),
@@ -40,6 +42,7 @@ import { ToneDot } from '../../components/ToneDot';
  */
 export function OperationsPage() {
   const { t } = useTranslation();
+  const { canFilter, state, district } = useAdminGeo();
   const [data, setData] = useState<OperationsDashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,13 +51,16 @@ export function OperationsPage() {
     setLoading(true);
     setError(null);
     try {
-      setData(await api.getOperationsDashboard());
+      const params = canFilter
+        ? { state: state || undefined, district: district || undefined }
+        : undefined;
+      setData(await api.getOperationsDashboard(params));
     } catch (e) {
       setError(e instanceof Error ? e.message : t('admin.ops.error'));
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, canFilter, state, district]);
 
   useEffect(() => {
     void load();
@@ -173,6 +179,10 @@ export function OperationsPage() {
           {t('admin.ops.refresh')}
         </Button>
       </header>
+
+      {/* Console-wide State/District drill-down — scopes the whole operations
+          view server-side (hidden for a role already locked to its own district). */}
+      <AdminGeoFilter />
 
       {error ? (
         <div

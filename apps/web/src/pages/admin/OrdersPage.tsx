@@ -44,24 +44,28 @@ export function OrdersPage() {
     void load();
   }, [load]);
 
+  // Everything below hangs off the geo-scoped set, so the chip counts and the
+  // table agree with the console-wide State/District pick (a district selection
+  // used to leave the "All (58)" counts unchanged — the reported bug).
+  const { inGeoScope } = useAdminGeo();
+  const scoped = useMemo(() => orders.filter((o) => inGeoScope(o.district)), [orders, inGeoScope]);
+
   // Status filter options, derived from the data so we never show an empty bucket.
   const statusOptions = useMemo(() => {
     const counts = new Map<string, number>();
-    orders.forEach((o) => counts.set(statusOf(o), (counts.get(statusOf(o)) || 0) + 1));
+    scoped.forEach((o) => counts.set(statusOf(o), (counts.get(statusOf(o)) || 0) + 1));
     return [
-      { value: 'all', label: `${t('admin.orders.all')} (${orders.length})` },
+      { value: 'all', label: `${t('admin.orders.all')} (${scoped.length})` },
       ...[...counts.entries()]
         .sort((a, b) => b[1] - a[1])
         // The VALUE stays the English status — it is what the filter compares.
         .map(([s, n]) => ({ value: s, label: `${t(statusKey(s), s)} (${n})` })),
     ];
-  }, [orders, t]);
+  }, [scoped, t]);
 
-  const { inGeoScope } = useAdminGeo();
   const rows = useMemo(
-    () =>
-      orders.filter((o) => (status === 'all' || statusOf(o) === status) && inGeoScope(o.district)),
-    [orders, status, inGeoScope],
+    () => (status === 'all' ? scoped : scoped.filter((o) => statusOf(o) === status)),
+    [scoped, status],
   );
 
   const columns = useMemo<TableColumn<Order>[]>(

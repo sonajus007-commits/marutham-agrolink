@@ -55,9 +55,17 @@ export function ListingsPage() {
     void load();
   }, [load]);
 
+  // Geo-scoped base so the chip counts, stale headline and table all reflect the
+  // district pick.
+  const { inGeoScope } = useAdminGeo();
+  const scoped = useMemo(
+    () => listings.filter((l) => inGeoScope(l.farmer?.district)),
+    [listings, inGeoScope],
+  );
+
   const statusOptions = useMemo(() => {
     const counts: Record<string, number> = {};
-    listings.forEach((l) => {
+    scoped.forEach((l) => {
       const s = String(l.listing_status || 'pending');
       counts[s] = (counts[s] || 0) + 1;
     });
@@ -65,27 +73,24 @@ export function ListingsPage() {
       { value: 'pending', label: `${t('admin.lst.status.pending')} (${counts.pending || 0})` },
       { value: 'active', label: `${t('admin.lst.status.active')} (${counts.active || 0})` },
       { value: 'rejected', label: `${t('admin.lst.status.rejected')} (${counts.rejected || 0})` },
-      { value: 'all', label: `${t('admin.lst.all')} (${listings.length})` },
+      { value: 'all', label: `${t('admin.lst.all')} (${scoped.length})` },
     ];
-  }, [listings, t]);
+  }, [scoped, t]);
 
-  const { inGeoScope } = useAdminGeo();
   const rows = useMemo(
     () =>
-      listings.filter(
-        (l) =>
-          (status === 'all' || String(l.listing_status || 'pending') === status) &&
-          inGeoScope(l.farmer?.district),
-      ),
-    [listings, status, inGeoScope],
+      status === 'all'
+        ? scoped
+        : scoped.filter((l) => String(l.listing_status || 'pending') === status),
+    [scoped, status],
   );
 
   /* How many sellers have been waiting too long. Surfaced as a headline, not
      buried in a column: an approval queue's failure mode is going quiet, and a
      seller cannot earn from a product that is still pending. */
   const staleCount = useMemo(
-    () => listings.filter((l) => isListingStale(l.created_at, l.listing_status)).length,
-    [listings],
+    () => scoped.filter((l) => isListingStale(l.created_at, l.listing_status)).length,
+    [scoped],
   );
 
   const columns = useMemo<TableColumn<AdminListing>[]>(

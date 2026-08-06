@@ -48,23 +48,26 @@ export function UsersPage() {
     void load();
   }, [load]);
 
+  // Geo-scoped base so the role counts and table both reflect the district pick.
+  const { inGeoScope } = useAdminGeo();
+  const scoped = useMemo(() => users.filter((u) => inGeoScope(u.district)), [users, inGeoScope]);
+
   const kindOptions = useMemo(() => {
     const counts = { consumer: 0, farmer: 0, admin: 0 } as Record<string, number>;
-    users.forEach((u) => {
+    scoped.forEach((u) => {
       counts[kindOf(u)] = (counts[kindOf(u)] || 0) + 1;
     });
     return [
-      { value: 'all', label: `${t('admin.users.all')} (${users.length})` },
+      { value: 'all', label: `${t('admin.users.all')} (${scoped.length})` },
       { value: 'consumer', label: `${t('admin.users.consumers')} (${counts.consumer})` },
       { value: 'farmer', label: `${t('admin.users.farmers')} (${counts.farmer})` },
       { value: 'admin', label: `${t('admin.users.staff')} (${counts.admin})` },
     ];
-  }, [users, t]);
+  }, [scoped, t]);
 
-  const { inGeoScope } = useAdminGeo();
   const rows = useMemo(
-    () => users.filter((u) => (kind === 'all' || kindOf(u) === kind) && inGeoScope(u.district)),
-    [users, kind, inGeoScope],
+    () => (kind === 'all' ? scoped : scoped.filter((u) => kindOf(u) === kind)),
+    [scoped, kind],
   );
 
   const columns = useMemo<TableColumn<User>[]>(

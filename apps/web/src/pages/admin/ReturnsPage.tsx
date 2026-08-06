@@ -34,9 +34,16 @@ export function ReturnsPage() {
     void load();
   }, [load]);
 
+  // Geo-scoped base so the chip counts and table both reflect the district pick.
+  const { inGeoScope } = useAdminGeo();
+  const scoped = useMemo(
+    () => returns.filter((r) => inGeoScope(r.order?.district)),
+    [returns, inGeoScope],
+  );
+
   const statusOptions = useMemo(() => {
     const counts: Record<string, number> = {};
-    returns.forEach((r) => {
+    scoped.forEach((r) => {
       const s = returnStatus(r);
       counts[s] = (counts[s] || 0) + 1;
     });
@@ -48,17 +55,13 @@ export function ReturnsPage() {
         label: `${t('admin.ret.status.collected')} (${counts.collected || 0})`,
       },
       { value: 'rejected', label: `${t('admin.ret.status.rejected')} (${counts.rejected || 0})` },
-      { value: 'all', label: `${t('admin.ret.all')} (${returns.length})` },
+      { value: 'all', label: `${t('admin.ret.all')} (${scoped.length})` },
     ];
-  }, [returns, t]);
+  }, [scoped, t]);
 
-  const { inGeoScope } = useAdminGeo();
   const rows = useMemo(
-    () =>
-      returns.filter(
-        (r) => (status === 'all' || returnStatus(r) === status) && inGeoScope(r.order?.district),
-      ),
-    [returns, status, inGeoScope],
+    () => (status === 'all' ? scoped : scoped.filter((r) => returnStatus(r) === status)),
+    [scoped, status],
   );
 
   const columns = useMemo<TableColumn<AdminReturn>[]>(

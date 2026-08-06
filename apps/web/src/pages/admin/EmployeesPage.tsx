@@ -6,6 +6,8 @@ import { fmtDateShort } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { EmployeeDetailSheet, EMP_APPROVAL_TONE } from './EmployeeDetailSheet';
 import { EmployeeFormSheet } from './EmployeeFormSheet';
+import { useAdminGeo } from './AdminGeoContext';
+import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
 
 const approvalOf = (e: Employee) => String(e.approval_status || 'pending');
@@ -76,9 +78,21 @@ export function EmployeesPage() {
       });
   }, [user?.admin_role]);
 
+  // Geo-scoped by the staff member's WORK district, so the chip counts and table
+  // reflect the console-wide State/District pick.
+  const { inGeoScope } = useAdminGeo();
+  const scopedEmployees = useMemo(
+    () => employees.filter((e) => inGeoScope(e.work_district)),
+    [employees, inGeoScope],
+  );
+  const scopedRemoved = useMemo(
+    () => removed.filter((e) => inGeoScope(e.work_district)),
+    [removed, inGeoScope],
+  );
+
   const approvalOptions = useMemo(() => {
     const counts: Record<string, number> = {};
-    employees.forEach((e) => {
+    scopedEmployees.forEach((e) => {
       const s = approvalOf(e);
       counts[s] = (counts[s] || 0) + 1;
     });
@@ -90,18 +104,18 @@ export function EmployeesPage() {
       // they get their own chip, which is the only route to a restore. It is shown even
       // at zero: hiding it would strand you on an empty selection the moment you restore
       // the last person, and it answers "where did they go?" for anyone looking.
-      { value: 'all', label: `${t('admin.emp.all')} (${employees.length})` },
-      { value: 'removed', label: `${t('admin.emp.removed')} (${removed.length})` },
+      { value: 'all', label: `${t('admin.emp.all')} (${scopedEmployees.length})` },
+      { value: 'removed', label: `${t('admin.emp.removed')} (${scopedRemoved.length})` },
     ];
-  }, [employees, removed, t]);
+  }, [scopedEmployees, scopedRemoved, t]);
 
   const viewingRemoved = approval === 'removed';
 
   const rows = useMemo(() => {
-    if (viewingRemoved) return removed;
-    if (approval === 'all') return employees;
-    return employees.filter((e) => approvalOf(e) === approval);
-  }, [employees, removed, approval, viewingRemoved]);
+    if (viewingRemoved) return scopedRemoved;
+    if (approval === 'all') return scopedEmployees;
+    return scopedEmployees.filter((e) => approvalOf(e) === approval);
+  }, [scopedEmployees, scopedRemoved, approval, viewingRemoved]);
 
   const columns = useMemo<TableColumn<Employee>[]>(
     () => [
@@ -210,6 +224,8 @@ export function EmployeesPage() {
           </Button>
         </div>
       </div>
+
+      <AdminGeoFilter className="mb-3" />
 
       <div className="mb-3">
         <FilterChips options={approvalOptions} value={approval} onChange={setApproval} />
