@@ -103,13 +103,113 @@
   font-size: 14px;
   cursor: pointer;
 }
+.agent-iconbtn.is-active {
+  background: var(--forest-dark);
+  color: var(--white);
+  border-color: var(--forest-dark);
+}
 
+/* Body = sidebar + main, mirroring the Consumer/Farmer portals. The sidebar is
+ * a >=1024px enhancement; on a phone the scrolling TabBar drives navigation and
+ * the layout is the familiar single column. Only one nav is ever visible, so
+ * there is no duplicate tab stop. */
 .agent-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.agent-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+/* The scrolling content column — the old single-column body layout lives here. */
+.agent-pane {
   flex: 1;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+/* Sidebar (desktop) */
+.agent-side {
+  display: none;
+}
+.agent-side__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.agent-side__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.agent-side__item:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+}
+.agent-side__item.is-active {
+  background: var(--forest-dark);
+  color: var(--white);
+  font-weight: 600;
+}
+.agent-side__icon {
+  font-size: 15px;
+  line-height: 1;
+}
+.agent-side__label {
+  flex: 1;
+}
+.agent-side__badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.agent-side__item.is-active .agent-side__badge {
+  background: var(--white);
+  color: var(--forest-dark);
+}
+.agent-side__logout {
+  margin-top: auto;
+}
+
+@media (min-width: 1024px) {
+  .agent-side {
+    display: flex;
+    flex-direction: column;
+    width: 216px;
+    flex-shrink: 0;
+    padding: 14px 10px;
+    background: var(--surface);
+    border-right: 1px solid var(--border-subtle);
+  }
+  .agent-tabbar {
+    display: none;
+  }
 }
 
 .agent-id {

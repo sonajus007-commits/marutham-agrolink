@@ -1,28 +1,31 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { EmptyState, Spinner } from '@marutham/ui';
+import { TabBar } from '@marutham/ui';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
 import { api } from '@marutham/api-client';
 import { statusKey } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider, useToast } from '../../components/Toast';
 import { useAgentOrders, useFieldDashboard, useClock } from './hooks';
-import { StatsRow } from './StatsRow';
-import { FieldDashboard } from './FieldDashboard';
-import { ScanBar } from './ScanBar';
-import { QueueSection } from './QueueSection';
-import { DeliveredList } from './DeliveredList';
+import { AgentOverview } from './AgentOverview';
+import { AgentTracking } from './AgentTracking';
+import { AgentDelivered } from './AgentDelivered';
+import { ProfileContent } from './ProfileContent';
 import { OrderViewSheet } from './sheets/OrderViewSheet';
 import { DeliverSheet } from './sheets/DeliverSheet';
 import { VerifySheet } from './sheets/VerifySheet';
-import { ProfileSheet } from './sheets/ProfileSheet';
 import './agent.css';
 
-type SheetKind = 'view' | 'deliver' | 'verify' | 'profile' | null;
+type SheetKind = 'view' | 'deliver' | 'verify' | null;
 interface SheetState {
   kind: SheetKind;
   orderId: string | null;
 }
+
+/* The four sections the field portal is split into — mirroring the Consumer and
+ * Farmer portals: a left sidebar (desktop) / scrolling TabBar (phone) picks one,
+ * and the right pane renders it. */
+type Tab = 'overview' | 'work' | 'done' | 'profile';
 
 export function AgentPage() {
   return (
@@ -42,10 +45,15 @@ function AgentPageInner() {
   const field = useFieldDashboard();
   const clock = useClock();
 
+  const [tab, setTab] = useState<Tab>('overview');
   const [sheet, setSheet] = useState<SheetState>({ kind: null, orderId: null });
   const close = () => setSheet({ kind: null, orderId: null });
   const afterChange = () => {
     close();
+    reload();
+    field.reload();
+  };
+  const onScanned = () => {
     reload();
     field.reload();
   };
@@ -78,89 +86,26 @@ function AgentPageInner() {
 
   const setLang = (lang: AppLanguage) => changeLanguage(lang);
 
-  const pickUpDirect = queues ? queues.toPickUp.filter((o) => o.route !== 'hub') : [];
-  const pickUpHub = queues ? queues.toPickUp.filter((o) => o.route === 'hub') : [];
-
-  const sections = queues
-    ? [
-        isVCO && queues.toVerify.length
-          ? {
-              key: 'verify',
-              title: `📋 ${t('agent.queue.verify')}`,
-              orders: queues.toVerify,
-              action: 'verify' as const,
-              cls: 'q-section--verify',
-              btn: `✓ ${t('agent.btn.verify')}`,
-            }
-          : null,
-        /* A verified order is split by ROUTE: a direct one is collected for the
-           doorstep, a hub one is run to the hub. Same scan, different journey — one
-           "Pick Up" button for both read as a mistake once the hub order came back
-           saying "In Transit". */
-        pickUpDirect.length
-          ? {
-              key: 'pickup',
-              title: `📦 ${t('agent.queue.pickup')}`,
-              orders: pickUpDirect,
-              action: 'pickup' as const,
-              cls: 'q-section--pickup',
-              btn: `⬆ ${t('agent.btn.pickup')}`,
-            }
-          : null,
-        pickUpHub.length
-          ? {
-              key: 'tohub',
-              title: `🏭 ${t('agent.queue.toHub', 'Send to Hub')}`,
-              orders: pickUpHub,
-              action: 'pickup' as const,
-              cls: 'q-section--transit',
-              btn: `🚚 ${t('agent.btn.toHub', 'Send to Hub')}`,
-            }
-          : null,
-        /* Hub lane: the Incharge has named this agent, and collecting it is their
-           scan. A VCO never sees it — a VCO does not work the hub. */
-        !isVCO && queues.toCollect.length
-          ? {
-              key: 'collect',
-              title: `🏭 ${t('agent.queue.collect', 'Collect from Hub')}`,
-              orders: queues.toCollect,
-              action: 'pickup' as const,
-              cls: 'q-section--pickup',
-              btn: `⬆ ${t('agent.btn.collect', 'Collect')}`,
-            }
-          : null,
-        queues.inTransit.length
-          ? {
-              key: 'transit',
-              title: `🚚 ${t('agent.queue.transit')}`,
-              orders: queues.inTransit,
-              action: 'transit' as const,
-              cls: 'q-section--transit',
-              btn: `→ ${t('agent.btn.outForDelivery')}`,
-            }
-          : null,
-        queues.toDeliver.length
-          ? {
-              key: 'deliver',
-              title: `🛵 ${t('agent.queue.deliver')}`,
-              orders: queues.toDeliver,
-              action: 'deliver' as const,
-              cls: 'q-section--deliver',
-              btn: `${t('agent.btn.deliver')} →`,
-            }
-          : null,
-        queues.inProgress.length
-          ? {
-              key: 'inprogress',
-              title: `🚚 ${t('agent.queue.inProgress')}`,
-              orders: queues.inProgress,
-              action: 'view' as const,
-              cls: 'q-section--transit',
-              btn: '',
-            }
-          : null,
-      ].filter(Boolean)
-    : [];
+  // The operational tab's label/icon and the day's finished-tab label differ by
+  // role: a VCO collects and completes; a Delivery Agent tracks and delivers.
+  const workBadge = stats ? stats.queue : undefined;
+  const navItems: { id: Tab; icon: string; label: string; badge?: number }[] = [
+    { id: 'overview', icon: '🏠', label: t('agent.nav.overview', 'Overview') },
+    {
+      id: 'work',
+      icon: isVCO ? '📋' : '🚚',
+      label: isVCO
+        ? t('agent.nav.collections', 'Collections')
+        : t('agent.nav.tracking', 'Delivery Tracking'),
+      badge: workBadge || undefined,
+    },
+    {
+      id: 'done',
+      icon: '✅',
+      label: isVCO ? t('agent.nav.completed', 'Completed') : t('agent.nav.delivered', 'Delivered'),
+    },
+    { id: 'profile', icon: '⚙️', label: t('agent.nav.profile', 'Profile') },
+  ];
 
   return (
     <div className="agent-shell">
@@ -197,8 +142,9 @@ function AgentPageInner() {
             </button>
           </div>
           <button
-            className="agent-iconbtn"
-            onClick={() => setSheet({ kind: 'profile', orderId: null })}
+            className={`agent-iconbtn${tab === 'profile' ? ' is-active' : ''}`}
+            onClick={() => setTab(tab === 'profile' ? 'overview' : 'profile')}
+            aria-pressed={tab === 'profile'}
             aria-label={t('agent.profile')}
           >
             👤
@@ -210,59 +156,85 @@ function AgentPageInner() {
       </header>
 
       <div className="agent-body">
-        <div className="agent-id">
-          <div>
-            <div className="agent-id__name">{name}</div>
-            <div className="agent-id__sub">{sub}</div>
-          </div>
-          <div>
-            <div className="agent-clock">{clock}</div>
+        {/* Sidebar — a >=1024px enhancement; the TabBar drives phones. */}
+        <nav className="agent-side" aria-label={t('agent.nav.label', 'Field sections')}>
+          <ul className="agent-side__list">
+            {navItems.map((it) => {
+              const on = tab === it.id;
+              return (
+                <li key={it.id}>
+                  <button
+                    type="button"
+                    className={`agent-side__item${on ? ' is-active' : ''}`}
+                    aria-current={on ? 'page' : undefined}
+                    onClick={() => setTab(it.id)}
+                  >
+                    <span className="agent-side__icon" aria-hidden="true">
+                      {it.icon}
+                    </span>
+                    <span className="agent-side__label">{it.label}</span>
+                    {it.badge ? <span className="agent-side__badge">{it.badge}</span> : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <button type="button" className="agent-side__item agent-side__logout" onClick={logout}>
+            <span className="agent-side__icon" aria-hidden="true">
+              ⎋
+            </span>
+            <span className="agent-side__label">{t('agent.profile.signOut')}</span>
+          </button>
+        </nav>
+
+        <div className="agent-main">
+          <TabBar
+            className="agent-tabbar"
+            items={navItems.map((it) => ({
+              id: it.id,
+              label: `${it.icon} ${it.label}`,
+              badge: it.badge,
+            }))}
+            active={tab}
+            onSelect={(id) => setTab(id as Tab)}
+            aria-label={t('agent.nav.label', 'Field sections')}
+          />
+
+          <div className="agent-pane">
+            {tab === 'overview' ? (
+              <AgentOverview
+                name={name}
+                sub={sub}
+                clock={clock}
+                stats={stats}
+                isVCO={isVCO}
+                field={field}
+              />
+            ) : tab === 'work' ? (
+              <AgentTracking
+                queues={queues}
+                loading={loading}
+                error={error}
+                isVCO={isVCO}
+                onScanned={onScanned}
+                onOpenView={(id) => setSheet({ kind: 'view', orderId: id })}
+                onOpenDeliver={(id) => setSheet({ kind: 'deliver', orderId: id })}
+                onOpenVerify={(id) => setSheet({ kind: 'verify', orderId: id })}
+                onQuickScan={quickScan}
+              />
+            ) : tab === 'done' ? (
+              <AgentDelivered
+                orders={queues ? queues.delivered : []}
+                onOpenView={(id) => setSheet({ kind: 'view', orderId: id })}
+              />
+            ) : (
+              <ProfileContent isVCO={isVCO} />
+            )}
           </div>
         </div>
-
-        <StatsRow stats={stats} isVCO={isVCO} />
-
-        <FieldDashboard data={field.data} onRefresh={field.reload} />
-
-        <ScanBar
-          onScanned={() => {
-            reload();
-            field.reload();
-          }}
-        />
-
-        {loading ? (
-          <Spinner label={t('agent.loadingOrders')} />
-        ) : error ? (
-          <EmptyState>{error}</EmptyState>
-        ) : sections.length === 0 ? (
-          <EmptyState icon="🎉">{t('agent.allClear')}</EmptyState>
-        ) : (
-          sections.map((s) => (
-            <QueueSection
-              key={s!.key}
-              title={s!.title}
-              orders={s!.orders}
-              action={s!.action}
-              sectionClass={s!.cls}
-              btnLabel={s!.btn}
-              onOpenView={(id) => setSheet({ kind: 'view', orderId: id })}
-              onOpenDeliver={(id) => setSheet({ kind: 'deliver', orderId: id })}
-              onOpenVerify={(id) => setSheet({ kind: 'verify', orderId: id })}
-              onQuickScan={quickScan}
-            />
-          ))
-        )}
-
-        {queues ? (
-          <DeliveredList
-            orders={queues.delivered}
-            onOpenView={(id) => setSheet({ kind: 'view', orderId: id })}
-          />
-        ) : null}
       </div>
 
-      {/* Sheets */}
+      {/* Order-action sheets */}
       <OrderViewSheet open={sheet.kind === 'view'} orderId={sheet.orderId} onClose={close} />
       <DeliverSheet
         open={sheet.kind === 'deliver'}
@@ -276,7 +248,6 @@ function AgentPageInner() {
         onClose={close}
         onChanged={afterChange}
       />
-      <ProfileSheet open={sheet.kind === 'profile'} onClose={close} isVCO={isVCO} />
     </div>
   );
 }
