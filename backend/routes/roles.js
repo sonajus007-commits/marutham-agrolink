@@ -91,21 +91,23 @@ router.patch('/:id', requirePermission('role_permission_management', 'edit'), as
 
   const touchedModules = Object.keys(mods);
 
-  // Replace this role's rows for exactly the touched modules.
-  const delPerms = await supabase
+  // Replace this role's rows for exactly the touched modules. Errors are read via
+  // destructuring so a failed write can never answer 200 (and so db:check-reads
+  // can see the guard statically — it does not follow `const x = …; if (x.error)`).
+  const { error: delPermsErr } = await supabase
     .from('rbac_role_permissions').delete().eq('role_id', roleId).in('module_key', touchedModules);
-  if (delPerms.error) return res.status(500).json({ error: `Could not update permissions: ${delPerms.error.message}` });
-  const delScope = await supabase
+  if (delPermsErr) return res.status(500).json({ error: `Could not update permissions: ${delPermsErr.message}` });
+  const { error: delScopeErr } = await supabase
     .from('rbac_role_scope').delete().eq('role_id', roleId).in('module_key', touchedModules);
-  if (delScope.error) return res.status(500).json({ error: `Could not update scope: ${delScope.error.message}` });
+  if (delScopeErr) return res.status(500).json({ error: `Could not update scope: ${delScopeErr.message}` });
 
   if (permRows.length) {
-    const insPerms = await supabase.from('rbac_role_permissions').insert(permRows);
-    if (insPerms.error) return res.status(500).json({ error: `Could not save permissions: ${insPerms.error.message}` });
+    const { error: insPermsErr } = await supabase.from('rbac_role_permissions').insert(permRows);
+    if (insPermsErr) return res.status(500).json({ error: `Could not save permissions: ${insPermsErr.message}` });
   }
   if (scopeRows.length) {
-    const insScope = await supabase.from('rbac_role_scope').insert(scopeRows);
-    if (insScope.error) return res.status(500).json({ error: `Could not save scope: ${insScope.error.message}` });
+    const { error: insScopeErr } = await supabase.from('rbac_role_scope').insert(scopeRows);
+    if (insScopeErr) return res.status(500).json({ error: `Could not save scope: ${insScopeErr.message}` });
   }
 
   // The change is live in the DB — drop the cache so the very next request resolves

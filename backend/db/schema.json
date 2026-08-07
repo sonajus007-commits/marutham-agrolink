@@ -924,6 +924,98 @@
         }
       }
     },
+    "rbac_modules": {
+      "columns": {
+        "key": {
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        "label": {
+          "type": "text",
+          "notNull": true
+        },
+        "sort": {
+          "type": "smallint",
+          "notNull": true,
+          "default": "0"
+        }
+      }
+    },
+    "rbac_role_permissions": {
+      "columns": {
+        "action": {
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        "module_key": {
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true,
+          "references": "rbac_modules.key"
+        },
+        "role_id": {
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": true,
+          "references": "rbac_roles.id"
+        }
+      }
+    },
+    "rbac_role_scope": {
+      "columns": {
+        "module_key": {
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true,
+          "references": "rbac_modules.key"
+        },
+        "role_id": {
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": true,
+          "references": "rbac_roles.id"
+        },
+        "scope": {
+          "type": "text",
+          "notNull": true,
+          "default": "none"
+        }
+      }
+    },
+    "rbac_roles": {
+      "columns": {
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "id": {
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": true
+        },
+        "is_system": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "true"
+        },
+        "key": {
+          "type": "text",
+          "notNull": true
+        },
+        "label": {
+          "type": "text",
+          "notNull": true
+        },
+        "tier": {
+          "type": "smallint",
+          "notNull": true,
+          "default": "5"
+        }
+      }
+    },
     "return_lines": {
       "columns": {
         "farmer_name": {
@@ -1381,6 +1473,11 @@
         "role": {
           "type": "text",
           "notNull": true
+        },
+        "role_id": {
+          "type": "integer",
+          "notNull": false,
+          "references": "rbac_roles.id"
         },
         "seller_type": {
           "type": "text",

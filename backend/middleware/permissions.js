@@ -161,11 +161,14 @@ async function ensureTrustFlags(user) {
   user.is_hr_admin = false;
   user.is_board_director = false;
   if (user.role !== 'admin' || !user.emp_id) return;
-  const { data: emp } = await supabase
+  const { data: emp, error } = await supabase
     .from('employees')
     .select('is_hr_admin, is_board_director, approval_status')
     .eq('emp_id', user.emp_id)
     .maybeSingle();
+  // Best-effort: on a lookup error leave the (already-false) flags as they are —
+  // the client under-shows and the server still enforces on the next call.
+  if (error) return;
   if (emp && emp.approval_status === 'approved') {
     user.is_hr_admin = emp.is_hr_admin === true;
     user.is_board_director = emp.is_board_director === true;
