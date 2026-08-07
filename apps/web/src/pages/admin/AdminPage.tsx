@@ -31,6 +31,7 @@ import { ProductsPage } from './ProductsPage';
 import { EmployeesPage } from './EmployeesPage';
 import { ProfilePage } from './ProfilePage';
 import { HubQueuePage } from './HubQueuePage';
+import { HubsPage } from './HubsPage';
 
 /**
  * The Admin / management console. Wires the Phase-3 shell (AppShell + Sidebar +
@@ -144,6 +145,7 @@ export function AdminPage() {
               <Route path="products" element={<ProductsPage />} />
               <Route path="employees" element={<EmployeesPage />} />
               <Route path="hub" element={<HubQueuePage />} />
+              <Route path="hubs" element={<HubsPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="*" element={<Placeholder titleKey="admin.nav.overview" />} />
             </Routes>

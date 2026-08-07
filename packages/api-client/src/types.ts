@@ -215,7 +215,7 @@ export interface EligibleAgentsResponse {
   leg?: string;
 }
 
-/* ── Hubs (GET /api/hubs) ── */
+/* ── Hubs (GET/PATCH /api/hubs) ── */
 export interface Hub {
   id: string;
   hub_type: 'main' | 'taluk';
@@ -227,9 +227,31 @@ export interface Hub {
   hub_incharge_id: string | null;
   lat: number | null;
   lng: number | null;
+  is_active?: boolean;
+  /** Resolved name of the responsible Hub Incharge (GET /hubs only). */
+  incharge_name?: string | null;
 }
 export interface HubsResponse {
   hubs: Hub[];
+}
+
+/** A Hub Incharge a hub can be assigned to (GET /api/hubs/incharges). */
+export interface HubIncharge {
+  id: string;
+  name: string;
+  login_id: string;
+}
+export interface HubInchargesResponse {
+  incharges: HubIncharge[];
+}
+
+/** Editable fields on a hub (PATCH /api/hubs/:id). */
+export interface HubUpdate {
+  name?: string;
+  is_active?: boolean;
+  lat?: number | null;
+  lng?: number | null;
+  hub_incharge_id?: string | null;
 }
 
 /** Delivery-agent coverage entry (users.service_areas). */

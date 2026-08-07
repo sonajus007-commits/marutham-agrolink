@@ -15,7 +15,7 @@ test('matrix is complete: every role × module resolves', () => {
   const rows = rbac.resolveMatrix();
   assert.equal(rows.length, rbac.ROLE_KEYS.length * rbac.MODULE_KEYS.length);
   assert.equal(rbac.ROLE_KEYS.length, 11);
-  assert.equal(rbac.MODULE_KEYS.length, 31);
+  assert.equal(rbac.MODULE_KEYS.length, 32);
 });
 
 test('Admin can at least view every module', () => {

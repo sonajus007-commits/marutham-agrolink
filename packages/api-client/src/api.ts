@@ -15,6 +15,9 @@ import type {
   MyRatingsResponse,
   LocationsResponse,
   HubsResponse,
+  HubInchargesResponse,
+  Hub,
+  HubUpdate,
   PlaceOrderPayload,
   TrackResponse,
   ReturnRequestPayload,
@@ -346,6 +349,16 @@ export const api = {
     const qs = new URLSearchParams({ district });
     if (state) qs.set('state', state);
     return apiFetch<HubsResponse>('GET', `/hubs?${qs.toString()}`);
+  },
+  /** The Hub Incharge staff a hub in this district can be assigned to. */
+  getHubIncharges(district: string, state?: string | null): Promise<HubInchargesResponse> {
+    const qs = new URLSearchParams({ district });
+    if (state) qs.set('state', state);
+    return apiFetch<HubInchargesResponse>('GET', `/hubs/incharges?${qs.toString()}`);
+  },
+  /** Edit a hub — name, geo, active flag, responsible Hub Incharge. */
+  updateHub(id: string, data: HubUpdate): Promise<{ hub: Hub }> {
+    return apiFetch<{ hub: Hub }>('PATCH', `/hubs/${id}`, data);
   },
   placeOrder(payload: PlaceOrderPayload): Promise<{ order: Order }> {
     return apiFetch<{ order: Order }>('POST', '/orders', payload);

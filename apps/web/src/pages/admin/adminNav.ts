@@ -112,6 +112,13 @@ export const ADMIN_NAV: AdminNavSection[] = [
         requires: { module: 'warehouse_hub', action: 'edit' },
       },
       {
+        id: 'hubs',
+        labelKey: 'admin.nav.hubs',
+        icon: '🗺️',
+        to: '/admin/hubs',
+        requires: { module: 'hub_management', action: 'view' },
+      },
+      {
         id: 'returns',
         labelKey: 'admin.nav.returns',
         icon: '↩️',
