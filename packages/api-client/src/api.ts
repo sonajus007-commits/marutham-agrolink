@@ -14,6 +14,7 @@ import type {
   TopRatingsResponse,
   MyRatingsResponse,
   LocationsResponse,
+  HubsResponse,
   PlaceOrderPayload,
   TrackResponse,
   ReturnRequestPayload,
@@ -339,6 +340,12 @@ export const api = {
   },
   getLocations(): Promise<LocationsResponse> {
     return apiFetch<LocationsResponse>('GET', '/locations', undefined, false);
+  },
+  /** The hubs in one district (its main hub + every taluk hub). */
+  getHubs(district: string, state?: string | null): Promise<HubsResponse> {
+    const qs = new URLSearchParams({ district });
+    if (state) qs.set('state', state);
+    return apiFetch<HubsResponse>('GET', `/hubs?${qs.toString()}`);
   },
   placeOrder(payload: PlaceOrderPayload): Promise<{ order: Order }> {
     return apiFetch<{ order: Order }>('POST', '/orders', payload);

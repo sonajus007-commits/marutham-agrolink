@@ -45,7 +45,10 @@ export function VerifySheet({
         setOrder(ord.order);
         setMatched(elig.matched || []);
         setAll(elig.all || []);
-        if ((elig.matched || []).length >= 1) setAgentId(elig.matched[0].id);
+        // Default to the best coverer who is ready today; matched is already sorted
+        // ready-first, so matched[0] is that agent when any ready coverer exists.
+        const best = (elig.matched || []).find((a) => a.ready_today) || (elig.matched || [])[0];
+        if (best) setAgentId(best.id);
       })
       .catch(
         (e) =>
@@ -106,6 +109,20 @@ export function VerifySheet({
   }
 
   const others = all.filter((a) => !matched.some((m) => m.id === a.id));
+
+  // Option text carries the availability signal a <select> can't badge: whether
+  // the agent is ready today, and how far their last GPS is from the drop.
+  const agentLabel = (a: EligibleAgent) => {
+    let s = a.name;
+    if (a.vehicle) s += ` · ${a.vehicle}`;
+    s += a.ready_today
+      ? ` · ✅ ${t('agent.assign.readyToday', 'Ready today')}`
+      : ` · ⏸ ${t('agent.assign.away', 'Off duty')}`;
+    if (a.distance_m != null) {
+      s += ` · ${t('agent.assign.km', { km: (a.distance_m / 1000).toFixed(1) })}`;
+    }
+    return s;
+  };
 
   return (
     <Sheet
@@ -231,8 +248,7 @@ export function VerifySheet({
                   <optgroup label={t('agent.verify.covers', 'Covers this village')}>
                     {matched.map((a) => (
                       <option key={a.id} value={a.id}>
-                        {a.name}
-                        {a.vehicle ? ` · ${a.vehicle}` : ''}
+                        {agentLabel(a)}
                       </option>
                     ))}
                   </optgroup>
@@ -241,8 +257,7 @@ export function VerifySheet({
                   <optgroup label={t('agent.verify.others', 'Other agents in district')}>
                     {others.map((a) => (
                       <option key={a.id} value={a.id}>
-                        {a.name}
-                        {a.vehicle ? ` · ${a.vehicle}` : ''}
+                        {agentLabel(a)}
                       </option>
                     ))}
                   </optgroup>

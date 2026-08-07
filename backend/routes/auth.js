@@ -114,6 +114,13 @@ function signToken(userId) {
   return jwt.sign({ sub: userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
 }
 
+// Today's date in IST as 'YYYY-MM-DD'. The business runs in one timezone (see
+// packages/lib IST_OFFSET_MINUTES); a delivery agent's "ready today" must roll
+// over at IST midnight, not the server's UTC midnight.
+function istDateToday() {
+  return new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
 // A login identifier is a phone or a login_id: letters, digits, underscore, and the
 // +/- and space a phone may carry. Nothing here is a PostgREST filter separator, so a
 // value that passes cannot break out of the .or() filter it is interpolated into.
@@ -744,8 +751,11 @@ router.patch('/me', requireAuth, async (req, res) => {
     'village_town', 'city', 'taluk', 'district', 'pincode', 'state',
     'agent_vehicle',                                   // agent vehicle
     'service_villages',                                // Delivery Agent: villages they cover (text[])
+    'service_areas',                                   // Delivery Agent: coverage grouped by taluk (JSONB)
+    'hub_id',                                          // Delivery Agent: the taluk hub responsible for them
     'delivery_addresses',                              // consumer address book (JSONB array)
     'farm_lat', 'farm_lng',                            // seller farm coordinates (best-effort GPS)
+    'agent_lat', 'agent_lng',                          // Delivery Agent live coordinates (set with "ready")
     'shop_open_hour', 'shop_close_hour',               // Retailer: daily trading window (IST hours)
   ];
 
@@ -757,13 +767,54 @@ router.patch('/me', requireAuth, async (req, res) => {
   // Coordinates are the one whitelisted pair the DB stores as a number, so a bad
   // value here would be a 500 from Postgres, not a clean 400. Validate + coerce.
   // null is allowed (clearing the location); a present value must be in range.
-  for (const [key, min, max] of [['farm_lat', -90, 90], ['farm_lng', -180, 180]]) {
+  for (const [key, min, max] of [
+    ['farm_lat', -90, 90], ['farm_lng', -180, 180],
+    ['agent_lat', -90, 90], ['agent_lng', -180, 180],
+  ]) {
     if (updates[key] === undefined || updates[key] === null) continue;
     const n = Number(updates[key]);
     if (!Number.isFinite(n) || n < min || n > max) {
-      return res.status(400).json({ error: 'Invalid farm location.' });
+      return res.status(400).json({ error: 'Invalid location.' });
     }
     updates[key] = n;
+  }
+
+  // Delivery Agent coverage — [{ taluk, villages: [] }]. Validate the shape (a bad
+  // jsonb would be stored verbatim and break the reader), normalise, and bound it.
+  if (updates.service_areas !== undefined) {
+    const raw = updates.service_areas;
+    if (!Array.isArray(raw) || raw.length > 50) {
+      return res.status(400).json({ error: 'Coverage must be a list of up to 50 taluks.' });
+    }
+    const areas = [];
+    for (const a of raw) {
+      const taluk = a && typeof a.taluk === 'string' ? a.taluk.trim() : '';
+      if (!taluk) return res.status(400).json({ error: 'Each covered area needs a taluk.' });
+      const villages = Array.isArray(a.villages)
+        ? [...new Set(a.villages.map((v) => String(v).trim()).filter(Boolean))].slice(0, 200)
+        : [];
+      areas.push({ taluk, villages });
+    }
+    updates.service_areas = areas;
+  }
+
+  // Delivery Agent hub — must be a real hub (an invalid id would be a Postgres FK
+  // 500, not a clean 400). null clears it.
+  if (updates.hub_id !== undefined && updates.hub_id !== null) {
+    const { data: hub, error: hubErr } = await supabase
+      .from('hubs').select('id').eq('id', updates.hub_id).maybeSingle();
+    if (hubErr) {
+      console.error('hub_id lookup failed:', hubErr.message);
+      return res.status(500).json({ error: 'Could not verify the selected hub.' });
+    }
+    if (!hub) return res.status(400).json({ error: 'That hub does not exist.' });
+  }
+
+  // Daily "ready for delivery" flag. `available` is a VIRTUAL boolean, never a
+  // column: the server owns the date so it can lapse overnight. true stamps
+  // today's IST date (ready-today ⇔ available_date === today); false clears it.
+  if (req.body.available !== undefined) {
+    updates.available_date = req.body.available ? istDateToday() : null;
   }
 
   // Retailer trading window. There is a CHECK constraint behind this (migration

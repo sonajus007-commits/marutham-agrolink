@@ -4,6 +4,7 @@ import { api } from '@marutham/api-client';
 import { employeeDetailPairs, type EmployeeDetailPair, type EmployeeRecord } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
+import { DeliveryAgentFields } from './DeliveryAgentFields';
 
 /* The field-staff profile body — the same cards whether shown as the Profile
  * PAGE (sidebar/tab) or inside the legacy ProfileSheet. Seeds from the current
@@ -17,8 +18,6 @@ export function ProfileContent({ isVCO }: { isVCO: boolean }) {
 
   const [gender, setGender] = useState('');
   const [vehicle, setVehicle] = useState('');
-  const [villages, setVillages] = useState<string[]>([]);
-  const [villageInput, setVillageInput] = useState('');
   const [empPairs, setEmpPairs] = useState<EmployeeDetailPair[] | null>(null);
   const [cpw, setCpw] = useState('');
   const [npw, setNpw] = useState('');
@@ -29,10 +28,6 @@ export function ProfileContent({ isVCO }: { isVCO: boolean }) {
     if (!user) return;
     setGender((user.gender as string) || '');
     setVehicle((user.agent_vehicle as string) || '');
-    setVillages(
-      Array.isArray(user.service_villages) ? [...(user.service_villages as string[])] : [],
-    );
-    setVillageInput('');
     setCpw('');
     setNpw('');
     setPwErr('');
@@ -67,13 +62,6 @@ export function ProfileContent({ isVCO }: { isVCO: boolean }) {
   async function saveGender() {
     if (!gender) return toast('Please select a gender.', 'er');
     patch({ gender }, t('agent.profile.saved'));
-  }
-
-  function addVillage() {
-    const v = villageInput.trim();
-    if (v && !villages.some((x) => x.toLowerCase() === v.toLowerCase()))
-      setVillages([...villages, v]);
-    setVillageInput('');
   }
 
   async function changePw() {
@@ -202,70 +190,8 @@ export function ProfileContent({ isVCO }: { isVCO: boolean }) {
         </div>
       </div>
 
-      {/* Service villages — Delivery Agent only */}
-      {!isVCO ? (
-        <div className="a-card">
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)', marginBottom: 4 }}>
-            📍 {t('agent.profile.villages')}
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--gray)', marginBottom: 10 }}>
-            {t(
-              'agent.profile.villagesNote',
-              'You’ll be auto-suggested for orders in these villages — for collection and delivery.',
-            )}
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-            {villages.length ? (
-              villages.map((v, i) => (
-                <span className="a-chip" key={v}>
-                  {v}
-                  <button
-                    onClick={() => setVillages(villages.filter((_, j) => j !== i))}
-                    aria-label={t('agent.profile.removeVillage', 'Remove {{name}}', { name: v })}
-                  >
-                    ✕
-                  </button>
-                </span>
-              ))
-            ) : (
-              <span style={{ fontSize: 12, color: 'var(--gray)' }}>
-                {t('agent.profile.noVillages', 'No villages added yet.')}
-              </span>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <input
-              className="a-input"
-              type="text"
-              placeholder={t('agent.profile.addVillage', 'Add a village/town')}
-              value={villageInput}
-              onChange={(e) => setVillageInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addVillage();
-                }
-              }}
-              aria-label={t('agent.profile.addVillageAria', 'Add a village or town')}
-            />
-            <button className="a-btn-save" onClick={addVillage}>
-              {t('consumer.addr.add', 'Add')}
-            </button>
-          </div>
-          <button
-            className="a-btn-save"
-            style={{ marginTop: 10, width: '100%' }}
-            onClick={() =>
-              patch(
-                { service_villages: villages },
-                t('agent.profile.villagesSaved', 'Service villages saved.'),
-              )
-            }
-          >
-            {t('agent.profile.saveVillages', 'Save Villages')}
-          </button>
-        </div>
-      ) : null}
+      {/* Delivery-Agent coverage, hub and daily readiness. VCOs have no run. */}
+      {!isVCO ? <DeliveryAgentFields /> : null}
 
       {/* Change password */}
       <div className="a-card">

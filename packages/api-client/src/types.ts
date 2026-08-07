@@ -192,6 +192,17 @@ export interface EligibleAgent {
   id: string;
   name: string;
   vehicle?: string;
+  phone?: string;
+  service_villages?: string[];
+  /** The taluk hub responsible for this agent, if set. */
+  hub_id?: string | null;
+  /** Did the agent mark themselves "ready for delivery" TODAY (IST)? */
+  ready_today?: boolean;
+  /** Does the agent's coverage include the order's delivery village / taluk? */
+  covers_village?: boolean;
+  covers_taluk?: boolean;
+  /** Metres from the order's delivery point to the agent's last GPS, when both exist. */
+  distance_m?: number | null;
 }
 
 export interface EligibleAgentsResponse {
@@ -199,7 +210,32 @@ export interface EligibleAgentsResponse {
   all: EligibleAgent[];
   /** The consumer's delivery village — what `matched` was matched ON. */
   village?: string | null;
+  /** The delivery taluk, when the address carried one. */
+  taluk?: string | null;
   leg?: string;
+}
+
+/* ── Hubs (GET /api/hubs) ── */
+export interface Hub {
+  id: string;
+  hub_type: 'main' | 'taluk';
+  state: string;
+  district: string;
+  taluk: string | null;
+  name: string;
+  parent_hub_id: string | null;
+  hub_incharge_id: string | null;
+  lat: number | null;
+  lng: number | null;
+}
+export interface HubsResponse {
+  hubs: Hub[];
+}
+
+/** Delivery-agent coverage entry (users.service_areas). */
+export interface ServiceArea {
+  taluk: string;
+  villages: string[];
 }
 
 /** GET /orders/:id/track — live agent + ETA for the tracking card. */

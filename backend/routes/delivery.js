@@ -726,13 +726,17 @@ router.post('/:id/assign', async (req, res) => {
 // `leg=collection` (default) matches the order's fulfilment village (farmer side);
 // `leg=delivery` matches the consumer's delivery village (hub → doorstep).
 router.get('/:id/eligible-agents', async (req, res) => {
-  if (!can(req.user, 'delivery_assignment', 'assign')) {
+  // Both roles that name an agent may list them: a VCO at verify time (via /scan —
+  // a role check; VCOs hold delivery_assignment view/create, not 'assign'), and a
+  // Hub Incharge / senior admin via /assign (the RBAC 'assign' permission). Guarding
+  // on 'assign' alone 403'd the VCO verify picker — which is why this allows VCO too.
+  if (req.user.admin_role !== 'VCO' && !can(req.user, 'delivery_assignment', 'assign')) {
     return res.status(403).json({ error: 'Delivery assignment permission required.' });
   }
 
   const { data: order, error: oe } = await supabase
     .from('orders')
-    .select('id, village, delivery_village, district')
+    .select('id, village, delivery_village, district, delivery_address, delivered_lat, delivered_lng')
     .eq('id', req.params.id)
     .single();
   if (oe || !order) return res.status(404).json({ error: 'Order not found.' });
@@ -741,14 +745,20 @@ router.get('/:id/eligible-agents', async (req, res) => {
   // delivery leg → consumer-side delivery village (Hub Incharge assigns last-mile
   // agent); falls back to the fulfilment village if none was captured.
   const leg = req.query.leg === 'delivery' ? 'delivery' : 'collection';
-  const village = leg === 'delivery'
-    ? (order.delivery_village || order.village)
-    : order.village;
+  const da = order.delivery_address || {};
+  const village =
+    leg === 'delivery'
+      ? order.delivery_village || order.village || da.village_town || null
+      : order.village || null;
+  const taluk = (da.taluk || '').trim() || null;
 
   // All Delivery Agents in the order's district — the manual-fallback list.
   const { data: all, error: ae } = await supabase
     .from('users')
-    .select('id, fname, lname, phone, agent_vehicle, village_town, service_villages, district')
+    .select(
+      'id, fname, lname, phone, agent_vehicle, village_town, service_villages, ' +
+        'service_areas, hub_id, taluk, available_date, agent_lat, agent_lng, district',
+    )
     .eq('role', 'admin')
     .eq('admin_role', 'Delivery Agent')
     .is('deleted_at', null)          // removed agents are not offered for assignment
@@ -756,25 +766,79 @@ router.get('/:id/eligible-agents', async (req, res) => {
     .eq('status', 'active');
   if (ae) return res.status(500).json({ error: ae.message });
 
-  // Auto-match: agents whose service_villages include this village.
-  const matched = (all || []).filter(a =>
-    village && Array.isArray(a.service_villages) && a.service_villages.includes(village)
-  );
+  // ready-today ⇔ available_date === today (IST). The business runs in one tz.
+  const today = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
+  const vlc = (village || '').toLowerCase();
+  const tlc = (taluk || '').toLowerCase();
+  const oLat = order.delivered_lat ?? (typeof da.lat === 'number' ? da.lat : null);
+  const oLng = order.delivered_lng ?? (typeof da.lng === 'number' ? da.lng : null);
 
-  const shape = a => ({
-    id: a.id,
-    name: a.fname + (a.lname ? ' ' + a.lname : ''),
-    phone: a.phone,
-    vehicle: a.agent_vehicle || '',
-    service_villages: a.service_villages || [],
-  });
+  // Coverage from users.service_areas ([{taluk, villages[]}]); the legacy flat
+  // service_villages[] still counts as a village match so nothing regresses.
+  const covers = (a) => {
+    const areas = Array.isArray(a.service_areas) ? a.service_areas : [];
+    let cv = false;
+    let ct = false;
+    for (const ar of areas) {
+      if (tlc && String(ar.taluk || '').toLowerCase() === tlc) ct = true;
+      if (
+        vlc &&
+        Array.isArray(ar.villages) &&
+        ar.villages.some((v) => String(v).toLowerCase() === vlc)
+      ) {
+        cv = true;
+      }
+    }
+    if (
+      !cv &&
+      vlc &&
+      Array.isArray(a.service_villages) &&
+      a.service_villages.some((v) => String(v).toLowerCase() === vlc)
+    ) {
+      cv = true;
+    }
+    return { cv, ct };
+  };
 
-  res.json({
-    leg,
-    village: village || null,
-    matched: matched.map(shape),
-    all: (all || []).map(shape),
-  });
+  const shape = (a) => {
+    const { cv, ct } = covers(a);
+    const distance_m =
+      oLat != null && oLng != null && a.agent_lat != null && a.agent_lng != null
+        ? distanceMeters(Number(oLat), Number(oLng), Number(a.agent_lat), Number(a.agent_lng))
+        : null;
+    return {
+      id: a.id,
+      name: a.fname + (a.lname ? ' ' + a.lname : ''),
+      phone: a.phone,
+      vehicle: a.agent_vehicle || '',
+      service_villages: a.service_villages || [],
+      hub_id: a.hub_id || null,
+      ready_today: a.available_date === today,
+      covers_village: cv,
+      covers_taluk: ct,
+      distance_m,
+    };
+  };
+
+  // Ready-first, then better coverage (village > taluk > none), then nearest, then
+  // name — the order the picker defaults to and displays in.
+  const rankKey = (s) => [
+    s.ready_today ? 0 : 1,
+    s.covers_village ? 0 : s.covers_taluk ? 1 : 2,
+    s.distance_m ?? Infinity,
+  ];
+  const bySort = (x, y) => {
+    const kx = rankKey(x);
+    const ky = rankKey(y);
+    for (let i = 0; i < kx.length; i++) if (kx[i] !== ky[i]) return kx[i] - ky[i];
+    return x.name.localeCompare(y.name);
+  };
+
+  const shaped = (all || []).map(shape);
+  const matched = shaped.filter((s) => s.covers_village || s.covers_taluk).sort(bySort);
+  const allSorted = [...shaped].sort(bySort);
+
+  res.json({ leg, village: village || null, taluk: taluk || null, matched, all: allSorted });
 });
 
 // ── GET /orders/:id/track  (consumer who owns it, or any staff) ───────────────

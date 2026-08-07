@@ -253,7 +253,9 @@ function DispatchModal({
         setMatched(m);
         setOthers(all.filter((a) => !m.some((x) => x.id === a.id)));
         setVillage(res.village ?? null);
-        if (m.length) setAgentId(m[0].id); // auto-select the village match
+        // Auto-select the best coverer who is ready today (matched is ready-first).
+        const best = m.find((a) => a.ready_today) || m[0];
+        if (best) setAgentId(best.id);
       })
       .catch(() => active && toast(t('admin.hub.agentsFailed'), 'er'))
       .finally(() => active && setLoading(false));
@@ -261,6 +263,19 @@ function DispatchModal({
       active = false;
     };
   }, [order, toast, t]);
+
+  // Option text carries the availability signal a <select> can't badge.
+  const agentLabel = (a: EligibleAgent) => {
+    let s = a.name;
+    if (a.vehicle) s += ` · ${a.vehicle}`;
+    s += a.ready_today
+      ? ` · ✅ ${t('agent.assign.readyToday', 'Ready today')}`
+      : ` · ⏸ ${t('agent.assign.away', 'Off duty')}`;
+    if (a.distance_m != null) {
+      s += ` · ${t('agent.assign.km', { km: (a.distance_m / 1000).toFixed(1) })}`;
+    }
+    return s;
+  };
 
   async function confirm() {
     if (!order) return;
@@ -334,8 +349,7 @@ function DispatchModal({
               <optgroup label={t('admin.hub.covers', { village: village || '' })}>
                 {matched.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.name}
-                    {a.vehicle ? ` · ${a.vehicle}` : ''}
+                    {agentLabel(a)}
                   </option>
                 ))}
               </optgroup>
@@ -344,8 +358,7 @@ function DispatchModal({
               <optgroup label={t('admin.hub.otherAgents')}>
                 {others.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.name}
-                    {a.vehicle ? ` · ${a.vehicle}` : ''}
+                    {agentLabel(a)}
                   </option>
                 ))}
               </optgroup>

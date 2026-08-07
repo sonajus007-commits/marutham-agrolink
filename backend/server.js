@@ -65,6 +65,7 @@ const locationsRouter     = require('./routes/locations');
 const employeesRouter     = require('./routes/employees');
 const notificationsRouter = require('./routes/notifications');
 const rolesRouter         = require('./routes/roles');
+const hubsRouter          = require('./routes/hubs');
 
 // The whole API lives under /api. It used to own the ROOT namespace (/products,
 // /orders, /users …), which made the root unusable for anything else: a public
@@ -100,6 +101,7 @@ api.use('/locations',     locationsRouter);
 api.use('/employees',     employeesRouter);
 api.use('/notifications', notificationsRouter);
 api.use('/roles',         rolesRouter);
+api.use('/hubs',          hubsRouter);
 
 // /me lives under /auth but the spec exposes it at /me — alias both
 api.get('/me',   require('./middleware/auth').requireAuth, (req, res) => res.redirect(307, '/api/auth/me'));
@@ -116,7 +118,7 @@ app.use('/api', api);
 const API_SEGMENTS = [
   'auth', 'products', 'listings', 'orders', 'ratings', 'returns', 'dashboard',
   'payouts', 'users', 'farmers', 'consumers', 'config', 'registrations',
-  'subscription', 'locations', 'employees', 'me',
+  'subscription', 'locations', 'employees', 'me', 'hubs',
 ];
 app.use(`/:segment(${API_SEGMENTS.join('|')})`, (req, res, next) => {
   // The shop owns /products/* as PAGES. Only shout when the caller clearly wanted

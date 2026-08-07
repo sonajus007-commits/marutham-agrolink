@@ -373,6 +373,64 @@
         }
       }
     },
+    "hubs": {
+      "columns": {
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "district": {
+          "type": "text",
+          "notNull": true
+        },
+        "hub_incharge_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "hub_type": {
+          "type": "text",
+          "notNull": true
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "is_active": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "true"
+        },
+        "lat": {
+          "type": "double precision",
+          "notNull": false
+        },
+        "lng": {
+          "type": "double precision",
+          "notNull": false
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "parent_hub_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "hubs.id"
+        },
+        "state": {
+          "type": "text",
+          "notNull": true
+        },
+        "taluk": {
+          "type": "text",
+          "notNull": false
+        }
+      }
+    },
     "locations": {
       "columns": {
         "district": {
@@ -1301,6 +1359,18 @@
           "type": "text",
           "notNull": false
         },
+        "agent_lat": {
+          "type": "double precision",
+          "notNull": false
+        },
+        "agent_lng": {
+          "type": "double precision",
+          "notNull": false
+        },
+        "agent_loc_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
         "agent_vehicle": {
           "type": "text",
           "notNull": false
@@ -1322,6 +1392,10 @@
           "type": "uuid",
           "notNull": false,
           "references": "users.id"
+        },
+        "available_date": {
+          "type": "date",
+          "notNull": false
         },
         "bank_account": {
           "type": "text",
@@ -1419,6 +1493,11 @@
           "type": "text",
           "notNull": false
         },
+        "hub_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "hubs.id"
+        },
         "id": {
           "type": "uuid",
           "notNull": true,
@@ -1482,6 +1561,10 @@
         "seller_type": {
           "type": "text",
           "notNull": false
+        },
+        "service_areas": {
+          "type": "jsonb",
+          "notNull": true
         },
         "service_villages": {
           "type": "text[]",
