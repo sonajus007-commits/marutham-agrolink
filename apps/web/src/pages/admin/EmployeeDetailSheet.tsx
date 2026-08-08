@@ -5,6 +5,7 @@ import { api, type Employee, type EmployeeAuditEntry } from '@marutham/api-clien
 import { fmtDate, fmtDateShort } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
 import { AuditLogList } from './HistoryPanels';
+import { BAND_LABEL } from './employeeOptions';
 
 export const EMP_APPROVAL_TONE: Record<string, string> = {
   pending: 'var(--warning-strong)',
@@ -328,6 +329,14 @@ function Body({
         ) : null}
         {emp.department ? (
           <Row label={t('admin.emp.department')} value={String(emp.department)} />
+        ) : null}
+        {emp.career_band ? (
+          <Row
+            label={t('admin.emp.band')}
+            value={`${emp.career_band}${
+              BAND_LABEL[String(emp.career_band)] ? ` · ${BAND_LABEL[String(emp.career_band)]}` : ''
+            }`}
+          />
         ) : null}
         {emp.employment_type ? (
           <Row label={t('admin.emp.type')} value={String(emp.employment_type)} />

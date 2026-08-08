@@ -118,6 +118,10 @@
           "type": "uuid",
           "notNull": false
         },
+        "career_band": {
+          "type": "text",
+          "notNull": false
+        },
         "city": {
           "type": "text",
           "notNull": false

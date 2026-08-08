@@ -23,11 +23,20 @@ const EMPLOYEE_FIELDS = [
   'fname', 'lname', 'gender', 'dob', 'phone', 'email', 'aadhar',
   'address_line', 'house_no', 'street1', 'street2',
   'village_town', 'city', 'taluk', 'district', 'state', 'pincode',
-  'designation', 'department', 'employment_type', 'date_of_joining',
+  'designation', 'department', 'career_band', 'employment_type', 'date_of_joining',
   'work_location', 'work_district', 'work_state',
   'reporting_manager', 'reporting_manager_emp_id', 'is_manager',
   'status', 'notes',
 ];
+
+// Career band is an HR dimension separate from RBAC (037_rbac.sql) — a promotion
+// must never auto-grant system access. The app auto-fills it from a designation
+// catalog but HR may override, so the only server-side rule is that a supplied
+// value is one of the 13 codes. Empty string is normalised to null by pickFields.
+const CAREER_BANDS = ['L0', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'L10', 'L11', 'L12'];
+function invalidBand(rec) {
+  return rec.career_band != null && !CAREER_BANDS.includes(rec.career_band);
+}
 
 // Next auto Employee ID: <prefix> + <2-letter state code> + 5-digit per-state
 // sequence, restarting at 00001 for each prefix+state combination.
@@ -204,6 +213,7 @@ router.post('/', requirePermission('employee_management', 'create'), async (req,
   try {
     const rec = pickFields(req.body);
     if (!rec.fname) return res.status(400).json({ error: 'Employee first name is required.' });
+    if (invalidBand(rec)) return res.status(400).json({ error: 'Invalid career band. Must be one of L0–L12.' });
 
     // Trust-role flags — only Head Office or a Board of Director may set them.
     const wantsBoD     = truthy(req.body.is_board_director);
@@ -249,6 +259,8 @@ router.patch('/:id', requirePermission('employee_management', 'edit'), async (re
 
   // Employee ID is permanent once generated — never editable after creation.
   delete updates.emp_id;
+
+  if (invalidBand(updates)) return res.status(400).json({ error: 'Invalid career band. Must be one of L0–L12.' });
 
   // Trust-role flags can be delegated later, but only by Head Office / a Board of Director.
   if (req.body.is_board_director !== undefined || req.body.is_hr_admin !== undefined) {

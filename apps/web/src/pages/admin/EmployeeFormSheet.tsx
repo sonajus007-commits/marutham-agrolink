@@ -5,8 +5,10 @@ import { api, type Employee, type EmployeePayload } from '@marutham/api-client';
 import { useToast } from '../../components/Toast';
 import { ManagerPickerModal } from './ManagerPickerModal';
 import {
+  BANDS,
+  bandForDesignation,
+  designationsForDepartment,
   EMP_DEPARTMENTS,
-  EMP_DESIGNATIONS,
   EMP_EMPLOYMENT_TYPES,
   EMP_GENDERS,
   EMP_STATUSES,
@@ -31,6 +33,7 @@ interface EmpForm {
   village_town: string;
   designation: string;
   department: string;
+  career_band: string;
   employment_type: string;
   date_of_joining: string;
   work_state: string;
@@ -64,6 +67,7 @@ const blank: EmpForm = {
   village_town: '',
   designation: '',
   department: '',
+  career_band: '',
   employment_type: 'Permanent',
   date_of_joining: '',
   work_state: '',
@@ -101,6 +105,7 @@ function formFrom(e: Employee): EmpForm {
     village_town: s(e.village_town),
     designation: s(e.designation),
     department: s(e.department),
+    career_band: s(e.career_band),
     employment_type: s(e.employment_type) || 'Permanent',
     date_of_joining: s(e.date_of_joining),
     work_state: s(e.work_state),
@@ -191,6 +196,39 @@ export function EmployeeFormSheet({
     }));
   }
 
+  // Department drives the designation options. Changing it drops a designation
+  // that no longer belongs to the new department; the band is left as-is (HR may
+  // have overridden it) until a fresh designation is picked.
+  function setDepartment_(dept: string) {
+    setForm((f) => {
+      const titles = designationsForDepartment(dept).map((c) => c.title);
+      const designation = titles.includes(f.designation) ? f.designation : '';
+      return { ...f, department: dept, designation };
+    });
+  }
+  // Picking a designation auto-fills its band (editable afterwards). An unknown
+  // designation (legacy) leaves the current band untouched.
+  function setDesignation_(title: string) {
+    setForm((f) => ({
+      ...f,
+      designation: title,
+      career_band: bandForDesignation(title) || f.career_band,
+    }));
+  }
+
+  // Legacy tolerance: a record can carry a department/designation not in the new
+  // catalog. Inject the current value so the Select never renders blank.
+  const deptOptions = useMemo(() => {
+    const base = [...EMP_DEPARTMENTS] as string[];
+    return form.department && !base.includes(form.department) ? [form.department, ...base] : base;
+  }, [form.department]);
+  const desigOptions = useMemo(() => {
+    const list = designationsForDepartment(form.department).map((c) => c.title);
+    return form.designation && !list.includes(form.designation)
+      ? [form.designation, ...list]
+      : list;
+  }, [form.department, form.designation]);
+
   async function save() {
     if (!form.fname.trim()) return setError(t('admin.emp.errName'));
     if (form.aadhar && !/^\d{12}$/.test(form.aadhar)) return setError(t('admin.emp.errAadhar'));
@@ -215,6 +253,7 @@ export function EmployeeFormSheet({
       village_town: orUndef(form.village_town),
       designation: orUndef(form.designation),
       department: orUndef(form.department),
+      career_band: orUndef(form.career_band),
       employment_type: orUndef(form.employment_type),
       date_of_joining: orUndef(form.date_of_joining),
       work_state: orUndef(form.work_state),
@@ -410,15 +449,11 @@ export function EmployeeFormSheet({
 
       <SecHead>{t('admin.emp.company')}</SecHead>
       <div className="grid grid-cols-2 gap-3">
-        <Field label={t('admin.emp.designation')}>
+        <Field label={t('admin.emp.department')}>
           {(p) => (
-            <Select
-              {...p}
-              value={form.designation}
-              onChange={(e) => set('designation', e.target.value)}
-            >
+            <Select {...p} value={form.department} onChange={(e) => setDepartment_(e.target.value)}>
               <option value="">{t('admin.emp.select')}</option>
-              {EMP_DESIGNATIONS.map((d) => (
+              {deptOptions.map((d) => (
                 <option key={d} value={d}>
                   {d}
                 </option>
@@ -426,17 +461,34 @@ export function EmployeeFormSheet({
             </Select>
           )}
         </Field>
-        <Field label={t('admin.emp.department')}>
+        <Field label={t('admin.emp.designation')} hint={t('admin.emp.designationHint')}>
           {(p) => (
             <Select
               {...p}
-              value={form.department}
-              onChange={(e) => set('department', e.target.value)}
+              value={form.designation}
+              onChange={(e) => setDesignation_(e.target.value)}
+              disabled={!form.department && desigOptions.length === 0}
             >
               <option value="">{t('admin.emp.select')}</option>
-              {EMP_DEPARTMENTS.map((d) => (
+              {desigOptions.map((d) => (
                 <option key={d} value={d}>
                   {d}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+        <Field label={t('admin.emp.band')} hint={t('admin.emp.bandHint')}>
+          {(p) => (
+            <Select
+              {...p}
+              value={form.career_band}
+              onChange={(e) => set('career_band', e.target.value)}
+            >
+              <option value="">{t('admin.emp.select')}</option>
+              {BANDS.map((b) => (
+                <option key={b.code} value={b.code}>
+                  {b.code} · {b.label}
                 </option>
               ))}
             </Select>

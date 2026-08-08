@@ -456,6 +456,9 @@ export interface Employee {
   email?: string | null;
   designation?: string | null;
   department?: string | null;
+  /** HR career band L0–L12. Separate from RBAC — set from the designation catalog
+   *  but HR-editable; a promotion here never changes system access. */
+  career_band?: string | null;
   employment_type?: string | null;
   date_of_joining?: string | null;
   work_location?: string | null;
@@ -558,6 +561,7 @@ export interface EmployeePayload {
   village_town?: string;
   designation?: string;
   department?: string;
+  career_band?: string;
   employment_type?: string;
   date_of_joining?: string;
   work_state?: string;
