@@ -207,14 +207,26 @@ export function EmployeeFormSheet({
     });
   }
   // Picking a designation auto-fills its band (editable afterwards). An unknown
-  // designation (legacy) leaves the current band untouched.
+  // designation (legacy) leaves the current band untouched. Contract staff carry
+  // no band at all, so the auto-fill is skipped for them.
   function setDesignation_(title: string) {
     setForm((f) => ({
       ...f,
       designation: title,
-      career_band: bandForDesignation(title) || f.career_band,
+      career_band:
+        f.employment_type === 'Contract' ? '' : bandForDesignation(title) || f.career_band,
     }));
   }
+  // Career band is a permanent-employee classification — switching to Contract
+  // drops the band (the DB enforces this too, see migration 040).
+  function setEmploymentType_(ty: string) {
+    setForm((f) => ({
+      ...f,
+      employment_type: ty,
+      career_band: ty === 'Contract' ? '' : f.career_band,
+    }));
+  }
+  const isContract = form.employment_type === 'Contract';
 
   // Legacy tolerance: a record can carry a department/designation not in the new
   // catalog. Inject the current value so the Select never renders blank.
@@ -478,28 +490,32 @@ export function EmployeeFormSheet({
             </Select>
           )}
         </Field>
-        <Field label={t('admin.emp.band')} hint={t('admin.emp.bandHint')}>
-          {(p) => (
-            <Select
-              {...p}
-              value={form.career_band}
-              onChange={(e) => set('career_band', e.target.value)}
-            >
-              <option value="">{t('admin.emp.select')}</option>
-              {BANDS.map((b) => (
-                <option key={b.code} value={b.code}>
-                  {b.code} · {b.label}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
+        {/* Career band applies to permanent employees only. Hidden for contract
+            staff — the form clears it and the backend/DB enforce the same. */}
+        {!isContract ? (
+          <Field label={t('admin.emp.band')} hint={t('admin.emp.bandHint')}>
+            {(p) => (
+              <Select
+                {...p}
+                value={form.career_band}
+                onChange={(e) => set('career_band', e.target.value)}
+              >
+                <option value="">{t('admin.emp.select')}</option>
+                {BANDS.map((b) => (
+                  <option key={b.code} value={b.code}>
+                    {b.code} · {b.label}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+        ) : null}
         <Field label={t('admin.emp.type')} hint={t('admin.emp.typeHint')}>
           {(p) => (
             <Select
               {...p}
               value={form.employment_type}
-              onChange={(e) => set('employment_type', e.target.value)}
+              onChange={(e) => setEmploymentType_(e.target.value)}
             >
               {EMP_EMPLOYMENT_TYPES.map((ty) => (
                 <option key={ty} value={ty}>

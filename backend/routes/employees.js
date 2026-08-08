@@ -38,6 +38,14 @@ function invalidBand(rec) {
   return rec.career_band != null && !CAREER_BANDS.includes(rec.career_band);
 }
 
+// The career band is a PERMANENT-employee classification (see 040). A contract
+// employee never carries one, so a Contract employment_type in the same write
+// nulls the band — matching the DB constraint and turning a "switched to
+// contract" edit into a clean clear instead of a 500 from the check.
+function clearBandForContract(rec) {
+  if (rec.employment_type === 'Contract') rec.career_band = null;
+}
+
 // Next auto Employee ID: <prefix> + <2-letter state code> + 5-digit per-state
 // sequence, restarting at 00001 for each prefix+state combination.
 //   Permanent -> MA…  (Marutham Agrolink):  Tamil Nadu MATN00001, Karnataka MAKA00001
@@ -214,6 +222,7 @@ router.post('/', requirePermission('employee_management', 'create'), async (req,
     const rec = pickFields(req.body);
     if (!rec.fname) return res.status(400).json({ error: 'Employee first name is required.' });
     if (invalidBand(rec)) return res.status(400).json({ error: 'Invalid career band. Must be one of L0–L12.' });
+    clearBandForContract(rec);
 
     // Trust-role flags — only Head Office or a Board of Director may set them.
     const wantsBoD     = truthy(req.body.is_board_director);
@@ -261,6 +270,7 @@ router.patch('/:id', requirePermission('employee_management', 'edit'), async (re
   delete updates.emp_id;
 
   if (invalidBand(updates)) return res.status(400).json({ error: 'Invalid career band. Must be one of L0–L12.' });
+  clearBandForContract(updates);
 
   // Trust-role flags can be delegated later, but only by Head Office / a Board of Director.
   if (req.body.is_board_director !== undefined || req.body.is_hr_admin !== undefined) {
