@@ -436,6 +436,8 @@ export interface SubscriptionPayResponse {
  * MONEY: already in rupees (`cod_amount`, `farmer_payments_amount`). */
 export interface FieldDashboardResponse {
   role: string;
+  /** A VCO flagged can_deliver — the field dashboard adds a delivery tile group. */
+  can_deliver?: boolean;
   stats: Record<string, number | string | null>;
   scope?: { name?: string };
   generated_at: string;

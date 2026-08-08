@@ -100,7 +100,37 @@ export function FieldDashboard({
             hint={pending ? t('agent.field.vco.farmersPending', { count: pending }) : null}
           />
         </TileGrid>
-      ) : (
+      ) : null}
+
+      {/* A delivery-capable VCO (users.can_deliver) also carries last-mile orders —
+          shown as their own group so collections and delivery stay legible. */}
+      {isVCO && data.can_deliver ? (
+        <>
+          <div className="fd-subhead">🛵 {t('agent.field.vco.deliveryTitle', 'Delivery')}</div>
+          <TileGrid>
+            <StatTile
+              icon="📦"
+              label={t('agent.field.vco.deliveriesAssigned', 'Deliveries Assigned')}
+              value={fmtNum(s.deliveries_assigned)}
+              accent={colors.forest}
+            />
+            <StatTile
+              icon="✅"
+              label={t('agent.field.vco.deliveredToday', 'Delivered Today')}
+              value={fmtNum(s.deliveries_completed_today)}
+              accent={colors.green}
+            />
+            <StatTile
+              icon="💵"
+              label={t('agent.field.vco.deliveryCod', 'COD Collected')}
+              value={fmtMoneyInt(s.delivery_cod_amount)}
+              accent={colors.forest}
+            />
+          </TileGrid>
+        </>
+      ) : null}
+
+      {!isVCO ? (
         <TileGrid>
           <StatTile
             icon="📦"
@@ -147,7 +177,7 @@ export function FieldDashboard({
             accent={colors.gold}
           />
         </TileGrid>
-      )}
+      ) : null}
 
       {/* The metrics this screen's audience asked for that nothing feeds yet — GPS
           route, daily earnings, fuel allowance. The backend has been sending them

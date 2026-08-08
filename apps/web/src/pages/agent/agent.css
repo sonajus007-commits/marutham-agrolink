@@ -459,6 +459,12 @@
   font-size: 11px;
   color: var(--gray);
 }
+.fd-subhead {
+  margin: 14px 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--forest);
+}
 .fd-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

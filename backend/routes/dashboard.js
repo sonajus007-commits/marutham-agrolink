@@ -830,8 +830,29 @@ router.get('/field', async (req, res) => {
   const confirmed = listings.filter(l => l.confirmed);
   const pendingPayouts = payouts.filter(p => p.status === 'pending');
 
+  // A delivery-capable VCO also works last-mile orders assigned to them
+  // (users.can_deliver). Surface those counts as an extra tile group so the
+  // Overview reflects the delivery duty, not just collections.
+  let deliveryStats = {};
+  if (u.can_deliver) {
+    const { data: myDeliveries, error: dErr } = await supabase
+      .from('orders')
+      .select('id, status, cancelled, pay_method, total, delivered_at')
+      .eq('agent_id', u.id);
+    if (dErr) return res.status(500).json({ error: 'Could not load field dashboard.' });
+    const mine = myDeliveries || [];
+    const delivered = mine.filter(o => o.status === 'Delivered');
+    const isCod = o => o.pay_method === 'Cash on Delivery';
+    deliveryStats = {
+      deliveries_assigned:        mine.filter(o => !o.cancelled && o.status !== 'Delivered').length,
+      deliveries_completed_today: delivered.filter(o => isToday(o.delivered_at)).length,
+      delivery_cod_amount:        rup(delivered.filter(o => isCod(o) && isToday(o.delivered_at)).reduce((s, o) => s + o.total, 0)),
+    };
+  }
+
   return res.json({
     role: 'VCO',
+    can_deliver: !!u.can_deliver,
     scope: { level: 'village', name: village || 'Unassigned' },
     generated_at: new Date().toISOString(),
     stats: {
@@ -845,6 +866,7 @@ router.get('/field', async (req, res) => {
       farmer_payments_amount: rup(pendingPayouts.reduce((s, p) => s + p.amount, 0)),
       farmers_registered: farmers.length,
       farmers_pending:    farmers.filter(f => f.approval_status === 'pending_review').length,
+      ...deliveryStats,
     },
     placeholders: FIELD_PLACEHOLDERS.VCO,
   });
