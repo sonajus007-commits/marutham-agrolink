@@ -92,13 +92,19 @@ async function resolveUserPermissions(user) {
   const merged = {};
   if (user.role_id) mergeInto(merged, await loadRolePermissions(user.role_id));
 
-  if (user.is_board_director || user.is_hr_admin) {
+  if (user.is_board_director || user.is_hr_admin || user.can_deliver) {
     const ids = await getKeyToId();
     if (user.is_board_director && ids.board_of_directors) {
       mergeInto(merged, await loadRolePermissions(ids.board_of_directors));
     }
     if (user.is_hr_admin && ids.hr) {
       mergeInto(merged, await loadRolePermissions(ids.hr));
+    }
+    // A VCO flagged can_deliver gains the Delivery Agent role's permissions on top
+    // of their own — the same additive UNION as the trust flags. Their role_id is
+    // unchanged; this is a capability, not a promotion.
+    if (user.can_deliver && ids.delivery_agent && user.role_id !== ids.delivery_agent) {
+      mergeInto(merged, await loadRolePermissions(ids.delivery_agent));
     }
   }
   return merged;

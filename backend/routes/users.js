@@ -409,6 +409,23 @@ router.patch('/:id', requirePermission('user_management', 'edit'), async (req, r
   for (const key of ADMIN_EDITABLE) {
     if (req.body[key] !== undefined) updates[key] = req.body[key] || null;
   }
+
+  // can_deliver is a boolean capability (a VCO who also does nearby delivery), so
+  // it can't go through the `|| null` coercion above — false is a real value, not
+  // "unset". Only a VCO may carry it; the DB has the same check as a backstop.
+  if (req.body.can_deliver !== undefined) {
+    const wants = req.body.can_deliver === true || req.body.can_deliver === 'true';
+    if (wants) {
+      const { data: tgt, error: tgtErr } = await supabase
+        .from('users').select('admin_role').eq('id', req.params.id).maybeSingle();
+      if (tgtErr) return res.status(500).json({ error: 'Could not verify this account before updating it. Please try again.' });
+      if (!tgt || tgt.admin_role !== 'VCO') {
+        return res.status(400).json({ error: 'Only a VCO can be enabled as a nearby Delivery Agent.' });
+      }
+    }
+    updates.can_deliver = wants;
+  }
+
   if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No updatable fields provided.' });
 
   // village_town is canonical; keep the legacy vco_city (VCO order-matching) in sync.

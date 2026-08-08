@@ -129,6 +129,7 @@ export const resources = {
       'agent.nav.overview': 'Overview',
       'agent.nav.tracking': 'Delivery Tracking',
       'agent.nav.collections': 'Collections',
+      'agent.nav.collectionsDelivery': 'Collections & Delivery',
       'agent.nav.delivered': 'Delivered',
       'agent.nav.completed': 'Completed',
       'agent.nav.profile': 'Profile',
@@ -1599,6 +1600,11 @@ export const resources = {
       'admin.users.blockConfirm': 'Block this user?',
       'admin.users.blockReason': 'Reason (required)',
       'admin.users.blockReasonPlaceholder': 'Why is this user being blocked?',
+      'admin.users.saved': 'Saved.',
+      'admin.users.deliveryCap': 'Delivery Capability',
+      'admin.users.canDeliver': 'Also serves as a nearby Delivery Agent',
+      'admin.users.canDeliverHint':
+        'Lets this VCO be assigned last-mile deliveries within their own service area, on top of collections. Their role and permissions are unchanged otherwise.',
       // Registrations
       'admin.reg.title': 'Registrations',
       'admin.reg.refresh': 'Refresh',
@@ -2073,6 +2079,7 @@ export const resources = {
       'agent.nav.overview': 'கண்ணோட்டம்',
       'agent.nav.tracking': 'டெலிவரி கண்காணிப்பு',
       'agent.nav.collections': 'சேகரிப்புகள்',
+      'agent.nav.collectionsDelivery': 'சேகரிப்பு & விநியோகம்',
       'agent.nav.delivered': 'வழங்கப்பட்டது',
       'agent.nav.completed': 'முடிந்தது',
       'agent.nav.profile': 'சுயவிவரம்',
@@ -3555,6 +3562,11 @@ export const resources = {
       'admin.users.blockConfirm': 'இந்தப் பயனரைத் தடுக்கவா?',
       'admin.users.blockReason': 'காரணம் (தேவை)',
       'admin.users.blockReasonPlaceholder': 'இந்தப் பயனர் ஏன் தடுக்கப்படுகிறார்?',
+      'admin.users.saved': 'சேமிக்கப்பட்டது.',
+      'admin.users.deliveryCap': 'விநியோகத் திறன்',
+      'admin.users.canDeliver': 'அருகிலுள்ள விநியோக முகவராகவும் செயல்படுகிறார்',
+      'admin.users.canDeliverHint':
+        'இந்த VCO தங்கள் சேவைப் பகுதிக்குள், சேகரிப்புகளுடன் சேர்த்து கடைசி-மைல் விநியோகங்களையும் மேற்கொள்ள அனுமதிக்கிறது. அவர்களின் பங்கும் அனுமதிகளும் மாறாது.',
       // Registrations
       'admin.reg.title': 'பதிவுகள்',
       'admin.reg.refresh': 'புதுப்பி',

@@ -150,10 +150,13 @@ export interface AgentStats {
   codOrPipeline: string;
 }
 
-/** Derive the 3 header stats, role-aware (VCO vs Delivery Agent). */
-export function deriveAgentStats(q: OrderQueues, isVCO: boolean): AgentStats {
+/** Derive the 3 header stats, role-aware (VCO vs Delivery Agent). A VCO flagged
+ *  `canDeliver` also works last-mile, so their queue count folds in the
+ *  collect-from-hub lane on top of their verify lane. */
+export function deriveAgentStats(q: OrderQueues, isVCO: boolean, canDeliver = false): AgentStats {
   const queue =
-    (isVCO ? q.toVerify.length : q.toCollect.length) +
+    (isVCO ? q.toVerify.length : 0) +
+    (!isVCO || canDeliver ? q.toCollect.length : 0) +
     q.toPickUp.length +
     q.inTransit.length +
     q.toDeliver.length;

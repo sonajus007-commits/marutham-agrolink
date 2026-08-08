@@ -50,6 +50,9 @@ export interface User {
   /** Delegated trust flags from the employee record (union extra permissions). */
   is_hr_admin?: boolean;
   is_board_director?: boolean;
+  /** VCO who also serves as a nearby Delivery Agent — an additive capability that
+   *  unions the Delivery Agent permissions without changing their role. */
+  can_deliver?: boolean;
   status: 'active' | 'suspended' | 'blocked';
   approval_status?: string | null;
   fname?: string | null;

@@ -546,7 +546,15 @@ router.get('/', async (req, res) => {
     if (role === 'VCO') {
       // Match on the VCO's village. village_town is the canonical field (editable
       // in profile/admin edit); vco_city is a legacy fallback for older records.
-      query = query.eq('village', u.village_town || u.vco_city);
+      const vcoVillage = u.village_town || u.vco_city || '';
+      if (u.can_deliver) {
+        // A delivery-capable VCO also works the last-mile orders assigned to them
+        // (agent_id), on top of their collection queue (their village). Quote the
+        // village value so a name with a comma can't break the .or() parse.
+        query = query.or(`village.eq."${String(vcoVillage).replace(/"/g, '')}",agent_id.eq.${u.id}`);
+      } else {
+        query = query.eq('village', vcoVillage);
+      }
 
     } else if (role === 'District Manager' || role === 'Hub Incharge') {
       query = query.eq('district', u.district_assign || u.district);

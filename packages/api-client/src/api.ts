@@ -490,6 +490,14 @@ export const api = {
   getUser(id: string): Promise<{ user: User }> {
     return apiFetch<{ user: User }>('GET', '/users/' + id);
   },
+  /** Admin edit of a staff account (user_management edit). Whitelisted server-side;
+   *  used for the VCO can_deliver toggle. */
+  adminUpdateUser(
+    id: string,
+    body: { can_deliver?: boolean } & Record<string, unknown>,
+  ): Promise<{ message: string; user: User }> {
+    return apiFetch('PATCH', '/users/' + id, body);
+  },
   /** active | suspended | blocked. A block needs a reason (server enforces). */
   setUserStatus(
     id: string,

@@ -31,7 +31,7 @@ interface AgentOrdersState {
 }
 
 /** Fetch orders, group into queues, derive stats, and poll every 60s. */
-export function useAgentOrders(isVCO: boolean): AgentOrdersState {
+export function useAgentOrders(isVCO: boolean, canDeliver = false): AgentOrdersState {
   const { t } = useTranslation();
   const [queues, setQueues] = useState<OrderQueues | null>(null);
   const [stats, setStats] = useState<AgentStats | null>(null);
@@ -45,7 +45,7 @@ export function useAgentOrders(isVCO: boolean): AgentOrdersState {
       if (!mounted.current) return;
       const q = groupOrders(res.orders || []);
       setQueues(q);
-      setStats(deriveAgentStats(q, isVCO));
+      setStats(deriveAgentStats(q, isVCO, canDeliver));
       setError(null);
     } catch (e) {
       if (!mounted.current) return;
@@ -55,7 +55,7 @@ export function useAgentOrders(isVCO: boolean): AgentOrdersState {
     }
     // `t` is a dependency: without it this closure keeps the language it was
     // created in, and the fallback would still be English after a switch.
-  }, [isVCO, t]);
+  }, [isVCO, canDeliver, t]);
 
   useEffect(() => {
     mounted.current = true;

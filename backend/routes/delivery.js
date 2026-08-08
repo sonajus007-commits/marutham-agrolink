@@ -752,18 +752,27 @@ router.get('/:id/eligible-agents', async (req, res) => {
       : order.village || null;
   const taluk = (da.taluk || '').trim() || null;
 
-  // All Delivery Agents in the order's district — the manual-fallback list.
-  const { data: all, error: ae } = await supabase
+  // The candidate pool in the order's district — the manual-fallback list.
+  // Collection legs are worked by Delivery Agents. Last-mile (delivery) legs add
+  // VCOs flagged can_deliver, so a VCO can take a nearby doorstep drop; they're
+  // narrowed to their own coverage further down (a VCO is never a district-wide
+  // fallback, only offered where their service_areas reach — "nearby only").
+  let poolQuery = supabase
     .from('users')
     .select(
       'id, fname, lname, phone, agent_vehicle, village_town, service_villages, ' +
-        'service_areas, hub_id, taluk, available_date, agent_lat, agent_lng, district',
+        'service_areas, hub_id, taluk, available_date, agent_lat, agent_lng, district, ' +
+        'admin_role, can_deliver',
     )
     .eq('role', 'admin')
-    .eq('admin_role', 'Delivery Agent')
     .is('deleted_at', null)          // removed agents are not offered for assignment
     .eq('district', order.district)
     .eq('status', 'active');
+  poolQuery =
+    leg === 'delivery'
+      ? poolQuery.or('admin_role.eq.Delivery Agent,and(admin_role.eq.VCO,can_deliver.eq.true)')
+      : poolQuery.eq('admin_role', 'Delivery Agent');
+  const { data: all, error: ae } = await poolQuery;
   if (ae) return res.status(500).json({ error: ae.message });
 
   // ready-today ⇔ available_date === today (IST). The business runs in one tz.
@@ -834,7 +843,20 @@ router.get('/:id/eligible-agents', async (req, res) => {
     return x.name.localeCompare(y.name);
   };
 
-  const shaped = (all || []).map(shape);
+  // Compose the pool explicitly rather than leaning on the DB .or() alone: a
+  // Delivery Agent stays in the district-wide fallback (coverage or not); on a
+  // delivery leg a can_deliver VCO is added but ONLY where their service_areas
+  // actually reach (nearby only). Anyone else is out.
+  const pool = (all || []).filter((a) => {
+    if (a.admin_role === 'Delivery Agent') return true;
+    if (leg === 'delivery' && a.admin_role === 'VCO' && a.can_deliver === true) {
+      const { cv, ct } = covers(a);
+      return cv || ct;
+    }
+    return false;
+  });
+
+  const shaped = pool.map(shape);
   const matched = shaped.filter((s) => s.covers_village || s.covers_taluk).sort(bySort);
   const allSorted = [...shaped].sort(bySort);
 

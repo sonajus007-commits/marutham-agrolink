@@ -91,14 +91,36 @@ function Body({
   onChanged: () => void;
 }) {
   const { t } = useTranslation();
+  const { user: me } = useAuth();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [showBlock, setShowBlock] = useState(false);
   const [reason, setReason] = useState('');
+  const [canDeliver, setCanDeliver] = useState(!!user.can_deliver);
+  useEffect(() => setCanDeliver(!!user.can_deliver), [user.can_deliver]);
 
   const status = String(user.status);
   const roleLabel = user.role === 'admin' ? String(user.admin_role || 'Admin') : String(user.role);
   const isSeller = user.role === 'farmer';
+  const isVCO = user.role === 'admin' && user.admin_role === 'VCO';
+  const canEditUsers = ((me?.permissions?.user_management?.actions as string[]) || []).includes(
+    'edit',
+  );
+
+  async function saveCanDeliver(next: boolean) {
+    setCanDeliver(next); // optimistic
+    setBusy(true);
+    try {
+      await api.adminUpdateUser(user.id, { can_deliver: next });
+      toast(t('admin.users.saved', 'Saved.'), 'ok');
+      onChanged();
+    } catch (e) {
+      setCanDeliver(!next); // revert on failure
+      toast(e instanceof Error ? e.message : 'Could not save', 'er');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function change(next: AccountStatus, why?: string) {
     setBusy(true);
@@ -164,6 +186,26 @@ function Body({
         ) : null}
         {address ? <div className="pt-1.5 text-2xs text-fg-muted">{address}</div> : null}
       </Section>
+
+      {isVCO ? (
+        <Section title={`🛵 ${t('admin.users.deliveryCap', 'Delivery Capability')}`}>
+          <label className="flex items-center gap-2 py-1 text-sm text-fg">
+            <input
+              type="checkbox"
+              checked={canDeliver}
+              disabled={busy || !canEditUsers}
+              onChange={(e) => saveCanDeliver(e.target.checked)}
+            />
+            {t('admin.users.canDeliver', 'Also serves as a nearby Delivery Agent')}
+          </label>
+          <p className="mt-1 text-2xs text-fg-muted">
+            {t(
+              'admin.users.canDeliverHint',
+              'Lets this VCO be assigned last-mile deliveries within their own service area, on top of collections. Their role and permissions are unchanged otherwise.',
+            )}
+          </p>
+        </Section>
+      ) : null}
 
       {isSeller ? (
         <Section title={`🏦 ${t('admin.users.seller')}`}>

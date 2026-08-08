@@ -614,3 +614,66 @@ test('an At Hub order cannot be switched to the direct route', async () => {
   assert.match(res.body.error, /cannot be switched/);
   assert.equal(db.callsTo('orders', 'update').length, 0);
 });
+
+// ── eligible-agents: VCO as a nearby delivery agent ───────────────────────────
+// The delivery leg offers Delivery Agents (district-wide fallback) PLUS VCOs
+// flagged can_deliver, but only where that VCO's service_areas actually cover the
+// delivery village (nearby only). A plain VCO (no flag) is never offered, and a
+// non-management/other role never enters the pool.
+const REQ = { id: 'req1', role: 'admin', admin_role: 'VCO', fname: 'Requester' };
+
+function eligibleDb() {
+  const order = {
+    id: 'o1',
+    district: 'Pudukkottai',
+    delivery_village: 'Alangudi',
+    village: 'Alangudi',
+    delivery_address: {},
+  };
+  const users = [
+    { id: 'da1', fname: 'DA', admin_role: 'Delivery Agent', can_deliver: false,
+      district: 'Pudukkottai', status: 'active', service_villages: ['Alangudi'], service_areas: [] },
+    { id: 'vco_cov', fname: 'VcoCover', admin_role: 'VCO', can_deliver: true,
+      district: 'Pudukkottai', status: 'active', service_villages: ['Alangudi'], service_areas: [] },
+    { id: 'vco_far', fname: 'VcoFar', admin_role: 'VCO', can_deliver: true,
+      district: 'Pudukkottai', status: 'active', service_villages: ['Somewhere'], service_areas: [] },
+    { id: 'vco_plain', fname: 'VcoPlain', admin_role: 'VCO', can_deliver: false,
+      district: 'Pudukkottai', status: 'active', service_villages: ['Alangudi'], service_areas: [] },
+    { id: 'hub1', fname: 'Hub', admin_role: 'Hub Incharge', can_deliver: false,
+      district: 'Pudukkottai', status: 'active', service_villages: ['Alangudi'], service_areas: [] },
+  ];
+  return fakeSupabase({ 'orders:select': { data: [order] }, 'users:select': { data: users } });
+}
+
+test('eligible-agents (delivery): a covering can_deliver VCO is offered, a far one is not', async () => {
+  const db = eligibleDb();
+  app = await mountRoute('delivery', { supabase: db, user: REQ });
+  const res = await app.get('/o1/eligible-agents?leg=delivery');
+
+  assert.equal(res.status, 200);
+  const ids = res.body.all.map((a) => a.id).sort();
+  // DA (fallback) + the covering can_deliver VCO — and nobody else.
+  assert.deepEqual(ids, ['da1', 'vco_cov']);
+  const matchedIds = res.body.matched.map((a) => a.id).sort();
+  assert.deepEqual(matchedIds, ['da1', 'vco_cov']);
+});
+
+test('eligible-agents: a plain VCO (no can_deliver) is never offered for delivery', async () => {
+  const db = eligibleDb();
+  app = await mountRoute('delivery', { supabase: db, user: REQ });
+  const res = await app.get('/o1/eligible-agents?leg=delivery');
+
+  const ids = res.body.all.map((a) => a.id);
+  assert.ok(!ids.includes('vco_plain'), 'a VCO without the flag must not appear');
+  assert.ok(!ids.includes('hub1'), 'a non delivery/VCO role must not appear');
+});
+
+test('eligible-agents (collection): VCOs are never offered — Delivery Agents only', async () => {
+  const db = eligibleDb();
+  app = await mountRoute('delivery', { supabase: db, user: REQ });
+  const res = await app.get('/o1/eligible-agents?leg=collection');
+
+  const ids = res.body.all.map((a) => a.id);
+  assert.ok(ids.includes('da1'), 'the Delivery Agent is offered for collection');
+  assert.ok(!ids.some((i) => i.startsWith('vco')), 'no VCO on the collection leg');
+});

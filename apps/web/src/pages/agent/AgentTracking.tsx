@@ -14,6 +14,7 @@ export function AgentTracking({
   loading,
   error,
   isVCO,
+  canDeliver = false,
   onScanned,
   onOpenView,
   onOpenDeliver,
@@ -24,6 +25,8 @@ export function AgentTracking({
   loading: boolean;
   error: string | null;
   isVCO: boolean;
+  /** A VCO who also works last-mile deliveries — shows the hub-collect lane too. */
+  canDeliver?: boolean;
   onScanned: () => void;
   onOpenView: (id: string) => void;
   onOpenDeliver: (id: string) => void;
@@ -72,8 +75,9 @@ export function AgentTracking({
             }
           : null,
         /* Hub lane: the Incharge has named this agent, and collecting it is their
-           scan. A VCO never sees it — a VCO does not work the hub. */
-        !isVCO && queues.toCollect.length
+           scan. A plain VCO never sees it — but a delivery-capable VCO assigned a
+           last-mile drop does, so they can collect it from the hub. */
+        (!isVCO || canDeliver) && queues.toCollect.length
           ? {
               key: 'collect',
               title: `🏭 ${t('agent.queue.collect', 'Collect from Hub')}`,

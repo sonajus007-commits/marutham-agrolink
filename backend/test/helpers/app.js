@@ -50,6 +50,9 @@ function permsForUser(user) {
   if (roleKey) add(roleKey);
   if (user.is_board_director) add('board_of_directors');
   if (user.is_hr_admin) add('hr');
+  // A VCO flagged can_deliver unions the Delivery Agent role — mirrors the
+  // additive grant in middleware/permissions.js so route tests see the same shape.
+  if (user.can_deliver && roleKey !== 'delivery_agent') add('delivery_agent');
   return map;
 }
 

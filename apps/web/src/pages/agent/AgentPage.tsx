@@ -40,8 +40,11 @@ function AgentPageInner() {
   const { user, logout } = useAuth();
   const toast = useToast();
   const isVCO = user?.admin_role === 'VCO';
+  // A VCO flagged can_deliver also works last-mile deliveries — their queues show
+  // both the collection and the delivery lanes.
+  const canDeliver = !!user?.can_deliver;
 
-  const { queues, stats, loading, error, reload } = useAgentOrders(isVCO);
+  const { queues, stats, loading, error, reload } = useAgentOrders(isVCO, canDeliver);
   const field = useFieldDashboard();
   const clock = useClock();
 
@@ -95,7 +98,9 @@ function AgentPageInner() {
       id: 'work',
       icon: isVCO ? '📋' : '🚚',
       label: isVCO
-        ? t('agent.nav.collections', 'Collections')
+        ? canDeliver
+          ? t('agent.nav.collectionsDelivery', 'Collections & Delivery')
+          : t('agent.nav.collections', 'Collections')
         : t('agent.nav.tracking', 'Delivery Tracking'),
       badge: workBadge || undefined,
     },
@@ -216,6 +221,7 @@ function AgentPageInner() {
                 loading={loading}
                 error={error}
                 isVCO={isVCO}
+                canDeliver={canDeliver}
                 onScanned={onScanned}
                 onOpenView={(id) => setSheet({ kind: 'view', orderId: id })}
                 onOpenDeliver={(id) => setSheet({ kind: 'deliver', orderId: id })}

@@ -1421,6 +1421,11 @@
           "type": "text",
           "notNull": false
         },
+        "can_deliver": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "false"
+        },
         "city": {
           "type": "text",
           "notNull": false
