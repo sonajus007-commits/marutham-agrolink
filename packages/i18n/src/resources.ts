@@ -627,7 +627,7 @@ export const resources = {
       'common.optional': 'optional',
       // Order status. The VALUE stays English (statusColor/buildPipeline key off it); these are only how it is spoken.
       'status.orderPlaced': 'Order Placed',
-      'status.packaged': 'Packaged',
+      'status.packaged': 'Packed',
       'status.vcoVerified': 'VCO Verified',
       'status.pickedUp': 'Picked Up',
       'status.inTransit': 'In Transit',
