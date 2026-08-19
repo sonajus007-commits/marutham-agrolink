@@ -10,6 +10,8 @@ import {
   needsSubscriptionPayment,
   listingState,
   canConfirmListing,
+  needsSupplyConfirm,
+  todaysSupplyListings,
   listingPriceRs,
   requestableProducts,
   rupeesToPaise,
@@ -510,6 +512,53 @@ describe('canConfirmListing', () => {
     expect(canConfirmListing({ ...base, listed: false })).toBe(false);
     expect(canConfirmListing({ ...base, farmer_price: 0 })).toBe(false);
     expect(canConfirmListing({ ...base, listing_status: 'pending' })).toBe(false);
+  });
+});
+
+describe("today's supply — the daily one-tap confirm set", () => {
+  const listing = (over: Partial<FarmerListing> = {}): FarmerListing => ({
+    id: 'l1',
+    product_id: 'p1',
+    farmer_price: '30.00',
+    listing_status: 'active',
+    listed: true,
+    confirmed: false,
+    ...over,
+  });
+
+  describe('needsSupplyConfirm', () => {
+    it('a priced, live-but-unconfirmed listing needs confirming', () => {
+      expect(needsSupplyConfirm(listing())).toBe(true);
+    });
+    it('a listing whose cutoff passed still needs confirming for today', () => {
+      expect(needsSupplyConfirm(listing({ listed: false }))).toBe(true);
+    });
+    it('an already-confirmed listing does not', () => {
+      expect(needsSupplyConfirm(listing({ confirmed: true }))).toBe(false);
+    });
+    it('pending / needs-price / rejected rows are never in scope', () => {
+      expect(needsSupplyConfirm(listing({ listing_status: 'pending' }))).toBe(false);
+      expect(needsSupplyConfirm(listing({ farmer_price: 0 }))).toBe(false);
+      expect(needsSupplyConfirm(listing({ listing_status: 'rejected' }))).toBe(false);
+    });
+  });
+
+  describe('todaysSupplyListings', () => {
+    it('keeps every approved, priced listing regardless of registration recency', () => {
+      const rows: FarmerListing[] = [
+        listing({ id: 'a' }), // listed
+        listing({ id: 'b', confirmed: true }), // confirmed (done)
+        listing({ id: 'c', listed: false }), // cutoff passed
+        listing({ id: 'd', listing_status: 'pending' }), // not approved
+        listing({ id: 'e', farmer_price: 0 }), // needs price
+        listing({ id: 'f', listing_status: 'rejected' }), // rejected
+      ];
+      expect(todaysSupplyListings(rows).map((l) => l.id)).toEqual(['a', 'b', 'c']);
+    });
+
+    it('is empty when the seller has no priced, approved products', () => {
+      expect(todaysSupplyListings([listing({ listing_status: 'pending' })])).toEqual([]);
+    });
   });
 });
 

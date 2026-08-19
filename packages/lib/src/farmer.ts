@@ -597,6 +597,35 @@ export function canConfirmListing(l: FarmerListing): boolean {
   return listingState(l) === 'listed';
 }
 
+/* ── Today's supply (the daily one-tap confirm) ────────────────────────────
+ * A seller's regular sellable products are the ones already approved and priced.
+ * Every market day the overnight reset (server-side) clears `listed`/`confirmed`,
+ * so these listings drop to `cutoff_passed` and each must be re-listed and then
+ * confirmed to reach customers. `todaysSupplyListings` is that daily set — it is
+ * deliberately NOT filtered by how recently the product was registered: a staple
+ * priced weeks ago is still today's supply. Recency, if wanted, is a sort order,
+ * never a filter. The admin approval path is untouched: pending/rejected/
+ * needs-price rows are never in this set. */
+
+/** True while a priced, active listing still has to be confirmed for today. */
+export function needsSupplyConfirm(l: FarmerListing): boolean {
+  const s = listingState(l);
+  return s === 'listed' || s === 'cutoff_passed';
+}
+
+/**
+ * The seller's regular sellable products — every approved, priced listing,
+ * whether or not it is already confirmed for today. Callers show the
+ * unconfirmed ones (needsSupplyConfirm) as the daily to-do and the confirmed
+ * ones as already done.
+ */
+export function todaysSupplyListings(listings: FarmerListing[]): FarmerListing[] {
+  return listings.filter((l) => {
+    const s = listingState(l);
+    return s === 'listed' || s === 'cutoff_passed' || s === 'confirmed';
+  });
+}
+
 /** Products a seller has not already requested, in any state. */
 export function requestableProducts<T extends { id: string; available?: boolean }>(
   products: T[],

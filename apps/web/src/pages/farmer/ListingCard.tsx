@@ -46,11 +46,15 @@ export function ListingCard({
   return (
     <article className="listing">
       <div className="listing__top">
-        {/* The product's standard image. The photos this listing carries are the
-            seller's own uploads — shown where they are managed (the listing form) and
-            reviewed (admin), not as the product's thumbnail here. */}
-        <div className="listing__thumb" aria-hidden="true">
-          {getProductEmoji(p?.name || '')}
+        {/* The seller's own first photo when they have uploaded one — the same image
+            managed in the listing form and the Confirm-today's-supply card — falling
+            back to the product's standard emoji. */}
+        <div className="listing__thumb">
+          {listing.images?.[0] ? (
+            <img src={listing.images[0]} alt="" />
+          ) : (
+            <span aria-hidden="true">{getProductEmoji(p?.name || '')}</span>
+          )}
         </div>
         <div className="listing__id">
           <div className="listing__name">{p?.name || '—'}</div>

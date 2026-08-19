@@ -17,6 +17,7 @@ import {
 import { FadeIn } from '../../components/FadeIn';
 import { FarmerOrderRow } from './FarmerOrderRow';
 import { FarmerOrderSheet } from './FarmerOrderSheet';
+import { TodaysSupplyCard } from './TodaysSupplyCard';
 
 const FarmerInsights = lazy(() => import('./FarmerInsights'));
 
@@ -159,6 +160,10 @@ export function FarmerHomeTab({
           </EmptyState>
         </FadeIn>
       ) : null}
+
+      <FadeIn delay={0.06}>
+        <TodaysSupplyCard listings={listings} onReload={loadSide} />
+      </FadeIn>
 
       <FadeIn delay={0.08}>
         <section className="fm-qa" aria-label={t('farmer.home.qa.title')}>
