@@ -13,6 +13,7 @@ const toast = vi.fn();
 const getCurrentPosition = vi.fn();
 const getOrder = vi.fn();
 const deliverOffline = vi.fn();
+const trackOrder = vi.fn();
 const onChanged = vi.fn();
 
 vi.mock('../../../components/Toast', () => ({ useToast: () => toast }));
@@ -26,6 +27,7 @@ vi.mock('@marutham/api-client', async (importActual) => {
     api: {
       getOrder: (...args: unknown[]) => getOrder(...args),
       deliverOffline: (...args: unknown[]) => deliverOffline(...args),
+      trackOrder: (...args: unknown[]) => trackOrder(...args),
     },
   };
 });
@@ -59,6 +61,9 @@ beforeEach(() => {
   getCurrentPosition.mockResolvedValue({ lat: 10.5, lng: 78.8 });
   getOrder.mockResolvedValue(orderAt(4));
   deliverOffline.mockResolvedValue({ message: 'Order advanced to: Delivered.' });
+  // The deliver sheet now polls /track for the agent's live route map; the map is
+  // invisible without a Maps key (as in tests), but the hook still calls trackOrder.
+  trackOrder.mockResolvedValue(null);
 });
 
 async function renderAndConfirm(orderId = 'o1') {

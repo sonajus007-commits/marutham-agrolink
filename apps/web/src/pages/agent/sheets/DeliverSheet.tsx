@@ -13,6 +13,8 @@ import {
   type AddressObject,
 } from '@marutham/lib';
 import { useToast } from '../../../components/Toast';
+import { LiveOrderMap } from '../../../components/LiveOrderMap';
+import { useOrderTrack } from '../../../lib/useOrderTrack';
 import { getCurrentPosition } from '../../../native/geolocation';
 
 export function DeliverSheet({
@@ -31,6 +33,12 @@ export function DeliverSheet({
   const [data, setData] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // The agent's own live route to the door. This agent IS the order's assigned agent
+  // and is GPS-pinging every 30 s while out delivering, so /track returns their own
+  // moving position plus the destination — the very feed the consumer map consumes.
+  // Poll only while the sheet is open; the map stays invisible without a Maps key or
+  // coordinates, and the address + confirm button below carry the delivery regardless.
+  const track = useOrderTrack(open ? orderId : null, open);
 
   useEffect(() => {
     if (!open || !orderId) return;
@@ -127,6 +135,11 @@ export function DeliverSheet({
           ) : null}
 
           <DeliveryAddress order={o} />
+
+          {/* Live route from the agent's own position to the customer's door, with
+              ETA — the same map the customer watches, shown here to navigate the last
+              mile. Renders only when Maps is configured and there are coordinates. */}
+          <LiveOrderMap track={track} />
 
           <div className="a-card">
             <h3>🌿 {t('agent.deliver.items', 'Items to Hand Over')}</h3>

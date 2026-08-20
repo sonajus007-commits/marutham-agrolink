@@ -26,48 +26,10 @@ import {
 } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
 import { LiveOrderMap } from '../../components/LiveOrderMap';
+import { TRACK_POLL_MS, useOrderTrack } from '../../lib/useOrderTrack';
 import { CancelOrderModal } from './CancelOrderModal';
 import { ReturnRequestModal } from './ReturnRequestModal';
 import { useReorder } from './useReorder';
-
-/** How often an in-flight order re-checks its agent/ETA. */
-const TRACK_POLL_MS = 30_000;
-
-/**
- * Poll GET /orders/:id/track for one order or split parcel: a one-shot fetch on
- * mount (so even a just-delivered parcel gets its final map), then a 30 s refresh
- * while it is still in flight. Best-effort — a failed fetch keeps the last good
- * value and the next tick retries. Used to drive each split part's own live map;
- * the top-level order does its tracking inline in OrderDetailBody (it also folds
- * status changes back into the loaded order).
- */
-function useOrderTrack(orderId: string, live: boolean): TrackResponse | null {
-  const [track, setTrack] = useState<TrackResponse | null>(null);
-  useEffect(() => {
-    let active = true;
-    const load = () =>
-      api
-        .trackOrder(orderId)
-        .then((tr) => {
-          if (active) setTrack(tr);
-        })
-        .catch(() => {
-          /* transient — a later tick (or the next open) retries */
-        });
-    load();
-    if (!live) {
-      return () => {
-        active = false;
-      };
-    }
-    const id = setInterval(load, TRACK_POLL_MS);
-    return () => {
-      active = false;
-      clearInterval(id);
-    };
-  }, [orderId, live]);
-  return track;
-}
 
 export function OrderDetailSheet({
   orderId,
