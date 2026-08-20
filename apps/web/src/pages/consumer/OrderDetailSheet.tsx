@@ -1,7 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, OrderPipeline, OrderTimeline, Sheet, Spinner, StarRating } from '@marutham/ui';
-import { neutral } from '@marutham/tokens';
 import { api, type TrackResponse } from '@marutham/api-client';
 import {
   addressLabelKey,
@@ -26,17 +25,49 @@ import {
   type OrderPart,
 } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
-import { isMapsConfigured } from '../../lib/googleMaps';
+import { LiveOrderMap } from '../../components/LiveOrderMap';
 import { CancelOrderModal } from './CancelOrderModal';
 import { ReturnRequestModal } from './ReturnRequestModal';
 import { useReorder } from './useReorder';
 
-// Lazy so the Google Maps SDK chunk loads only when a live map is actually shown,
-// and never at all without an API key configured.
-const OrderMap = lazy(() => import('../../components/OrderMap'));
-
 /** How often an in-flight order re-checks its agent/ETA. */
 const TRACK_POLL_MS = 30_000;
+
+/**
+ * Poll GET /orders/:id/track for one order or split parcel: a one-shot fetch on
+ * mount (so even a just-delivered parcel gets its final map), then a 30 s refresh
+ * while it is still in flight. Best-effort — a failed fetch keeps the last good
+ * value and the next tick retries. Used to drive each split part's own live map;
+ * the top-level order does its tracking inline in OrderDetailBody (it also folds
+ * status changes back into the loaded order).
+ */
+function useOrderTrack(orderId: string, live: boolean): TrackResponse | null {
+  const [track, setTrack] = useState<TrackResponse | null>(null);
+  useEffect(() => {
+    let active = true;
+    const load = () =>
+      api
+        .trackOrder(orderId)
+        .then((tr) => {
+          if (active) setTrack(tr);
+        })
+        .catch(() => {
+          /* transient — a later tick (or the next open) retries */
+        });
+    load();
+    if (!live) {
+      return () => {
+        active = false;
+      };
+    }
+    const id = setInterval(load, TRACK_POLL_MS);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+  }, [orderId, live]);
+  return track;
+}
 
 export function OrderDetailSheet({
   orderId,
@@ -191,23 +222,6 @@ function OrderDetailBody({
   const effectiveStatus = confirmedStatus ?? String(o.status ?? '');
   const isDelivered = effectiveStatus === 'Delivered';
 
-  // Coordinates for the live map, read from the polled track response (fresh agent
-  // position). Rendered only for a single-parcel order that has a destination AND at
-  // least one journey point (agent / dispatch / delivered) to draw, and only when
-  // Google Maps is configured — otherwise the pipeline stepper stands alone.
-  const to = track?.order;
-  const pt = (lat?: number | null, lng?: number | null) =>
-    typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : null;
-  const mapDest = pt(to?.dest_lat, to?.dest_lng);
-  const mapAgent = track?.agentLoc
-    ? { lat: track.agentLoc.lat, lng: track.agentLoc.lng, at: track.agentLoc.at }
-    : null;
-  const mapDispatch = pt(to?.dispatched_lat, to?.dispatched_lng);
-  const mapDelivered = pt(to?.delivered_lat, to?.delivered_lng);
-  const mapView =
-    isMapsConfigured() && !isSplit && mapDest && (mapAgent || mapDispatch || mapDelivered)
-      ? { dest: mapDest, agent: mapAgent, dispatch: mapDispatch, delivered: mapDelivered }
-      : null;
   // Confirm receipt is the ONE status action a customer owns: Out for Delivery →
   // Delivered. The server re-checks role, ownership and stage, so this is just UX.
   const canConfirm = !isOrderCancelled(o) && effectiveStatus === 'Out for Delivery';
@@ -328,31 +342,11 @@ function OrderDetailBody({
             ) : null}
           </div>
         ) : null}
-        {/* Live-tracking map: only for a single-parcel order that has a destination
-            plus a journey point to draw, and only when Google Maps is configured.
-            Split orders track each parcel separately (follow-up); the pipeline
-            stepper above remains the fallback whenever the map isn't shown. */}
-        {mapView ? (
-          <Suspense
-            fallback={
-              <div
-                style={{
-                  height: 300,
-                  marginTop: 12,
-                  borderRadius: 12,
-                  background: neutral[200],
-                }}
-              />
-            }
-          >
-            <OrderMap
-              dest={mapView.dest}
-              agent={mapView.agent}
-              dispatch={mapView.dispatch}
-              delivered={mapView.delivered}
-            />
-          </Suspense>
-        ) : null}
+        {/* Live-tracking map for a single-parcel order. A split order has no one
+            journey to draw here — each parcel travels on its own, so the map is
+            shown per part below instead. The pipeline stepper above remains the
+            fallback whenever the map isn't shown (no Maps key, or no coordinates). */}
+        {isSplit ? null : <LiveOrderMap track={track} />}
       </div>
 
       <div
@@ -647,7 +641,13 @@ function PartCard({
   const { t } = useTranslation();
   const [showCancel, setShowCancel] = useState(false);
 
-  const partStatus = isOrderCancelled(part) ? 'Cancelled' : String(part.status ?? '');
+  // Each parcel is its own order with its own agent and route, so it tracks itself:
+  // poll this part's /track for the live agent dot and to keep its stepper honest as
+  // the parcel advances, exactly as the top-level order does. A cancelled part has
+  // nothing left to track.
+  const partTrack = useOrderTrack(part.id, isOrderActive(part));
+  const liveStatus = partTrack?.order.status;
+  const partStatus = isOrderCancelled(part) ? 'Cancelled' : String(liveStatus ?? part.status ?? '');
   const partDelivered = partStatus === 'Delivered';
 
   return (
@@ -684,9 +684,13 @@ function PartCard({
       {isOrderCancelled(part) ? null : (
         <div style={{ padding: '4px 0 10px' }}>
           <OrderPipeline
-            nodes={buildPipeline(part.route || 'direct', partStatus)}
+            nodes={buildPipeline(partTrack?.order.route || part.route || 'direct', partStatus)}
             labelFor={(l) => t(statusKey(l), l)}
           />
+          {/* This parcel's own live map — its agent, its dispatch hub, the shared
+              destination — shown only when Maps is configured and there is a route
+              to draw; otherwise the stepper above stands alone. */}
+          <LiveOrderMap track={partTrack} />
         </div>
       )}
 
