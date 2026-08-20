@@ -250,6 +250,16 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
   // fulfilment `village` above.
   const deliveryVillage = (delivery_address && delivery_address.village_town) || req.user.village_town || null;
 
+  // Delivery destination coordinates (geolocation phase 5): the map pin the consumer
+  // dropped on the delivery address, promoted from the delivery_address JSONB to
+  // top-level columns so the live-tracking map can read it without parsing the blob.
+  // Best-effort — null when the address was never pinned; the order is never blocked.
+  const destLat =
+    delivery_address && typeof delivery_address.lat === 'number' ? delivery_address.lat : null;
+  const destLng =
+    delivery_address && typeof delivery_address.lng === 'number' ? delivery_address.lng : null;
+  const destCoords = destLat !== null && destLng !== null ? { dest_lat: destLat, dest_lng: destLng } : {};
+
   // ── 4. Insert order — one row, or a parent + one child per seller ─────────
   // A cart from a single seller stays exactly one row, as it always has. A cart
   // spanning sellers becomes a parent (what the customer pays for and tracks) plus
@@ -284,6 +294,7 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
       // any rollup status. Every pipeline mutation refuses a row routed this way.
       route:         isSplit ? SPLIT_ROUTE : '',
       ...(delivery_address ? { delivery_address } : {}),
+      ...destCoords,
     })
     .select()
     .single();
@@ -340,6 +351,7 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
         status:        'Order Placed',
         route:         '',
         ...(delivery_address ? { delivery_address } : {}),
+        ...destCoords,
       };
     });
 
@@ -468,7 +480,7 @@ router.get('/', async (req, res) => {
   /** Farmers only: { order_id → paise this farmer is owed }. Attached below. */
   let farmerPayouts = null;
 
-  const COLUMNS = 'id, code, consumer_name, district, village, delivery_village, total, status, stage, route, pay_method, pay_status, created_at, agent_name';
+  const COLUMNS = 'id, code, consumer_name, district, village, delivery_village, total, status, stage, route, pay_method, pay_status, created_at, agent_name, dest_lat, dest_lng';
 
   /* Consumers also get a line-item count, for the dashboard's Recent Orders table.
    * It is an EMBEDDED AGGREGATE rather than a second fetch-and-group (the shape the
@@ -849,7 +861,7 @@ router.get('/:id', async (req, res) => {
   if (isSplitParent) {
     const { data: children, error: childErr } = await supabase
       .from('orders')
-      .select('id, code, split_seq, seller_id, seller_name, village, district, status, stage, route, total, item_total, cancelled, cancel_reason, agent_id, agent_name, agent_phone, eta_ts, picked_up_at, delivered_at, pay_status')
+      .select('id, code, split_seq, seller_id, seller_name, village, district, status, stage, route, total, item_total, cancelled, cancel_reason, agent_id, agent_name, agent_phone, eta_ts, picked_up_at, delivered_at, pay_status, dest_lat, dest_lng')
       .eq('parent_order_id', order.id)
       .order('split_seq', { ascending: true });
 

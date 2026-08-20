@@ -5,6 +5,7 @@ const { can } = require('../middleware/permissions');
 const { distanceMeters } = require('../utils/geo');
 const { SPLIT_ROUTE } = require('../utils/orderSplit');
 const { rollupToParent } = require('../utils/orderRollup');
+const { geocodeAddress, geocodingEnabled } = require('../utils/geocode');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -888,6 +889,38 @@ router.get('/:id/track', async (req, res) => {
     return res.status(500).json({ error: 'Could not load tracking for this order. Please try again.' });
   }
 
+  // Destination fallback for the map: an order that was never map-pinned at checkout
+  // has no dest_lat/lng. The first time it's tracked, geocode its delivery address —
+  // the captured delivery_address, or the consumer's registered address — and persist
+  // the result, so the (billable) geocode is paid once and only for orders someone
+  // actually opens the map on. Best-effort: no key, no address, or a failed geocode
+  // just leaves it null and the map falls back to the pipeline stepper.
+  if (order.dest_lat == null && order.dest_lng == null && geocodingEnabled()) {
+    let addr =
+      order.delivery_address && typeof order.delivery_address === 'object'
+        ? order.delivery_address
+        : null;
+    if (!addr && order.consumer_id) {
+      const { data: consumer, error: cErr } = await supabase
+        .from('users')
+        .select('house_no, street1, street2, landmark, village_town, city, taluk, district, pincode, state')
+        .eq('id', order.consumer_id)
+        .maybeSingle();
+      if (cErr) console.error('Order tracking consumer-address lookup failed:', cErr.message);
+      addr = consumer || null;
+    }
+    const geo = addr ? await geocodeAddress(addr) : null;
+    if (geo) {
+      order.dest_lat = geo.lat;
+      order.dest_lng = geo.lng;
+      const { error: upErr } = await supabase
+        .from('orders')
+        .update({ dest_lat: geo.lat, dest_lng: geo.lng })
+        .eq('id', order.id);
+      if (upErr) console.error('Order tracking geocode write-back failed:', upErr.message);
+    }
+  }
+
   const route  = resolveRoute(order);
   // Defensive: an unrecognised route must not throw here. This handler is async, and
   // an async throw in Express 4 is not caught — the response never goes out and the
@@ -901,6 +934,25 @@ router.get('/:id/track', async (req, res) => {
     status: i < order.stage ? 'done' : i === order.stage ? 'active' : 'pending',
   }));
 
+  // Live position of the assigned agent, for the tracking map's moving dot. The
+  // agent's device pings its location (PATCH /auth/me → agent_lat/lng/agent_loc_at)
+  // while out delivering; we read whatever the currently assigned agent last sent.
+  // Best-effort: no assigned agent, or an agent who never shared location, → null.
+  // A failed read must not sink tracking — the map simply shows no live dot.
+  let agentLoc = null;
+  if (order.agent_id) {
+    const { data: ag, error: agErr } = await supabase
+      .from('users')
+      .select('agent_lat, agent_lng, agent_loc_at')
+      .eq('id', order.agent_id)
+      .maybeSingle();
+    if (agErr) {
+      console.error('Order tracking agent-location lookup failed:', agErr.message);
+    } else if (ag && ag.agent_lat != null && ag.agent_lng != null) {
+      agentLoc = { lat: ag.agent_lat, lng: ag.agent_lng, at: ag.agent_loc_at };
+    }
+  }
+
   res.json({
     order: {
       id:       order.id,
@@ -909,12 +961,23 @@ router.get('/:id/track', async (req, res) => {
       stage:    order.stage,
       route,
       cancelled: order.cancelled,
+      // Map endpoints for the tracking route line, all best-effort/nullable (a pin
+      // or a device fix can be declined). dest = where the parcel is headed,
+      // dispatched = where the hub sent it, delivered = where it actually arrived.
+      dest_lat:        order.dest_lat ?? null,
+      dest_lng:        order.dest_lng ?? null,
+      dispatched_lat:  order.dispatched_lat ?? null,
+      dispatched_lng:  order.dispatched_lng ?? null,
+      delivered_lat:   order.delivered_lat ?? null,
+      delivered_lng:   order.delivered_lng ?? null,
     },
     agent: order.agent_name ? {
       name:    order.agent_name,
       phone:   order.agent_phone,
       vehicle: order.agent_vehicle,
     } : null,
+    // The agent's last-known live coordinates + when they were captured, or null.
+    agentLoc,
     eta:      order.eta_ts,
     routeMap,
     timeline: history,

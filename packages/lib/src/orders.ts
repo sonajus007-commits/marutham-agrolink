@@ -64,6 +64,19 @@ export interface Order {
   created_at?: string;
   delivered_at?: string | null;
   /**
+   * Geolocation stamps for the live-tracking map, all best-effort and nullable
+   * (a device fix can be declined at any handoff). `dest_*` is where the parcel is
+   * headed — the pin the consumer dropped on the delivery address; `dispatched_*` is
+   * where the hub sent it for last-mile; `delivered_*` is where it actually arrived.
+   * Returned by GET /orders/:id and GET /delivery/:id/track (both select '*').
+   */
+  dest_lat?: number | null;
+  dest_lng?: number | null;
+  dispatched_lat?: number | null;
+  dispatched_lng?: number | null;
+  delivered_lat?: number | null;
+  delivered_lng?: number | null;
+  /**
    * Existing return for this order, or null. Not a column — GET /orders/:id
    * derives it from the returns table, so it is absent on the list endpoint.
    */

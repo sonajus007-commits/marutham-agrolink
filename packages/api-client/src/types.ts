@@ -300,8 +300,20 @@ export interface TrackResponse {
     stage: number;
     route: string;
     cancelled?: boolean;
+    /** Map endpoints for the tracking route line — all best-effort and nullable.
+     *  dest = where the parcel is headed (consumer's pin), dispatched = where the
+     *  hub sent it for last-mile, delivered = where it actually arrived. */
+    dest_lat?: number | null;
+    dest_lng?: number | null;
+    dispatched_lat?: number | null;
+    dispatched_lng?: number | null;
+    delivered_lat?: number | null;
+    delivered_lng?: number | null;
   };
   agent: TrackAgent | null;
+  /** The assigned agent's last-known live position + capture time (the moving dot),
+   *  or null when no agent is assigned or none has shared a location. */
+  agentLoc: { lat: number; lng: number; at: string | null } | null;
   eta: string | null;
   routeMap: Array<{ step: number; label: string; status: 'done' | 'active' | 'pending' }>;
   timeline: Array<{ label: string; note?: string; ts?: string }>;

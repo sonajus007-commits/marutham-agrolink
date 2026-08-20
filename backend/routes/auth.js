@@ -779,6 +779,15 @@ router.patch('/me', requireAuth, async (req, res) => {
     updates[key] = n;
   }
 
+  // Freshness stamp for the live-tracking map. Whenever the agent's coordinates move
+  // — the daily "Ready" snapshot or a periodic ping while out delivering — record
+  // WHEN, so a consumer's map can tell a live dot from a stale one and stop showing
+  // a position that hasn't refreshed. Clearing the location (null) clears the stamp.
+  if (updates.agent_lat !== undefined || updates.agent_lng !== undefined) {
+    const cleared = updates.agent_lat === null || updates.agent_lng === null;
+    updates.agent_loc_at = cleared ? null : new Date().toISOString();
+  }
+
   // Delivery Agent coverage — [{ taluk, villages: [] }]. Validate the shape (a bad
   // jsonb would be stored verbatim and break the reader), normalise, and bound it.
   if (updates.service_areas !== undefined) {

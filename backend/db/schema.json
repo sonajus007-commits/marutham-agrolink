@@ -638,6 +638,14 @@
           "type": "text",
           "notNull": false
         },
+        "dest_lat": {
+          "type": "double precision",
+          "notNull": false
+        },
+        "dest_lng": {
+          "type": "double precision",
+          "notNull": false
+        },
         "dispatched_lat": {
           "type": "double precision",
           "notNull": false

@@ -6,7 +6,7 @@ import { api } from '@marutham/api-client';
 import { statusKey } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider, useToast } from '../../components/Toast';
-import { useAgentOrders, useFieldDashboard, useClock } from './hooks';
+import { useAgentOrders, useFieldDashboard, useClock, useDeliveryLocationPing } from './hooks';
 import { AgentOverview } from './AgentOverview';
 import { AgentTracking } from './AgentTracking';
 import { AgentDelivered } from './AgentDelivered';
@@ -47,6 +47,15 @@ function AgentPageInner() {
   const { queues, stats, loading, error, reload } = useAgentOrders(isVCO, canDeliver);
   const field = useFieldDashboard();
   const clock = useClock();
+
+  // Beacon this agent's live position while they're on the road (a parcel Picked Up
+  // or Out for Delivery), so consumers tracking those orders see a moving dot. A VCO
+  // who doesn't do deliveries never beacons. Stops the moment the road work clears.
+  const onTheRoad =
+    (user?.admin_role === 'Delivery Agent' || canDeliver) &&
+    !!queues &&
+    queues.inTransit.length + queues.toDeliver.length > 0;
+  useDeliveryLocationPing(onTheRoad);
 
   const [tab, setTab] = useState<Tab>('overview');
   const [sheet, setSheet] = useState<SheetState>({ kind: null, orderId: null });

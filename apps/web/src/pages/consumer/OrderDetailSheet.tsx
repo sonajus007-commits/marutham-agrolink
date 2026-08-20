@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, OrderPipeline, OrderTimeline, Sheet, Spinner, StarRating } from '@marutham/ui';
 import { api, type TrackResponse } from '@marutham/api-client';
@@ -25,9 +25,14 @@ import {
   type OrderPart,
 } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
+import { isMapsConfigured } from '../../lib/googleMaps';
 import { CancelOrderModal } from './CancelOrderModal';
 import { ReturnRequestModal } from './ReturnRequestModal';
 import { useReorder } from './useReorder';
+
+// Lazy so the Google Maps SDK chunk loads only when a live map is actually shown,
+// and never at all without an API key configured.
+const OrderMap = lazy(() => import('../../components/OrderMap'));
 
 /** How often an in-flight order re-checks its agent/ETA. */
 const TRACK_POLL_MS = 30_000;
@@ -184,6 +189,24 @@ function OrderDetailBody({
     typeof o.delivery_address === 'object' ? o.delivery_address?.label : undefined;
   const effectiveStatus = confirmedStatus ?? String(o.status ?? '');
   const isDelivered = effectiveStatus === 'Delivered';
+
+  // Coordinates for the live map, read from the polled track response (fresh agent
+  // position). Rendered only for a single-parcel order that has a destination AND at
+  // least one journey point (agent / dispatch / delivered) to draw, and only when
+  // Google Maps is configured — otherwise the pipeline stepper stands alone.
+  const to = track?.order;
+  const pt = (lat?: number | null, lng?: number | null) =>
+    typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : null;
+  const mapDest = pt(to?.dest_lat, to?.dest_lng);
+  const mapAgent = track?.agentLoc
+    ? { lat: track.agentLoc.lat, lng: track.agentLoc.lng, at: track.agentLoc.at }
+    : null;
+  const mapDispatch = pt(to?.dispatched_lat, to?.dispatched_lng);
+  const mapDelivered = pt(to?.delivered_lat, to?.delivered_lng);
+  const mapView =
+    isMapsConfigured() && !isSplit && mapDest && (mapAgent || mapDispatch || mapDelivered)
+      ? { dest: mapDest, agent: mapAgent, dispatch: mapDispatch, delivered: mapDelivered }
+      : null;
   // Confirm receipt is the ONE status action a customer owns: Out for Delivery →
   // Delivered. The server re-checks role, ownership and stage, so this is just UX.
   const canConfirm = !isOrderCancelled(o) && effectiveStatus === 'Out for Delivery';
@@ -303,6 +326,31 @@ function OrderDetailBody({
               </div>
             ) : null}
           </div>
+        ) : null}
+        {/* Live-tracking map: only for a single-parcel order that has a destination
+            plus a journey point to draw, and only when Google Maps is configured.
+            Split orders track each parcel separately (follow-up); the pipeline
+            stepper above remains the fallback whenever the map isn't shown. */}
+        {mapView ? (
+          <Suspense
+            fallback={
+              <div
+                style={{
+                  height: 300,
+                  marginTop: 12,
+                  borderRadius: 12,
+                  background: 'var(--neutral-100, #f1f5f9)',
+                }}
+              />
+            }
+          >
+            <OrderMap
+              dest={mapView.dest}
+              agent={mapView.agent}
+              dispatch={mapView.dispatch}
+              delivered={mapView.delivered}
+            />
+          </Suspense>
         ) : null}
       </div>
 
