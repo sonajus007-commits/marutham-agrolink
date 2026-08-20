@@ -66,12 +66,62 @@ interface GMapsLatLngBounds {
   isEmpty(): boolean;
 }
 
+interface GMapsDirectionsRequest {
+  origin: GMapsLatLngLiteral;
+  destination: GMapsLatLngLiteral;
+  travelMode: string;
+}
+
+/** A leg's `distance`/`duration`: `text` is human-readable ("18 mins"), `value` is
+ *  the raw number (metres / seconds). */
+interface GMapsDirectionsMetric {
+  text: string;
+  value: number;
+}
+
+interface GMapsDirectionsLeg {
+  distance?: GMapsDirectionsMetric;
+  duration?: GMapsDirectionsMetric;
+}
+
+interface GMapsDirectionsRoute {
+  legs: GMapsDirectionsLeg[];
+}
+
+interface GMapsDirectionsResult {
+  routes: GMapsDirectionsRoute[];
+}
+
+interface GMapsDirectionsService {
+  // The modern SDK returns a Promise; it rejects when no route is found.
+  route(request: GMapsDirectionsRequest): Promise<GMapsDirectionsResult>;
+}
+
+interface GMapsDirectionsRendererOptions {
+  map?: GMapsMap | null;
+  suppressMarkers?: boolean;
+  preserveViewport?: boolean;
+  polylineOptions?: {
+    strokeColor?: string;
+    strokeOpacity?: number;
+    strokeWeight?: number;
+  };
+}
+
+interface GMapsDirectionsRenderer {
+  setDirections(result: GMapsDirectionsResult): void;
+  setMap(map: GMapsMap | null): void;
+}
+
 interface GMapsApi {
   Map: new (el: HTMLElement, opts?: GMapsMapOptions) => GMapsMap;
   Marker: new (opts: GMapsMarkerOptions) => GMapsMarker;
   Polyline: new (opts: GMapsPolylineOptions) => GMapsPolyline;
   LatLngBounds: new () => GMapsLatLngBounds;
+  DirectionsService: new () => GMapsDirectionsService;
+  DirectionsRenderer: new (opts?: GMapsDirectionsRendererOptions) => GMapsDirectionsRenderer;
   SymbolPath: { CIRCLE: number; FORWARD_CLOSED_ARROW: number };
+  TravelMode: { DRIVING: string };
 }
 
 interface Window {

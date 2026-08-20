@@ -61,8 +61,15 @@ export default function OrderMap({ dest, agent, dispatch, delivered }: OrderMapP
   const mapRef = useRef<GMapsMap | null>(null);
   const markersRef = useRef<Record<string, GMapsMarker>>({});
   const lineRef = useRef<GMapsPolyline | null>(null);
+  const dirServiceRef = useRef<GMapsDirectionsService | null>(null);
+  const dirRendererRef = useRef<GMapsDirectionsRenderer | null>(null);
+  // The origin→dest key the road route was last requested for. Directions is billed
+  // per request, so we only re-ask when the parcel has actually moved to a new key
+  // (coords rounded to ~100 m), not on every 30 s poll.
+  const lastRouteKeyRef = useRef<string | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [eta, setEta] = useState<{ duration: string; distance: string } | null>(null);
 
   // Load the SDK and create the map once.
   useEffect(() => {
@@ -163,30 +170,6 @@ export default function OrderMap({ dest, agent, dispatch, delivered }: OrderMapP
       }
     }
 
-    // The route line, in journey order: hub → agent → (delivered or) destination.
-    const path = [
-      dispatch,
-      agent ? { lat: agent.lat, lng: agent.lng } : null,
-      delivered ?? dest,
-    ].filter((p): p is LatLng => Boolean(p));
-    if (path.length >= 2) {
-      if (lineRef.current) {
-        lineRef.current.setPath(path);
-      } else {
-        lineRef.current = new api.Polyline({
-          path,
-          map,
-          geodesic: true,
-          strokeColor: neutral[400],
-          strokeOpacity: 0.9,
-          strokeWeight: 3,
-        });
-      }
-    } else if (lineRef.current) {
-      lineRef.current.setMap(null);
-      lineRef.current = null;
-    }
-
     // Frame everything. A single point just centres (fitBounds on one point zooms
     // in absurdly far).
     if (points.length === 1) {
@@ -198,6 +181,95 @@ export default function OrderMap({ dest, agent, dispatch, delivered }: OrderMapP
       map.fitBounds(bounds, 48);
     }
   }, [ready, dest, agent, dispatch, delivered, t]);
+
+  // The route line + ETA. Prefer a real road route (Directions API) from where the
+  // parcel is NOW (the live agent, else the dispatch hub) to the destination; fall
+  // back to a straight geodesic line when routing isn't possible or fails. Directions
+  // is billed per request, so we round the endpoints to ~100 m and only re-request
+  // when that key changes — an agent inching along won't rack up calls.
+  useEffect(() => {
+    const api = apiRef.current;
+    const map = mapRef.current;
+    if (!ready || !api || !map) return;
+
+    // Draw the straight fallback line through the journey, and clear any road route.
+    const drawStraightLine = () => {
+      if (dirRendererRef.current) dirRendererRef.current.setMap(null);
+      lastRouteKeyRef.current = null;
+      setEta(null);
+      const path = [
+        dispatch,
+        agent ? { lat: agent.lat, lng: agent.lng } : null,
+        delivered ?? dest,
+      ].filter((p): p is LatLng => Boolean(p));
+      if (path.length >= 2) {
+        if (lineRef.current) {
+          lineRef.current.setPath(path);
+          lineRef.current.setMap(map);
+        } else {
+          lineRef.current = new api.Polyline({
+            path,
+            map,
+            geodesic: true,
+            strokeColor: neutral[400],
+            strokeOpacity: 0.9,
+            strokeWeight: 3,
+          });
+        }
+      } else if (lineRef.current) {
+        lineRef.current.setMap(null);
+      }
+    };
+
+    // Route only the REMAINING journey to the door: from the live agent (or, before
+    // pickup, the dispatch hub) to the destination. A delivered parcel has arrived —
+    // no ETA to compute — and with no origin or destination there's nothing to route.
+    const origin = agent ? { lat: agent.lat, lng: agent.lng } : (dispatch ?? null);
+    const canRoute = !delivered && origin && dest;
+    if (!canRoute) {
+      drawStraightLine();
+      return;
+    }
+
+    const key = `${origin.lat.toFixed(3)},${origin.lng.toFixed(3)}->${dest.lat.toFixed(3)},${dest.lng.toFixed(3)}`;
+    if (key === lastRouteKeyRef.current) return; // unchanged since last request — keep the drawn route + ETA
+
+    let cancelled = false;
+    if (!dirServiceRef.current) dirServiceRef.current = new api.DirectionsService();
+    if (!dirRendererRef.current) {
+      dirRendererRef.current = new api.DirectionsRenderer({
+        map,
+        suppressMarkers: true, // we draw our own agent / destination markers
+        preserveViewport: true, // the marker effect already framed the map
+        polylineOptions: { strokeColor: COLORS.agent, strokeOpacity: 0.9, strokeWeight: 4 },
+      });
+    }
+
+    dirServiceRef.current
+      .route({ origin, destination: dest, travelMode: api.TravelMode?.DRIVING ?? 'DRIVING' })
+      .then((result) => {
+        if (cancelled) return;
+        lastRouteKeyRef.current = key;
+        if (lineRef.current) lineRef.current.setMap(null); // hide the straight fallback
+        dirRendererRef.current!.setMap(map);
+        dirRendererRef.current!.setDirections(result);
+        const leg = result.routes[0]?.legs[0];
+        setEta(
+          leg?.duration && leg?.distance
+            ? { duration: leg.duration.text, distance: leg.distance.text }
+            : null,
+        );
+      })
+      .catch(() => {
+        // No route (islands, bad coords) or an API/quota error — the straight line
+        // still conveys direction. Don't cache the key, so a later tick can retry.
+        if (!cancelled) drawStraightLine();
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, dest, agent, dispatch, delivered]);
 
   if (failed) return null; // SDK unavailable — caller's stepper carries the tracking.
 
@@ -217,6 +289,12 @@ export default function OrderMap({ dest, agent, dispatch, delivered }: OrderMapP
           background: neutral[200],
         }}
       />
+      {eta ? (
+        <div style={{ marginTop: 6, fontSize: 13, fontWeight: 600, color: neutral[700] }}>
+          🚗 {t('track.map.eta', '{{duration}} away', { duration: eta.duration })}
+          <span style={{ fontWeight: 400 }}> · {eta.distance}</span>
+        </div>
+      ) : null}
       {agent ? (
         <div style={{ marginTop: 6, fontSize: 12, color: neutral[700] }}>
           <span style={{ color: COLORS.agent }}>●</span> {t('track.map.live', 'Agent live')}
