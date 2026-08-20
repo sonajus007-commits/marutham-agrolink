@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, OrderPipeline, OrderTimeline, Sheet, Spinner, StarRating } from '@marutham/ui';
+import { neutral } from '@marutham/tokens';
 import { api, type TrackResponse } from '@marutham/api-client';
 import {
   addressLabelKey,
@@ -339,7 +340,7 @@ function OrderDetailBody({
                   height: 300,
                   marginTop: 12,
                   borderRadius: 12,
-                  background: 'var(--neutral-100, #f1f5f9)',
+                  background: neutral[200],
                 }}
               />
             }

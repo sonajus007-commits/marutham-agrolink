@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { colors, neutral, statusPalette } from '@marutham/tokens';
 import { loadGoogleMaps } from '../lib/googleMaps';
 
 /* Live-tracking map for an order: the parcel's journey from the hub it was
@@ -28,11 +29,16 @@ export interface OrderMapProps {
   delivered?: LatLng | null;
 }
 
+// Marker colours are design tokens, not hex literals (the tokens:literals gate
+// forbids raw colour in app code). Each point borrows the token that already means
+// it: the hub violet for dispatch, the on-the-move green for the live agent, the
+// Delivered green for proof of delivery, and the brand accent for the destination pin
+// (red stays reserved for status/cancelled, so it is deliberately not used here).
 const COLORS = {
-  dispatch: '#2563eb', // blue — origin
-  agent: '#16a34a', // green — live, moving
-  dest: '#dc2626', // red — destination
-  delivered: '#7c3aed', // violet — proof of delivery
+  dispatch: statusPalette['At Hub'], // hub violet — dispatched from the hub
+  agent: colors.green, // green — live, moving
+  dest: colors.bloom, // brand accent — destination pin
+  delivered: statusPalette.Delivered, // dark green — proof of delivery
 };
 
 /** "just now" / "2m ago" from an ISO timestamp, for the live-dot freshness caption. */
@@ -143,7 +149,7 @@ export default function OrderMap({ dest, agent, dispatch, delivered }: OrderMapP
             scale: p.key === 'agent' ? 9 : 7,
             fillColor: p.color,
             fillOpacity: 1,
-            strokeColor: '#ffffff',
+            strokeColor: colors.white,
             strokeWeight: 2,
           },
         });
@@ -171,7 +177,7 @@ export default function OrderMap({ dest, agent, dispatch, delivered }: OrderMapP
           path,
           map,
           geodesic: true,
-          strokeColor: '#64748b',
+          strokeColor: neutral[400],
           strokeOpacity: 0.9,
           strokeWeight: 3,
         });
@@ -208,11 +214,11 @@ export default function OrderMap({ dest, agent, dispatch, delivered }: OrderMapP
           height: 300,
           borderRadius: 12,
           overflow: 'hidden',
-          background: 'var(--neutral-100, #f1f5f9)',
+          background: neutral[200],
         }}
       />
       {agent ? (
-        <div style={{ marginTop: 6, fontSize: 12, color: 'var(--neutral-700, #334155)' }}>
+        <div style={{ marginTop: 6, fontSize: 12, color: neutral[700] }}>
           <span style={{ color: COLORS.agent }}>●</span> {t('track.map.live', 'Agent live')}
           {freshness ? ` · ${t('track.map.updated', 'updated')} ${freshness}` : ''}
         </div>
