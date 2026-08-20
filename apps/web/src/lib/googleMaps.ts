@@ -32,11 +32,18 @@ export function loadGoogleMaps(): Promise<GMapsApi | null> {
       return;
     }
     const script = document.createElement('script');
-    script.src =
-      'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(KEY) + '&loading=async';
+    // Deliberately NOT `loading=async`: the async bootstrap leaves window.google.maps
+    // a stub at onload — its classes (Map, Marker, SymbolPath, …) only appear after
+    // an `await google.maps.importLibrary(...)`, so calling `new google.maps.Map()`
+    // straight away throws "Map is not a constructor". The classic loader has the
+    // full core API ready the instant onload fires, which is all this map uses.
+    script.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(KEY);
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve(window.google?.maps ?? null);
+    // Resolve only when the API is genuinely usable (the Map constructor is present),
+    // so a half-initialised SDK is treated as a failure the caller can fall back from
+    // rather than a truthy object the map then crashes on.
+    script.onload = () => resolve(window.google?.maps?.Map ? window.google.maps : null);
     script.onerror = () => {
       // Let a later call retry (e.g. after connectivity returns) rather than caching
       // the failure forever.

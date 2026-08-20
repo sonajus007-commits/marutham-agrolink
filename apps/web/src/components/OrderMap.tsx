@@ -62,18 +62,25 @@ export default function OrderMap({ dest, agent, dispatch, delivered }: OrderMapP
   useEffect(() => {
     let cancelled = false;
     loadGoogleMaps().then((api) => {
-      if (cancelled || !api || !containerRef.current) {
-        if (!cancelled && !api) setFailed(true);
+      if (cancelled || !containerRef.current) return;
+      if (!api) {
+        setFailed(true);
         return;
       }
-      apiRef.current = api;
-      mapRef.current = new api.Map(containerRef.current, {
-        zoom: 12,
-        center: dest ?? agent ?? dispatch ?? { lat: 11.0, lng: 78.0 }, // Tamil Nadu-ish
-        disableDefaultUI: true,
-        clickableIcons: false,
-      });
-      setReady(true);
+      // Even with a loaded SDK, map construction can throw (bad key, quota, a
+      // half-initialised API). Fall back to the pipeline stepper rather than hang.
+      try {
+        apiRef.current = api;
+        mapRef.current = new api.Map(containerRef.current, {
+          zoom: 12,
+          center: dest ?? agent ?? dispatch ?? { lat: 11.0, lng: 78.0 }, // Tamil Nadu-ish
+          disableDefaultUI: true,
+          clickableIcons: false,
+        });
+        setReady(true);
+      } catch {
+        setFailed(true);
+      }
     });
     return () => {
       cancelled = true;
