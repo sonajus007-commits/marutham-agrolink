@@ -18,9 +18,13 @@ function TileGrid({ children }: { children: React.ReactNode }) {
 export function FieldDashboard({
   data,
   onRefresh,
+  onNavigate,
 }: {
   data: FieldDashboardResponse | null;
   onRefresh: () => void;
+  /** A count tile that maps to an order queue is a shortcut into it; metric and
+   *  money tiles (farmers, payments, ratings) have no list and stay plain. */
+  onNavigate: (tab: 'work' | 'done') => void;
 }) {
   const { t } = useTranslation();
   if (!data) return null;
@@ -72,6 +76,7 @@ export function FieldDashboard({
             label={t('agent.field.vco.pendingCollection')}
             value={fmtNum(s.pending_collection)}
             accent={colors.gold}
+            onClick={() => onNavigate('work')}
           />
           <StatTile
             icon="❌"
@@ -113,12 +118,14 @@ export function FieldDashboard({
               label={t('agent.field.vco.deliveriesAssigned', 'Deliveries Assigned')}
               value={fmtNum(s.deliveries_assigned)}
               accent={colors.forest}
+              onClick={() => onNavigate('work')}
             />
             <StatTile
               icon="✅"
               label={t('agent.field.vco.deliveredToday', 'Delivered Today')}
               value={fmtNum(s.deliveries_completed_today)}
               accent={colors.green}
+              onClick={() => onNavigate('done')}
             />
             <StatTile
               icon="💵"
@@ -137,6 +144,7 @@ export function FieldDashboard({
             label={t('agent.field.agent.deliveriesToday')}
             value={fmtNum(s.deliveries_today)}
             accent={colors.forest}
+            onClick={() => onNavigate('work')}
           />
           <StatTile
             icon="✅"
@@ -144,12 +152,14 @@ export function FieldDashboard({
             value={fmtNum(s.completed_today)}
             accent={colors.green}
             hint={t('agent.field.agent.completedHint')}
+            onClick={() => onNavigate('done')}
           />
           <StatTile
             icon="⏳"
             label={t('agent.field.agent.pending')}
             value={fmtNum(s.pending)}
             accent={colors.gold}
+            onClick={() => onNavigate('work')}
           />
           <StatTile
             icon="❌"

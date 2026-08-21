@@ -13,6 +13,7 @@ export function AgentOverview({
   stats,
   isVCO,
   field,
+  onNavigate,
 }: {
   name: string;
   sub: string;
@@ -20,6 +21,8 @@ export function AgentOverview({
   stats: AgentStats | null;
   isVCO: boolean;
   field: { data: FieldDashboardResponse | null; reload: () => void };
+  /** Jump to another section — a count tile is a shortcut into its list. */
+  onNavigate: (tab: 'work' | 'done') => void;
 }) {
   return (
     <>
@@ -33,9 +36,9 @@ export function AgentOverview({
         </div>
       </div>
 
-      <StatsRow stats={stats} isVCO={isVCO} />
+      <StatsRow stats={stats} isVCO={isVCO} onNavigate={onNavigate} />
 
-      <FieldDashboard data={field.data} onRefresh={field.reload} />
+      <FieldDashboard data={field.data} onRefresh={field.reload} onNavigate={onNavigate} />
     </>
   );
 }

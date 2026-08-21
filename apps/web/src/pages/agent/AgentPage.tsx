@@ -223,6 +223,7 @@ function AgentPageInner() {
                 stats={stats}
                 isVCO={isVCO}
                 field={field}
+                onNavigate={setTab}
               />
             ) : tab === 'work' ? (
               <AgentTracking
