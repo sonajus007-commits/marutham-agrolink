@@ -25,9 +25,11 @@ import {
   type OrderPart,
 } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
+import { isMapsConfigured } from '../../lib/googleMaps';
 import { LiveOrderMap } from '../../components/LiveOrderMap';
 import { TRACK_POLL_MS, useOrderTrack } from '../../lib/useOrderTrack';
 import { CancelOrderModal } from './CancelOrderModal';
+import { LiveTracker } from './LiveTracker';
 import { ReturnRequestModal } from './ReturnRequestModal';
 import { useReorder } from './useReorder';
 
@@ -184,6 +186,27 @@ function OrderDetailBody({
   const effectiveStatus = confirmedStatus ?? String(o.status ?? '');
   const isDelivered = effectiveStatus === 'Delivered';
 
+  // Coordinates for the Swiggy-style live hero, read from the polled track response
+  // (fresh agent position). Present only for a single-parcel order that has a
+  // destination AND at least one journey point (agent / dispatch / delivered) to
+  // draw, and only when Google Maps is configured — otherwise the pipeline stepper
+  // (and the split parcels' own maps) carry the tracking. Mirrors LiveOrderMap's
+  // gate; kept here because the hero swaps out the whole pipeline block, not just
+  // the map, so the caller must know whether a hero is coming.
+  const to = track?.order;
+  const pt = (lat?: number | null, lng?: number | null) =>
+    typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : null;
+  const mapDest = pt(to?.dest_lat, to?.dest_lng);
+  const mapAgent = track?.agentLoc
+    ? { lat: track.agentLoc.lat, lng: track.agentLoc.lng, at: track.agentLoc.at }
+    : null;
+  const mapDispatch = pt(to?.dispatched_lat, to?.dispatched_lng);
+  const mapDelivered = pt(to?.delivered_lat, to?.delivered_lng);
+  const mapView =
+    isMapsConfigured() && !isSplit && mapDest && (mapAgent || mapDispatch || mapDelivered)
+      ? { dest: mapDest, agent: mapAgent, dispatch: mapDispatch, delivered: mapDelivered }
+      : null;
+
   // Confirm receipt is the ONE status action a customer owns: Out for Delivery →
   // Delivered. The server re-checks role, ownership and stage, so this is just UX.
   const canConfirm = !isOrderCancelled(o) && effectiveStatus === 'Out for Delivery';
@@ -265,9 +288,12 @@ function OrderDetailBody({
   return (
     <>
       <div className="ord-card" style={{ padding: '14px 10px' }}>
-        {/* A split order has no single journey to draw — each parcel has its own,
-            shown per part below. Drawing one here would have to pick a route the
-            order does not have and would report only the slowest parcel. */}
+        {/* Single-parcel order → the Swiggy/Zomato-style live hero (map with the
+            agent dot gliding the road route, a big ETA/status banner, a horizontal
+            stepper and a call-your-partner card) when there are coordinates to draw;
+            otherwise the plain vertical pipeline (+ agent/ETA boxes) is the fallback.
+            A split order has no one journey to draw here — each parcel travels on its
+            own and gets its own map per part below. */}
         {isSplit ? (
           <div style={{ fontSize: 12, color: 'var(--neutral-700)', lineHeight: 1.6 }}>
             {/* A split order always spans 2+ sellers, so there is no singular case. */}
@@ -277,38 +303,44 @@ function OrderDetailBody({
               { count: parts.length },
             )}
           </div>
-        ) : (
-          <OrderPipeline
-            nodes={buildPipeline(o.route || 'direct', effectiveStatus)}
-            labelFor={(l) => t(statusKey(l), l)}
+        ) : mapView ? (
+          <LiveTracker
+            track={track!}
+            route={o.route || 'direct'}
+            status={effectiveStatus}
+            mapView={mapView}
           />
-        )}
-        {track?.agent || track?.eta ? (
-          <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-            {track.agent ? (
-              <div className="track-box track-box--agent">
-                <div className="track-box__k">
-                  🛵 {t('consumer.order.agent', 'Your Delivery Agent')}
-                </div>
-                <div className="track-box__v">{track.agent.name}</div>
-                {track.agent.vehicle ? (
-                  <div className="track-box__sub">{track.agent.vehicle}</div>
+        ) : (
+          <>
+            <OrderPipeline
+              nodes={buildPipeline(o.route || 'direct', effectiveStatus)}
+              labelFor={(l) => t(statusKey(l), l)}
+            />
+            {track?.agent || track?.eta ? (
+              <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+                {track.agent ? (
+                  <div className="track-box track-box--agent">
+                    <div className="track-box__k">
+                      🛵 {t('consumer.order.agent', 'Your Delivery Agent')}
+                    </div>
+                    <div className="track-box__v">{track.agent.name}</div>
+                    {track.agent.vehicle ? (
+                      <div className="track-box__sub">{track.agent.vehicle}</div>
+                    ) : null}
+                  </div>
+                ) : null}
+                {track.eta ? (
+                  <div className="track-box track-box--eta">
+                    <div className="track-box__k">
+                      ⏱ {t('consumer.order.eta', 'Estimated Arrival')}
+                    </div>
+                    <div className="track-box__v">{fmtDate(track.eta, i18n.language)}</div>
+                  </div>
                 ) : null}
               </div>
             ) : null}
-            {track.eta ? (
-              <div className="track-box track-box--eta">
-                <div className="track-box__k">⏱ {t('consumer.order.eta', 'Estimated Arrival')}</div>
-                <div className="track-box__v">{fmtDate(track.eta, i18n.language)}</div>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-        {/* Live-tracking map for a single-parcel order. A split order has no one
-            journey to draw here — each parcel travels on its own, so the map is
-            shown per part below instead. The pipeline stepper above remains the
-            fallback whenever the map isn't shown (no Maps key, or no coordinates). */}
-        {isSplit ? null : <LiveOrderMap track={track} />}
+          </>
+        )}
       </div>
 
       <div

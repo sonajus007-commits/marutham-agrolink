@@ -27,6 +27,14 @@ export interface OrderMapProps {
   dispatch?: LatLng | null;
   /** Where it was actually delivered, once complete. */
   delivered?: LatLng | null;
+  /** Map height in px (default 300). Hero layouts pass a taller value. */
+  height?: number;
+  /** Suppress the built-in ETA/live footer — the caller renders its own banner
+   *  (the Swiggy-style hero owns that chrome). */
+  hideChrome?: boolean;
+  /** Bubble the live road-route ETA up so a caller can headline it. Pass a stable
+   *  callback (e.g. a useState setter) — it fires whenever the ETA is recomputed. */
+  onEta?: (eta: { duration: string; distance: string } | null) => void;
 }
 
 // Marker colours are design tokens, not hex literals (the tokens:literals gate
@@ -54,12 +62,23 @@ function ago(iso: string | null | undefined): string | null {
   return `${hrs}h ago`;
 }
 
-export default function OrderMap({ dest, agent, dispatch, delivered }: OrderMapProps) {
+export default function OrderMap({
+  dest,
+  agent,
+  dispatch,
+  delivered,
+  height = 300,
+  hideChrome = false,
+  onEta,
+}: OrderMapProps) {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const apiRef = useRef<GMapsApi | null>(null);
   const mapRef = useRef<GMapsMap | null>(null);
   const markersRef = useRef<Record<string, GMapsMarker>>({});
+  // Handle of the in-flight agent-dot glide, so a fresh ping cancels the old tween
+  // and the dot doesn't fight itself between two targets.
+  const agentAnimRef = useRef<number | null>(null);
   const lineRef = useRef<GMapsPolyline | null>(null);
   const dirServiceRef = useRef<GMapsDirectionsService | null>(null);
   const dirRendererRef = useRef<GMapsDirectionsRenderer | null>(null);
@@ -138,13 +157,43 @@ export default function OrderMap({ dest, agent, dispatch, delivered }: OrderMapP
         title: t('track.map.dest', 'Delivery address'),
       });
 
+    // Glide the agent dot from where it is to its new ping over ~0.9s, so it reads
+    // as movement rather than teleporting between polls (Swiggy's moving scooter).
+    // Everything else snaps. Linear lat/lng interpolation is plenty at last-mile
+    // distances — no geometry library needed (the loader doesn't include one).
+    const animateAgent = (marker: GMapsMarker, to: LatLng) => {
+      const cur = marker.getPosition?.();
+      const from = cur ? { lat: cur.lat(), lng: cur.lng() } : null;
+      if (!from) {
+        marker.setPosition(to);
+        return;
+      }
+      const dLat = to.lat - from.lat;
+      const dLng = to.lng - from.lng;
+      if (Math.hypot(dLat, dLng) < 1e-6) {
+        marker.setPosition(to);
+        return;
+      }
+      if (agentAnimRef.current != null) cancelAnimationFrame(agentAnimRef.current);
+      const dur = 900;
+      const t0 = performance.now();
+      const tick = (now: number) => {
+        const prog = Math.min(1, (now - t0) / dur);
+        const e = prog < 0.5 ? 2 * prog * prog : 1 - (-2 * prog + 2) ** 2 / 2; // easeInOutQuad
+        marker.setPosition({ lat: from.lat + dLat * e, lng: from.lng + dLng * e });
+        agentAnimRef.current = prog < 1 ? requestAnimationFrame(tick) : null;
+      };
+      agentAnimRef.current = requestAnimationFrame(tick);
+    };
+
     // Upsert each marker (reuse so the agent dot animates its move, not blinks).
     const seen = new Set<string>();
     for (const p of points) {
       seen.add(p.key);
       const existing = markersRef.current[p.key];
       if (existing) {
-        existing.setPosition(p.pos);
+        if (p.key === 'agent') animateAgent(existing, p.pos);
+        else existing.setPosition(p.pos);
       } else {
         markersRef.current[p.key] = new api.Marker({
           position: p.pos,
@@ -271,31 +320,45 @@ export default function OrderMap({ dest, agent, dispatch, delivered }: OrderMapP
     };
   }, [ready, dest, agent, dispatch, delivered]);
 
+  // Surface the ETA to a caller that wants to headline it (the hero banner). The
+  // callback should be stable (a setState), so this only fires when the ETA changes.
+  useEffect(() => {
+    onEta?.(eta);
+  }, [eta, onEta]);
+
+  // Stop any in-flight agent glide when the map unmounts.
+  useEffect(
+    () => () => {
+      if (agentAnimRef.current != null) cancelAnimationFrame(agentAnimRef.current);
+    },
+    [],
+  );
+
   if (failed) return null; // SDK unavailable — caller's stepper carries the tracking.
 
   const freshness = agent ? ago(agent.at) : null;
 
   return (
-    <div style={{ marginTop: 12 }}>
+    <div style={{ marginTop: hideChrome ? 0 : 12 }}>
       <div
         ref={containerRef}
         role="img"
         aria-label={t('track.map.label', 'Map of the order’s delivery route')}
         style={{
           width: '100%',
-          height: 300,
+          height,
           borderRadius: 12,
           overflow: 'hidden',
           background: neutral[200],
         }}
       />
-      {eta ? (
+      {!hideChrome && eta ? (
         <div style={{ marginTop: 6, fontSize: 13, fontWeight: 600, color: neutral[700] }}>
           🚗 {t('track.map.eta', '{{duration}} away', { duration: eta.duration })}
           <span style={{ fontWeight: 400 }}> · {eta.distance}</span>
         </div>
       ) : null}
-      {agent ? (
+      {!hideChrome && agent ? (
         <div style={{ marginTop: 6, fontSize: 12, color: neutral[700] }}>
           <span style={{ color: COLORS.agent }}>●</span> {t('track.map.live', 'Agent live')}
           {freshness ? ` · ${t('track.map.updated', 'updated')} ${freshness}` : ''}

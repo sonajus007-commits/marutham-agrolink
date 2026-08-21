@@ -1279,3 +1279,181 @@
   font-style: italic;
   color: var(--fg-muted);
 }
+
+/* ── Live-tracking hero (Swiggy/Zomato-style) ────────────────────────────────
+   Map on top with the agent dot gliding the road route, a white panel overlapping
+   its base carrying a big ETA/status headline, a horizontal progress stepper and a
+   call-your-partner card. See LiveTracker.tsx. */
+.live-track {
+  margin-top: 4px;
+}
+.live-track__map {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+}
+/* "LIVE" badge over the map's top-left corner. */
+.live-track__badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 50px;
+  background: var(--forest);
+  color: var(--white);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(26, 61, 43, 0.25);
+}
+.live-track__pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--leaf);
+  box-shadow: 0 0 0 0 rgba(78, 159, 61, 0.6);
+  animation: live-track-pulse 1.6s infinite;
+}
+@keyframes live-track-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(78, 159, 61, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(78, 159, 61, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(78, 159, 61, 0);
+  }
+}
+/* White panel overlapping the map's base, à la the app bottom-sheet. */
+.live-track__panel {
+  position: relative;
+  z-index: 1;
+  margin: -18px 6px 0;
+  padding: 16px 14px 14px;
+  background: var(--white);
+  border-radius: 16px;
+  box-shadow: 0 -2px 14px rgba(31, 107, 59, 0.08);
+}
+.live-track__eta {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--forest);
+  line-height: 1.2;
+}
+.live-track__sub {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--gray);
+}
+/* Horizontal progress stepper. */
+.live-track__steps {
+  display: flex;
+  margin-top: 16px;
+}
+.live-track__step {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.live-track__bar {
+  position: absolute;
+  top: 6px;
+  left: -50%;
+  width: 100%;
+  height: 3px;
+  background: var(--surface-muted);
+  z-index: 0;
+}
+.live-track__step[data-state='done'] .live-track__bar,
+.live-track__step[data-state='active'] .live-track__bar {
+  background: var(--leaf);
+}
+.live-track__dot {
+  position: relative;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface-muted);
+  border: 2px solid var(--white);
+}
+.live-track__step[data-state='done'] .live-track__dot {
+  background: var(--leaf);
+}
+.live-track__step[data-state='active'] .live-track__dot {
+  background: var(--leaf);
+  box-shadow: 0 0 0 4px rgba(78, 159, 61, 0.2);
+  animation: live-track-pulse 1.6s infinite;
+}
+.live-track__slabel {
+  margin-top: 6px;
+  font-size: 9px;
+  line-height: 1.25;
+  color: var(--gray);
+}
+.live-track__step[data-state='active'] .live-track__slabel {
+  color: var(--forest);
+  font-weight: 700;
+}
+/* Delivery-partner card. */
+.live-track__agent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--surface-muted);
+}
+.live-track__avatar {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--forest);
+  color: var(--white);
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  font-weight: 800;
+}
+.live-track__who {
+  flex: 1;
+  min-width: 0;
+}
+.live-track__name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--forest);
+}
+.live-track__meta {
+  font-size: 11px;
+  color: var(--gray);
+  margin-top: 1px;
+}
+.live-track__livetxt {
+  color: var(--leaf);
+  font-weight: 600;
+}
+.live-track__call {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 18px;
+  border-radius: 50px;
+  background: var(--forest);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.live-track__call:hover {
+  background: var(--forest-deep);
+}

@@ -42,8 +42,16 @@ interface GMapsMarkerOptions {
   zIndex?: number;
 }
 
+// The SDK's LatLng object (as returned by Marker.getPosition), whose coordinates are
+// read through methods — distinct from the plain literal the setters accept.
+interface GMapsLatLng {
+  lat(): number;
+  lng(): number;
+}
+
 interface GMapsMarker {
   setPosition(p: GMapsLatLngLiteral): void;
+  getPosition(): GMapsLatLng | null | undefined;
   setMap(m: GMapsMap | null): void;
 }
 
