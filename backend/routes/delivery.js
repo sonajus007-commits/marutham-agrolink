@@ -864,6 +864,96 @@ router.get('/:id/eligible-agents', async (req, res) => {
   res.json({ leg, village: village || null, taluk: taluk || null, matched, all: allSorted });
 });
 
+// Pickup-origin fallback for the map: the tracking line should start where the
+// parcel was picked up — the FARMER's location on the direct lane, the HUB on the
+// hub lane. Neither farms nor hubs reliably carry a stored pin, so (exactly like the
+// destination) we geocode the address once and write it back — onto the order's
+// dispatched_lat/lng AND onto the source record (users.farm_lat/lng or hubs.lat/lng)
+// so every future order through it reuses the coordinate. Only ever fills a null pin,
+// so a real GPS-stamped dispatch (the At-Hub pickup scan) is never overwritten.
+// Best-effort: no key, no address, or a failed geocode just leaves the origin null and
+// the map starts the line from the live agent instead. Mutates `order` in place.
+async function backfillDispatchOrigin(order, route) {
+  if (order.dispatched_lat != null || order.dispatched_lng != null) return;
+  if (!geocodingEnabled()) return;
+
+  if (route === 'hub') {
+    // The hub the last-mile agent dispatched from. Prefer the assigned agent's hub;
+    // fall back to the delivery district's main hub.
+    let hub = null;
+    const HUB_COLS = 'id, name, taluk, district, state, lat, lng';
+    if (order.agent_id) {
+      const { data: agent, error: aErr } = await supabase
+        .from('users').select('hub_id').eq('id', order.agent_id).maybeSingle();
+      if (aErr) console.error('Order tracking agent-hub lookup failed:', aErr.message);
+      if (agent && agent.hub_id) {
+        const { data: h, error: hErr } = await supabase
+          .from('hubs').select(HUB_COLS).eq('id', agent.hub_id).maybeSingle();
+        if (hErr) console.error('Order tracking hub lookup failed:', hErr.message);
+        hub = h || null;
+      }
+    }
+    if (!hub && order.district) {
+      const { data: h, error: hErr } = await supabase
+        .from('hubs').select(HUB_COLS)
+        .eq('district', order.district).eq('hub_type', 'main').maybeSingle();
+      if (hErr) console.error('Order tracking main-hub lookup failed:', hErr.message);
+      hub = h || null;
+    }
+    if (!hub) return;
+
+    let lat = hub.lat, lng = hub.lng;
+    if (lat == null || lng == null) {
+      const geo = await geocodeAddress({
+        city: hub.taluk || hub.name, taluk: hub.taluk,
+        district: hub.district, state: hub.state || 'Tamil Nadu',
+      });
+      if (!geo) return;
+      lat = geo.lat; lng = geo.lng;
+      const { error: upErr } = await supabase
+        .from('hubs').update({ lat, lng }).eq('id', hub.id);
+      if (upErr) console.error('Order tracking hub-origin write-back failed:', upErr.message);
+    }
+    order.dispatched_lat = lat; order.dispatched_lng = lng;
+  } else {
+    // Direct lane: the farmer's location. A single-seller order leaves seller_id null,
+    // so read the farmer off the items (the first item that names one).
+    let farmerId = order.seller_id || null;
+    if (!farmerId) {
+      const { data: items, error: iErr } = await supabase
+        .from('order_items').select('farmer_id').eq('order_id', order.id);
+      if (iErr) console.error('Order tracking item-farmer lookup failed:', iErr.message);
+      const withFarmer = (items || []).find((i) => i.farmer_id);
+      farmerId = withFarmer ? withFarmer.farmer_id : null;
+    }
+    if (!farmerId) return;
+
+    const { data: farmer, error: fErr } = await supabase
+      .from('users')
+      .select('farm_lat, farm_lng, house_no, street1, street2, landmark, village_town, city, taluk, district, pincode, state')
+      .eq('id', farmerId).maybeSingle();
+    if (fErr) console.error('Order tracking farmer lookup failed:', fErr.message);
+    if (!farmer) return;
+
+    let lat = farmer.farm_lat, lng = farmer.farm_lng;
+    if (lat == null || lng == null) {
+      const geo = await geocodeAddress(farmer);
+      if (!geo) return;
+      lat = geo.lat; lng = geo.lng;
+      const { error: upErr } = await supabase
+        .from('users').update({ farm_lat: lat, farm_lng: lng }).eq('id', farmerId);
+      if (upErr) console.error('Order tracking farm-origin write-back failed:', upErr.message);
+    }
+    order.dispatched_lat = lat; order.dispatched_lng = lng;
+  }
+
+  const { error: oErr } = await supabase
+    .from('orders')
+    .update({ dispatched_lat: order.dispatched_lat, dispatched_lng: order.dispatched_lng })
+    .eq('id', order.id);
+  if (oErr) console.error('Order tracking dispatch-origin write-back failed:', oErr.message);
+}
+
 // ── GET /orders/:id/track  (consumer who owns it, or any staff) ───────────────
 router.get('/:id/track', async (req, res) => {
   const u = req.user;
@@ -926,6 +1016,11 @@ router.get('/:id/track', async (req, res) => {
   // an async throw in Express 4 is not caught — the response never goes out and the
   // caller hangs rather than getting an error.
   const stages = STAGE_MAP[route] || STAGE_MAP.direct;
+
+  // Fill the pickup origin (farmer on the direct lane, hub on the hub lane) the first
+  // time this order is tracked, so the map's route line starts where the parcel was
+  // collected rather than at the moving agent. Best-effort — see the helper.
+  await backfillDispatchOrigin(order, route);
 
   // Build the route map — each node shows whether it's done, active, or pending
   const routeMap = stages.map((label, i) => ({

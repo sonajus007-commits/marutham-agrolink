@@ -29,6 +29,9 @@ export function LiveOrderMap({ track }: { track: TrackResponse | null }) {
     : null;
   const dispatch = pt(to?.dispatched_lat, to?.dispatched_lng);
   const delivered = pt(to?.delivered_lat, to?.delivered_lng);
+  // The pickup origin is the farmer on the direct lane, the hub on the hub lane — so
+  // the origin marker is labelled for what it actually is.
+  const originKind = to?.route === 'hub' ? 'hub' : 'farm';
 
   if (!isMapsConfigured() || !dest || !(agent || dispatch || delivered)) return null;
 
@@ -38,7 +41,13 @@ export function LiveOrderMap({ track }: { track: TrackResponse | null }) {
         <div style={{ height: 300, marginTop: 12, borderRadius: 12, background: neutral[200] }} />
       }
     >
-      <OrderMap dest={dest} agent={agent} dispatch={dispatch} delivered={delivered} />
+      <OrderMap
+        dest={dest}
+        agent={agent}
+        dispatch={dispatch}
+        originKind={originKind}
+        delivered={delivered}
+      />
     </Suspense>
   );
 }

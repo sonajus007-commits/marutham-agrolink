@@ -89,6 +89,7 @@ export function LiveTracker({
             dest={mapView.dest}
             agent={mapView.agent}
             dispatch={mapView.dispatch}
+            originKind={route === 'hub' ? 'hub' : 'farm'}
             delivered={mapView.delivered}
             height={MAP_H}
             hideChrome

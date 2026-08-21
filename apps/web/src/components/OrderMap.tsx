@@ -23,8 +23,12 @@ export interface OrderMapProps {
   dest?: LatLng | null;
   /** The delivery agent's last-known live position, plus when it was captured. */
   agent?: (LatLng & { at?: string | null }) | null;
-  /** The hub the parcel was dispatched from, when it has left on the last mile. */
+  /** Where the parcel was picked up, when it has left on the last mile — the farmer's
+   *  farm on the direct lane, the hub on the hub lane. */
   dispatch?: LatLng | null;
+  /** What the pickup point IS, so the origin marker is labelled correctly. Defaults to
+   *  'hub' (the original single meaning of `dispatch`). */
+  originKind?: 'farm' | 'hub';
   /** Where it was actually delivered, once complete. */
   delivered?: LatLng | null;
   /** Map height in px (default 300). Hero layouts pass a taller value. */
@@ -66,6 +70,7 @@ export default function OrderMap({
   dest,
   agent,
   dispatch,
+  originKind = 'hub',
   delivered,
   height = 300,
   hideChrome = false,
@@ -133,7 +138,10 @@ export default function OrderMap({
         key: 'dispatch',
         pos: dispatch,
         color: COLORS.dispatch,
-        title: t('track.map.dispatch', 'Dispatched from hub'),
+        title:
+          originKind === 'farm'
+            ? t('track.map.dispatchFarm', 'Picked up from farm')
+            : t('track.map.dispatch', 'Dispatched from hub'),
       });
     if (agent)
       points.push({
@@ -229,7 +237,7 @@ export default function OrderMap({
       for (const p of points) bounds.extend(p.pos);
       map.fitBounds(bounds, 48);
     }
-  }, [ready, dest, agent, dispatch, delivered, t]);
+  }, [ready, dest, agent, dispatch, originKind, delivered, t]);
 
   // The route line + ETA. Prefer a real road route (Directions API) from where the
   // parcel is NOW (the live agent, else the dispatch hub) to the destination; fall
