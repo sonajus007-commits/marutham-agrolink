@@ -81,6 +81,8 @@ export interface AddressObject {
   district?: string | null;
   pincode?: string | null;
   state?: string | null;
+  /** Country of the address. Defaults to 'India' on save; blank reads as India. */
+  country?: string | null;
   /** Set on entries in a user's saved address book; exactly one is default. */
   is_default?: boolean;
   /** Optional map pin for the delivery point, captured best-effort from the device
@@ -89,8 +91,12 @@ export interface AddressObject {
   lng?: number | null;
 }
 
-/** Join a structured address object into a single line. */
+/** Join a structured address object into a single line, in the canonical
+ *  street → village/town → city → taluk → district → state → country hierarchy.
+ *  Pincode rides with the state, and country is dropped when it is the default
+ *  India so a domestic address stays short. */
 export function buildAddress(u: AddressObject): string {
+  const country = u.country && u.country.trim().toLowerCase() !== 'india' ? u.country : null;
   return [
     u.house_no,
     u.street1,
@@ -98,9 +104,11 @@ export function buildAddress(u: AddressObject): string {
     u.landmark,
     u.village_town,
     u.city,
+    u.taluk,
     u.district,
-    u.pincode,
     u.state,
+    u.pincode,
+    country,
   ]
     .filter(Boolean)
     .join(', ');

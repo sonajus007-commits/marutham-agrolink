@@ -45,6 +45,32 @@ export function addressSummary(a: SavedAddress): string {
   return [a.house_no, a.street1, a.landmark, a.village_town, a.pincode].filter(Boolean).join(', ');
 }
 
+/** [i18n key, English label, value] per row. Third element carries no key so a
+ *  screen can call t(key, english); mirrors employeeDetailPairs' shape. */
+export type AddressDetailRow = [key: string, label: string, value: string];
+
+/**
+ * The canonical address as labeled rows, in the fixed
+ * Street → Village/Town → City → Taluk → District → State → Country → Pincode
+ * hierarchy. Every profile renders THIS so the address block is identical across
+ * roles — the missing pieces show as "—" rather than being silently dropped, and
+ * the four street components collapse into one Street line. Country blank reads
+ * as India (the platform's default). Pass a custom `dash` for a localized "—".
+ */
+export function addressDetailRows(a: AddressObject, dash = '—'): AddressDetailRow[] {
+  const street = [a.house_no, a.street1, a.street2, a.landmark].filter(Boolean).join(', ');
+  return [
+    ['address.street', 'Street', street || dash],
+    ['address.village', 'Village / Town', a.village_town || dash],
+    ['address.city', 'City', a.city || dash],
+    ['address.taluk', 'Taluk', a.taluk || dash],
+    ['address.district', 'District', a.district || dash],
+    ['address.state', 'State', a.state || dash],
+    ['address.country', 'Country', a.country || 'India'],
+    ['address.pincode', 'Pincode', a.pincode || dash],
+  ];
+}
+
 /**
  * Display name for an entry, falling back to its position.
  *

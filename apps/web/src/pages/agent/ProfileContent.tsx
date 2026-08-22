@@ -1,10 +1,37 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '@marutham/api-client';
-import { employeeDetailPairs, type EmployeeDetailPair, type EmployeeRecord } from '@marutham/lib';
+import {
+  addressDetailRows,
+  employeeAddressObject,
+  employeeDetailPairs,
+  type AddressDetailRow,
+  type AddressObject,
+  type EmployeeDetailPair,
+  type EmployeeRecord,
+} from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
 import { DeliveryAgentFields } from './DeliveryAgentFields';
+
+/* Coerce a user row into an AddressObject — the address fields reach the user row
+ * through its index signature as `unknown`, so pick them out as strings. */
+function userAddress(u: Record<string, unknown> | null): AddressObject {
+  const s = (k: string) => (u?.[k] as string) || null;
+  return {
+    house_no: s('house_no'),
+    street1: s('street1'),
+    street2: s('street2'),
+    landmark: s('landmark'),
+    village_town: s('village_town'),
+    city: s('city'),
+    taluk: s('taluk'),
+    district: s('district'),
+    state: s('state'),
+    country: s('country'),
+    pincode: s('pincode'),
+  };
+}
 
 /* The field-staff profile body — the same cards whether shown as the Profile
  * PAGE (sidebar/tab) or inside the legacy ProfileSheet. Seeds from the current
@@ -19,6 +46,7 @@ export function ProfileContent({ isVCO }: { isVCO: boolean }) {
   const [gender, setGender] = useState('');
   const [vehicle, setVehicle] = useState('');
   const [empPairs, setEmpPairs] = useState<EmployeeDetailPair[] | null>(null);
+  const [addrRows, setAddrRows] = useState<AddressDetailRow[]>([]);
   const [cpw, setCpw] = useState('');
   const [npw, setNpw] = useState('');
   const [pwErr, setPwErr] = useState('');
@@ -34,11 +62,20 @@ export function ProfileContent({ isVCO }: { isVCO: boolean }) {
     let active = true;
     api
       .getMyEmployeeRecord()
-      .then(
-        (res) =>
-          active && setEmpPairs(employeeDetailPairs(res.employee as EmployeeRecord, i18n.language)),
-      )
-      .catch(() => active && setEmpPairs(null));
+      .then((res) => {
+        if (!active) return;
+        const emp = res.employee as EmployeeRecord | null;
+        // Address block is rendered structured below, so drop the squashed row.
+        setEmpPairs(employeeDetailPairs(emp, i18n.language, { excludeAddress: true }));
+        // Staff address of record is the HO employee master (read-only); fall back
+        // to the user row for contract/unlinked staff who have no employee record.
+        setAddrRows(addressDetailRows(emp ? employeeAddressObject(emp) : userAddress(user), '—'));
+      })
+      .catch(() => {
+        if (!active) return;
+        setEmpPairs(null);
+        setAddrRows(addressDetailRows(userAddress(user), '—'));
+      });
     return () => {
       active = false;
     };
@@ -142,6 +179,25 @@ export function ProfileContent({ isVCO }: { isVCO: boolean }) {
           </div>
         </div>
       ) : null}
+
+      {/* Address (read-only) — the same unified block every profile shows. Staff
+          address of record is the HO employee master, so it is not self-editable. */}
+      <div className="a-card">
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)' }}>
+          📍 {t('address.registered', 'Registered address')}
+        </div>
+        <div style={{ fontSize: 10, color: 'var(--gray)', marginBottom: 10 }}>
+          {t('agent.profile.employeeNote', 'Maintained by Head Office · read-only')}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {addrRows.map(([key, label, value]) => (
+            <div className="a-row" key={key}>
+              <span className="a-row__k">{t(key, label)}</span>
+              <span className="a-row__v">{value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Gender */}
       <div className="a-card">

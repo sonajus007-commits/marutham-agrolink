@@ -748,7 +748,7 @@ router.patch('/me', requireAuth, async (req, res) => {
     'fname', 'lname', 'email', 'alt_phone',
     'gender',
     'house_no', 'street1', 'street2', 'landmark',
-    'village_town', 'city', 'taluk', 'district', 'pincode', 'state',
+    'village_town', 'city', 'taluk', 'district', 'pincode', 'state', 'country',
     'agent_vehicle',                                   // agent vehicle
     'service_villages',                                // Delivery Agent: villages they cover (text[])
     'service_areas',                                   // Delivery Agent: coverage grouped by taluk (JSONB)

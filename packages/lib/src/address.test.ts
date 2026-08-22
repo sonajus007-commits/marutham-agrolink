@@ -8,6 +8,7 @@ import {
   defaultAddressIndex,
   addressSummary,
   addressTitle,
+  addressDetailRows,
   type SavedAddress,
 } from './address';
 
@@ -175,6 +176,40 @@ describe('formatting', () => {
 
   it('summary of an empty address is empty', () => {
     expect(addressSummary({})).toBe('');
+  });
+
+  it('detail rows are the same 8-row hierarchy for every address', () => {
+    const keys = addressDetailRows({}).map(([k]) => k);
+    expect(keys).toEqual([
+      'address.street',
+      'address.village',
+      'address.city',
+      'address.taluk',
+      'address.district',
+      'address.state',
+      'address.country',
+      'address.pincode',
+    ]);
+  });
+
+  it('detail rows collapse the street parts and default the country to India', () => {
+    const rows = addressDetailRows({
+      house_no: '12',
+      street1: 'Main St',
+      village_town: 'Vilakudi',
+      district: 'Pudukkottai',
+      pincode: '622001',
+    });
+    const val = (key: string) => rows.find(([k]) => k === key)?.[2];
+    expect(val('address.street')).toBe('12, Main St');
+    expect(val('address.village')).toBe('Vilakudi');
+    expect(val('address.country')).toBe('India'); // blank reads as India
+    expect(val('address.city')).toBe('—'); // missing shows the dash, never dropped
+  });
+
+  it('detail rows keep an explicit non-India country', () => {
+    const rows = addressDetailRows({ country: 'Sri Lanka' });
+    expect(rows.find(([k]) => k === 'address.country')?.[2]).toBe('Sri Lanka');
   });
 
   it('title falls back to the position', () => {

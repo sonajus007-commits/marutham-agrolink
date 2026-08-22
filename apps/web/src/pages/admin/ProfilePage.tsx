@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, Field, Input, Select, Spinner } from '@marutham/ui';
 import { api } from '@marutham/api-client';
-import { employeeDetailPairs, GENDERS, type EmployeeRecord } from '@marutham/lib';
+import {
+  addressDetailRows,
+  employeeAddressObject,
+  employeeDetailPairs,
+  GENDERS,
+  type AddressObject,
+  type EmployeeRecord,
+} from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
 import { ChangePasswordCard } from '../../components/ChangePasswordCard';
@@ -26,6 +33,25 @@ interface ProfileDraft {
   gender: string;
   email: string;
   alt_phone: string;
+}
+
+/* Coerce a user row into an AddressObject — address fields reach the user row
+ * through its index signature as `unknown`, so pick them out as strings. */
+function userAddress(u: Record<string, unknown> | null): AddressObject {
+  const s = (k: string) => (u?.[k] as string) || null;
+  return {
+    house_no: s('house_no'),
+    street1: s('street1'),
+    street2: s('street2'),
+    landmark: s('landmark'),
+    village_town: s('village_town'),
+    city: s('city'),
+    taluk: s('taluk'),
+    district: s('district'),
+    state: s('state'),
+    country: s('country'),
+    pincode: s('pincode'),
+  };
 }
 
 const draftFrom = (u: Record<string, unknown>): ProfileDraft => ({
@@ -98,7 +124,13 @@ export function ProfilePage() {
   }
 
   const fullName = `${user.fname || ''}${user.lname ? ' ' + user.lname : ''}`.trim() || '—';
-  const pairs = employeeDetailPairs(employee);
+  const pairs = employeeDetailPairs(employee, undefined, { excludeAddress: true });
+  // Staff address of record is the HO employee master (read-only); fall back to
+  // the user row for contract/unlinked staff with no employee record.
+  const addrRows = addressDetailRows(
+    employee ? employeeAddressObject(employee) : userAddress(user),
+    '—',
+  );
   /* Contract or unlinked staff may carry an Employee No on the user row with no
    * employee record behind it — still worth showing, just thinner. */
   const thinEmployee = !pairs && (user.emp_id || user.employment_type);
@@ -206,6 +238,18 @@ export function ProfilePage() {
               </div>
             </>
           )}
+        </Card>
+
+        {/* Address (read-only) — the same unified block every profile shows. Staff
+            address of record is the HO employee master, so it is not self-editable. */}
+        <Card>
+          <h2 className="mb-1 text-sm font-bold text-primary">
+            📍 {t('address.registered', 'Registered address')}
+          </h2>
+          <p className="mb-3 text-2xs text-fg-muted">{t('admin.profile.employeeNote')}</p>
+          {addrRows.map(([key, label, value]) => (
+            <Row key={key} label={t(key, label)} value={value} />
+          ))}
         </Card>
 
         {/* Employee master — HO's record, shown as-is. */}

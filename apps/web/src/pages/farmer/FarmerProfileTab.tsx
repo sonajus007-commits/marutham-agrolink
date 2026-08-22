@@ -2,41 +2,63 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, Field, Input, FIELD_ERR_CLASS } from '@marutham/ui';
 import { api } from '@marutham/api-client';
-import { buildAddress, subscriptionStatus, fmtDateShort } from '@marutham/lib';
+import {
+  addressDetailRows,
+  subscriptionStatus,
+  fmtDateShort,
+  type SavedAddress,
+} from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
+import { AddressFields } from '../../components/AddressFields';
+import { useLocations } from '../../hooks/useLocations';
 import { ChangePasswordCard } from '../../components/ChangePasswordCard';
 import { BankDetailsCard } from './BankDetailsCard';
 import { FarmLocationCard } from './FarmLocationCard';
 import { ShopHoursCard } from './ShopHoursCard';
 
 /* Self-service fields a seller may edit directly (applied immediately via
- * PATCH /auth/me). District/state are support-gated and bank/business go through
- * the change-request flow, so neither appears here. */
+ * PATCH /auth/me): email + the full address (shared AddressFields). State &
+ * District are shown but LOCKED (support-gated — the district scopes their
+ * storefront). Bank/business go through the change-request flow, not here. */
 interface ProfileDraft {
   email: string;
-  street1: string;
-  street2: string;
-  village_town: string;
-  city: string;
-  pincode: string;
+  addr: SavedAddress;
+}
+
+/* The address keys carried on the seller's own user row. */
+const ADDR_KEYS = [
+  'house_no',
+  'street1',
+  'street2',
+  'landmark',
+  'village_town',
+  'city',
+  'taluk',
+  'district',
+  'state',
+  'country',
+  'pincode',
+] as const;
+
+function addrFrom(user: Record<string, unknown>): SavedAddress {
+  const a: SavedAddress = {};
+  for (const k of ADDR_KEYS) (a as Record<string, unknown>)[k] = (user[k] as string) || '';
+  if (!a.country) a.country = 'India';
+  return a;
 }
 
 function draftFrom(user: Record<string, unknown>): ProfileDraft {
-  const s = (k: string) => (user[k] as string) || '';
   return {
-    email: s('email'),
-    street1: s('street1'),
-    street2: s('street2'),
-    village_town: s('village_town'),
-    city: s('city'),
-    pincode: s('pincode'),
+    email: (user.email as string) || '',
+    addr: addrFrom(user),
   };
 }
 
 export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
   const { t, i18n } = useTranslation();
   const { user, updateUser } = useAuth();
+  const { taluksOf } = useLocations();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<ProfileDraft>(() => draftFrom(user || {}));
@@ -45,7 +67,10 @@ export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
 
   const sub = useMemo(() => subscriptionStatus(user || {}), [user]);
   if (!user) return null;
-  const set = (k: keyof ProfileDraft, v: string) => setDraft((d) => ({ ...d, [k]: v }));
+
+  // A taluk is required whenever the (support-set) district actually lists any —
+  // mirrors the registration rule, and keeps non-taluk districts submittable.
+  const districtHasTaluks = taluksOf(draft.addr.state || '', draft.addr.district || '').length > 0;
 
   function openEdit() {
     setDraft(draftFrom(user || {}));
@@ -54,8 +79,11 @@ export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
   }
 
   async function save() {
-    if (draft.pincode && !/^\d{6}$/.test(draft.pincode))
+    const a = draft.addr;
+    if (a.pincode && !/^\d{6}$/.test(a.pincode))
       return setError(t('consumer.profile.badPincode', 'Pincode must be 6 digits.'));
+    if (districtHasTaluks && !a.taluk?.trim())
+      return setError(t('address.err.taluk', 'Select a taluk.'));
     if (draft.email && !/^\S+@\S+\.\S+$/.test(draft.email))
       return setError(t('consumer.profile.badEmail', 'Enter a valid email address.'));
     setError(null);
@@ -63,9 +91,12 @@ export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
     try {
       const base = draftFrom(user || {});
       const patch: Record<string, string> = {};
-      (Object.keys(draft) as (keyof ProfileDraft)[]).forEach((k) => {
-        if (draft[k] !== base[k]) patch[k] = draft[k];
-      });
+      if (draft.email !== base.email) patch.email = draft.email;
+      for (const k of ADDR_KEYS) {
+        const next = String((a as Record<string, unknown>)[k] ?? '');
+        const prev = String((base.addr as Record<string, unknown>)[k] ?? '');
+        if (next !== prev) patch[k] = next;
+      }
       if (Object.keys(patch).length === 0) {
         setEditing(false);
         return;
@@ -86,7 +117,7 @@ export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
   }
 
   const fullName = `${user.fname || ''}${user.lname ? ' ' + user.lname : ''}`.trim() || '—';
-  const address = buildAddress(user);
+  const addrRows = addressDetailRows(addrFrom(user), '—');
   const sellerType = user.seller_type === 'Retailer' ? t('farmer.tagRetailer') : t('farmer.tag');
 
   return (
@@ -111,8 +142,17 @@ export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
             mono
           />
           <ProfRow label={t('farmer.profile.email')} value={(user.email as string) || '—'} />
-          <ProfRow label={t('farmer.profile.district')} value={(user.district as string) || '—'} />
-          <ProfRow label={t('farmer.profile.address')} value={address || '—'} />
+        </dl>
+
+        {/* The unified address block — identical fields, order and labels across
+            every profile (via addressDetailRows). */}
+        <h4 className="mb-1 mt-3 text-sm font-bold text-primary">
+          📍 {t('farmer.profile.address')}
+        </h4>
+        <dl className="flex flex-col">
+          {addrRows.map(([key, label, value]) => (
+            <ProfRow key={key} label={t(key, label)} value={value} />
+          ))}
         </dl>
 
         {!editing ? (
@@ -129,62 +169,18 @@ export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
                   autoComplete="email"
                   placeholder="your@email.com"
                   value={draft.email}
-                  onChange={(e) => set('email', e.target.value)}
+                  onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
                 />
               )}
             </Field>
-            <Field label={t('farmer.profile.street1')}>
-              {(p) => (
-                <Input
-                  {...p}
-                  type="text"
-                  value={draft.street1}
-                  onChange={(e) => set('street1', e.target.value)}
-                />
-              )}
-            </Field>
-            <Field label={t('farmer.profile.street2')}>
-              {(p) => (
-                <Input
-                  {...p}
-                  type="text"
-                  value={draft.street2}
-                  onChange={(e) => set('street2', e.target.value)}
-                />
-              )}
-            </Field>
-            <Field label={t('farmer.profile.villageTown')}>
-              {(p) => (
-                <Input
-                  {...p}
-                  type="text"
-                  value={draft.village_town}
-                  onChange={(e) => set('village_town', e.target.value)}
-                />
-              )}
-            </Field>
-            <Field label={t('farmer.profile.city')}>
-              {(p) => (
-                <Input
-                  {...p}
-                  type="text"
-                  value={draft.city}
-                  onChange={(e) => set('city', e.target.value)}
-                />
-              )}
-            </Field>
-            <Field label={t('farmer.profile.pincode')}>
-              {(p) => (
-                <Input
-                  {...p}
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="postal-code"
-                  value={draft.pincode}
-                  onChange={(e) => set('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))}
-                />
-              )}
-            </Field>
+
+            <AddressFields
+              value={draft.addr}
+              onChange={(addr) => setDraft((d) => ({ ...d, addr }))}
+              showStreet2
+              locked={{ state: true, district: true }}
+              required={{ taluk: districtHasTaluks }}
+            />
 
             {error ? (
               <div className={FIELD_ERR_CLASS} role="alert">

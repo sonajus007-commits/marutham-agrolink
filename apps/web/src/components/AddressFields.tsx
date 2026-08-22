@@ -26,6 +26,7 @@ export type AddressFieldKey =
   | 'taluk'
   | 'village_town'
   | 'city'
+  | 'country'
   | 'pincode';
 
 type AddressFieldMap<T> = Partial<Record<AddressFieldKey, T>>;
@@ -50,6 +51,10 @@ export interface AddressFieldsProps {
   required?: AddressFieldMap<boolean>;
   /** Label overrides, e.g. house_no → "House / Survey Number" for a farm. */
   labels?: AddressFieldMap<string>;
+  /** Fields the caller renders read-only. Used by the self-profiles, where the
+   *  district scopes the storefront + delivery hub and so is support-managed:
+   *  `locked={{ state: true, district: true }}` shows them but disables editing. */
+  locked?: AddressFieldMap<boolean>;
 }
 
 /** Keep only digits, capped at 6 — the legacy numOnly() + maxlength. */
@@ -72,6 +77,7 @@ const LABELS: Record<AddressFieldKey, readonly [string, string]> = {
   taluk: ['address.taluk', 'Taluk'],
   village_town: ['address.village', 'Village / Town'],
   city: ['address.city', 'City'],
+  country: ['address.country', 'Country'],
   pincode: ['address.pincode', 'Pincode'],
 };
 
@@ -86,6 +92,7 @@ export function AddressFields({
   errors = {},
   required = {},
   labels = {},
+  locked = {},
 }: AddressFieldsProps) {
   const { t } = useTranslation();
   const { states, districtsOf, taluksOf } = useLocations();
@@ -170,6 +177,7 @@ export function AddressFields({
             {...p}
             autoComplete="address-level1"
             value={value.state || ''}
+            disabled={locked.state}
             /* A new state invalidates the district and taluk below it. */
             onChange={(e) => set({ state: e.target.value, district: '', taluk: '' })}
           >
@@ -189,7 +197,7 @@ export function AddressFields({
             {...p}
             autoComplete="address-level2"
             value={value.district || ''}
-            disabled={!value.state}
+            disabled={locked.district || !value.state}
             onChange={(e) => set({ district: e.target.value, taluk: '' })}
           >
             <option value="">— {t('address.selectDistrict', 'Select District')} —</option>
@@ -239,6 +247,20 @@ export function AddressFields({
             autoComplete="address-level2"
             value={value.city || ''}
             onChange={(e) => set({ city: e.target.value })}
+          />
+        )}
+      </Field>
+
+      <Field {...field('country')}>
+        {(p) => (
+          <Input
+            {...p}
+            type="text"
+            autoComplete="country-name"
+            placeholder="India"
+            value={value.country ?? ''}
+            disabled={locked.country}
+            onChange={(e) => set({ country: e.target.value })}
           />
         )}
       </Field>
