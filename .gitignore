@@ -32,3 +32,6 @@ apps/web/.playwright/
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude Code — local, per-machine settings and worktrees
+.claude/
