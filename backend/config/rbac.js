@@ -102,6 +102,10 @@ const TOKEN_ACTIONS = {
   approve: ['view', 'approve'],
   assign: ['view', 'assign'],
   manage: ['view', 'create', 'edit', 'delete', 'assign'],
+  // manage WITHOUT create — run existing records (edit/delete/assign) but cannot
+  // bring a new one into being. Used for hub_management: only the Admin team may
+  // CREATE a hub; the operational tiers may still edit hubs and assign staff.
+  manageNoCreate: ['view', 'edit', 'delete', 'assign'],
   full: ['view', 'create', 'edit', 'delete', 'approve', 'assign', 'export'],
   update: ['view', 'edit'], // status update
   initiate: ['view', 'create'], // e.g. raise a return
@@ -157,7 +161,9 @@ const MATRIX = {
   product_approval:           { bod:'view', adm:'full', th:'none', hr:'none', sh:'approve', zm:'approve', rm:'approve', dm:'approve', hub:'approve', hmg:'approve', vco:'create', da:'none' },
   inventory:                  { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', hmg:'manage', vco:'view', da:'view' },
   warehouse_hub:              { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'full', hmg:'full', vco:'none', da:'view' },
-  hub_management:             { bod:'view', adm:'full', th:'none', hr:'none', sh:'manage', zm:'manage', rm:'manage', dm:'manage', hub:'view', hmg:'manage', vco:'none', da:'none' },
+  // CREATE is Admin-only (adm:'full'). The operational tiers get manageNoCreate:
+  // they edit hubs and assign Hub Managers / Incharges, but cannot create a new hub.
+  hub_management:             { bod:'view', adm:'full', th:'none', hr:'none', sh:'manageNoCreate', zm:'manageNoCreate', rm:'manageNoCreate', dm:'manageNoCreate', hub:'view', hmg:'manageNoCreate', vco:'none', da:'none' },
   orders:                     { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', hmg:'manage', vco:'create', da:'assigned' },
   delivery_assignment:        { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', hmg:'manage', vco:'none', da:'assigned' },
   delivery_tracking:          { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', hmg:'manage', vco:'view', da:'update' },

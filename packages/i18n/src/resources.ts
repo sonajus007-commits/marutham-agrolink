@@ -1594,10 +1594,14 @@ export const resources = {
       'admin.hubs.createTitle': 'Create a taluk hub',
       'admin.hubs.createHint':
         'Create a hub for a taluk in {{district}}. Only taluks without a hub are listed.',
+      'admin.hubs.createHintGeo':
+        'Pick the State, District and Taluk the hub serves. Only taluks without a hub are listed.',
       'admin.hubs.createFailed': 'Could not create hub',
       'admin.hubs.created': 'Hub created.',
       'admin.hubs.creating': 'Creating…',
+      'admin.hubs.pickState': '— Select a state —',
       'admin.hubs.pickTaluk': '— Select a taluk —',
+      'admin.hubs.allTaluks': 'All taluks',
       'admin.hubs.nameOptional': 'Hub name (optional)',
       'admin.hubs.allTaluksHaveHubs': 'Every taluk in this district already has a hub.',
       'admin.hubs.incharge': 'Hub Incharge responsible',
@@ -3649,10 +3653,14 @@ export const resources = {
       'admin.hubs.createTitle': 'தாலுகா மையத்தை உருவாக்கு',
       'admin.hubs.createHint':
         '{{district}}-இல் ஒரு தாலுகாவிற்கு மையத்தை உருவாக்கவும். மையம் இல்லாத தாலுகாக்கள் மட்டுமே பட்டியலிடப்படுகின்றன.',
+      'admin.hubs.createHintGeo':
+        'மையம் சேவை செய்யும் மாநிலம், மாவட்டம், தாலுகாவைத் தேர்ந்தெடுக்கவும். மையம் இல்லாத தாலுகாக்கள் மட்டுமே பட்டியலிடப்படுகின்றன.',
       'admin.hubs.createFailed': 'மையத்தை உருவாக்க முடியவில்லை',
       'admin.hubs.created': 'மையம் உருவாக்கப்பட்டது.',
       'admin.hubs.creating': 'உருவாக்குகிறது…',
+      'admin.hubs.pickState': '— மாநிலத்தைத் தேர்ந்தெடு —',
       'admin.hubs.pickTaluk': '— தாலுகாவைத் தேர்ந்தெடு —',
+      'admin.hubs.allTaluks': 'அனைத்து தாலுகாக்கள்',
       'admin.hubs.nameOptional': 'மைய பெயர் (விருப்பம்)',
       'admin.hubs.allTaluksHaveHubs':
         'இந்த மாவட்டத்தில் ஒவ்வொரு தாலுகாவிற்கும் ஏற்கனவே மையம் உள்ளது.',

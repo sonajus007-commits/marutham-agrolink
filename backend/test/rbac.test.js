@@ -73,6 +73,18 @@ test('Delivery Agent is scoped to assigned rows only', () => {
   assert.equal(actions('delivery_agent', 'company_analytics'), '');
 });
 
+test('hub creation is Admin-only; managers still edit/assign hubs', () => {
+  // Only the Admin team may CREATE a hub. POST /hubs is guarded on
+  // hub_management:create, so this is what makes that endpoint admin-only.
+  assert.ok(cell('admin', 'hub_management').actions.includes('create'));
+  for (const role of ['state_head', 'zonal_manager', 'regional_manager', 'district_manager', 'hub_manager']) {
+    assert.ok(!cell(role, 'hub_management').actions.includes('create'), `${role} must NOT create hubs`);
+    // …but they keep the operational reach: edit a hub, assign its staff.
+    assert.ok(cell(role, 'hub_management').actions.includes('edit'), `${role} should still edit hubs`);
+    assert.ok(cell(role, 'hub_management').actions.includes('assign'), `${role} should still assign hub staff`);
+  }
+});
+
 test('State Head = Zonal Manager plus Settlement approval', () => {
   for (const m of rbac.MODULE_KEYS) {
     if (m === 'settlement_sellers') continue;
