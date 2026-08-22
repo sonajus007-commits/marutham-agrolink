@@ -7,7 +7,12 @@
 
 export interface PermUser {
   permissions?: Record<string, { actions: string[]; scope: string }> | null;
-  dashboards?: { executive?: boolean; operations?: boolean; adminhead?: boolean } | null;
+  dashboards?: {
+    executive?: boolean;
+    operations?: boolean;
+    adminhead?: boolean;
+    hub?: boolean;
+  } | null;
   role_key?: string | null;
 }
 
@@ -31,7 +36,7 @@ export function scopeFor(user: PermUser | null | undefined, module: string): str
 /** Whether a composite dashboard is open to this user (server-computed flags). */
 export function canSeeDashboard(
   user: PermUser | null | undefined,
-  which: 'executive' | 'operations' | 'adminhead',
+  which: 'executive' | 'operations' | 'adminhead' | 'hub',
 ): boolean {
   return !!user?.dashboards?.[which];
 }

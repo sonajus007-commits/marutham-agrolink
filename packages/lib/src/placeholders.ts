@@ -67,6 +67,11 @@ const PLACEHOLDER_CATALOGUE: Readonly<Record<string, { group: PlaceholderGroupId
     warehouse_utilization: { group: 'inventory', icon: '🏭' },
     inventory_stock: { group: 'inventory', icon: '📦' },
 
+    // ── Hub dashboard (HUB_PLACEHOLDERS) ──
+    hub_capacity: { group: 'inventory', icon: '🏭' },
+    staff_on_shift: { group: 'field', icon: '🧑‍🏭' },
+    stock_on_hand: { group: 'inventory', icon: '📦' },
+
     // ── Field: VCO & Delivery Agent (FIELD_PLACEHOLDERS) ──
     todays_schedule: { group: 'field', icon: '🗓️' },
     gps_route: { group: 'field', icon: '🗺️' },

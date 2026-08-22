@@ -35,6 +35,7 @@ import type {
   ExecutiveTrendMode,
   OperationsDashboardResponse,
   AdminHeadDashboardResponse,
+  HubDashboardResponse,
   AccountStatus,
   UserStatusHistoryEntry,
   Registration,
@@ -508,6 +509,16 @@ export const api = {
     if (params?.district) qs.set('district', params.district);
     const q = qs.toString();
     return apiFetch<AdminHeadDashboardResponse>('GET', `/dashboard/adminhead${q ? `?${q}` : ''}`);
+  },
+  /** Per-hub order in/out attribution. 403s outside Hub Manager / District Manager
+   *  / Admin. Scope is picked SERVER-SIDE from the caller (a Hub Manager sees their
+   *  own hub); Admin may preview a district via `district`. Money comes back in
+   *  RUPEES already. */
+  getHubDashboard(params?: { district?: string }): Promise<HubDashboardResponse> {
+    const qs = new URLSearchParams();
+    if (params?.district) qs.set('district', params.district);
+    const q = qs.toString();
+    return apiFetch<HubDashboardResponse>('GET', `/dashboard/hub${q ? `?${q}` : ''}`);
   },
 
   // ── Admin: users ──

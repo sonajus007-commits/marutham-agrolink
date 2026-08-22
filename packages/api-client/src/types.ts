@@ -33,6 +33,8 @@ export interface DashboardAccess {
   executive: boolean;
   operations: boolean;
   adminhead: boolean;
+  /** Per-hub in/out attribution — Hub Manager (own hub) + District Manager (roll-up). */
+  hub: boolean;
 }
 
 export interface User {
@@ -987,6 +989,47 @@ export interface OperationsDashboardResponse {
   districts: OperationsDistrict[];
   alerts: ExecutiveAlert[];
   /** See OPS_PLACEHOLDERS in backend/routes/dashboard.js. */
+  placeholders: string[];
+}
+
+/* ── Per-hub in/out attribution (GET /dashboard/hub, Hub Management Phase 3) ──────
+ *
+ * IN  = orders whose seller sits in this hub's taluk (orders.pickup_hub_id = hub).
+ * OUT = orders delivered into this hub's taluk       (orders.delivery_hub_id = hub).
+ * scope.level 'hub' → one hub (a Hub Manager); 'district' → every taluk hub in the
+ * district rolled up (a District Manager / Admin preview). MONEY: `revenue` is
+ * already RUPEES (rup()'d server-side) — fmtMoney it, never divide by 100. */
+export interface HubFlowMetrics {
+  /** Parcel COUNT (incl. cancelled). NOT named `total` — that is a money-middleware
+   *  field name and would be coerced into a rupee string server-side. */
+  count: number;
+  /** Live and not yet delivered. */
+  active: number;
+  delivered: number;
+  /** Placed today (IST). */
+  today: number;
+  /** RUPEES already — sum over non-cancelled parcels. */
+  revenue: number;
+}
+
+export interface HubDashboardHub {
+  id: string;
+  name: string;
+  taluk: string | null;
+  in: HubFlowMetrics;
+  out: HubFlowMetrics;
+}
+
+export interface HubDashboardResponse {
+  scope: { level: 'hub' | 'district'; name: string; district: string | null };
+  generated_at: string;
+  /** One entry for a Hub Manager; every district taluk hub for a District Manager. */
+  hubs: HubDashboardHub[];
+  totals: { in: HubFlowMetrics; out: HubFlowMetrics };
+  /** Active-order status → count, across every IN parcel in scope. */
+  in_status: Record<string, number>;
+  out_status: Record<string, number>;
+  /** See HUB_PLACEHOLDERS in backend/routes/dashboard.js. */
   placeholders: string[];
 }
 

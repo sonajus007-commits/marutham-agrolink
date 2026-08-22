@@ -531,7 +531,11 @@ function cancelledOrdersCount(orders) { return orders.filter(o => o.cancelled).l
 // replacement for the old OPS_*_ROLES admin_role sets). District tier sees one
 // district; region tier sees their state's districts; Admin is unscoped and may
 // drill via the console filter. Access itself is gated by u.dashboards.operations.
-const OPS_DISTRICT_KEYS = new Set(['district_manager', 'hub_incharge']);
+// Hub Manager joins the district tier (Phase 3 scope tightening). They were falling
+// through to the unscoped "all regions" branch here — a taluk-hub manager seeing the
+// whole company's operations. District is the tightest scope this shared dashboard
+// offers; their own-hub view is the dedicated /dashboard/hub.
+const OPS_DISTRICT_KEYS = new Set(['district_manager', 'hub_incharge', 'hub_manager']);
 const OPS_REGION_KEYS   = new Set(['regional_manager', 'state_head', 'zonal_manager']);
 
 const OPS_PLACEHOLDERS = ['hub_stock', 'farmer_visits', 'vco_attendance', 'agents_online', 'transfer_stock'];
@@ -987,6 +991,132 @@ router.get('/adminhead', async (req, res) => {
     },
     alerts,
     placeholders: ADMINHEAD_PLACEHOLDERS,
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GET /dashboard/hub  — per-hub order in/out attribution (Hub Management, Phase 3)
+// ───────────────────────────────────────────────────────────────────────────────
+// Reads the pickup_hub_id / delivery_hub_id stamped on every order (Phase 2):
+//   IN  = orders whose seller sits in this hub's taluk   (pickup_hub_id  = hub)
+//   OUT = orders delivered into this hub's taluk          (delivery_hub_id = hub)
+// Scope by role:
+//   Hub Manager      → their OWN hub only (hubs.hub_manager_id = self)
+//   District Manager → every taluk hub in their district, rolled up
+//   Admin            → preview a district (?district, else their own)
+// Only TALUK hubs carry attribution (resolveTalukHubId only ever returns a taluk
+// hub), so the main hub never appears here. Money already-in-rupees.
+//
+// A split order is a parent container plus one child per seller. The parent's
+// pickup is NULL (so it never counts as IN) but it DOES carry delivery_hub_id, so
+// it is excluded from OUT explicitly — otherwise a split order would count once as
+// the container and again per child. Counting only real parcels (route !== 'split')
+// keeps IN and OUT on the same footing: the physical things that move.
+// ═══════════════════════════════════════════════════════════════════════════════
+const HUB_PLACEHOLDERS = ['hub_capacity', 'staff_on_shift', 'stock_on_hand'];
+
+router.get('/hub', async (req, res) => {
+  const u = req.user;
+  if (!u.dashboards.hub) {
+    return res.status(403).json({ error: 'The hub dashboard is for Hub Managers and District Managers.' });
+  }
+
+  // ── Resolve which hubs are in scope ─────────────────────────────────────────
+  let scope;
+  let hubRows = [];
+  const hubCols = 'id, name, taluk, district, state, hub_type';
+
+  if (u.role_key === 'hub_manager') {
+    // Own hub(s): the taluk hub this manager runs. hub_manager_id is the operational
+    // pointer set by the admin assign flow (Phase 1).
+    const { data, error } = await supabase.from('hubs').select(hubCols).eq('hub_manager_id', u.id);
+    if (error) {
+      console.error('GET /dashboard/hub manager-hub lookup failed:', error.message);
+      return res.status(500).json({ error: 'Could not load your hub.' });
+    }
+    hubRows = data || [];
+    scope = { level: 'hub', name: hubRows[0]?.name || 'Your hub', district: hubRows[0]?.district || null };
+  } else {
+    // District roll-up (District Manager, or Admin previewing). Attribution lives on
+    // taluk hubs, so main hubs are excluded.
+    const district =
+      u.role_key === 'district_manager'
+        ? u.district_assign || u.district
+        : (req.query.district || '').trim() || u.district_assign || u.district;
+    scope = { level: 'district', name: district || 'Unassigned', district: district || null };
+    if (district) {
+      const { data, error } = await supabase
+        .from('hubs')
+        .select(hubCols)
+        .eq('district', district)
+        .eq('hub_type', 'taluk')
+        .order('taluk', { ascending: true });
+      if (error) {
+        console.error('GET /dashboard/hub district lookup failed:', error.message);
+        return res.status(500).json({ error: 'Could not load the district hubs.' });
+      }
+      hubRows = data || [];
+    }
+  }
+
+  // ── Pull orders and attribute them ──────────────────────────────────────────
+  const { data: allOrders, error: oErr } = await supabase
+    .from('orders')
+    .select('id, total, status, cancelled, route, pickup_hub_id, delivery_hub_id, created_at, delivered_at');
+  if (oErr) {
+    console.error('GET /dashboard/hub orders load failed:', oErr.message);
+    return res.status(500).json({ error: 'Could not load hub orders.' });
+  }
+
+  const nowIst = istParts(Date.now());
+  const isToday = (ts) => {
+    if (!ts) return false;
+    const p = istParts(ts);
+    return p.y === nowIst.y && p.m === nowIst.m && p.day === nowIst.day;
+  };
+
+  // A parcel is anything that physically moves — the container parent does not.
+  const parcels = (allOrders || []).filter((o) => o.route !== 'split');
+
+  const metrics = (list) => {
+    const live = list.filter((o) => !o.cancelled);
+    return {
+      // NOT `total` — that name is a MONEY_FIELD, so the money middleware would
+      // coerce this parcel COUNT into a rupee string ("0.01" for one order). See
+      // the money-middleware collision the Overview/AdminHead dashboards hit.
+      count:     list.length,
+      active:    live.filter((o) => o.status !== 'Delivered').length,
+      delivered: live.filter((o) => o.status === 'Delivered').length,
+      today:     list.filter((o) => isToday(o.created_at)).length,
+      revenue:   rup(live.reduce((s, o) => s + (o.total || 0), 0)),
+    };
+  };
+  const statusOf = (list) => {
+    const b = {};
+    list.filter((o) => !o.cancelled).forEach((o) => { b[o.status] = (b[o.status] || 0) + 1; });
+    return b;
+  };
+
+  const hubIdSet = new Set(hubRows.map((h) => h.id));
+  const inAll  = parcels.filter((o) => o.pickup_hub_id   && hubIdSet.has(o.pickup_hub_id));
+  const outAll = parcels.filter((o) => o.delivery_hub_id && hubIdSet.has(o.delivery_hub_id));
+
+  const hubs = hubRows.map((h) => ({
+    id:    h.id,
+    name:  h.name,
+    taluk: h.taluk,
+    in:    metrics(inAll.filter((o) => o.pickup_hub_id === h.id)),
+    out:   metrics(outAll.filter((o) => o.delivery_hub_id === h.id)),
+  }));
+
+  res.json({
+    scope,
+    generated_at: new Date().toISOString(),
+    hubs,
+    totals: { in: metrics(inAll), out: metrics(outAll) },
+    in_status:  statusOf(inAll),
+    out_status: statusOf(outAll),
+    placeholders: HUB_PLACEHOLDERS,
   });
 });
 

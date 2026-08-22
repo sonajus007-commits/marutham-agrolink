@@ -125,6 +125,11 @@ const OPS_ROLE_KEYS = new Set([
   'hub_incharge',
 ]);
 const ADMINHEAD_ROLE_KEYS = new Set(['admin', 'technical_head', 'hr']);
+// The per-hub in/out dashboard (Hub Management, Phase 3). A Hub Manager sees their
+// own hub; a District Manager rolls up every hub in their district; Admin previews.
+// Hub Incharge is deliberately NOT here — they run the hub FLOOR (the queue page),
+// not the attribution dashboard.
+const HUB_DASH_ROLE_KEYS = new Set(['admin', 'district_manager', 'hub_manager']);
 
 /** Which composite dashboards a user may open, from role + trust flags + perms. */
 function dashboardsFor(user, perms, roleKey) {
@@ -137,6 +142,9 @@ function dashboardsFor(user, perms, roleKey) {
     operations: OPS_ROLE_KEYS.has(roleKey),
     // Head Office control panel: Admin, Technical Head, HR (or an HR-Admin trust).
     adminhead: ADMINHEAD_ROLE_KEYS.has(roleKey) || user.is_hr_admin === true,
+    // Per-hub in/out attribution (Phase 3): Hub Manager (own hub), District
+    // Manager (district roll-up), Admin (preview). Scoped in-handler.
+    hub: HUB_DASH_ROLE_KEYS.has(roleKey),
   };
 }
 

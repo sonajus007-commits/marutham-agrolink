@@ -17,7 +17,7 @@ export const APP_BASE = import.meta.env.BASE_URL.replace(/\/+$/, '');
 /** A capability requirement for a nav item / route. */
 export type NavRequirement =
   | { module: string; action?: string } // default action: 'view'
-  | { dashboard: 'executive' | 'operations' | 'adminhead' };
+  | { dashboard: 'executive' | 'operations' | 'adminhead' | 'hub' };
 
 /** Does the user satisfy a requirement? */
 export function meetsRequirement(user: User | null | undefined, req?: NavRequirement): boolean {
@@ -43,6 +43,7 @@ const HOME_BY_ROLE_KEY: Record<string, string> = {
   zonal_manager: '/admin/operations',
   regional_manager: '/admin/operations',
   district_manager: '/admin/operations',
+  hub_manager: '/admin/hub-dashboard',
   hub_incharge: '/admin/hub',
   technical_head: '/admin/adminhead',
   hr: '/admin/adminhead',
@@ -103,6 +104,13 @@ export const ADMIN_NAV: AdminNavSection[] = [
         icon: '📦',
         to: '/admin/orders',
         requires: { module: 'orders' },
+      },
+      {
+        id: 'hub-dashboard',
+        labelKey: 'admin.nav.hubDashboard',
+        icon: '📈',
+        to: '/admin/hub-dashboard',
+        requires: { dashboard: 'hub' },
       },
       {
         id: 'hub',
