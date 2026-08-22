@@ -19,6 +19,7 @@ const {
   childCode,
 } = require('../utils/orderSplit');
 const { rollupToParent } = require('../utils/orderRollup');
+const { resolveTalukHubId } = require('../utils/hubResolver');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -129,7 +130,7 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
     // Fetch seller info (name + village for fulfilment + seller_type for fee)
     const { data: farmer, error: farmerErr } = await supabase
       .from('users')
-      .select('id, fname, lname, village_town, district, seller_type')
+      .select('id, fname, lname, village_town, district, state, taluk, seller_type')
       .eq('id', farmer_id)
       .maybeSingle();
 
@@ -205,6 +206,9 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
       // Where THIS seller's goods are, for the per-seller child order
       _sellerVillage: farmer.village_town,
       _sellerDistrict: farmer.district,
+      // Seller taluk/state — resolves the pickup hub this parcel enters through.
+      _sellerState: farmer.state,
+      _sellerTaluk: farmer.taluk,
     });
   }
 
@@ -260,6 +264,34 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
     delivery_address && typeof delivery_address.lng === 'number' ? delivery_address.lng : null;
   const destCoords = destLat !== null && destLng !== null ? { dest_lat: destLat, dest_lng: destLng } : {};
 
+  // ── 3b. Order → hub attribution (Hub Management, Phase 2) ──────────────────
+  // Every order records the taluk hub its goods ENTER through (the seller's hub)
+  // and the taluk hub they LEAVE through for the door (the consumer's delivery
+  // hub). Both best-effort: an unresolved side stamps NULL and never blocks the
+  // order — attribution is reporting metadata, not a gate. See utils/hubResolver.
+  //
+  // Delivery side: the chosen delivery address wins (a consumer can ship to another
+  // taluk), else the profile. Resolved once — one destination per order.
+  const deliveryTaluk    = (delivery_address && delivery_address.taluk)    || req.user.taluk    || null;
+  const deliveryDistrict = (delivery_address && delivery_address.district) || req.user.district || null;
+  const deliveryState    = (delivery_address && delivery_address.state)    || req.user.state    || null;
+  const deliveryHubId = await resolveTalukHubId(supabase, {
+    state: deliveryState, district: deliveryDistrict, taluk: deliveryTaluk,
+  });
+
+  // Pickup side: each seller's taluk hub. Cached by seller so a multi-line cart from
+  // one seller (and every child of a split) costs a single lookup.
+  const pickupHubBySeller = new Map();
+  for (const it of resolvedItems) {
+    if (pickupHubBySeller.has(it.farmer_id)) continue;
+    pickupHubBySeller.set(
+      it.farmer_id,
+      await resolveTalukHubId(supabase, {
+        state: it._sellerState, district: it._sellerDistrict, taluk: it._sellerTaluk,
+      }),
+    );
+  }
+
   // ── 4. Insert order — one row, or a parent + one child per seller ─────────
   // A cart from a single seller stays exactly one row, as it always has. A cart
   // spanning sellers becomes a parent (what the customer pays for and tracks) plus
@@ -293,6 +325,11 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
       // The container's own route, so its `stage` indexes into a map that can hold
       // any rollup status. Every pipeline mutation refuses a row routed this way.
       route:         isSplit ? SPLIT_ROUTE : '',
+      // Hub attribution. A split parent has several sellers, so — like its NULL
+      // village — it carries no single pickup hub; each child carries its own.
+      // An unsplit order has exactly one seller, so its pickup hub is that seller's.
+      pickup_hub_id:   isSplit ? null : (pickupHubBySeller.get(resolvedItems[0].farmer_id) ?? null),
+      delivery_hub_id: deliveryHubId,
       ...(delivery_address ? { delivery_address } : {}),
       ...destCoords,
     })
@@ -350,6 +387,10 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
         stage:         0,
         status:        'Order Placed',
         route:         '',
+        // Each child parcel enters through its own seller's hub; all leave through
+        // the one consumer delivery hub.
+        pickup_hub_id:   pickupHubBySeller.get(group.seller_id) ?? null,
+        delivery_hub_id: deliveryHubId,
         ...(delivery_address ? { delivery_address } : {}),
         ...destCoords,
       };
@@ -373,7 +414,7 @@ router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res
   // farmer payouts group order_items by order_id, so a line copied onto the parent
   // as well would pay its seller twice.
   const childIdBySeller = new Map(children.map(c => [c.seller_id, c.id]));
-  const itemRows = resolvedItems.map(({ _lineTotal, _lineFarmerTotal, _handling, _exotic, _saved, _sellerVillage, _sellerDistrict, ...rest }) => ({
+  const itemRows = resolvedItems.map(({ _lineTotal, _lineFarmerTotal, _handling, _exotic, _saved, _sellerVillage, _sellerDistrict, _sellerState, _sellerTaluk, ...rest }) => ({
     ...rest,
     order_id: isSplit ? childIdBySeller.get(rest.farmer_id) : order.id,
   }));

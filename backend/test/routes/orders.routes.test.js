@@ -11,7 +11,7 @@ const { mountRoute, muteConsoleError } = require('../helpers/app');
 
 const CONSUMER = {
   id: 'consumer-1', role: 'consumer', fname: 'Priya', lname: 'Nair',
-  district: 'Chennai', village_town: 'Adyar',
+  state: 'Tamil Nadu', district: 'Chennai', taluk: 'Egmore', village_town: 'Adyar',
 };
 
 const FARMER_ID  = 'farmer-1';
@@ -32,9 +32,10 @@ function healthyCheckout(overrides = {}) {
     }] },
     'users:select': { data: [{
       id: FARMER_ID, fname: 'Ravi', lname: 'K', village_town: 'Hosur',
-      district: 'Krishnagiri', seller_type: 'Farmer',
+      state: 'Tamil Nadu', district: 'Krishnagiri', taluk: 'Hosur', seller_type: 'Farmer',
     }] },
     'product_district_prices:select': { data: [{ market_price: 3000, handling: 0 }] },
+    'hubs:select': { data: [{ id: 'hub-1' }] },
     'rpc:next_code_seq:rpc': { data: 1 },
     'orders:insert': { data: [{ id: 'order-1', code: 'ORDCBE260714000001', consumer_name: 'Priya Nair' }] },
     'order_items:insert': { data: [] },
@@ -65,6 +66,41 @@ describe('POST /orders', () => {
     assert.equal(update.payload.qty_available, 34);
     // Still in stock, so it must NOT be unlisted.
     assert.equal(update.payload.listed, undefined);
+  });
+
+  // Hub Management Phase 2: every order records the taluk hub its goods enter
+  // through (the seller's) and leave through (the consumer's). Best-effort, so it
+  // must never fail the order — but when a hub resolves, it must be stamped.
+  test('STAMPS pickup_hub_id and delivery_hub_id on the order', async () => {
+    const supa = healthyCheckout();
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+
+    const res = await app.post('/', CART);
+
+    assert.equal(res.status, 201);
+    const insert = supa.callsTo('orders', 'insert')[0];
+    assert.equal(insert.payload.pickup_hub_id, 'hub-1', 'seller taluk hub not stamped');
+    assert.equal(insert.payload.delivery_hub_id, 'hub-1', 'consumer delivery hub not stamped');
+
+    // The internal `_seller*` scratch fields must never leak into order_items —
+    // Postgres rejects an unknown column and the whole order rolls back. The fake
+    // silently accepts unknown columns, so this asserts the strip explicitly.
+    const itemRows = supa.callsTo('order_items', 'insert')[0].payload;
+    const leaked = Object.keys(itemRows[0] || itemRows).filter(k => k.startsWith('_'));
+    assert.deepEqual(leaked, [], `internal fields leaked into order_items: ${leaked}`);
+  });
+
+  test('a missing hub leaves attribution NULL but still places the order', async () => {
+    // No taluk hub exists for either side — the lookup returns 0 rows.
+    const supa = healthyCheckout({ 'hubs|select': { data: [] } });
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+
+    const res = await app.post('/', CART);
+
+    assert.equal(res.status, 201, 'attribution must never gate the order');
+    const insert = supa.callsTo('orders', 'insert')[0];
+    assert.equal(insert.payload.pickup_hub_id, null);
+    assert.equal(insert.payload.delivery_hub_id, null);
   });
 
   test('auto-unlists the listing when the order takes the last of the stock', async () => {

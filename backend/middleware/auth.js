@@ -18,7 +18,7 @@ async function requireAuth(req, res, next) {
 
   const { data: user, error } = await supabase
     .from('users')
-    .select('id, login_id, phone, role, admin_role, role_id, status, block_reason, approval_status, payment_reference, payment_confirmed_at, seller_type, gender, subscription_plan, subscription_amount, subscription_expires_at, registration_charge, fname, lname, email, district, state, village_town, vco_city, district_assign, agent_vehicle, emp_id, employment_type, can_deliver, deleted_at')
+    .select('id, login_id, phone, role, admin_role, role_id, status, block_reason, approval_status, payment_reference, payment_confirmed_at, seller_type, gender, subscription_plan, subscription_amount, subscription_expires_at, registration_charge, fname, lname, email, district, state, taluk, village_town, vco_city, district_assign, agent_vehicle, emp_id, employment_type, can_deliver, deleted_at')
     .eq('id', payload.sub)
     .single();
 

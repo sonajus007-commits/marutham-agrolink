@@ -639,6 +639,11 @@
           "type": "double precision",
           "notNull": false
         },
+        "delivery_hub_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "hubs.id"
+        },
         "delivery_village": {
           "type": "text",
           "notNull": false
@@ -704,6 +709,11 @@
         "picked_up_at": {
           "type": "timestamp with time zone",
           "notNull": false
+        },
+        "pickup_hub_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "hubs.id"
         },
         "refund_amt": {
           "type": "int32",
