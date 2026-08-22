@@ -15,9 +15,10 @@
 async function resolveTalukHubId(supabase, { state, district, taluk } = {}) {
   if (!state || !district || !taluk) return null;
 
-  // maybeSingle: 0 rows is a legitimate answer (no hub for this taluk yet), not an
-  // error. The (state, district, taluk) partial-unique index guarantees at most one
-  // taluk hub, so this never trips maybeSingle's 2+-rows error.
+  // A taluk may now hold SEVERAL hubs (offices), so this is no longer a single-row
+  // lookup — maybeSingle would throw the moment a second office exists. Attribute to
+  // the OLDEST hub in the taluk (its primary office); limit(1) also means 0 rows is
+  // a clean "no hub yet" → null, never an error.
   const { data, error } = await supabase
     .from('hubs')
     .select('id')
@@ -25,13 +26,14 @@ async function resolveTalukHubId(supabase, { state, district, taluk } = {}) {
     .eq('district', district)
     .eq('taluk', taluk)
     .eq('hub_type', 'taluk')
-    .maybeSingle();
+    .order('created_at', { ascending: true })
+    .limit(1);
 
   if (error) {
     console.error('resolveTalukHubId lookup failed:', error.message);
     return null;
   }
-  return data ? data.id : null;
+  return data && data.length ? data[0].id : null;
 }
 
 module.exports = { resolveTalukHubId };

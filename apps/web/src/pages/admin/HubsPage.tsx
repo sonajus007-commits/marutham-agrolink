@@ -49,16 +49,15 @@ export function HubsPage() {
   // Page-local Taluk filter (narrows the loaded district's hubs).
   const [talukFilter, setTalukFilter] = useState('');
 
-  // Create-hub sheet — Admin picks State → District → a taluk with no hub yet.
+  // Create-hub sheet — Admin picks State → District → Taluk and names the hub. A
+  // taluk can hold several hubs (offices), so the taluk is never "taken"; the NAME
+  // is what must be unique within the taluk (validated on save).
   const [creating, setCreating] = useState(false);
   const [newState, setNewState] = useState('');
   const [newDistrict, setNewDistrict] = useState('');
   const [newTaluk, setNewTaluk] = useState('');
   const [newName, setNewName] = useState('');
   const [savingNew, setSavingNew] = useState(false);
-  // Taluks that already have a hub in the create-form's district (so we never offer
-  // to create a duplicate). Fetched for whatever district the Admin picks.
-  const [createTaken, setCreateTaken] = useState<Set<string>>(new Set());
 
   const load = useCallback(() => {
     if (!effectiveDistrict) {
@@ -99,10 +98,11 @@ export function HubsPage() {
     [hubs, talukFilter],
   );
 
-  // Taluks the Admin may still create a hub for, in the chosen create-district.
-  const createAvailableTaluks = useMemo(
-    () => taluksOf(newState, newDistrict).filter((tk) => !createTaken.has(tk)),
-    [taluksOf, newState, newDistrict, createTaken],
+  // Every taluk in the chosen create-district — all selectable (a taluk can hold
+  // several hubs).
+  const createTaluks = useMemo(
+    () => taluksOf(newState, newDistrict),
+    [taluksOf, newState, newDistrict],
   );
 
   function openCreate() {
@@ -112,38 +112,19 @@ export function HubsPage() {
     setNewDistrict(effectiveDistrict || '');
     setNewTaluk('');
     setNewName('');
-    setCreateTaken(new Set());
     setCreating(true);
   }
 
-  // When the create-form's district resolves, learn which of its taluks are taken.
-  useEffect(() => {
-    if (!creating || !newDistrict) {
-      setCreateTaken(new Set());
-      return;
-    }
-    let live = true;
-    api
-      .getHubs(newDistrict, newState)
-      .then((res) => {
-        if (!live) return;
-        setCreateTaken(new Set((res.hubs || []).map((h) => h.taluk).filter(Boolean) as string[]));
-      })
-      .catch(() => live && setCreateTaken(new Set()));
-    return () => {
-      live = false;
-    };
-  }, [creating, newState, newDistrict]);
-
   async function createHub() {
-    if (!newState || !newDistrict || !newTaluk) return;
+    const name = newName.trim();
+    if (!newState || !newDistrict || !newTaluk || !name) return;
     setSavingNew(true);
     try {
       await api.createHub({
         state: newState,
         district: newDistrict,
         taluk: newTaluk,
-        name: newName.trim() || undefined,
+        name,
       });
       toast(t('admin.hubs.created', 'Hub created.'), 'ok');
       setCreating(false);
@@ -320,7 +301,7 @@ export function HubsPage() {
           <p className="text-sm text-fg-muted">
             {t(
               'admin.hubs.createHintGeo',
-              'Pick the State, District and Taluk the hub serves. Only taluks without a hub are listed.',
+              'Pick the State, District and Taluk this hub serves, then give it a name. A taluk can have several hubs — each name must be unique within the taluk (e.g. Hub 1, Hub 2).',
             )}
           </p>
 
@@ -370,7 +351,7 @@ export function HubsPage() {
               disabled={!newDistrict}
             >
               <option value="">{t('admin.hubs.pickTaluk', '— Select a taluk —')}</option>
-              {createAvailableTaluks.map((tk) => (
+              {createTaluks.map((tk) => (
                 <option key={tk} value={tk}>
                   {tk}
                 </option>
@@ -379,24 +360,19 @@ export function HubsPage() {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className={FIELD_LABEL_CLASS}>
-              {t('admin.hubs.nameOptional', 'Hub name (optional)')}
-            </span>
+            <span className={FIELD_LABEL_CLASS}>{t('admin.hubs.nameLabel', 'Hub name')}</span>
             <Input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder={newTaluk ? `${newTaluk} Hub` : t('admin.hubs.name', 'Hub name')}
+              placeholder={newTaluk ? `${newTaluk} Hub 1` : t('admin.hubs.name', 'Hub name')}
             />
           </label>
 
-          {newDistrict && createAvailableTaluks.length === 0 ? (
-            <p className="text-2xs text-fg-muted">
-              {t('admin.hubs.allTaluksHaveHubs', 'Every taluk in this district already has a hub.')}
-            </p>
-          ) : null}
-
           <div className="flex gap-2">
-            <Button onClick={createHub} disabled={savingNew || !newTaluk}>
+            <Button
+              onClick={createHub}
+              disabled={savingNew || !newState || !newDistrict || !newTaluk || !newName.trim()}
+            >
               {savingNew
                 ? t('admin.hubs.creating', 'Creating…')
                 : t('admin.hubs.create', 'Create hub')}

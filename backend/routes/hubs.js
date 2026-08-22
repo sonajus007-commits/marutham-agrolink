@@ -151,6 +151,11 @@ router.post('/', requirePermission('hub_management', 'create'), async (req, res)
   if (!state || !district || !taluk) {
     return res.status(400).json({ error: 'state, district and taluk are required.' });
   }
+  // A taluk may now hold several hubs (offices), so the NAME is the identifier that
+  // tells them apart — it is required, and must be unique within the taluk.
+  if (!name) {
+    return res.status(400).json({ error: 'A hub name is required.' });
+  }
 
   // The taluk must be real reference data (guards against typos creating junk hubs).
   const { data: loc, error: locErr } = await supabase
@@ -186,7 +191,10 @@ router.post('/', requirePermission('hub_management', 'create'), async (req, res)
       .json({ error: 'This district has no main hub yet — create the main hub first.' });
   }
 
-  // Reject a duplicate up front for a clean 409 (the unique index is the backstop).
+  // A taluk can hold multiple hubs, but not two with the same name. Reject a dup
+  // name up front for a clean 409 (case-insensitive; the unique index is the
+  // backstop). limit(1), not maybeSingle: pre-existing data could in theory hold a
+  // dup, and a guard that errors on the very thing it guards against is no guard.
   const { data: existing, error: exErr } = await supabase
     .from('hubs')
     .select('id')
@@ -194,13 +202,16 @@ router.post('/', requirePermission('hub_management', 'create'), async (req, res)
     .eq('district', district)
     .eq('taluk', taluk)
     .eq('hub_type', 'taluk')
-    .maybeSingle();
+    .ilike('name', name)
+    .limit(1);
   if (exErr) {
     console.error('POST /hubs duplicate check error:', exErr.message);
     return res.status(500).json({ error: 'Could not check for an existing hub.' });
   }
-  if (existing) {
-    return res.status(409).json({ error: 'A taluk hub already exists for this taluk.' });
+  if (existing && existing.length) {
+    return res
+      .status(409)
+      .json({ error: 'A hub with that name already exists in this taluk.' });
   }
 
   const { data: created, error } = await supabase
@@ -210,7 +221,7 @@ router.post('/', requirePermission('hub_management', 'create'), async (req, res)
       state,
       district,
       taluk,
-      name: name || `${taluk} Hub`,
+      name,
       parent_hub_id: main.id,
       is_active: true,
     })
