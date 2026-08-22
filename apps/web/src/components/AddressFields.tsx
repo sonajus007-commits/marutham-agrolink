@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Field, Input, Select, FIELD_ERR_CLASS } from '@marutham/ui';
 import type { SavedAddress } from '@marutham/lib';
 import { useLocations } from '../hooks/useLocations';
+import { useVillageSuggestions } from '../hooks/useVillageSuggestions';
 import { LocationPinButton } from './LocationPinButton';
 
 /* The address form, shared by the consumer Address Book, the Checkout "deliver
@@ -25,7 +26,6 @@ export type AddressFieldKey =
   | 'district'
   | 'taluk'
   | 'village_town'
-  | 'city'
   | 'country'
   | 'pincode';
 
@@ -75,8 +75,7 @@ const LABELS: Record<AddressFieldKey, readonly [string, string]> = {
   state: ['address.state', 'State'],
   district: ['address.district', 'District'],
   taluk: ['address.taluk', 'Taluk'],
-  village_town: ['address.village', 'Village / Town'],
-  city: ['address.city', 'City'],
+  village_town: ['address.village', 'Village / Town / City'],
   country: ['address.country', 'Country'],
   pincode: ['address.pincode', 'Pincode'],
 };
@@ -96,6 +95,7 @@ export function AddressFields({
 }: AddressFieldsProps) {
   const { t } = useTranslation();
   const { states, districtsOf, taluksOf } = useLocations();
+  const villageHints = useVillageSuggestions(value.state, value.district, value.taluk);
   const set = (patch: Partial<SavedAddress>) => onChange({ ...value, ...patch });
 
   /** Everything <Field> needs for one address key, so no call site re-derives it. */
@@ -228,26 +228,30 @@ export function AddressFields({
         )}
       </Field>
 
+      {/* Merged Village/Town/City. The datalist offers localities already entered
+          in this taluk (learned autocomplete) but never constrains — free text
+          wins, so any new village can be typed. */}
       <Field {...field('village_town')}>
         {(p) => (
-          <Input
-            {...p}
-            type="text"
-            value={value.village_town || ''}
-            onChange={(e) => set({ village_town: e.target.value })}
-          />
-        )}
-      </Field>
-
-      <Field {...field('city')}>
-        {(p) => (
-          <Input
-            {...p}
-            type="text"
-            autoComplete="address-level2"
-            value={value.city || ''}
-            onChange={(e) => set({ city: e.target.value })}
-          />
+          <>
+            <Input
+              {...p}
+              type="text"
+              autoComplete="address-level2"
+              list={villageHints.length ? 'ma-village-hints' : undefined}
+              value={value.village_town || ''}
+              onChange={(e) => set({ village_town: e.target.value })}
+            />
+            {villageHints.length ? (
+              <datalist id="ma-village-hints">
+                {villageHints.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </datalist>
+            ) : null}
+          </>
         )}
       </Field>
 

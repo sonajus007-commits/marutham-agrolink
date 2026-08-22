@@ -52,8 +52,8 @@ export function employeeAddressObject(e: EmployeeRecord | null | undefined): Add
     house_no: e.house_no ?? null,
     street1: e.street1 ?? e.address_line ?? null,
     street2: e.street2 ?? null,
-    village_town: e.village_town ?? null,
-    city: e.city ?? null,
+    // Merged Village/Town/City — fall back to the legacy city column.
+    village_town: e.village_town ?? e.city ?? null,
     taluk: e.taluk ?? null,
     district: e.district ?? null,
     state: e.state ?? null,
@@ -87,8 +87,7 @@ export function employeeDetailPairs(
     e.street1,
     e.street2,
     e.address_line,
-    e.village_town,
-    e.city,
+    e.village_town || e.city, // merged Village/Town/City (city = legacy fallback)
     e.taluk,
     e.district,
     e.state,

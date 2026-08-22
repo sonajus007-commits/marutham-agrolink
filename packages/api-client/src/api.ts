@@ -14,6 +14,7 @@ import type {
   TopRatingsResponse,
   MyRatingsResponse,
   LocationsResponse,
+  VillageSuggestionsResponse,
   HubsResponse,
   HubInchargesResponse,
   Hub,
@@ -343,6 +344,21 @@ export const api = {
   },
   getLocations(): Promise<LocationsResponse> {
     return apiFetch<LocationsResponse>('GET', '/locations', undefined, false);
+  },
+  /** Learned autocomplete: localities already entered in this taluk (no auth —
+   *  used pre-login on the registration form). */
+  villageSuggestions(
+    state: string,
+    district: string,
+    taluk: string,
+  ): Promise<VillageSuggestionsResponse> {
+    const qs = new URLSearchParams({ state, district, taluk });
+    return apiFetch<VillageSuggestionsResponse>(
+      'GET',
+      `/locations/villages?${qs}`,
+      undefined,
+      false,
+    );
   },
   /** The hubs in one district (its main hub + every taluk hub). */
   getHubs(district: string, state?: string | null): Promise<HubsResponse> {

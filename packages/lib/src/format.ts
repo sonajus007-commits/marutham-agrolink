@@ -75,7 +75,10 @@ export interface AddressObject {
   street1?: string | null;
   street2?: string | null;
   landmark?: string | null;
+  /** Canonical locality — the merged "Village / Town / City" field. */
   village_town?: string | null;
+  /** Legacy separate city column; still read as a fallback for pre-merge rows,
+   *  no longer written to (the form writes `village_town`). */
   city?: string | null;
   taluk?: string | null;
   district?: string | null;
@@ -97,13 +100,15 @@ export interface AddressObject {
  *  India so a domestic address stays short. */
 export function buildAddress(u: AddressObject): string {
   const country = u.country && u.country.trim().toLowerCase() !== 'india' ? u.country : null;
+  // village_town is the canonical locality; `city` survives only as a fallback for
+  // rows written before the two fields were merged into one Village/Town/City field.
+  const locality = u.village_town || u.city;
   return [
     u.house_no,
     u.street1,
     u.street2,
     u.landmark,
-    u.village_town,
-    u.city,
+    locality,
     u.taluk,
     u.district,
     u.state,

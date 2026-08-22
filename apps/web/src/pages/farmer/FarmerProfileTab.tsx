@@ -33,7 +33,6 @@ const ADDR_KEYS = [
   'street2',
   'landmark',
   'village_town',
-  'city',
   'taluk',
   'district',
   'state',
@@ -44,6 +43,9 @@ const ADDR_KEYS = [
 function addrFrom(user: Record<string, unknown>): SavedAddress {
   const a: SavedAddress = {};
   for (const k of ADDR_KEYS) (a as Record<string, unknown>)[k] = (user[k] as string) || '';
+  // Village/Town/City is merged onto village_town; seed from the legacy city column
+  // for records written before the merge so nothing disappears from the form.
+  if (!a.village_town) a.village_town = (user.city as string) || '';
   if (!a.country) a.country = 'India';
   return a;
 }

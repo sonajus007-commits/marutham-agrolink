@@ -178,12 +178,11 @@ describe('formatting', () => {
     expect(addressSummary({})).toBe('');
   });
 
-  it('detail rows are the same 8-row hierarchy for every address', () => {
+  it('detail rows are the same 7-row hierarchy for every address', () => {
     const keys = addressDetailRows({}).map(([k]) => k);
     expect(keys).toEqual([
       'address.street',
-      'address.village',
-      'address.city',
+      'address.village', // one merged Village / Town / City row
       'address.taluk',
       'address.district',
       'address.state',
@@ -204,7 +203,13 @@ describe('formatting', () => {
     expect(val('address.street')).toBe('12, Main St');
     expect(val('address.village')).toBe('Vilakudi');
     expect(val('address.country')).toBe('India'); // blank reads as India
-    expect(val('address.city')).toBe('—'); // missing shows the dash, never dropped
+    expect(val('address.taluk')).toBe('—'); // missing shows the dash, never dropped
+  });
+
+  it('the merged locality row falls back to the legacy city column', () => {
+    // A row written before the merge — only `city` is set.
+    const rows = addressDetailRows({ city: 'Pudukkottai' });
+    expect(rows.find(([k]) => k === 'address.village')?.[2]).toBe('Pudukkottai');
   });
 
   it('detail rows keep an explicit non-India country', () => {

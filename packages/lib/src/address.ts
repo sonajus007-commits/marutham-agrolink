@@ -42,7 +42,8 @@ export function addressProblemKey(problem: AddressProblem): string {
 
 /** Compact one-line form used in lists and pickers (not the full postal line). */
 export function addressSummary(a: SavedAddress): string {
-  return [a.house_no, a.street1, a.landmark, a.village_town, a.pincode].filter(Boolean).join(', ');
+  const locality = a.village_town || a.city;
+  return [a.house_no, a.street1, a.landmark, locality, a.pincode].filter(Boolean).join(', ');
 }
 
 /** [i18n key, English label, value] per row. Third element carries no key so a
@@ -59,10 +60,12 @@ export type AddressDetailRow = [key: string, label: string, value: string];
  */
 export function addressDetailRows(a: AddressObject, dash = '—'): AddressDetailRow[] {
   const street = [a.house_no, a.street1, a.street2, a.landmark].filter(Boolean).join(', ');
+  // Village/Town/City is one merged field; `city` survives only as a fallback for
+  // rows written before the merge.
+  const locality = a.village_town || a.city;
   return [
     ['address.street', 'Street', street || dash],
-    ['address.village', 'Village / Town', a.village_town || dash],
-    ['address.city', 'City', a.city || dash],
+    ['address.village', 'Village / Town / City', locality || dash],
     ['address.taluk', 'Taluk', a.taluk || dash],
     ['address.district', 'District', a.district || dash],
     ['address.state', 'State', a.state || dash],

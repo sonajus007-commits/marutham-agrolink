@@ -175,7 +175,6 @@ export function Register() {
     district: t('reg.addr.district'),
     taluk: t('reg.addr.taluk'),
     village_town: isRetailer ? t('reg.addr.area') : t('reg.addr.village'),
-    city: t('reg.addr.city'),
     pincode: t('reg.addr.pincode'),
   };
 
@@ -320,8 +319,7 @@ export function Register() {
             labels={addressLabels}
             required={{
               street1: true,
-              city: true,
-              village_town: isFarmer,
+              village_town: true,
               taluk: districtHasTaluks,
             }}
             errors={{
@@ -329,7 +327,6 @@ export function Register() {
               state: err.state,
               district: err.district,
               taluk: err.taluk,
-              city: err.city,
               pincode: err.pincode,
               village_town: err.village_town,
             }}

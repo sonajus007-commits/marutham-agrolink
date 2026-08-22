@@ -624,6 +624,11 @@ export interface LocationsResponse {
   tree: Record<string, Record<string, string[]>>;
 }
 
+export interface VillageSuggestionsResponse {
+  /** Distinct localities already entered in the requested taluk (learned hints). */
+  villages: string[];
+}
+
 export interface PlaceOrderItem {
   product_id: string;
   farmer_id?: string | null;

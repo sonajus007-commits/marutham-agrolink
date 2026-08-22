@@ -190,7 +190,9 @@ export function validateRegistration(
   if (!a.district) e.district = 'district';
   // A district with no taluks in the tree can't demand one.
   if (opts.districtHasTaluks && !a.taluk) e.taluk = 'taluk';
-  if (!trim(a.city)) e.city = 'required';
+  // Village/Town/City is one merged, always-required locality field. (A farm gets a
+  // more specific 'villageRequired' fault below.)
+  if (!trim(a.village_town)) e.village_town = 'required';
   if (!PINCODE_RE.test(a.pincode || '')) e.pincode = 'pincode';
 
   if (!isStrongPassword(form.password)) e.password = 'passwordWeak';

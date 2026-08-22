@@ -64,14 +64,14 @@ describe('validateRegistration — shared rules', () => {
     expect(validateRegistration(validConsumer(), withTaluks)).toEqual({});
   });
 
-  it('requires name, gender, phone, street, city, state, district and pincode', () => {
+  it('requires name, gender, phone, street, village/town/city, state, district and pincode', () => {
     // No district picked yet, so the tree offers no taluks to require.
     const errors = validateRegistration(emptyRegisterForm('consumer'), {
       districtHasTaluks: false,
     });
     expect(Object.keys(errors).sort()).toEqual(
       [
-        'city',
+        'village_town', // the merged Village / Town / City locality
         'district',
         'fname',
         'gender',
@@ -120,12 +120,13 @@ describe('validateRegistration — shared rules', () => {
     expect(validateRegistration(mismatch, withTaluks).confirm_password).toBe('passwordMismatch');
   });
 
-  it('does not ask a consumer for KYC, a village or a plan', () => {
+  it('asks a consumer for the merged locality but not KYC or a plan', () => {
     const errors = validateRegistration(
       { ...validConsumer(), address: { ...validConsumer().address, village_town: '' } },
       withTaluks,
     );
-    expect(errors.village_town).toBeUndefined();
+    // Village/Town/City is now a universal required field (merged from city).
+    expect(errors.village_town).toBe('required');
     expect(errors.aadhar).toBeUndefined();
     expect(errors.subscription_plan).toBeUndefined();
   });
@@ -199,13 +200,14 @@ describe('validateRegistration — Retailer seller', () => {
     expect(validateRegistration(bad, withTaluks).gst_number).toBe('gstin');
   });
 
-  it('does not ask a Retailer for Aadhaar, bank details or a village', () => {
+  it('asks a Retailer for the locality but not Aadhaar or bank details', () => {
     const r = validRetailer();
     r.address = { ...r.address, village_town: '' };
     const errors = validateRegistration(r, withTaluks);
     expect(errors.aadhar).toBeUndefined();
     expect(errors.bank_account).toBeUndefined();
-    expect(errors.village_town).toBeUndefined();
+    // Merged Village/Town/City is universal; a Retailer gets the generic 'required'.
+    expect(errors.village_town).toBe('required');
   });
 });
 
