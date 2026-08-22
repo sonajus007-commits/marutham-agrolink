@@ -121,6 +121,7 @@ const OPS_ROLE_KEYS = new Set([
   'zonal_manager',
   'regional_manager',
   'district_manager',
+  'hub_manager',
   'hub_incharge',
 ]);
 const ADMINHEAD_ROLE_KEYS = new Set(['admin', 'technical_head', 'hr']);

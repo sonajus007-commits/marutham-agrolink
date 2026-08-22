@@ -17,6 +17,8 @@ import type {
   VillageSuggestionsResponse,
   HubsResponse,
   HubInchargesResponse,
+  HubStaffResponse,
+  CreateHubPayload,
   Hub,
   HubUpdate,
   PlaceOrderPayload,
@@ -372,7 +374,18 @@ export const api = {
     if (state) qs.set('state', state);
     return apiFetch<HubInchargesResponse>('GET', `/hubs/incharges?${qs.toString()}`);
   },
-  /** Edit a hub — name, geo, active flag, responsible Hub Incharge. */
+  /** Staff of a given role (Hub Manager / District Manager / Hub Incharge) a hub in
+   *  this district can be assigned to. */
+  getHubStaff(role: string, district: string, state?: string | null): Promise<HubStaffResponse> {
+    const qs = new URLSearchParams({ role, district });
+    if (state) qs.set('state', state);
+    return apiFetch<HubStaffResponse>('GET', `/hubs/staff?${qs.toString()}`);
+  },
+  /** Admin creates a taluk hub for a chosen taluk. */
+  createHub(payload: CreateHubPayload): Promise<{ hub: Hub }> {
+    return apiFetch<{ hub: Hub }>('POST', '/hubs', payload);
+  },
+  /** Edit a hub — name, geo, active flag, responsible Hub Manager / Hub Incharge. */
   updateHub(id: string, data: HubUpdate): Promise<{ hub: Hub }> {
     return apiFetch<{ hub: Hub }>('PATCH', `/hubs/${id}`, data);
   },

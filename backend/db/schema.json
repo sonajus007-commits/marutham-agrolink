@@ -13,7 +13,7 @@
           "primaryKey": true
         },
         "next_seq": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "default": "1"
         },
@@ -85,7 +85,7 @@
           "notNull": false
         },
         "id": {
-          "type": "bigint",
+          "type": "int64",
           "notNull": true,
           "primaryKey": true
         },
@@ -317,7 +317,7 @@
           "references": "users.id"
         },
         "farmer_price": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true
         },
         "id": {
@@ -389,6 +389,11 @@
           "notNull": true
         },
         "hub_incharge_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "hub_manager_id": {
           "type": "uuid",
           "notNull": false,
           "references": "users.id"
@@ -488,7 +493,7 @@
     "order_items": {
       "columns": {
         "base_farmer_price": {
-          "type": "integer",
+          "type": "int32",
           "notNull": false
         },
         "farmer_id": {
@@ -501,11 +506,11 @@
           "notNull": false
         },
         "farmer_price": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true
         },
         "govt_price": {
-          "type": "integer",
+          "type": "int32",
           "notNull": false
         },
         "id": {
@@ -524,7 +529,7 @@
           "references": "orders.id"
         },
         "price": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true
         },
         "product_code": {
@@ -550,7 +555,7 @@
           "notNull": false
         },
         "rating_value": {
-          "type": "integer",
+          "type": "int32",
           "notNull": false
         },
         "unit": {
@@ -622,7 +627,7 @@
           "notNull": false
         },
         "delivery": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "default": "0"
         },
@@ -663,7 +668,7 @@
           "notNull": false
         },
         "handling": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "default": "0"
         },
@@ -674,12 +679,12 @@
           "primaryKey": true
         },
         "item_total": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "default": "0"
         },
         "market_fee": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "default": "0"
         },
@@ -701,7 +706,7 @@
           "notNull": false
         },
         "refund_amt": {
-          "type": "integer",
+          "type": "int32",
           "notNull": false
         },
         "refund_to": {
@@ -718,7 +723,7 @@
           "notNull": false
         },
         "saved": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "default": "0"
         },
@@ -732,11 +737,11 @@
           "notNull": false
         },
         "split_seq": {
-          "type": "smallint",
+          "type": "int32",
           "notNull": false
         },
         "stage": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "default": "0"
         },
@@ -746,7 +751,7 @@
           "default": "Order Placed"
         },
         "total": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "default": "0"
         },
@@ -772,7 +777,7 @@
     "payouts": {
       "columns": {
         "amount": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true
         },
         "created_at": {
@@ -822,7 +827,7 @@
           "notNull": true
         },
         "handling": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "default": "0"
         },
@@ -833,7 +838,7 @@
           "primaryKey": true
         },
         "market_price": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true
         },
         "product_id": {
@@ -857,7 +862,7 @@
           "primaryKey": true
         },
         "num_ratings": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "default": "0"
         },
@@ -867,7 +872,7 @@
           "references": "products.id"
         },
         "sum_stars": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "default": "0"
         }
@@ -1006,7 +1011,7 @@
           "notNull": true
         },
         "sort": {
-          "type": "smallint",
+          "type": "int32",
           "notNull": true,
           "default": "0"
         }
@@ -1026,7 +1031,7 @@
           "references": "rbac_modules.key"
         },
         "role_id": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "primaryKey": true,
           "references": "rbac_roles.id"
@@ -1042,7 +1047,7 @@
           "references": "rbac_modules.key"
         },
         "role_id": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "primaryKey": true,
           "references": "rbac_roles.id"
@@ -1062,7 +1067,7 @@
           "default": "now()"
         },
         "id": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "primaryKey": true
         },
@@ -1080,7 +1085,7 @@
           "notNull": true
         },
         "tier": {
-          "type": "smallint",
+          "type": "int32",
           "notNull": true,
           "default": "5"
         }
@@ -1103,7 +1108,7 @@
           "notNull": false
         },
         "price": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true
         },
         "product_code": {
@@ -1184,7 +1189,7 @@
           "references": "orders.id"
         },
         "refund_amt": {
-          "type": "integer",
+          "type": "int32",
           "notNull": false
         },
         "refund_to": {
@@ -1225,17 +1230,17 @@
           "notNull": true
         },
         "plan_amount": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "default": "0"
         },
         "registration_charge": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "default": "0"
         },
         "total_amount": {
-          "type": "integer",
+          "type": "int32",
           "notNull": true,
           "default": "0"
         },
@@ -1266,7 +1271,7 @@
           "notNull": false
         },
         "id": {
-          "type": "bigint",
+          "type": "int64",
           "notNull": true,
           "primaryKey": true
         },
@@ -1288,7 +1293,7 @@
           "default": "now()"
         },
         "id": {
-          "type": "bigint",
+          "type": "int64",
           "notNull": true,
           "primaryKey": true
         },
@@ -1558,7 +1563,7 @@
           "notNull": false
         },
         "registration_charge": {
-          "type": "integer",
+          "type": "int32",
           "notNull": false,
           "default": "0"
         },
@@ -1571,7 +1576,7 @@
           "notNull": true
         },
         "role_id": {
-          "type": "integer",
+          "type": "int32",
           "notNull": false,
           "references": "rbac_roles.id"
         },
@@ -1588,11 +1593,11 @@
           "notNull": true
         },
         "shop_close_hour": {
-          "type": "smallint",
+          "type": "int32",
           "notNull": false
         },
         "shop_open_hour": {
-          "type": "smallint",
+          "type": "int32",
           "notNull": false
         },
         "state": {
@@ -1613,7 +1618,7 @@
           "notNull": false
         },
         "subscription_amount": {
-          "type": "integer",
+          "type": "int32",
           "notNull": false,
           "default": "0"
         },

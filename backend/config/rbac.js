@@ -22,7 +22,7 @@
  * one-to-one with the business spec it was transcribed from.
  */
 
-// ---- Roles (canonical set of 11) -------------------------------------------
+// ---- Roles (canonical set of 12) -------------------------------------------
 // tier is a coarse ordering for display and for "team" scope resolution (a
 // manager's team = lower-tier staff under them). Lower number = higher authority.
 const ROLES = [
@@ -34,9 +34,12 @@ const ROLES = [
   { key: 'zonal_manager', label: 'Zonal Manager', tier: 3, defaultScope: 'geo' },
   { key: 'regional_manager', label: 'Regional Manager', tier: 4, defaultScope: 'geo' },
   { key: 'district_manager', label: 'District Manager', tier: 5, defaultScope: 'geo' },
-  { key: 'hub_incharge', label: 'Hub Incharge', tier: 6, defaultScope: 'geo' },
-  { key: 'vco', label: 'VCO', tier: 7, defaultScope: 'geo' },
-  { key: 'delivery_agent', label: 'Delivery Agent', tier: 8, defaultScope: 'assigned' },
+  // Hub Manager runs a TALUK hub and reports to the district's District Manager;
+  // Hub Incharge / VCO / Delivery Agent sit under it (lower tiers = its team).
+  { key: 'hub_manager', label: 'Hub Manager', tier: 6, defaultScope: 'geo' },
+  { key: 'hub_incharge', label: 'Hub Incharge', tier: 7, defaultScope: 'geo' },
+  { key: 'vco', label: 'VCO', tier: 8, defaultScope: 'geo' },
+  { key: 'delivery_agent', label: 'Delivery Agent', tier: 9, defaultScope: 'assigned' },
 ];
 
 const ROLE_KEYS = ROLES.map((r) => r.key);
@@ -138,40 +141,41 @@ function expandCell(cell, roleDefaultScope) {
 // still below Admin (no System Configuration). Missing role in a row = 'none'.
 //
 // Column legend: bod=Board, adm=Admin, th=Technical Head, hr=HR, sh=State Head,
-// zm=Zonal, rm=Regional, dm=District, hub=Hub Incharge, vco=VCO, da=Delivery Agent.
+// zm=Zonal, rm=Regional, dm=District, hmg=Hub Manager, hub=Hub Incharge, vco=VCO,
+// da=Delivery Agent.
 const MATRIX = {
-  dashboard:                  { bod:'view', adm:'view', th:'view', hr:'view', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', vco:'view', da:'view' },
-  company_analytics:          { bod:'full', adm:'full', th:'view', hr:'view', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', vco:'view', da:'none' },
-  financial_reports:          { bod:'full', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', vco:'view', da:'none' },
-  sales_reports:              { bod:'full', adm:'full', th:'view', hr:'none', sh:'full', zm:'full', rm:'full', dm:'full', hub:'view', vco:'view', da:'none' },
-  profit_loss:                { bod:'full', adm:'full', th:'none', hr:'none', sh:'full', zm:'full', rm:'view', dm:'view', hub:'view', vco:'none', da:'none' },
-  user_management:            { bod:'view', adm:'full', th:'view', hr:'manage@employees', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', vco:'none', da:'none' },
-  role_permission_management: { bod:'view', adm:'full', th:'view', hr:'none', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', vco:'none', da:'none' },
-  farmer_management:          { bod:'view', adm:'full', th:'view', hr:'none', sh:'manage', zm:'manage', rm:'manage', dm:'manage', hub:'manage', vco:'createedit', da:'view' },
-  seller_management:          { bod:'view', adm:'full', th:'view', hr:'none', sh:'manage', zm:'manage', rm:'manage', dm:'manage', hub:'manage', vco:'createedit', da:'none' },
-  consumer_management:        { bod:'view', adm:'full', th:'view', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', vco:'support', da:'none' },
-  product_approval:           { bod:'view', adm:'full', th:'none', hr:'none', sh:'approve', zm:'approve', rm:'approve', dm:'approve', hub:'approve', vco:'create', da:'none' },
-  inventory:                  { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', vco:'view', da:'view' },
-  warehouse_hub:              { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'full', vco:'none', da:'view' },
-  hub_management:             { bod:'view', adm:'full', th:'none', hr:'none', sh:'manage', zm:'manage', rm:'manage', dm:'manage', hub:'view', vco:'none', da:'none' },
-  orders:                     { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', vco:'create', da:'assigned' },
-  delivery_assignment:        { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', vco:'none', da:'assigned' },
-  delivery_tracking:          { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', vco:'view', da:'update' },
-  returns_refunds:            { bod:'view', adm:'full', th:'none', hr:'none', sh:'approve', zm:'approve', rm:'approve', dm:'approve', hub:'approve', vco:'initiate', da:'update' },
-  payments:                   { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', vco:'view', da:'none' },
-  settlement_sellers:         { bod:'view', adm:'full', th:'none', hr:'none', sh:'approve', zm:'view', rm:'view', dm:'view', hub:'view', vco:'none', da:'none' },
-  employee_management:        { bod:'view', adm:'view', th:'none', hr:'full', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', vco:'none', da:'self' },
-  attendance:                 { bod:'view', adm:'view', th:'none', hr:'full', sh:'team', zm:'team', rm:'team', dm:'team', hub:'team', vco:'self', da:'self' },
-  payroll:                    { bod:'view', adm:'view', th:'none', hr:'full', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', vco:'none', da:'self' },
-  leave_management:           { bod:'view', adm:'view', th:'none', hr:'full', sh:'team', zm:'team', rm:'team', dm:'team', hub:'team', vco:'self', da:'self' },
-  recruitment:                { bod:'view', adm:'view', th:'none', hr:'full', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', vco:'none', da:'none' },
-  customer_complaints:        { bod:'view', adm:'full', th:'none', hr:'none', sh:'escalation', zm:'escalation', rm:'escalation', dm:'escalation', hub:'resolve', vco:'resolve', da:'assigned' },
-  notifications:              { bod:'view', adm:'full', th:'none', hr:'none', sh:'send', zm:'send', rm:'send', dm:'send', hub:'send', vco:'send', da:'receive' },
-  reports_export:             { bod:'view', adm:'full', th:'view', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', vco:'none', da:'none' },
-  audit_logs:                 { bod:'view', adm:'full', th:'view', hr:'none', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', vco:'none', da:'none' },
-  system_configuration:       { bod:'view', adm:'full', th:'full', hr:'none', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', vco:'none', da:'none' },
-  api_integrations:           { bod:'none', adm:'view', th:'full', hr:'none', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', vco:'none', da:'none' },
-  backup_security:            { bod:'none', adm:'view', th:'full', hr:'none', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', vco:'none', da:'none' },
+  dashboard:                  { bod:'view', adm:'view', th:'view', hr:'view', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', hmg:'view', vco:'view', da:'view' },
+  company_analytics:          { bod:'full', adm:'full', th:'view', hr:'view', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', hmg:'view', vco:'view', da:'none' },
+  financial_reports:          { bod:'full', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', hmg:'view', vco:'view', da:'none' },
+  sales_reports:              { bod:'full', adm:'full', th:'view', hr:'none', sh:'full', zm:'full', rm:'full', dm:'full', hub:'view', hmg:'view', vco:'view', da:'none' },
+  profit_loss:                { bod:'full', adm:'full', th:'none', hr:'none', sh:'full', zm:'full', rm:'view', dm:'view', hub:'view', hmg:'view', vco:'none', da:'none' },
+  user_management:            { bod:'view', adm:'full', th:'view', hr:'manage@employees', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', hmg:'none', vco:'none', da:'none' },
+  role_permission_management: { bod:'view', adm:'full', th:'view', hr:'none', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', hmg:'none', vco:'none', da:'none' },
+  farmer_management:          { bod:'view', adm:'full', th:'view', hr:'none', sh:'manage', zm:'manage', rm:'manage', dm:'manage', hub:'manage', hmg:'manage', vco:'createedit', da:'view' },
+  seller_management:          { bod:'view', adm:'full', th:'view', hr:'none', sh:'manage', zm:'manage', rm:'manage', dm:'manage', hub:'manage', hmg:'manage', vco:'createedit', da:'none' },
+  consumer_management:        { bod:'view', adm:'full', th:'view', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', hmg:'view', vco:'support', da:'none' },
+  product_approval:           { bod:'view', adm:'full', th:'none', hr:'none', sh:'approve', zm:'approve', rm:'approve', dm:'approve', hub:'approve', hmg:'approve', vco:'create', da:'none' },
+  inventory:                  { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', hmg:'manage', vco:'view', da:'view' },
+  warehouse_hub:              { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'full', hmg:'full', vco:'none', da:'view' },
+  hub_management:             { bod:'view', adm:'full', th:'none', hr:'none', sh:'manage', zm:'manage', rm:'manage', dm:'manage', hub:'view', hmg:'manage', vco:'none', da:'none' },
+  orders:                     { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', hmg:'manage', vco:'create', da:'assigned' },
+  delivery_assignment:        { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', hmg:'manage', vco:'none', da:'assigned' },
+  delivery_tracking:          { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', hmg:'manage', vco:'view', da:'update' },
+  returns_refunds:            { bod:'view', adm:'full', th:'none', hr:'none', sh:'approve', zm:'approve', rm:'approve', dm:'approve', hub:'approve', hmg:'approve', vco:'initiate', da:'update' },
+  payments:                   { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', hmg:'view', vco:'view', da:'none' },
+  settlement_sellers:         { bod:'view', adm:'full', th:'none', hr:'none', sh:'approve', zm:'view', rm:'view', dm:'view', hub:'view', hmg:'view', vco:'none', da:'none' },
+  employee_management:        { bod:'view', adm:'view', th:'none', hr:'full', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', hmg:'view', vco:'none', da:'self' },
+  attendance:                 { bod:'view', adm:'view', th:'none', hr:'full', sh:'team', zm:'team', rm:'team', dm:'team', hub:'team', hmg:'team', vco:'self', da:'self' },
+  payroll:                    { bod:'view', adm:'view', th:'none', hr:'full', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', hmg:'none', vco:'none', da:'self' },
+  leave_management:           { bod:'view', adm:'view', th:'none', hr:'full', sh:'team', zm:'team', rm:'team', dm:'team', hub:'team', hmg:'team', vco:'self', da:'self' },
+  recruitment:                { bod:'view', adm:'view', th:'none', hr:'full', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', hmg:'none', vco:'none', da:'none' },
+  customer_complaints:        { bod:'view', adm:'full', th:'none', hr:'none', sh:'escalation', zm:'escalation', rm:'escalation', dm:'escalation', hub:'resolve', hmg:'resolve', vco:'resolve', da:'assigned' },
+  notifications:              { bod:'view', adm:'full', th:'none', hr:'none', sh:'send', zm:'send', rm:'send', dm:'send', hub:'send', hmg:'send', vco:'send', da:'receive' },
+  reports_export:             { bod:'view', adm:'full', th:'view', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', hmg:'view', vco:'none', da:'none' },
+  audit_logs:                 { bod:'view', adm:'full', th:'view', hr:'none', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', hmg:'none', vco:'none', da:'none' },
+  system_configuration:       { bod:'view', adm:'full', th:'full', hr:'none', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', hmg:'none', vco:'none', da:'none' },
+  api_integrations:           { bod:'none', adm:'view', th:'full', hr:'none', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', hmg:'none', vco:'none', da:'none' },
+  backup_security:            { bod:'none', adm:'view', th:'full', hr:'none', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', hmg:'none', vco:'none', da:'none' },
 };
 
 // Short column keys used in MATRIX above → canonical role keys.
@@ -184,6 +188,7 @@ const COL_TO_ROLE = {
   zm: 'zonal_manager',
   rm: 'regional_manager',
   dm: 'district_manager',
+  hmg: 'hub_manager',
   hub: 'hub_incharge',
   vco: 'vco',
   da: 'delivery_agent',
@@ -225,6 +230,7 @@ const ADMIN_ROLE_TO_ROLE = {
   'Zonal Manager': 'zonal_manager',
   'Regional Manager': 'regional_manager',
   'District Manager': 'district_manager',
+  'Hub Manager': 'hub_manager',
   'Hub Incharge': 'hub_incharge',
   VCO: 'vco',
   'Delivery Agent': 'delivery_agent',

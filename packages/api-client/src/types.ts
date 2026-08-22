@@ -227,10 +227,14 @@ export interface Hub {
   taluk: string | null;
   name: string;
   parent_hub_id: string | null;
+  /** The Hub Manager (taluk hub) or District Manager (main hub) running this hub. */
+  hub_manager_id: string | null;
   hub_incharge_id: string | null;
   lat: number | null;
   lng: number | null;
   is_active?: boolean;
+  /** Resolved name of the responsible Hub Manager (GET /hubs only). */
+  manager_name?: string | null;
   /** Resolved name of the responsible Hub Incharge (GET /hubs only). */
   incharge_name?: string | null;
 }
@@ -254,7 +258,25 @@ export interface HubUpdate {
   is_active?: boolean;
   lat?: number | null;
   lng?: number | null;
+  hub_manager_id?: string | null;
   hub_incharge_id?: string | null;
+}
+
+/** Staff assignable to a hub (Hub Manager / District Manager / Hub Incharge). */
+export interface HubStaff {
+  id: string;
+  name: string;
+  login_id: string;
+}
+export interface HubStaffResponse {
+  staff: HubStaff[];
+}
+
+export interface CreateHubPayload {
+  state: string;
+  district: string;
+  taluk: string;
+  name?: string;
 }
 
 /** Delivery-agent coverage entry (users.service_areas). */

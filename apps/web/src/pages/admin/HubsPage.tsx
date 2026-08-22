@@ -1,9 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Table, Button, Select, Spinner, EmptyState, type TableColumn } from '@marutham/ui';
+import {
+  Table,
+  Button,
+  Select,
+  Input,
+  Sheet,
+  Spinner,
+  EmptyState,
+  FIELD_LABEL_CLASS,
+  type TableColumn,
+} from '@marutham/ui';
 import { api, type Hub } from '@marutham/api-client';
 import { can } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
+import { useLocations } from '../../hooks/useLocations';
+import { useToast } from '../../components/Toast';
 import { useAdminGeo } from './AdminGeoContext';
 import { useTableLabels } from './useTableLabels';
 import { HubDetailSheet } from './HubDetailSheet';
@@ -15,9 +27,12 @@ import { HubDetailSheet } from './HubDetailSheet';
 export function HubsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const toast = useToast();
   const { state, district, districts, setDistrict } = useAdminGeo();
+  const { taluksOf } = useLocations();
   const tableLabels = useTableLabels();
   const editable = can(user, 'hub_management', 'edit');
+  const canCreate = can(user, 'hub_management', 'create');
 
   // A geo-locked manager (District Manager and below) has no console district
   // filter and no district tree — they only ever manage their OWN district, so
@@ -28,6 +43,23 @@ export function HubsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<Hub | null>(null);
+
+  // Create-hub sheet (admin picks a taluk that has no hub yet).
+  const [creating, setCreating] = useState(false);
+  const [newTaluk, setNewTaluk] = useState('');
+  const [newName, setNewName] = useState('');
+  const [savingNew, setSavingNew] = useState(false);
+
+  // Taluks in this district that don't already have a hub — the only ones a new
+  // hub can be created for (one taluk hub per taluk).
+  const takenTaluks = useMemo(
+    () => new Set(hubs.map((h) => h.taluk).filter(Boolean) as string[]),
+    [hubs],
+  );
+  const availableTaluks = useMemo(
+    () => taluksOf(state, effectiveDistrict).filter((tk) => !takenTaluks.has(tk)),
+    [taluksOf, state, effectiveDistrict, takenTaluks],
+  );
 
   const load = useCallback(() => {
     if (!effectiveDistrict) {
@@ -49,6 +81,35 @@ export function HubsPage() {
     load();
   }, [load]);
 
+  function openCreate() {
+    setNewTaluk('');
+    setNewName('');
+    setCreating(true);
+  }
+
+  async function createHub() {
+    if (!newTaluk) return;
+    setSavingNew(true);
+    try {
+      await api.createHub({
+        state,
+        district: effectiveDistrict,
+        taluk: newTaluk,
+        name: newName.trim() || undefined,
+      });
+      toast(t('admin.hubs.created', 'Hub created.'), 'ok');
+      setCreating(false);
+      load();
+    } catch (e) {
+      toast(
+        e instanceof Error ? e.message : t('admin.hubs.createFailed', 'Could not create hub'),
+        'er',
+      );
+    } finally {
+      setSavingNew(false);
+    }
+  }
+
   const columns = useMemo<TableColumn<Hub>[]>(
     () => [
       { key: 'name', header: t('admin.hubs.name', 'Hub name'), value: (h) => h.name },
@@ -62,9 +123,15 @@ export function HubsPage() {
       },
       { key: 'taluk', header: t('address.taluk', 'Taluk'), value: (h) => h.taluk || '—' },
       {
+        key: 'manager',
+        header: t('admin.hubs.managerCol', 'Manager'),
+        value: (h) => h.manager_name || t('admin.hubs.unassigned', 'Unassigned'),
+      },
+      {
         key: 'incharge',
         header: t('admin.hubs.incharge', 'Hub Incharge responsible'),
-        value: (h) => h.incharge_name || t('admin.hubs.unassigned', 'Unassigned'),
+        value: (h) =>
+          h.hub_type === 'main' ? '—' : h.incharge_name || t('admin.hubs.unassigned', 'Unassigned'),
       },
       {
         key: 'geo',
@@ -105,14 +172,19 @@ export function HubsPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div>
-        <h1 className="text-lg font-bold text-primary">{t('admin.nav.hubs', 'Hubs')}</h1>
-        <p className="text-sm text-fg-muted">
-          {t(
-            'admin.hubs.subtitle',
-            'The district’s main hub and its taluk hubs. Assign a Hub Incharge and set each hub’s location.',
-          )}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-bold text-primary">{t('admin.nav.hubs', 'Hubs')}</h1>
+          <p className="text-sm text-fg-muted">
+            {t(
+              'admin.hubs.subtitle',
+              'The district’s main hub and its taluk hubs. Assign a Hub Manager and set each hub’s location.',
+            )}
+          </p>
+        </div>
+        {canCreate && effectiveDistrict ? (
+          <Button onClick={openCreate}>+ {t('admin.hubs.create', 'Create hub')}</Button>
+        ) : null}
       </div>
 
       {!effectiveDistrict ? (
@@ -164,6 +236,62 @@ export function HubsPage() {
         onClose={() => setOpen(null)}
         onChanged={load}
       />
+
+      <Sheet
+        open={creating}
+        title={t('admin.hubs.createTitle', 'Create a taluk hub')}
+        onClose={() => setCreating(false)}
+      >
+        <div className="flex flex-col gap-4 p-1">
+          <p className="text-sm text-fg-muted">
+            {t(
+              'admin.hubs.createHint',
+              'Create a hub for a taluk in {{district}}. Only taluks without a hub are listed.',
+              { district: effectiveDistrict },
+            )}
+          </p>
+
+          <label className="flex flex-col gap-1">
+            <span className={FIELD_LABEL_CLASS}>{t('address.taluk', 'Taluk')}</span>
+            <Select value={newTaluk} onChange={(e) => setNewTaluk(e.target.value)}>
+              <option value="">{t('admin.hubs.pickTaluk', '— Select a taluk —')}</option>
+              {availableTaluks.map((tk) => (
+                <option key={tk} value={tk}>
+                  {tk}
+                </option>
+              ))}
+            </Select>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className={FIELD_LABEL_CLASS}>
+              {t('admin.hubs.nameOptional', 'Hub name (optional)')}
+            </span>
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder={newTaluk ? `${newTaluk} Hub` : t('admin.hubs.name', 'Hub name')}
+            />
+          </label>
+
+          {availableTaluks.length === 0 ? (
+            <p className="text-2xs text-fg-muted">
+              {t('admin.hubs.allTaluksHaveHubs', 'Every taluk in this district already has a hub.')}
+            </p>
+          ) : null}
+
+          <div className="flex gap-2">
+            <Button onClick={createHub} disabled={savingNew || !newTaluk}>
+              {savingNew
+                ? t('admin.hubs.creating', 'Creating…')
+                : t('admin.hubs.create', 'Create hub')}
+            </Button>
+            <Button variant="ghost" onClick={() => setCreating(false)}>
+              {t('common.cancel', 'Cancel')}
+            </Button>
+          </div>
+        </div>
+      </Sheet>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sheet, Input, Select, Button, FIELD_LABEL_CLASS } from '@marutham/ui';
-import { api, type Hub, type HubIncharge } from '@marutham/api-client';
+import { api, type Hub, type HubIncharge, type HubStaff } from '@marutham/api-client';
 import { getCurrentPosition } from '../../native/geolocation';
 import { useToast } from '../../components/Toast';
 
@@ -33,6 +33,8 @@ export function HubDetailSheet({
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [managerId, setManagerId] = useState('');
+  const [managers, setManagers] = useState<HubStaff[]>([]);
   const [inchargeId, setInchargeId] = useState('');
   const [incharges, setIncharges] = useState<HubIncharge[]>([]);
   const [saving, setSaving] = useState(false);
@@ -44,12 +46,23 @@ export function HubDetailSheet({
     setLat(hub.lat != null ? String(hub.lat) : '');
     setLng(hub.lng != null ? String(hub.lng) : '');
     setIsActive(hub.is_active !== false);
+    setManagerId(hub.hub_manager_id || '');
     setInchargeId(hub.hub_incharge_id || '');
+    const role = hub.hub_type === 'main' ? 'District Manager' : 'Hub Manager';
     let active = true;
     api
-      .getHubIncharges(district, state)
-      .then((res) => active && setIncharges(res.incharges || []))
-      .catch(() => active && setIncharges([]));
+      .getHubStaff(role, district, state)
+      .then((res) => active && setManagers(res.staff || []))
+      .catch(() => active && setManagers([]));
+    // A main hub has no separate Hub Incharge layer; only taluk hubs do.
+    if (hub.hub_type === 'taluk') {
+      api
+        .getHubIncharges(district, state)
+        .then((res) => active && setIncharges(res.incharges || []))
+        .catch(() => active && setIncharges([]));
+    } else {
+      setIncharges([]);
+    }
     return () => {
       active = false;
     };
@@ -77,7 +90,9 @@ export function HubDetailSheet({
         is_active: isActive,
         lat: lat.trim() === '' ? null : Number(lat),
         lng: lng.trim() === '' ? null : Number(lng),
-        hub_incharge_id: inchargeId || null,
+        hub_manager_id: managerId || null,
+        // Only taluk hubs carry a Hub Incharge; don't send it for a main hub.
+        ...(hub!.hub_type === 'taluk' ? { hub_incharge_id: inchargeId || null } : {}),
       });
       toast(t('admin.hubs.saved', 'Hub updated.'), 'ok');
       onChanged();
@@ -111,21 +126,44 @@ export function HubDetailSheet({
 
         <label className="flex flex-col gap-1">
           <span className={FIELD_LABEL_CLASS}>
-            {t('admin.hubs.incharge', 'Hub Incharge responsible')}
+            {hub.hub_type === 'main'
+              ? t('admin.hubs.districtManager', 'District Manager responsible')
+              : t('admin.hubs.manager', 'Hub Manager responsible')}
           </span>
           <Select
-            value={inchargeId}
-            onChange={(e) => setInchargeId(e.target.value)}
+            value={managerId}
+            onChange={(e) => setManagerId(e.target.value)}
             disabled={!editable}
           >
-            <option value="">{t('admin.hubs.noIncharge', '— Unassigned —')}</option>
-            {incharges.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.name} ({i.login_id})
+            <option value="">{t('admin.hubs.noManager', '— Unassigned —')}</option>
+            {managers.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name} ({m.login_id})
               </option>
             ))}
           </Select>
         </label>
+
+        {/* A taluk hub also has a Hub Incharge (a reportee under the Hub Manager). */}
+        {hub.hub_type === 'taluk' ? (
+          <label className="flex flex-col gap-1">
+            <span className={FIELD_LABEL_CLASS}>
+              {t('admin.hubs.incharge', 'Hub Incharge responsible')}
+            </span>
+            <Select
+              value={inchargeId}
+              onChange={(e) => setInchargeId(e.target.value)}
+              disabled={!editable}
+            >
+              <option value="">{t('admin.hubs.noIncharge', '— Unassigned —')}</option>
+              {incharges.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.name} ({i.login_id})
+                </option>
+              ))}
+            </Select>
+          </label>
+        ) : null}
 
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1">

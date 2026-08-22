@@ -14,7 +14,7 @@ const scope = (role, mod) => cell(role, mod).scope;
 test('matrix is complete: every role × module resolves', () => {
   const rows = rbac.resolveMatrix();
   assert.equal(rows.length, rbac.ROLE_KEYS.length * rbac.MODULE_KEYS.length);
-  assert.equal(rbac.ROLE_KEYS.length, 11);
+  assert.equal(rbac.ROLE_KEYS.length, 12);
   assert.equal(rbac.MODULE_KEYS.length, 32);
 });
 
@@ -42,7 +42,13 @@ test('Admin has Full Control over the core operational + governance modules', ()
 });
 
 test('separation of duties: managers cannot touch user or role management', () => {
-  for (const role of ['district_manager', 'regional_manager', 'zonal_manager', 'hub_incharge']) {
+  for (const role of [
+    'district_manager',
+    'regional_manager',
+    'zonal_manager',
+    'hub_manager',
+    'hub_incharge',
+  ]) {
     assert.equal(actions(role, 'user_management'), '', `${role} user_management`);
     assert.equal(actions(role, 'role_permission_management'), '', `${role} role mgmt`);
   }
@@ -80,7 +86,7 @@ test('only the tiered managers + admin can approve product listings', () => {
   const approvers = rbac.ROLE_KEYS.filter((r) => cell(r, 'product_approval').actions.includes('approve'));
   assert.deepEqual(
     approvers.sort(),
-    ['admin', 'district_manager', 'hub_incharge', 'regional_manager', 'state_head', 'zonal_manager'].sort()
+    ['admin', 'district_manager', 'hub_manager', 'hub_incharge', 'regional_manager', 'state_head', 'zonal_manager'].sort()
   );
 });
 
