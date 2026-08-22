@@ -138,9 +138,34 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 // a user signs in or does any work. What remains under frontend/ is the public
 // landing page and the two assets it and this app share — see the static mount
 // at the bottom of this file.
+// In dev the portal runs as a live Vite server (base `/app/`); in production it
+// is a static build under apps/web/dist. Same reasoning as the shop proxy below:
+// Express stays the single front door so /app and the shop share ONE origin, and
+// the cart/session hand-off (origin-scoped localStorage) survives. Set WEB_URL to
+// the Vite dev server (e.g. http://localhost:5173) and /app/* is proxied there —
+// so clicking "login" on the shop reaches your live portal, not a stale build.
+// Unset, it serves the static build exactly as before: additive and reversible.
+const WEB_URL = process.env.WEB_URL; // e.g. http://localhost:5173
 const appDist = path.join(__dirname, '../apps/web/dist');
-app.use('/app', express.static(appDist));
-app.get('/app/*', (_req, res) => res.sendFile(path.join(appDist, 'index.html')));
+if (WEB_URL) {
+  const { createProxyMiddleware } = require('http-proxy-middleware');
+  // Filtered app-wide, NOT app.use('/app', proxy): a prefix mount STRIPS /app from
+  // req.url, but Vite runs with base `/app/` and expects it — strip it and every
+  // asset 404s (same trap the shop proxy documents just below).
+  app.use(
+    createProxyMiddleware({
+      target: WEB_URL,
+      changeOrigin: false, // the same-origin illusion is the whole point
+      xfwd: true,
+      ws: true, // Vite HMR rides a websocket
+      pathFilter: (pathname) => pathname === '/app' || pathname.startsWith('/app/'),
+    }),
+  );
+  console.log(`[web] proxying /app/* → ${WEB_URL}`);
+} else {
+  app.use('/app', express.static(appDist));
+  app.get('/app/*', (_req, res) => res.sendFile(path.join(appDist, 'index.html')));
+}
 
 // ── Public marketplace (apps/shop, Next.js) — proxied at the site root ────────
 //
