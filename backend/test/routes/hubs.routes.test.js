@@ -81,3 +81,72 @@ describe('POST /hubs', () => {
     assert.equal(res.status, 403);
   });
 });
+
+// GET /hubs — the list is district-drilled for most roles, but a Hub Manager is
+// scoped to the hub(s) they run (hubs.hub_manager_id = self). These pin that boundary
+// so a Hub Manager can never enumerate the rest of the district's network via the API.
+describe('GET /hubs', () => {
+  let app, mute;
+  afterEach(async () => { if (mute) mute.restore(); if (app) await app.close(); });
+
+  const HUB_MANAGER = { id: 'hm1', role: 'admin', role_key: 'hub_manager', admin_role: 'Hub Manager' };
+  const DISTRICT_MGR = { id: 'd1', role: 'admin', role_key: 'district_manager', admin_role: 'District Manager' };
+
+  test('a Hub Manager sees only the hub they run — scoped by hub_manager_id, no district needed', async () => {
+    // Two hubs in the district; only one is run by this manager. The fake applies the
+    // route's eq filters, so the response should hold just the manager's own hub.
+    const supa = fakeSupabase({
+      'hubs:select': {
+        data: [
+          { id: 'hub-own', name: 'Alangudi Hub 1', taluk: 'Alangudi', district: 'Pudukkottai', hub_type: 'taluk', hub_manager_id: 'hm1' },
+          { id: 'hub-other', name: 'Kulathur Hub 1', taluk: 'Kulathur', district: 'Pudukkottai', hub_type: 'taluk', hub_manager_id: 'hm2' },
+        ],
+      },
+      'users:select': { data: [{ id: 'hm1', fname: 'Hub', lname: 'Manager' }] },
+    });
+    app = await mountRoute('hubs', { supabase: supa, user: HUB_MANAGER });
+
+    // No district supplied — a Hub Manager must not need one.
+    const res = await app.get('/');
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.hubs.length, 1);
+    assert.equal(res.body.hubs[0].id, 'hub-own');
+    // The scope filter is hub_manager_id = self, and the district filter is NOT applied.
+    const filters = supa.callsTo('hubs', 'select')[0].filters;
+    assert.ok(filters.some(([op, col, val]) => op === 'eq' && col === 'hub_manager_id' && val === 'hm1'));
+    assert.ok(!filters.some(([op, col]) => op === 'eq' && col === 'district'));
+  });
+
+  test('a District Manager still drills by district (400 without one)', async () => {
+    mute = muteConsoleError();
+    const supa = fakeSupabase({ 'hubs:select': { data: [] } });
+    app = await mountRoute('hubs', { supabase: supa, user: DISTRICT_MGR });
+
+    const res = await app.get('/');
+
+    assert.equal(res.status, 400);
+    assert.equal(supa.callsTo('hubs', 'select').length, 0);
+  });
+
+  test('a District Manager scopes by district, not by hub_manager_id', async () => {
+    const supa = fakeSupabase({
+      'hubs:select': {
+        data: [
+          { id: 'main-1', name: 'Pudukkottai Main', taluk: null, district: 'Pudukkottai', hub_type: 'main', hub_manager_id: null },
+          { id: 'hub-1', name: 'Alangudi Hub 1', taluk: 'Alangudi', district: 'Pudukkottai', hub_type: 'taluk', hub_manager_id: 'hm2' },
+        ],
+      },
+      'users:select': { data: [] },
+    });
+    app = await mountRoute('hubs', { supabase: supa, user: DISTRICT_MGR });
+
+    const res = await app.get('/?district=Pudukkottai');
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.hubs.length, 2);
+    const filters = supa.callsTo('hubs', 'select')[0].filters;
+    assert.ok(filters.some(([op, col, val]) => op === 'eq' && col === 'district' && val === 'Pudukkottai'));
+    assert.ok(!filters.some(([op, col]) => op === 'eq' && col === 'hub_manager_id'));
+  });
+});

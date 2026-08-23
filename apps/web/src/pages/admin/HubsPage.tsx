@@ -40,6 +40,11 @@ export function HubsPage() {
   // fall back to it. Higher tiers pick via the console filter / the picker below.
   const effectiveDistrict = district || (user?.district as string) || '';
 
+  // A Hub Manager is scoped to their OWN hub(s), server-side — GET /hubs ignores the
+  // district for them and returns only the hub(s) they run. So the page loads without
+  // a district selection and drops the district/taluk drill entirely.
+  const ownHubOnly = user?.role_key === 'hub_manager';
+
   const [hubs, setHubs] = useState<Hub[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +65,9 @@ export function HubsPage() {
   const [savingNew, setSavingNew] = useState(false);
 
   const load = useCallback(() => {
-    if (!effectiveDistrict) {
+    // A Hub Manager loads their own hub(s) regardless of district (the server scopes
+    // by hub_manager_id); everyone else needs a district selected first.
+    if (!ownHubOnly && !effectiveDistrict) {
       setHubs([]);
       return;
     }
@@ -73,7 +80,7 @@ export function HubsPage() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Could not load hubs'))
       .finally(() => setLoading(false));
-  }, [effectiveDistrict, state]);
+  }, [effectiveDistrict, state, ownHubOnly]);
 
   useEffect(() => {
     load();
@@ -220,10 +227,15 @@ export function HubsPage() {
         <div>
           <h1 className="text-lg font-bold text-primary">{t('admin.nav.hubs', 'Hubs')}</h1>
           <p className="text-sm text-fg-muted">
-            {t(
-              'admin.hubs.subtitle',
-              'The district’s main hub and its taluk hubs. Assign a Hub Manager and set each hub’s location.',
-            )}
+            {ownHubOnly
+              ? t(
+                  'admin.hubs.subtitleOwn',
+                  'The hub you manage. Set its office address and location.',
+                )
+              : t(
+                  'admin.hubs.subtitle',
+                  'The district’s main hub and its taluk hubs. Assign a Hub Manager and set each hub’s location.',
+                )}
           </p>
         </div>
         {canCreate ? (
@@ -250,7 +262,7 @@ export function HubsPage() {
             </Select>
           </label>
         ) : null}
-        {effectiveDistrict ? (
+        {effectiveDistrict && !ownHubOnly ? (
           <label className="flex flex-col gap-1">
             <span className={FIELD_LABEL_CLASS}>{t('address.taluk', 'Taluk')}</span>
             <Select
@@ -270,7 +282,7 @@ export function HubsPage() {
         ) : null}
       </div>
 
-      {!effectiveDistrict ? (
+      {!ownHubOnly && !effectiveDistrict ? (
         <EmptyState icon="🏭">
           {t('admin.hubs.pickDistrict', 'Pick a district to see its hub network.')}
         </EmptyState>
@@ -291,7 +303,11 @@ export function HubsPage() {
           exportFileName="hubs.csv"
           pageSize={25}
           empty={
-            <EmptyState icon="🏭">{t('admin.hubs.empty', 'No hubs in this district.')}</EmptyState>
+            <EmptyState icon="🏭">
+              {ownHubOnly
+                ? t('admin.hubs.emptyOwn', 'No hub is assigned to you yet.')
+                : t('admin.hubs.empty', 'No hubs in this district.')}
+            </EmptyState>
           }
         />
       )}

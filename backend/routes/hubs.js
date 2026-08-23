@@ -53,19 +53,32 @@ function parseAddress(body) {
 router.get('/', requireAuth, async (req, res) => {
   const state = (req.query.state || '').trim();
   const district = (req.query.district || '').trim();
-  if (!district) {
-    return res.status(400).json({ error: 'district is required.' });
-  }
+
+  // A Hub Manager is scoped to the hub(s) they actually run — they never see the rest
+  // of the district's network here. This is the API boundary, not a UI hide: the list,
+  // its CSV export and the raw endpoint all return only their own hub(s), mirroring the
+  // hub dashboard, which already shows own-hub only. The district filter is skipped for
+  // them (their hub defines the scope, and a stale district must never strand it).
+  const ownHubOnly = req.user.role_key === 'hub_manager';
 
   let q = supabase
     .from('hubs')
     .select(
       HUB_SELECT,
     )
-    .eq('district', district)
     .order('hub_type', { ascending: true }) // 'main' before 'taluk'
     .order('taluk', { ascending: true });
-  if (state) q = q.eq('state', state);
+  if (ownHubOnly) {
+    q = q.eq('hub_manager_id', req.user.id);
+  } else {
+    // Everyone else drills by district — required so this never dumps the whole
+    // ~1,700-row network.
+    if (!district) {
+      return res.status(400).json({ error: 'district is required.' });
+    }
+    q = q.eq('district', district);
+    if (state) q = q.eq('state', state);
+  }
 
   const { data: hubs, error } = await q;
   if (error) {

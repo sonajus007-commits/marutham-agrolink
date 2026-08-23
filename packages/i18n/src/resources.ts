@@ -1588,6 +1588,7 @@ export const resources = {
       'admin.hubDash.ph.sub': 'Hub metrics that need a data source.',
       'admin.hubs.subtitle':
         'The district’s main hub and its taluk hubs. Assign a Hub Manager and set each hub’s location.',
+      'admin.hubs.subtitleOwn': 'The hub you manage. Set its office address and location.',
       'admin.hubs.name': 'Hub name',
       'admin.hubs.type': 'Type',
       'admin.hubs.mainHub': 'Main hub (district)',
@@ -1642,6 +1643,7 @@ export const resources = {
       'admin.hubs.view': 'View',
       'admin.hubs.search': 'Search hubs',
       'admin.hubs.empty': 'No hubs in this district.',
+      'admin.hubs.emptyOwn': 'No hub is assigned to you yet.',
       'admin.hubs.pickDistrict': 'Pick a district to see its hub network.',
       'admin.hubs.pickDistrictShort': '— Select district —',
       'admin.hubs.saved': 'Hub updated.',
@@ -3676,6 +3678,8 @@ export const resources = {
       'admin.hubDash.ph.sub': 'தரவு ஆதாரம் தேவைப்படும் மைய அளவீடுகள்.',
       'admin.hubs.subtitle':
         'மாவட்டத்தின் முதன்மை மையமும் அதன் தாலுகா மையங்களும். ஹப் மேலாளரை நியமித்து ஒவ்வொரு மையத்தின் இடத்தை அமைக்கவும்.',
+      'admin.hubs.subtitleOwn':
+        'நீங்கள் நிர்வகிக்கும் மையம். அதன் அலுவலக முகவரியையும் இடத்தையும் அமைக்கவும்.',
       'admin.hubs.name': 'மைய பெயர்',
       'admin.hubs.type': 'வகை',
       'admin.hubs.mainHub': 'முதன்மை மையம் (மாவட்டம்)',
@@ -3731,6 +3735,7 @@ export const resources = {
       'admin.hubs.view': 'பார்',
       'admin.hubs.search': 'மையங்களைத் தேடு',
       'admin.hubs.empty': 'இந்த மாவட்டத்தில் மையங்கள் இல்லை.',
+      'admin.hubs.emptyOwn': 'உங்களுக்கு இன்னும் எந்த மையமும் ஒதுக்கப்படவில்லை.',
       'admin.hubs.pickDistrict': 'அதன் மைய வலையமைப்பைக் காண ஒரு மாவட்டத்தைத் தேர்வுசெய்யவும்.',
       'admin.hubs.pickDistrictShort': '— மாவட்டத்தைத் தேர்வுசெய் —',
       'admin.hubs.saved': 'மையம் புதுப்பிக்கப்பட்டது.',
