@@ -3,6 +3,13 @@ const supabase = require('../db/supabase');
 const { requirePermission, scopeFor } = require('../middleware/permissions');
 const notify = require('../utils/notify');
 const { validateStaffEmployment } = require('../utils/employeeValidation');
+const { geocodeAddress, geocodingEnabled } = require('../utils/geocode');
+
+// Address columns that, when an admin edits them, may need a fresh geocoded pin.
+const ADDRESS_KEYS = [
+  'house_no', 'street1', 'street2', 'landmark',
+  'village_town', 'city', 'taluk', 'district', 'state', 'pincode',
+];
 
 const router = express.Router();
 
@@ -480,6 +487,28 @@ router.patch('/:id', requirePermission('user_management', 'edit'), async (req, r
         if (dupEmp && dupEmp.length) {
           return res.status(409).json({ error: `Employee "${newEmpId}" already has a login (${dupEmp[0].login_id}). One employee can hold only one login account.` });
         }
+      }
+    }
+  }
+
+  // Address → map pin, best-effort. When an admin edits a SELLER's address and the
+  // farm has no pin yet, geocode the merged address to fill farm_lat/lng (the pickup
+  // origin on the tracking map) — the admin equivalent of the seller's own PATCH /me
+  // fallback. Never overwrites a real pin; a geocode miss just leaves it unset.
+  const adminAddressChanged = ADDRESS_KEYS.some((k) => updates[k] !== undefined);
+  if (adminAddressChanged && geocodingEnabled()) {
+    const { data: cur, error: curErr } = await supabase
+      .from('users')
+      .select('role, house_no, street1, street2, landmark, village_town, city, taluk, district, state, pincode, farm_lat, farm_lng')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (curErr) {
+      console.error('PATCH /users farm geocode read failed:', curErr.message);
+    } else if (cur && cur.role === 'farmer' && cur.farm_lat == null && cur.farm_lng == null) {
+      const geo = await geocodeAddress({ ...cur, ...updates });
+      if (geo) {
+        updates.farm_lat = geo.lat;
+        updates.farm_lng = geo.lng;
       }
     }
   }

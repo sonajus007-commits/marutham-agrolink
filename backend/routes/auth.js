@@ -898,6 +898,36 @@ router.patch('/me', requireAuth, async (req, res) => {
     }
   }
 
+  // Consumer address book: geocode every saved delivery address that carries no pin
+  // of its own, so each one maps to a location even without "Pin current location".
+  // Entries the user already pinned (GPS) are left untouched. Bounded per save so a
+  // large book can't fan out into unbounded geocode calls.
+  if (
+    updates.delivery_addresses !== undefined &&
+    Array.isArray(updates.delivery_addresses) &&
+    geocodingEnabled()
+  ) {
+    let budget = 10;
+    const filled = [];
+    for (const a of updates.delivery_addresses) {
+      const needs =
+        a &&
+        typeof a === 'object' &&
+        (a.lat == null || a.lng == null) &&
+        (a.street1 || a.village_town || a.city || a.house_no);
+      if (needs && budget > 0) {
+        budget--;
+        const geo = await geocodeAddress(a);
+        if (geo) {
+          filled.push({ ...a, lat: geo.lat, lng: geo.lng });
+          continue;
+        }
+      }
+      filled.push(a);
+    }
+    updates.delivery_addresses = filled;
+  }
+
   updates.updated_at = new Date().toISOString();
 
   const { data: updated, error } = await supabase
