@@ -379,6 +379,10 @@
     },
     "hubs": {
       "columns": {
+        "country": {
+          "type": "text",
+          "notNull": false
+        },
         "created_at": {
           "type": "timestamp with time zone",
           "notNull": true,
@@ -387,6 +391,10 @@
         "district": {
           "type": "text",
           "notNull": true
+        },
+        "house_no": {
+          "type": "text",
+          "notNull": false
         },
         "hub_incharge_id": {
           "type": "uuid",
@@ -413,6 +421,10 @@
           "notNull": true,
           "default": "true"
         },
+        "landmark": {
+          "type": "text",
+          "notNull": false
+        },
         "lat": {
           "type": "double precision",
           "notNull": false
@@ -430,11 +442,27 @@
           "notNull": false,
           "references": "hubs.id"
         },
+        "pincode": {
+          "type": "text",
+          "notNull": false
+        },
         "state": {
           "type": "text",
           "notNull": true
         },
+        "street1": {
+          "type": "text",
+          "notNull": false
+        },
+        "street2": {
+          "type": "text",
+          "notNull": false
+        },
         "taluk": {
+          "type": "text",
+          "notNull": false
+        },
+        "village_town": {
           "type": "text",
           "notNull": false
         }

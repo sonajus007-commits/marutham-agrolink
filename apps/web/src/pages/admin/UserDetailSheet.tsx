@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, INPUT_CLASS, Modal, Sheet, Spinner, Tabs } from '@marutham/ui';
+import { Button, INPUT_CLASS, Modal, Select, Sheet, Spinner, Tabs } from '@marutham/ui';
 import {
   api,
   type AccountStatus,
+  type Hub,
   type LoginHistoryEntry,
   type User,
   type UserAuditEntry,
   type UserStatusHistoryEntry,
 } from '@marutham/api-client';
-import { buildAddress, fmtDate } from '@marutham/lib';
+import { addressDetailRows, buildAddress, fmtDate } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
 import { AuditLogList, LoginHistoryList } from './HistoryPanels';
@@ -103,6 +104,9 @@ function Body({
   const roleLabel = user.role === 'admin' ? String(user.admin_role || 'Admin') : String(user.role);
   const isSeller = user.role === 'farmer';
   const isVCO = user.role === 'admin' && user.admin_role === 'VCO';
+  // The hub-based field roles: their office is a hub, set here by admin/HR.
+  const HUB_ROLES = ['VCO', 'Delivery Agent', 'Hub Incharge', 'Hub Manager'];
+  const isHubRole = user.role === 'admin' && HUB_ROLES.includes(String(user.admin_role));
   const canEditUsers = ((me?.permissions?.user_management?.actions as string[]) || []).includes(
     'edit',
   );
@@ -205,6 +209,10 @@ function Body({
             )}
           </p>
         </Section>
+      ) : null}
+
+      {isHubRole ? (
+        <HubAssignSection user={user} canEdit={canEditUsers} onChanged={onChanged} />
       ) : null}
 
       {isSeller ? (
@@ -363,6 +371,110 @@ function HistorySection({ userId, status }: { userId: string; status: UserStatus
           },
         ]}
       />
+    </Section>
+  );
+}
+
+/* Assign a VCO / Delivery Agent / Hub Incharge / Hub Manager to their home hub.
+ * Admin/HR own this; the staff member sees it read-only on their own profile, and
+ * their office address IS the selected hub's address (shown below the picker so the
+ * assigner sees exactly what the employee will see). Hubs are drawn from the user's
+ * own district — the network the person actually works in. */
+function HubAssignSection({
+  user,
+  canEdit,
+  onChanged,
+}: {
+  user: User;
+  canEdit: boolean;
+  onChanged: () => void;
+}) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const district = String(user.district || '');
+  const state = user.state ? String(user.state) : undefined;
+  const [hubs, setHubs] = useState<Hub[]>([]);
+  const [hubId, setHubId] = useState<string>((user.hub_id as string) || '');
+  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => setHubId((user.hub_id as string) || ''), [user.hub_id]);
+
+  useEffect(() => {
+    if (!district) return;
+    let active = true;
+    setLoading(true);
+    api
+      .getHubs(district, state)
+      .then((res) => active && setHubs(res.hubs || []))
+      .catch(() => active && setHubs([]))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [district, state]);
+
+  async function save(next: string) {
+    const prev = hubId;
+    setHubId(next); // optimistic
+    setBusy(true);
+    try {
+      await api.adminUpdateUser(user.id, { hub_id: next || null });
+      toast(t('admin.users.saved', 'Saved.'), 'ok');
+      onChanged();
+    } catch (e) {
+      setHubId(prev); // revert
+      toast(e instanceof Error ? e.message : 'Could not save', 'er');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const selected = hubs.find((h) => h.id === hubId) || null;
+
+  return (
+    <Section title={`🏭 ${t('admin.users.hubAssign', 'Hub assignment')}`}>
+      {!district ? (
+        <p className="py-1 text-2xs text-fg-muted">
+          {t('admin.users.hubNoDistrict', 'Set this staff member’s district to assign a hub.')}
+        </p>
+      ) : (
+        <>
+          <Select
+            value={hubId}
+            disabled={busy || loading || !canEdit}
+            aria-label={t('admin.users.hub', 'Hub')}
+            onChange={(e) => save(e.target.value)}
+          >
+            <option value="">{t('admin.users.hubUnassigned', '— No hub assigned —')}</option>
+            {hubs.map((h) => (
+              <option key={h.id} value={h.id}>
+                {h.name}
+                {h.taluk ? ` · ${h.taluk}` : ''}
+              </option>
+            ))}
+          </Select>
+          <p className="mt-1 text-2xs text-fg-muted">
+            {t(
+              'admin.users.hubHint',
+              'The office this person works from. Their profile shows this hub’s office address, and delivery routing uses it.',
+            )}
+          </p>
+          {selected ? (
+            <div className="mt-2 rounded-base border border-border-subtle bg-surface-muted p-2">
+              <div className="mb-1 text-2xs font-bold uppercase tracking-wide text-fg-muted">
+                {t('admin.users.officeAddress', 'Office address')}
+              </div>
+              {addressDetailRows(selected, '—').map(([key, label, value]) => (
+                <div key={key} className="flex justify-between gap-3 py-0.5 text-2xs">
+                  <span className="text-fg-muted">{t(key, label)}</span>
+                  <span className="text-right font-medium text-fg">{value}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </>
+      )}
     </Section>
   );
 }

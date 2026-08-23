@@ -1596,6 +1596,20 @@ export const resources = {
         'Create a hub for a taluk in {{district}}. Only taluks without a hub are listed.',
       'admin.hubs.createHintGeo':
         'Pick the State, District and Taluk this hub serves, then give it a name. A taluk can have several hubs — each name must be unique within the taluk (e.g. Hub 1, Hub 2).',
+      'admin.hubs.createHintAddr':
+        'Name the hub and fill its complete office address. State, District and Taluk route parcels through it; the rest is the office address shown to its staff, and the pin marks where hub → consumer deliveries start. A taluk can have several hubs — each name must be unique within the taluk (e.g. Hub 1, Hub 2).',
+      'admin.hubs.officeAddress': 'Office address',
+      'admin.hubs.talukRequired': 'Select the taluk this hub serves.',
+      'admin.users.hubAssign': 'Hub assignment',
+      'admin.users.hub': 'Hub',
+      'admin.users.hubUnassigned': '— No hub assigned —',
+      'admin.users.hubNoDistrict': 'Set this staff member’s district to assign a hub.',
+      'admin.users.hubHint':
+        'The office this person works from. Their profile shows this hub’s office address, and delivery routing uses it.',
+      'admin.users.officeAddress': 'Office address',
+      'profile.officeHub': 'My office (hub)',
+      'profile.officeHubHint':
+        'Your assigned hub and its office address. Managed by admin / HR — contact them to change it.',
       'admin.hubs.createFailed': 'Could not create hub',
       'admin.hubs.created': 'Hub created.',
       'admin.hubs.creating': 'Creating…',
@@ -3657,6 +3671,20 @@ export const resources = {
         '{{district}}-இல் ஒரு தாலுகாவிற்கு மையத்தை உருவாக்கவும். மையம் இல்லாத தாலுகாக்கள் மட்டுமே பட்டியலிடப்படுகின்றன.',
       'admin.hubs.createHintGeo':
         'இந்த மையம் சேவை செய்யும் மாநிலம், மாவட்டம், தாலுகாவைத் தேர்ந்தெடுத்து ஒரு பெயரிடவும். ஒரு தாலுகாவில் பல மையங்கள் இருக்கலாம் — ஒவ்வொரு பெயரும் தாலுகாவிற்குள் தனித்துவமாக இருக்க வேண்டும் (எ.கா. Hub 1, Hub 2).',
+      'admin.hubs.createHintAddr':
+        'மையத்திற்குப் பெயரிட்டு அதன் முழு அலுவலக முகவரியையும் நிரப்பவும். மாநிலம், மாவட்டம், தாலுகா பொருட்களை வழிநடத்துகின்றன; மீதமுள்ளவை அதன் ஊழியர்களுக்குக் காட்டப்படும் அலுவலக முகவரி, மற்றும் பின் மையம் → நுகர்வோர் விநியோகம் தொடங்கும் இடத்தைக் குறிக்கிறது. ஒரு தாலுகாவில் பல மையங்கள் இருக்கலாம் — ஒவ்வொரு பெயரும் தனித்துவமாக இருக்க வேண்டும் (எ.கா. Hub 1, Hub 2).',
+      'admin.hubs.officeAddress': 'அலுவலக முகவரி',
+      'admin.hubs.talukRequired': 'இந்த மையம் சேவை செய்யும் தாலுகாவைத் தேர்ந்தெடுக்கவும்.',
+      'admin.users.hubAssign': 'மைய ஒதுக்கீடு',
+      'admin.users.hub': 'மையம்',
+      'admin.users.hubUnassigned': '— மையம் ஒதுக்கப்படவில்லை —',
+      'admin.users.hubNoDistrict': 'ஒரு மையத்தை ஒதுக்க இந்த ஊழியரின் மாவட்டத்தை அமைக்கவும்.',
+      'admin.users.hubHint':
+        'இந்த நபர் பணிபுரியும் அலுவலகம். அவர்களின் சுயவிவரத்தில் இந்த மையத்தின் அலுவலக முகவரி காட்டப்படும், மற்றும் விநியோக வழிநடத்தல் இதைப் பயன்படுத்துகிறது.',
+      'admin.users.officeAddress': 'அலுவலக முகவரி',
+      'profile.officeHub': 'என் அலுவலகம் (மையம்)',
+      'profile.officeHubHint':
+        'உங்களுக்கு ஒதுக்கப்பட்ட மையமும் அதன் அலுவலக முகவரியும். நிர்வாகம் / HR ஆல் நிர்வகிக்கப்படுகிறது — மாற்ற அவர்களைத் தொடர்பு கொள்ளவும்.',
       'admin.hubs.createFailed': 'மையத்தை உருவாக்க முடியவில்லை',
       'admin.hubs.created': 'மையம் உருவாக்கப்பட்டது.',
       'admin.hubs.creating': 'உருவாக்குகிறது…',

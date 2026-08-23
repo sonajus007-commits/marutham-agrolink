@@ -235,6 +235,15 @@ export interface Hub {
   lat: number | null;
   lng: number | null;
   is_active?: boolean;
+  /** Office address (migration 047). Routing keys state/district/taluk are above;
+   *  these describe the place. Together with lat/lng, the delivery-origin pin. */
+  house_no?: string | null;
+  street1?: string | null;
+  street2?: string | null;
+  landmark?: string | null;
+  village_town?: string | null;
+  country?: string | null;
+  pincode?: string | null;
   /** Resolved name of the responsible Hub Manager (GET /hubs only). */
   manager_name?: string | null;
   /** Resolved name of the responsible Hub Incharge (GET /hubs only). */
@@ -254,8 +263,19 @@ export interface HubInchargesResponse {
   incharges: HubIncharge[];
 }
 
+/** The office-address fields shared by create + update + the Hub row. */
+export interface HubAddress {
+  house_no?: string | null;
+  street1?: string | null;
+  street2?: string | null;
+  landmark?: string | null;
+  village_town?: string | null;
+  country?: string | null;
+  pincode?: string | null;
+}
+
 /** Editable fields on a hub (PATCH /api/hubs/:id). */
-export interface HubUpdate {
+export interface HubUpdate extends HubAddress {
   name?: string;
   is_active?: boolean;
   lat?: number | null;
@@ -274,11 +294,19 @@ export interface HubStaffResponse {
   staff: HubStaff[];
 }
 
-export interface CreateHubPayload {
+export interface CreateHubPayload extends HubAddress {
   state: string;
   district: string;
   taluk: string;
   name?: string;
+  /** Office map pin (delivery origin). */
+  lat?: number | null;
+  lng?: number | null;
+}
+
+/** GET /api/hubs/mine — the caller's assigned hub (office), or null. */
+export interface MyHubResponse {
+  hub: Hub | null;
 }
 
 /** Delivery-agent coverage entry (users.service_areas). */

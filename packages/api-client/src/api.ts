@@ -21,6 +21,7 @@ import type {
   CreateHubPayload,
   Hub,
   HubUpdate,
+  MyHubResponse,
   PlaceOrderPayload,
   TrackResponse,
   ReturnRequestPayload,
@@ -389,6 +390,10 @@ export const api = {
   /** Edit a hub — name, geo, active flag, responsible Hub Manager / Hub Incharge. */
   updateHub(id: string, data: HubUpdate): Promise<{ hub: Hub }> {
     return apiFetch<{ hub: Hub }>('PATCH', `/hubs/${id}`, data);
+  },
+  /** The caller's own assigned hub (their office) — VCO / DA / Incharge / Manager. */
+  getMyHub(): Promise<MyHubResponse> {
+    return apiFetch<MyHubResponse>('GET', '/hubs/mine');
   },
   placeOrder(payload: PlaceOrderPayload): Promise<{ order: Order }> {
     return apiFetch<{ order: Order }>('POST', '/orders', payload);

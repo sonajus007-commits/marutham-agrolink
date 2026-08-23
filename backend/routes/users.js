@@ -426,6 +426,26 @@ router.patch('/:id', requirePermission('user_management', 'edit'), async (req, r
     updates.can_deliver = wants;
   }
 
+  // Home hub — the office a VCO / Delivery Agent / Hub Incharge / Hub Manager is
+  // assigned to. Admin/HR own this (the staff member sees it read-only); their
+  // profile office address is this hub's address, and delivery routing scopes to it.
+  // null clears it; a present value must be a real hub (a bad id would be a Postgres
+  // FK 500, not a clean 400).
+  if (req.body.hub_id !== undefined) {
+    if (req.body.hub_id === null || req.body.hub_id === '') {
+      updates.hub_id = null;
+    } else {
+      const { data: hub, error: hubErr } = await supabase
+        .from('hubs').select('id').eq('id', req.body.hub_id).maybeSingle();
+      if (hubErr) {
+        console.error('admin hub_id lookup failed:', hubErr.message);
+        return res.status(500).json({ error: 'Could not verify the selected hub.' });
+      }
+      if (!hub) return res.status(400).json({ error: 'That hub does not exist.' });
+      updates.hub_id = req.body.hub_id;
+    }
+  }
+
   if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No updatable fields provided.' });
 
   // village_town is canonical; keep the legacy vco_city (VCO order-matching) in sync.

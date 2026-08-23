@@ -12,10 +12,10 @@ import {
   type TableColumn,
 } from '@marutham/ui';
 import { api, type Hub } from '@marutham/api-client';
-import { can } from '@marutham/lib';
+import { can, validateAddress, addressProblemKey, type SavedAddress } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
-import { useLocations } from '../../hooks/useLocations';
 import { useToast } from '../../components/Toast';
+import { AddressFields } from '../../components/AddressFields';
 import { useAdminGeo } from './AdminGeoContext';
 import { useTableLabels } from './useTableLabels';
 import { HubDetailSheet } from './HubDetailSheet';
@@ -31,7 +31,6 @@ export function HubsPage() {
   const { user } = useAuth();
   const toast = useToast();
   const { state, district, districts, setDistrict, canFilter } = useAdminGeo();
-  const { states, districtsOf, taluksOf } = useLocations();
   const tableLabels = useTableLabels();
   const editable = can(user, 'hub_management', 'edit');
   const canCreate = can(user, 'hub_management', 'create');
@@ -49,14 +48,15 @@ export function HubsPage() {
   // Page-local Taluk filter (narrows the loaded district's hubs).
   const [talukFilter, setTalukFilter] = useState('');
 
-  // Create-hub sheet — Admin picks State → District → Taluk and names the hub. A
-  // taluk can hold several hubs (offices), so the taluk is never "taken"; the NAME
-  // is what must be unique within the taluk (validated on save).
+  // Create-hub sheet — Admin names the hub and fills its complete OFFICE ADDRESS
+  // (the shared AddressFields block: State → District → Taluk pick the routing keys,
+  // the rest describes the place, and the pin marks the delivery origin). A taluk can
+  // hold several hubs (offices), so the taluk is never "taken"; the NAME is what must
+  // be unique within the taluk (validated on save).
   const [creating, setCreating] = useState(false);
-  const [newState, setNewState] = useState('');
-  const [newDistrict, setNewDistrict] = useState('');
-  const [newTaluk, setNewTaluk] = useState('');
   const [newName, setNewName] = useState('');
+  const [addr, setAddr] = useState<SavedAddress>({});
+  const [addrErr, setAddrErr] = useState<string | null>(null);
   const [savingNew, setSavingNew] = useState(false);
 
   const load = useCallback(() => {
@@ -98,38 +98,52 @@ export function HubsPage() {
     [hubs, talukFilter],
   );
 
-  // Every taluk in the chosen create-district — all selectable (a taluk can hold
-  // several hubs).
-  const createTaluks = useMemo(
-    () => taluksOf(newState, newDistrict),
-    [taluksOf, newState, newDistrict],
-  );
-
   function openCreate() {
-    // Seed from the console selection so the common case is one click, but every
-    // field stays editable — the Admin team can create a hub in any state/district.
-    setNewState(state || '');
-    setNewDistrict(effectiveDistrict || '');
-    setNewTaluk('');
+    // Seed the routing keys from the console selection so the common case is one
+    // click, but every field stays editable — the Admin team can create a hub in any
+    // state/district.
     setNewName('');
+    setAddr({ state: state || '', district: effectiveDistrict || '', taluk: '', country: '' });
+    setAddrErr(null);
     setCreating(true);
   }
 
   async function createHub() {
     const name = newName.trim();
-    if (!newState || !newDistrict || !newTaluk || !name) return;
+    if (!name) return;
+    // Validate the office address (street/locality, state+district, pincode) and
+    // then the taluk — the routing key AddressFields treats as optional but a hub
+    // must have.
+    const problem = validateAddress(addr);
+    if (problem) {
+      setAddrErr(t(addressProblemKey(problem), 'Please complete the address.'));
+      return;
+    }
+    if (!addr.taluk) {
+      setAddrErr(t('admin.hubs.talukRequired', 'Select the taluk this hub serves.'));
+      return;
+    }
     setSavingNew(true);
     try {
       await api.createHub({
-        state: newState,
-        district: newDistrict,
-        taluk: newTaluk,
+        state: addr.state!,
+        district: addr.district!,
+        taluk: addr.taluk,
         name,
+        house_no: addr.house_no ?? null,
+        street1: addr.street1 ?? null,
+        street2: addr.street2 ?? null,
+        landmark: addr.landmark ?? null,
+        village_town: addr.village_town ?? null,
+        country: addr.country ?? null,
+        pincode: addr.pincode ?? null,
+        lat: addr.lat ?? null,
+        lng: addr.lng ?? null,
       });
       toast(t('admin.hubs.created', 'Hub created.'), 'ok');
       setCreating(false);
       // If the new hub landed in the district on screen, reflect it.
-      if (newDistrict === effectiveDistrict) load();
+      if (addr.district === effectiveDistrict) load();
     } catch (e) {
       toast(
         e instanceof Error ? e.message : t('admin.hubs.createFailed', 'Could not create hub'),
@@ -300,78 +314,38 @@ export function HubsPage() {
         <div className="flex flex-col gap-4 p-1">
           <p className="text-sm text-fg-muted">
             {t(
-              'admin.hubs.createHintGeo',
-              'Pick the State, District and Taluk this hub serves, then give it a name. A taluk can have several hubs — each name must be unique within the taluk (e.g. Hub 1, Hub 2).',
+              'admin.hubs.createHintAddr',
+              'Name the hub and fill its complete office address. State, District and Taluk route parcels through it; the rest is the office address shown to its staff, and the pin marks where hub → consumer deliveries start. A taluk can have several hubs — each name must be unique within the taluk (e.g. Hub 1, Hub 2).',
             )}
           </p>
-
-          <label className="flex flex-col gap-1">
-            <span className={FIELD_LABEL_CLASS}>{t('address.state', 'State')}</span>
-            <Select
-              value={newState}
-              onChange={(e) => {
-                setNewState(e.target.value);
-                setNewDistrict('');
-                setNewTaluk('');
-              }}
-            >
-              <option value="">{t('admin.hubs.pickState', '— Select a state —')}</option>
-              {states.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </Select>
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className={FIELD_LABEL_CLASS}>{t('address.district', 'District')}</span>
-            <Select
-              value={newDistrict}
-              onChange={(e) => {
-                setNewDistrict(e.target.value);
-                setNewTaluk('');
-              }}
-              disabled={!newState}
-            >
-              <option value="">{t('admin.hubs.pickDistrictShort', '— Select district —')}</option>
-              {districtsOf(newState).map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </Select>
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className={FIELD_LABEL_CLASS}>{t('address.taluk', 'Taluk')}</span>
-            <Select
-              value={newTaluk}
-              onChange={(e) => setNewTaluk(e.target.value)}
-              disabled={!newDistrict}
-            >
-              <option value="">{t('admin.hubs.pickTaluk', '— Select a taluk —')}</option>
-              {createTaluks.map((tk) => (
-                <option key={tk} value={tk}>
-                  {tk}
-                </option>
-              ))}
-            </Select>
-          </label>
 
           <label className="flex flex-col gap-1">
             <span className={FIELD_LABEL_CLASS}>{t('admin.hubs.nameLabel', 'Hub name')}</span>
             <Input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder={newTaluk ? `${newTaluk} Hub 1` : t('admin.hubs.name', 'Hub name')}
+              placeholder={addr.taluk ? `${addr.taluk} Hub 1` : t('admin.hubs.name', 'Hub name')}
             />
           </label>
+
+          <AddressFields
+            value={addr}
+            onChange={(next) => {
+              setAddr(next);
+              setAddrErr(null);
+            }}
+            showStreet2
+            showPin
+            required={{ taluk: true, village_town: true }}
+            error={addrErr}
+          />
 
           <div className="flex gap-2">
             <Button
               onClick={createHub}
-              disabled={savingNew || !newState || !newDistrict || !newTaluk || !newName.trim()}
+              disabled={
+                savingNew || !newName.trim() || !addr.state || !addr.district || !addr.taluk
+              }
             >
               {savingNew
                 ? t('admin.hubs.creating', 'Creating…')

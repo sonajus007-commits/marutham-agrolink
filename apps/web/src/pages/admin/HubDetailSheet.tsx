@@ -32,6 +32,18 @@ export function HubDetailSheet({
   const [name, setName] = useState('');
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
+  // Office address (free text). state/district/taluk are the hub's routing keys and
+  // stay read-only in the structural block above — editing them here would silently
+  // re-route the hub.
+  const [addr, setAddr] = useState({
+    house_no: '',
+    street1: '',
+    street2: '',
+    landmark: '',
+    village_town: '',
+    country: '',
+    pincode: '',
+  });
   const [isActive, setIsActive] = useState(true);
   const [managerId, setManagerId] = useState('');
   const [managers, setManagers] = useState<HubStaff[]>([]);
@@ -45,6 +57,15 @@ export function HubDetailSheet({
     setName(hub.name || '');
     setLat(hub.lat != null ? String(hub.lat) : '');
     setLng(hub.lng != null ? String(hub.lng) : '');
+    setAddr({
+      house_no: hub.house_no || '',
+      street1: hub.street1 || '',
+      street2: hub.street2 || '',
+      landmark: hub.landmark || '',
+      village_town: hub.village_town || '',
+      country: hub.country || '',
+      pincode: hub.pincode || '',
+    });
     setIsActive(hub.is_active !== false);
     setManagerId(hub.hub_manager_id || '');
     setInchargeId(hub.hub_incharge_id || '');
@@ -90,6 +111,13 @@ export function HubDetailSheet({
         is_active: isActive,
         lat: lat.trim() === '' ? null : Number(lat),
         lng: lng.trim() === '' ? null : Number(lng),
+        house_no: addr.house_no.trim() || null,
+        street1: addr.street1.trim() || null,
+        street2: addr.street2.trim() || null,
+        landmark: addr.landmark.trim() || null,
+        village_town: addr.village_town.trim() || null,
+        country: addr.country.trim() || null,
+        pincode: addr.pincode.trim() || null,
         hub_manager_id: managerId || null,
         // Only taluk hubs carry a Hub Incharge; don't send it for a main hub.
         ...(hub!.hub_type === 'taluk' ? { hub_incharge_id: inchargeId || null } : {}),
@@ -194,6 +222,44 @@ export function HubDetailSheet({
               : t('admin.hubs.useLocation', '📍 Use my current location')}
           </Button>
         ) : null}
+
+        {/* Office address — the postal address shown to every VCO / Delivery Agent /
+            Hub Incharge / Hub Manager assigned to this hub. */}
+        <div className="flex flex-col gap-3 rounded-lg border border-border-subtle p-3">
+          <span className={FIELD_LABEL_CLASS}>
+            {t('admin.hubs.officeAddress', 'Office address')}
+          </span>
+          {(
+            [
+              ['house_no', t('address.houseNo', 'House / Flat No.')],
+              ['street1', t('address.street1', 'Street Line 1')],
+              ['street2', t('address.street2', 'Street Line 2')],
+              ['landmark', t('address.landmark', 'Landmark')],
+              ['village_town', t('address.village', 'Village / Town / City')],
+              ['country', t('address.country', 'Country')],
+            ] as const
+          ).map(([key, label]) => (
+            <label key={key} className="flex flex-col gap-1">
+              <span className={FIELD_LABEL_CLASS}>{label}</span>
+              <Input
+                value={addr[key]}
+                onChange={(e) => setAddr((a) => ({ ...a, [key]: e.target.value }))}
+                disabled={!editable}
+              />
+            </label>
+          ))}
+          <label className="flex flex-col gap-1">
+            <span className={FIELD_LABEL_CLASS}>{t('address.pincode', 'Pincode')}</span>
+            <Input
+              value={addr.pincode}
+              inputMode="numeric"
+              onChange={(e) =>
+                setAddr((a) => ({ ...a, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))
+              }
+              disabled={!editable}
+            />
+          </label>
+        </div>
 
         <label className="flex items-center gap-2 text-sm">
           <input

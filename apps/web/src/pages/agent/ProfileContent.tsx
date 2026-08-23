@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
 import { DeliveryAgentFields } from './DeliveryAgentFields';
+import { OfficeHubCard } from '../../components/OfficeHubCard';
 
 /* Coerce a user row into an AddressObject — the address fields reach the user row
  * through its index signature as `unknown`, so pick them out as strings. */
@@ -246,8 +247,9 @@ export function ProfileContent({ isVCO }: { isVCO: boolean }) {
         </div>
       </div>
 
-      {/* Delivery-Agent coverage, hub and daily readiness. VCOs have no run. */}
-      {!isVCO ? <DeliveryAgentFields /> : null}
+      {/* A VCO's office hub (read-only). A Delivery Agent gets the same card inside
+          DeliveryAgentFields, alongside their coverage and daily readiness. */}
+      {isVCO ? <OfficeHubCard /> : <DeliveryAgentFields />}
 
       {/* Change password */}
       <div className="a-card">

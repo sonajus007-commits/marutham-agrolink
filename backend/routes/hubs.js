@@ -5,6 +5,44 @@ const { requirePermission } = require('../middleware/permissions');
 
 const router = express.Router();
 
+// Every column a hub carries on the wire: routing keys, staff pointers, the map pin
+// and — since migration 047 — the full office address. One list so GET / POST / PATCH
+// all return the identical shape (a select that forgets the address columns would
+// make a freshly-saved hub look like it lost its address on reload).
+const HUB_SELECT =
+  'id, hub_type, state, district, taluk, name, parent_hub_id, hub_manager_id, ' +
+  'hub_incharge_id, lat, lng, is_active, house_no, street1, street2, landmark, ' +
+  'village_town, country, pincode';
+
+// The free-text office-address fields (the routing keys state/district/taluk are
+// handled separately — they define the hub, the address only describes it).
+const ADDRESS_FIELDS = [
+  'house_no',
+  'street1',
+  'street2',
+  'landmark',
+  'village_town',
+  'country',
+  'pincode',
+];
+
+// Pull the address fields off a request body into a plain patch: each present field
+// is trimmed, and an empty string clears it (null). pincode, if given, must be six
+// digits — a bad one is a clean 400 here rather than junk in the office address.
+// Returns { patch } on success or { error } to send straight back to the client.
+function parseAddress(body) {
+  const patch = {};
+  for (const key of ADDRESS_FIELDS) {
+    if (body[key] === undefined) continue;
+    const v = String(body[key] ?? '').trim();
+    patch[key] = v === '' ? null : v;
+  }
+  if (patch.pincode && !/^\d{6}$/.test(patch.pincode)) {
+    return { error: 'Pincode must be 6 digits.' };
+  }
+  return { patch };
+}
+
 // GET /hubs?state=&district=  — the hubs in one district: its main hub plus every
 // taluk hub that connects to it, each carrying the name of its responsible Hub
 // Incharge (resolved separately rather than via an embed so a rename of the FK
@@ -21,7 +59,7 @@ router.get('/', requireAuth, async (req, res) => {
   let q = supabase
     .from('hubs')
     .select(
-      'id, hub_type, state, district, taluk, name, parent_hub_id, hub_manager_id, hub_incharge_id, lat, lng, is_active',
+      HUB_SELECT,
     )
     .eq('district', district)
     .order('hub_type', { ascending: true }) // 'main' before 'taluk'
@@ -139,6 +177,35 @@ router.get('/staff', requirePermission('hub_management', 'view'), async (req, re
   });
 });
 
+// GET /hubs/mine  — the hub the CALLER is assigned to (users.hub_id), with its full
+// office address. This is what a VCO / Delivery Agent / Hub Incharge / Hub Manager
+// sees on their own profile as their office. Returns { hub: null } when the caller
+// has no hub assigned (a fresh account, or a role that carries no hub) — an absent
+// office is a normal state, not an error.
+router.get('/mine', requireAuth, async (req, res) => {
+  const { data: me, error: meErr } = await supabase
+    .from('users')
+    .select('hub_id')
+    .eq('id', req.user.id)
+    .maybeSingle();
+  if (meErr) {
+    console.error('GET /hubs/mine self lookup error:', meErr.message);
+    return res.status(500).json({ error: 'Could not load your hub.' });
+  }
+  if (!me || !me.hub_id) return res.json({ hub: null });
+
+  const { data: hub, error } = await supabase
+    .from('hubs')
+    .select(HUB_SELECT)
+    .eq('id', me.hub_id)
+    .maybeSingle();
+  if (error) {
+    console.error('GET /hubs/mine hub lookup error:', error.message);
+    return res.status(500).json({ error: 'Could not load your hub.' });
+  }
+  res.json({ hub: hub || null });
+});
+
 // POST /hubs  — admin creates a TALUK hub for a chosen taluk in a district. Not
 // every taluk gets a hub automatically any more; admin picks which taluks a
 // district actually needs. The district's MAIN hub must already exist (it becomes
@@ -214,6 +281,24 @@ router.post('/', requirePermission('hub_management', 'create'), async (req, res)
       .json({ error: 'A hub with that name already exists in this taluk.' });
   }
 
+  // Office address + map pin. The address describes the hub; lat/lng pins where a
+  // hub → consumer delivery leaves from (best-effort, so a bad number is a clean
+  // 400 rather than a Postgres 500 — but a missing pin is fine).
+  const { patch: address, error: addrErr } = parseAddress(req.body);
+  if (addrErr) return res.status(400).json({ error: addrErr });
+  const pin = {};
+  for (const [key, min, max] of [
+    ['lat', -90, 90],
+    ['lng', -180, 180],
+  ]) {
+    if (req.body[key] === undefined || req.body[key] === null || req.body[key] === '') continue;
+    const n = Number(req.body[key]);
+    if (!Number.isFinite(n) || n < min || n > max) {
+      return res.status(400).json({ error: 'Invalid hub location.' });
+    }
+    pin[key] = n;
+  }
+
   const { data: created, error } = await supabase
     .from('hubs')
     .insert({
@@ -224,9 +309,11 @@ router.post('/', requirePermission('hub_management', 'create'), async (req, res)
       name,
       parent_hub_id: main.id,
       is_active: true,
+      ...address,
+      ...pin,
     })
     .select(
-      'id, hub_type, state, district, taluk, name, parent_hub_id, hub_manager_id, hub_incharge_id, lat, lng, is_active',
+      HUB_SELECT,
     )
     .maybeSingle();
   if (error) {
@@ -333,6 +420,11 @@ router.patch('/:id', requirePermission('hub_management', 'edit'), async (req, re
     }
   }
 
+  // Office address (any subset; an empty string clears a field).
+  const { patch: address, error: addrErr } = parseAddress(req.body);
+  if (addrErr) return res.status(400).json({ error: addrErr });
+  Object.assign(updates, address);
+
   if (Object.keys(updates).length === 0) {
     return res.status(400).json({ error: 'No updatable fields provided.' });
   }
@@ -342,7 +434,7 @@ router.patch('/:id', requirePermission('hub_management', 'edit'), async (req, re
     .update(updates)
     .eq('id', req.params.id)
     .select(
-      'id, hub_type, state, district, taluk, name, parent_hub_id, hub_manager_id, hub_incharge_id, lat, lng, is_active',
+      HUB_SELECT,
     )
     .maybeSingle();
   if (error) {

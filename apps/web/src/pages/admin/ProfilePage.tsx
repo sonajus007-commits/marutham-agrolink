@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
 import { ChangePasswordCard } from '../../components/ChangePasswordCard';
+import { OfficeHubCard } from '../../components/OfficeHubCard';
 
 /* The admin's own account — the console's last missing screen (every other role
  * has had a profile since its migration).
@@ -251,6 +252,15 @@ export function ProfilePage() {
             <Row key={key} label={t(key, label)} value={value} />
           ))}
         </Card>
+
+        {/* Office hub — the hub this staffer is assigned to (Hub Incharge / Hub
+            Manager and any VCO/DA reaching this page), with its office address.
+            Read-only; assigned by admin/HR. Renders nothing when no hub is set. */}
+        {['VCO', 'Delivery Agent', 'Hub Incharge', 'Hub Manager'].includes(
+          String(user.admin_role),
+        ) ? (
+          <OfficeHubCard />
+        ) : null}
 
         {/* Employee master — HO's record, shown as-is. */}
         {empLoading ? (

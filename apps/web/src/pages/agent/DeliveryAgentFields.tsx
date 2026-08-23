@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, type Hub, type ServiceArea } from '@marutham/api-client';
+import { api, type ServiceArea } from '@marutham/api-client';
 import { getCurrentPosition } from '../../native/geolocation';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
+import { OfficeHubCard } from '../../components/OfficeHubCard';
 
 /** Today's date in IST as 'YYYY-MM-DD' — must match the server's istDateToday(). */
 function istToday(): string {
@@ -23,11 +24,9 @@ export function DeliveryAgentFields() {
   const state = (user?.state as string) || '';
 
   const [taluks, setTaluks] = useState<string[]>([]);
-  const [hubs, setHubs] = useState<Hub[]>([]);
   const [areas, setAreas] = useState<ServiceArea[]>([]);
   const [addTaluk, setAddTaluk] = useState('');
   const [villageInputs, setVillageInputs] = useState<Record<string, string>>({});
-  const [hubId, setHubId] = useState('');
   const [ready, setReady] = useState(false);
   const [savingReady, setSavingReady] = useState(false);
 
@@ -42,7 +41,6 @@ export function DeliveryAgentFields() {
           }))
         : [],
     );
-    setHubId((user.hub_id as string) || '');
     setReady(user.available_date === istToday());
   }, [user]);
 
@@ -62,16 +60,11 @@ export function DeliveryAgentFields() {
         setTaluks(forState || scan || []);
       })
       .catch(() => active && setTaluks([]));
-    api
-      .getHubs(district, state)
-      .then((res) => active && setHubs(res.hubs || []))
-      .catch(() => active && setHubs([]));
     return () => {
       active = false;
     };
   }, [district, state]);
 
-  const talukHubs = useMemo(() => hubs.filter((h) => h.hub_type === 'taluk'), [hubs]);
   const coveredTaluks = useMemo(() => new Set(areas.map((a) => a.taluk)), [areas]);
   const addableTaluks = useMemo(
     () => taluks.filter((tk) => !coveredTaluks.has(tk)),
@@ -225,39 +218,9 @@ export function DeliveryAgentFields() {
         </div>
       </div>
 
-      {/* Hub responsible — the taluk hub this agent belongs to. */}
-      <div className="a-card">
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)', marginBottom: 4 }}>
-          🏭 {t('agent.cover.hub', 'Hub responsible for me')}
-        </div>
-        <div style={{ fontSize: 11, color: 'var(--gray)', marginBottom: 10 }}>
-          {t('agent.cover.hubHint', 'The taluk hub you collect from and report to.')}
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <select
-            className="a-select"
-            value={hubId}
-            onChange={(e) => setHubId(e.target.value)}
-            aria-label={t('agent.cover.hub', 'Hub responsible for me')}
-          >
-            <option value="">{t('agent.cover.hubNone', '— Select your hub —')}</option>
-            {talukHubs.map((h) => (
-              <option key={h.id} value={h.id}>
-                {h.name}
-                {h.taluk ? ` (${h.taluk})` : ''}
-              </option>
-            ))}
-          </select>
-          <button
-            className="a-btn-save"
-            onClick={() =>
-              patch({ hub_id: hubId || null }, t('agent.cover.hubSaved', 'Hub saved.'))
-            }
-          >
-            {t('agent.profile.save', 'Save')}
-          </button>
-        </div>
-      </div>
+      {/* Hub responsible — the taluk hub this agent belongs to. Assigned by admin/HR
+          and shown read-only here (self-reassignment would defeat hub routing). */}
+      <OfficeHubCard />
 
       {/* Areas I cover — villages typed under a taluk cascaded from the district. */}
       <div className="a-card">
