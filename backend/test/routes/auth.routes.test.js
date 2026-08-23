@@ -341,3 +341,70 @@ describe('PATCH /auth/me — farm location', () => {
     assert.equal(supa.callsTo('users', 'update').length, 0);
   });
 });
+
+// POST /auth/create-staff derives the login ROLE from the employee's DESIGNATION,
+// never from the client. The designation catalog's Operations field titles ("Field
+// Associate", "Delivery Associate") must map to the operational roles (VCO, Delivery
+// Agent) — otherwise the role falls through to the raw title, which no one may create,
+// and every field-staff login 403s. These pin that mapping.
+describe('POST /auth/create-staff — designation → login role', () => {
+  const HEAD_OFFICE = { id: 'ho1', role: 'admin', role_key: 'head_office', admin_role: 'Head Office' };
+
+  // A create wired to succeed for an approved, active employee with `designation`.
+  function staffFake(designation) {
+    return fakeSupabase({
+      'employees:select': {
+        data: [{
+          emp_id: 'MATNPDK0007', designation, employment_type: 'Permanent',
+          status: 'active', approval_status: 'approved',
+        }],
+      },
+      'users:select': { data: [] },            // no dup emp_id, phone free
+      'users:insert': { data: [{ id: 'u-new', login_id: 'MATNPDK0007', admin_role: 'VCO' }] },
+    });
+  }
+
+  const bodyFor = () => ({
+    fname: 'Field', lname: 'Worker', phone: '9100000123', password: 'secret123',
+    gender: 'Male', state: 'Tamil Nadu', district: 'Pudukkottai', taluk: 'Alangudi',
+    pincode: '622001', aadhar: '123412341234', village_town: 'Alangudi', emp_id: 'MATNPDK0007',
+  });
+
+  let app, mute;
+  afterEach(async () => { if (mute) mute.restore(); if (app) await app.close(); });
+
+  test('Head Office can create a "Field Associate" — it maps to VCO', async () => {
+    const supa = staffFake('Field Associate');
+    app = await mountRoute('auth', { supabase: supa, user: HEAD_OFFICE });
+
+    const res = await app.post('/create-staff', bodyFor());
+
+    assert.equal(res.status, 201, res.text);
+    const insert = supa.callsTo('users', 'insert')[0];
+    assert.equal(insert.payload.admin_role, 'VCO');
+    // The login id IS the Employee ID (no role-based generated code).
+    assert.equal(insert.payload.login_id, 'MATNPDK0007');
+    assert.equal(insert.payload.emp_id, 'MATNPDK0007');
+  });
+
+  test('a "Delivery Associate" maps to Delivery Agent', async () => {
+    const supa = staffFake('Delivery Associate');
+    app = await mountRoute('auth', { supabase: supa, user: HEAD_OFFICE });
+
+    const res = await app.post('/create-staff', bodyFor());
+
+    assert.equal(res.status, 201, res.text);
+    assert.equal(supa.callsTo('users', 'insert')[0].payload.admin_role, 'Delivery Agent');
+  });
+
+  test('an unmapped office title still 403s (role falls through to the raw designation)', async () => {
+    mute = muteConsoleError();
+    const supa = staffFake('Chief Business Officer');
+    app = await mountRoute('auth', { supabase: supa, user: HEAD_OFFICE });
+
+    const res = await app.post('/create-staff', bodyFor());
+
+    assert.equal(res.status, 403);
+    assert.equal(supa.callsTo('users', 'insert').length, 0);
+  });
+});

@@ -56,6 +56,12 @@ const STATE_LEVEL_ROLES = new Set(['Regional Manager', 'State Head', 'Head Offic
 const DESIGNATION_TO_ROLE = {
   'Collection Officer(VCO)': 'VCO',
   'VCO':                     'VCO',
+  // Operations-department field titles from the designation catalog: a Field
+  // Associate is the village collection officer (VCO); a Delivery Associate is a
+  // Delivery Agent. Without these, deriving the login role fell through to the raw
+  // title, which no role may create → a 403 on every field-staff login.
+  'Field Associate':         'VCO',
+  'Delivery Associate':      'Delivery Agent',
   'Delivery Agent':          'Delivery Agent',
   'Hub Incharge':            'Hub Incharge',
   'District Manager':        'District Manager',
