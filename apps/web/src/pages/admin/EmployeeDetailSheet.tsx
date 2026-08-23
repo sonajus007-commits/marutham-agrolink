@@ -390,7 +390,10 @@ function Body({
           <>
             <Row label={t('admin.emp.login.id', 'Login ID')} value={loginId} mono />
             <p className="pt-1.5 text-2xs text-success">
-              {t('admin.emp.login.can', 'This employee can sign in with password or OTP.')}
+              {t(
+                'admin.emp.login.can',
+                'This employee signs in with their phone number or Employee ID (password or OTP).',
+              )}
             </p>
           </>
         ) : (
@@ -511,8 +514,12 @@ function Body({
         <p className="mb-3 text-2xs text-fg-muted">
           {t(
             'admin.emp.login.hint',
-            'The login role is set from the designation ({{role}}). The sign-in phone is {{phone}}. Set an initial password to share — the employee can change it after first sign-in.',
-            { role: String(emp.designation || '—'), phone: String(emp.phone || '—') },
+            'The login role is set from the designation ({{role}}). They sign in with their phone ({{phone}}) or Employee ID ({{empId}}). Set an initial password to share — the employee can change it after first sign-in.',
+            {
+              role: String(emp.designation || '—'),
+              phone: String(emp.phone || '—'),
+              empId: String(emp.emp_id || '—'),
+            },
           )}
         </p>
         <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-fg-muted">

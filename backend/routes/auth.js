@@ -370,11 +370,15 @@ router.post('/login', loginLimiter, async (req, res) => {
     return res.status(401).json({ error: 'Invalid phone number or password.' });
   }
 
-  // Accept either phone number or login_id in the phone field
+  // Accept phone number, login_id, OR Employee ID (emp_id) in the identifier field.
+  // Staff now sign in with their Employee ID (which is also their login_id for new
+  // accounts); the emp_id term also lets any existing staffer whose stored login_id
+  // still differs sign in with their Employee ID. The identifier was allowlisted
+  // above, so it carries no PostgREST filter syntax.
   const { data: user, error } = await supabase
     .from('users')
     .select('*')
-    .or(`phone.eq.${phone},login_id.eq.${phone}`)
+    .or(`phone.eq.${phone},login_id.eq.${phone},emp_id.eq.${phone}`)
     .maybeSingle();
 
   if (error || !user) {
@@ -674,15 +678,12 @@ router.post('/create-staff', requireAuth, async (req, res) => {
 
   const password_hash = await bcrypt.hash(password, 12);
 
-  // As in /register: an async throw here is an unhandled rejection, and an
-  // unhandled rejection is a dead API server.
-  let login_id;
-  try {
-    login_id = await generateLoginId('admin', admin_role, state || req.user.state, district || req.user.district, fname);
-  } catch (err) {
-    console.error('generateLoginId error:', err.message);
-    return res.status(500).json({ error: 'Could not create the staff account. Please try again.' });
-  }
+  // The Employee ID IS the staff login id — a staffer signs in with their phone or
+  // their Employee ID, not a separate generated code. It is unique per employee (one
+  // login per employee is enforced above), so it satisfies the login_id unique
+  // constraint; a collision with some other account's login_id would surface as the
+  // insert error below. generateLoginId now serves only consumer/farmer registration.
+  const login_id = emp.emp_id;
 
   // Attach the canonical RBAC role so the new staffer has permissions on their
   // very first login — without waiting for a re-seed/backfill. A null here (an

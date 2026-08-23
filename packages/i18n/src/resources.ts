@@ -1987,7 +1987,8 @@ export const resources = {
       'admin.emp.login.title': 'Login Account',
       'admin.emp.login.checking': 'Checking…',
       'admin.emp.login.id': 'Login ID',
-      'admin.emp.login.can': 'This employee can sign in with password or OTP.',
+      'admin.emp.login.can':
+        'This employee signs in with their phone number or Employee ID (password or OTP).',
       'admin.emp.login.none': 'No login account yet — this employee cannot sign in.',
       'admin.emp.login.needApproved': 'Approve & activate the employee first.',
       'admin.emp.login.create': 'Create Login',
@@ -2000,7 +2001,7 @@ export const resources = {
       'admin.emp.login.created': 'Login created: {{id}}',
       'admin.emp.login.failed': 'Could not create login',
       'admin.emp.login.hint':
-        'The login role is set from the designation ({{role}}). The sign-in phone is {{phone}}. Set an initial password to share — the employee can change it after first sign-in.',
+        'The login role is set from the designation ({{role}}). They sign in with their phone ({{phone}}) or Employee ID ({{empId}}). Set an initial password to share — the employee can change it after first sign-in.',
       'admin.emp.approveHint':
         'Approving issues the Employee ID (MA…/CE…) and marks the record active.',
       'admin.emp.approve': 'Approve',
@@ -4081,7 +4082,8 @@ export const resources = {
       'admin.emp.login.title': 'உள்நுழைவு கணக்கு',
       'admin.emp.login.checking': 'சரிபார்க்கிறது…',
       'admin.emp.login.id': 'உள்நுழைவு ஐடி',
-      'admin.emp.login.can': 'இந்த ஊழியர் கடவுச்சொல் அல்லது OTP மூலம் உள்நுழையலாம்.',
+      'admin.emp.login.can':
+        'இந்த ஊழியர் தனது தொலைபேசி எண் அல்லது ஊழியர் ஐடி மூலம் (கடவுச்சொல் அல்லது OTP) உள்நுழைவார்.',
       'admin.emp.login.none': 'இன்னும் உள்நுழைவு கணக்கு இல்லை — இந்த ஊழியரால் உள்நுழைய முடியாது.',
       'admin.emp.login.needApproved': 'முதலில் ஊழியரை அங்கீகரித்து செயல்படுத்தவும்.',
       'admin.emp.login.create': 'உள்நுழைவை உருவாக்கு',
@@ -4094,7 +4096,7 @@ export const resources = {
       'admin.emp.login.created': 'உள்நுழைவு உருவாக்கப்பட்டது: {{id}}',
       'admin.emp.login.failed': 'உள்நுழைவை உருவாக்க முடியவில்லை',
       'admin.emp.login.hint':
-        'உள்நுழைவு பங்கு பதவியிலிருந்து ({{role}}) அமைக்கப்படுகிறது. உள்நுழைவு தொலைபேசி {{phone}}. பகிர ஒரு தொடக்க கடவுச்சொல்லை அமைக்கவும் — ஊழியர் முதல் உள்நுழைவுக்குப் பிறகு அதை மாற்றலாம்.',
+        'உள்நுழைவு பங்கு பதவியிலிருந்து ({{role}}) அமைக்கப்படுகிறது. அவர்கள் தங்கள் தொலைபேசி ({{phone}}) அல்லது ஊழியர் ஐடி ({{empId}}) மூலம் உள்நுழைவார்கள். பகிர ஒரு தொடக்க கடவுச்சொல்லை அமைக்கவும் — ஊழியர் முதல் உள்நுழைவுக்குப் பிறகு அதை மாற்றலாம்.',
       'admin.emp.approveHint':
         'அங்கீகரித்தால் ஊழியர் ஐடி (MA…/CE…) வழங்கப்பட்டு பதிவு செயலில் இருக்கும்.',
       'admin.emp.approve': 'அங்கீகரி',
