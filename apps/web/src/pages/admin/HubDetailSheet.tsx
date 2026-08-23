@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sheet, Input, Select, Button, FIELD_LABEL_CLASS } from '@marutham/ui';
 import { api, type Hub, type HubIncharge, type HubStaff } from '@marutham/api-client';
-import { getCurrentPosition } from '../../native/geolocation';
+import { addressDetailRows, type SavedAddress } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
+import { AddressFields } from '../../components/AddressFields';
 
-/* Edit one hub: display name, geo coordinates, active flag, and the Hub Incharge
- * responsible for it. Structure (hub_type / district / parent) is seeded and shown
- * read-only. Saving requires hub_management 'edit' (the server enforces it too);
- * a view-only manager gets the fields disabled. */
+/* Edit one hub: display name, the complete OFFICE ADDRESS (with its map pin),
+ * active flag, and the responsible Hub Manager / Hub Incharge. state / district /
+ * taluk are the hub's ROUTING KEYS — shown in the address block but locked, because
+ * changing them would silently re-route the hub. Saving requires hub_management
+ * 'edit' (server-enforced too); a view-only manager sees everything read-only. */
 export function HubDetailSheet({
   hub,
   open,
@@ -30,41 +32,32 @@ export function HubDetailSheet({
   const toast = useToast();
 
   const [name, setName] = useState('');
-  const [lat, setLat] = useState('');
-  const [lng, setLng] = useState('');
-  // Office address (free text). state/district/taluk are the hub's routing keys and
-  // stay read-only in the structural block above — editing them here would silently
-  // re-route the hub.
-  const [addr, setAddr] = useState({
-    house_no: '',
-    street1: '',
-    street2: '',
-    landmark: '',
-    village_town: '',
-    country: '',
-    pincode: '',
-  });
+  // The full office address, including the routing keys (locked) and the map pin
+  // (lat/lng carried on the address object, set via "Pin current location").
+  const [addr, setAddr] = useState<SavedAddress>({});
   const [isActive, setIsActive] = useState(true);
   const [managerId, setManagerId] = useState('');
   const [managers, setManagers] = useState<HubStaff[]>([]);
   const [inchargeId, setInchargeId] = useState('');
   const [incharges, setIncharges] = useState<HubIncharge[]>([]);
   const [saving, setSaving] = useState(false);
-  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     if (!open || !hub) return;
     setName(hub.name || '');
-    setLat(hub.lat != null ? String(hub.lat) : '');
-    setLng(hub.lng != null ? String(hub.lng) : '');
     setAddr({
       house_no: hub.house_no || '',
       street1: hub.street1 || '',
       street2: hub.street2 || '',
       landmark: hub.landmark || '',
       village_town: hub.village_town || '',
+      state: hub.state || '',
+      district: hub.district || '',
+      taluk: hub.taluk || '',
       country: hub.country || '',
       pincode: hub.pincode || '',
+      lat: hub.lat ?? null,
+      lng: hub.lng ?? null,
     });
     setIsActive(hub.is_active !== false);
     setManagerId(hub.hub_manager_id || '');
@@ -91,33 +84,22 @@ export function HubDetailSheet({
 
   if (!hub) return null;
 
-  async function useCurrentLocation() {
-    setLocating(true);
-    const pos = await getCurrentPosition();
-    setLocating(false);
-    if (!pos) {
-      toast(t('admin.hubs.locFailed', 'Could not read your location.'), 'er');
-      return;
-    }
-    setLat(pos.lat.toFixed(6));
-    setLng(pos.lng.toFixed(6));
-  }
-
   async function save() {
     setSaving(true);
     try {
+      const a = addr;
       await api.updateHub(hub!.id, {
         name: name.trim(),
         is_active: isActive,
-        lat: lat.trim() === '' ? null : Number(lat),
-        lng: lng.trim() === '' ? null : Number(lng),
-        house_no: addr.house_no.trim() || null,
-        street1: addr.street1.trim() || null,
-        street2: addr.street2.trim() || null,
-        landmark: addr.landmark.trim() || null,
-        village_town: addr.village_town.trim() || null,
-        country: addr.country.trim() || null,
-        pincode: addr.pincode.trim() || null,
+        lat: typeof a.lat === 'number' ? a.lat : null,
+        lng: typeof a.lng === 'number' ? a.lng : null,
+        house_no: a.house_no?.trim() || null,
+        street1: a.street1?.trim() || null,
+        street2: a.street2?.trim() || null,
+        landmark: a.landmark?.trim() || null,
+        village_town: a.village_town?.trim() || null,
+        country: a.country?.trim() || null,
+        pincode: a.pincode?.trim() || null,
         hub_manager_id: managerId || null,
         // Only taluk hubs carry a Hub Incharge; don't send it for a main hub.
         ...(hub!.hub_type === 'taluk' ? { hub_incharge_id: inchargeId || null } : {}),
@@ -140,11 +122,10 @@ export function HubDetailSheet({
   return (
     <Sheet open={open} title={hub.name} onClose={onClose}>
       <div className="flex flex-col gap-4 p-1">
-        {/* Read-only structure */}
+        {/* Read-only structure. state/district/taluk also appear (locked) in the
+            address block below; only the hub Type is shown here. */}
         <div className="rounded-lg border border-border-subtle p-3 text-sm">
           <Row k={t('admin.hubs.type', 'Type')} v={typeLabel} />
-          <Row k={t('address.district', 'District')} v={hub.district} />
-          {hub.taluk ? <Row k={t('address.taluk', 'Taluk')} v={hub.taluk} /> : null}
         </div>
 
         <label className="flex flex-col gap-1">
@@ -193,72 +174,29 @@ export function HubDetailSheet({
           </label>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1">
-            <span className={FIELD_LABEL_CLASS}>{t('admin.hubs.lat', 'Latitude')}</span>
-            <Input
-              value={lat}
-              onChange={(e) => setLat(e.target.value)}
-              inputMode="decimal"
-              placeholder="—"
-              disabled={!editable}
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className={FIELD_LABEL_CLASS}>{t('admin.hubs.lng', 'Longitude')}</span>
-            <Input
-              value={lng}
-              onChange={(e) => setLng(e.target.value)}
-              inputMode="decimal"
-              placeholder="—"
-              disabled={!editable}
-            />
-          </label>
-        </div>
-        {editable ? (
-          <Button variant="ghost" onClick={useCurrentLocation} disabled={locating}>
-            {locating
-              ? t('admin.hubs.locating', 'Getting location…')
-              : t('admin.hubs.useLocation', '📍 Use my current location')}
-          </Button>
-        ) : null}
-
-        {/* Office address — the postal address shown to every VCO / Delivery Agent /
-            Hub Incharge / Hub Manager assigned to this hub. */}
+        {/* Office address — the full block. State / District / Taluk are the hub's
+            routing keys, shown but locked. The pin marks the hub → consumer delivery
+            origin; if you don't pin it, the server geocodes the address on save. */}
         <div className="flex flex-col gap-3 rounded-lg border border-border-subtle p-3">
           <span className={FIELD_LABEL_CLASS}>
             {t('admin.hubs.officeAddress', 'Office address')}
           </span>
-          {(
-            [
-              ['house_no', t('address.houseNo', 'House / Flat No.')],
-              ['street1', t('address.street1', 'Street Line 1')],
-              ['street2', t('address.street2', 'Street Line 2')],
-              ['landmark', t('address.landmark', 'Landmark')],
-              ['village_town', t('address.village', 'Village / Town / City')],
-              ['country', t('address.country', 'Country')],
-            ] as const
-          ).map(([key, label]) => (
-            <label key={key} className="flex flex-col gap-1">
-              <span className={FIELD_LABEL_CLASS}>{label}</span>
-              <Input
-                value={addr[key]}
-                onChange={(e) => setAddr((a) => ({ ...a, [key]: e.target.value }))}
-                disabled={!editable}
-              />
-            </label>
-          ))}
-          <label className="flex flex-col gap-1">
-            <span className={FIELD_LABEL_CLASS}>{t('address.pincode', 'Pincode')}</span>
-            <Input
-              value={addr.pincode}
-              inputMode="numeric"
-              onChange={(e) =>
-                setAddr((a) => ({ ...a, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))
-              }
-              disabled={!editable}
+          {editable ? (
+            <AddressFields
+              value={addr}
+              onChange={setAddr}
+              showStreet2
+              showPin
+              locked={{ state: true, district: true, taluk: true }}
             />
-          </label>
+          ) : (
+            addressDetailRows(addr).map(([key, label, value]) => (
+              <div key={key} className="flex justify-between gap-3 py-0.5 text-sm">
+                <span className="text-fg-muted">{t(key, label)}</span>
+                <span className="text-right font-medium">{value}</span>
+              </div>
+            ))
+          )}
         </div>
 
         <label className="flex items-center gap-2 text-sm">

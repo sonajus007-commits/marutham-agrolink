@@ -2,6 +2,7 @@ const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
+const { geocodeAddress, geocodingEnabled } = require('../utils/geocode');
 
 const router = express.Router();
 
@@ -299,6 +300,17 @@ router.post('/', requirePermission('hub_management', 'create'), async (req, res)
     pin[key] = n;
   }
 
+  // No pin supplied → derive one from the office address (best-effort geocode). An
+  // exact pin still needs "Pin current location"; this maps the typed address to a
+  // coordinate so the hub → consumer delivery origin exists. Never blocks the create.
+  if (pin.lat === undefined && pin.lng === undefined) {
+    const geo = await geocodeAddress({ ...address, state, district, taluk });
+    if (geo) {
+      pin.lat = geo.lat;
+      pin.lng = geo.lng;
+    }
+  }
+
   const { data: created, error } = await supabase
     .from('hubs')
     .insert({
@@ -427,6 +439,29 @@ router.patch('/:id', requirePermission('hub_management', 'edit'), async (req, re
 
   if (Object.keys(updates).length === 0) {
     return res.status(400).json({ error: 'No updatable fields provided.' });
+  }
+
+  // If the address changed but no pin was given this request, and the hub carries no
+  // pin yet, geocode the merged address to fill one (best-effort — a failure just
+  // leaves it unpinned; a pin already on the hub is never overwritten). Only worth a
+  // read when address fields moved and neither coordinate is being set explicitly.
+  const changingAddress = Object.keys(address).length > 0;
+  if (changingAddress && geocodingEnabled() && updates.lat === undefined && updates.lng === undefined) {
+    const { data: cur, error: curErr } = await supabase
+      .from('hubs')
+      .select('state, district, taluk, house_no, street1, street2, landmark, village_town, pincode, lat, lng')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (curErr) {
+      console.error('PATCH /hubs geocode current-hub read failed:', curErr.message);
+    } else if (cur && cur.lat == null && cur.lng == null) {
+      const merged = { ...cur, ...address };
+      const geo = await geocodeAddress(merged);
+      if (geo) {
+        updates.lat = geo.lat;
+        updates.lng = geo.lng;
+      }
+    }
   }
 
   const { data: updated, error } = await supabase

@@ -178,8 +178,17 @@ export function AddressFields({
             autoComplete="address-level1"
             value={value.state || ''}
             disabled={locked.state}
-            /* A new state invalidates the district and taluk below it. */
-            onChange={(e) => set({ state: e.target.value, district: '', taluk: '' })}
+            /* A new state invalidates the district and taluk below it. The location
+               tree is entirely Indian, so picking a state defaults Country to India
+               (only when it is still blank — a value the user typed is kept). */
+            onChange={(e) =>
+              set({
+                state: e.target.value,
+                district: '',
+                taluk: '',
+                country: value.country && value.country.trim() ? value.country : 'India',
+              })
+            }
           >
             <option value="">— {t('address.selectState', 'Select State')} —</option>
             {states.map((s) => (
@@ -215,7 +224,7 @@ export function AddressFields({
           <Select
             {...p}
             value={value.taluk || ''}
-            disabled={!value.district}
+            disabled={locked.taluk || !value.district}
             onChange={(e) => set({ taluk: e.target.value })}
           >
             <option value="">— {t('address.selectTaluk', 'Select Taluk')} —</option>

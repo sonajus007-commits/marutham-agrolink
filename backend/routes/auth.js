@@ -6,6 +6,7 @@ const { requireAuth } = require('../middleware/auth');
 const { permissionPayload, roleIdForAdminRole } = require('../middleware/permissions');
 const { loginLimiter, otpLimiter, resetLimiter } = require('../middleware/rateLimit');
 const { distCode, stateCode } = require('../utils/codeGen');
+const { geocodeAddress, geocodingEnabled } = require('../utils/geocode');
 const notify = require('../utils/notify');
 
 const router = express.Router();
@@ -866,6 +867,35 @@ router.patch('/me', requireAuth, async (req, res) => {
 
   if (Object.keys(updates).length === 0) {
     return res.status(400).json({ error: 'No updatable fields provided.' });
+  }
+
+  // Address → map pin, best-effort. A seller's farm pin (farm_lat/lng) is the pickup
+  // origin on the tracking map. When the address changes and the seller did NOT drop
+  // a pin themselves (and none is stored), geocode the address to fill it — so every
+  // profile with an address gets a location even without "Pin current location". An
+  // exact pin still needs the GPS button; this is the approximate fallback. Never
+  // overwrites a real pin, and a geocode failure just leaves it unset.
+  const ADDRESS_KEYS = [
+    'house_no', 'street1', 'street2', 'landmark',
+    'village_town', 'city', 'taluk', 'district', 'state', 'pincode',
+  ];
+  const addressChanged = ADDRESS_KEYS.some((k) => updates[k] !== undefined);
+  const settingFarmPin = updates.farm_lat !== undefined || updates.farm_lng !== undefined;
+  if (req.user.role === 'farmer' && addressChanged && !settingFarmPin && geocodingEnabled()) {
+    const { data: cur, error: curErr } = await supabase
+      .from('users')
+      .select('house_no, street1, street2, landmark, village_town, city, taluk, district, state, pincode, farm_lat, farm_lng')
+      .eq('id', req.user.id)
+      .maybeSingle();
+    if (curErr) {
+      console.error('PATCH /me farm geocode read failed:', curErr.message);
+    } else if (cur && cur.farm_lat == null && cur.farm_lng == null) {
+      const geo = await geocodeAddress({ ...cur, ...updates });
+      if (geo) {
+        updates.farm_lat = geo.lat;
+        updates.farm_lng = geo.lng;
+      }
+    }
   }
 
   updates.updated_at = new Date().toISOString();
