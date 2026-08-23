@@ -677,3 +677,59 @@ test('eligible-agents (collection): VCOs are never offered — Delivery Agents o
   assert.ok(ids.includes('da1'), 'the Delivery Agent is offered for collection');
   assert.ok(!ids.some((i) => i.startsWith('vco')), 'no VCO on the collection leg');
 });
+
+// ── eligible-agents: same-hub agents rank first (Phase 2 hub routing) ──────────
+// For a DIRECT pickup the agent should come from the SELLER's own hub. An agent
+// whose home hub is the order's pickup hub is flagged same_hub and sorted ahead of
+// everyone else — ahead even of a better coverer from another hub.
+test('eligible-agents (collection): a same-hub agent is flagged and ranked first', async () => {
+  const order = {
+    id: 'o1',
+    district: 'Pudukkottai',
+    village: 'Alangudi',
+    delivery_address: {},
+    pickup_hub_id: 'hubA',
+  };
+  const users = [
+    // Covers the village but belongs to a DIFFERENT hub.
+    { id: 'da_other', fname: 'Other', admin_role: 'Delivery Agent', can_deliver: false,
+      district: 'Pudukkottai', status: 'active', service_villages: ['Alangudi'], service_areas: [],
+      hub_id: 'hubB' },
+    // Same hub as the pickup, covers nothing — must still lead.
+    { id: 'da_same', fname: 'Same', admin_role: 'Delivery Agent', can_deliver: false,
+      district: 'Pudukkottai', status: 'active', service_villages: [], service_areas: [],
+      hub_id: 'hubA' },
+  ];
+  const db = fakeSupabase({ 'orders:select': { data: [order] }, 'users:select': { data: users } });
+  app = await mountRoute('delivery', { supabase: db, user: REQ });
+  const res = await app.get('/o1/eligible-agents?leg=collection');
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.all[0].id, 'da_same', 'same-hub agent sorts first');
+  assert.equal(res.body.all.find((a) => a.id === 'da_same').same_hub, true);
+  assert.equal(res.body.all.find((a) => a.id === 'da_other').same_hub, false);
+});
+
+// ── delivery-hubs: destination-hub candidates + deterministic suggestion ───────
+test('delivery-hubs: suggests the consumer’s own-taluk hub, lists all district hubs', async () => {
+  const order = {
+    id: 'o1',
+    district: 'Pudukkottai',
+    delivery_address: { district: 'Pudukkottai', taluk: 'Alangudi' },
+    delivery_hub_id: null,
+    delivered_lat: null,
+    delivered_lng: null,
+  };
+  const hubs = [
+    { id: 'h_thiru', name: 'Thirumayam Hub', taluk: 'Thirumayam', is_active: true },
+    { id: 'h_alangudi', name: 'Alangudi Hub', taluk: 'Alangudi', is_active: true },
+  ];
+  const db = fakeSupabase({ 'orders:select': { data: [order] }, 'hubs:select': { data: hubs } });
+  app = await mountRoute('delivery', { supabase: db, user: REQ });
+  const res = await app.get('/o1/delivery-hubs');
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.suggested_hub_id, 'h_alangudi', 'the consumer’s own taluk hub is suggested');
+  assert.equal(res.body.hubs.length, 2);
+  assert.equal(res.body.hubs[0].id, 'h_alangudi', 'the suggestion sorts first');
+});

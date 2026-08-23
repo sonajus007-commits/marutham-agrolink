@@ -597,17 +597,20 @@ router.get('/', async (req, res) => {
     const wantsParcels = LOGISTICS_ROLES.includes(role) || req.query.parts === '1';
 
     if (role === 'VCO') {
-      // Match on the VCO's village. village_town is the canonical field (editable
-      // in profile/admin edit); vco_city is a legacy fallback for older records.
-      const vcoVillage = u.village_town || u.vco_city || '';
-      if (u.can_deliver) {
-        // A delivery-capable VCO also works the last-mile orders assigned to them
-        // (agent_id), on top of their collection queue (their village). Quote the
-        // village value so a name with a comma can't break the .or() parse.
-        query = query.or(`village.eq."${String(vcoVillage).replace(/"/g, '')}",agent_id.eq.${u.id}`);
-      } else {
-        query = query.eq('village', vcoVillage);
-      }
+      // The VCO's collection queue. Responsibility is HUB-based: every order whose
+      // pickup hub is the VCO's assigned hub (users.hub_id) — the hub the seller's
+      // goods enter through. The legacy village match is kept as a UNION so orders
+      // placed before hub attribution (no pickup_hub_id) and any VCO without a hub
+      // assigned still resolve. village_town is canonical; vco_city is the legacy
+      // fallback. The village value is quoted so a name with a comma can't break the
+      // .or() parse.
+      const vcoVillage = String(u.village_town || u.vco_city || '').replace(/"/g, '');
+      const terms = [`village.eq."${vcoVillage}"`];
+      if (u.hub_id) terms.push(`pickup_hub_id.eq.${u.hub_id}`);
+      // A delivery-capable VCO also works the last-mile orders assigned to them
+      // (agent_id), on top of their collection queue.
+      if (u.can_deliver) terms.push(`agent_id.eq.${u.id}`);
+      query = terms.length > 1 ? query.or(terms.join(',')) : query.eq('village', vcoVillage);
 
     } else if (role === 'District Manager' || role === 'Hub Incharge') {
       query = query.eq('district', u.district_assign || u.district);

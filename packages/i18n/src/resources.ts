@@ -432,6 +432,12 @@ export const resources = {
       'agent.verify.deliveryAgent': 'Delivery agent',
       'agent.verify.hubAgentNote':
         'This order travels to the hub first. The Hub Incharge assigns the delivery agent when it arrives.',
+      'agent.verify.destHub': 'Destination hub',
+      'agent.verify.pickHub': 'Select a hub',
+      'agent.verify.suggested': 'Suggested',
+      'agent.verify.sameHub': 'Same hub',
+      'agent.verify.noHubs':
+        'No hub found for the delivery area. It will use the hub stamped at ordering.',
       'agent.verify.matched_one': '{{count}} agent covers this village — auto-selected.',
       'agent.verify.matched_other': '{{count}} agents cover this village — auto-selected.',
       'agent.verify.noMatch': 'No agent is tagged to this village. Pick one manually.',
@@ -2502,6 +2508,12 @@ export const resources = {
       'agent.verify.deliveryAgent': 'விநியோக முகவர்',
       'agent.verify.hubAgentNote':
         'இந்த ஆர்டர் முதலில் மையத்திற்குச் செல்கிறது. அது வந்ததும் மைய பொறுப்பாளர் விநியோக முகவரை ஒதுக்குவார்.',
+      'agent.verify.destHub': 'இலக்கு மையம்',
+      'agent.verify.pickHub': 'ஒரு மையத்தைத் தேர்ந்தெடுக்கவும்',
+      'agent.verify.suggested': 'பரிந்துரைக்கப்பட்டது',
+      'agent.verify.sameHub': 'அதே மையம்',
+      'agent.verify.noHubs':
+        'விநியோகப் பகுதிக்கு மையம் எதுவும் கிடைக்கவில்லை. ஆர்டர் செய்யும்போது பதிந்த மையம் பயன்படுத்தப்படும்.',
       'agent.verify.matched_one':
         '{{count}} முகவர் இந்தக் கிராமத்தைச் சேர்க்கிறார் — தானாகத் தேர்ந்தெடுக்கப்பட்டது.',
       'agent.verify.matched_other':

@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sheet, Spinner } from '@marutham/ui';
-import { api, OfflineQueuedError, type EligibleAgent } from '@marutham/api-client';
+import {
+  api,
+  OfflineQueuedError,
+  type EligibleAgent,
+  type DeliveryHubCandidate,
+} from '@marutham/api-client';
 import type { Order } from '@marutham/lib';
 import { useToast } from '../../../components/Toast';
 import { getCurrentPosition } from '../../../native/geolocation';
@@ -25,6 +30,10 @@ export function VerifySheet({
   const [error, setError] = useState<string | null>(null);
   const [route, setRoute] = useState('direct');
   const [agentId, setAgentId] = useState('');
+  // Destination hub for a via-hub order — candidates + the deterministic suggestion.
+  const [deliveryHubs, setDeliveryHubs] = useState<DeliveryHubCandidate[]>([]);
+  const [suggestedHubId, setSuggestedHubId] = useState<string | null>(null);
+  const [deliveryHubId, setDeliveryHubId] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -34,13 +43,22 @@ export function VerifySheet({
     setError(null);
     setRoute('direct');
     setAgentId('');
+    setDeliveryHubs([]);
+    setSuggestedHubId(null);
+    setDeliveryHubId('');
     setBusy(false); // the sheet stays mounted between orders — a finished verify
     // would otherwise leave the next order's button stuck on "Verifying…"
     // 'delivery' leg: the agent list is matched against the CONSUMER's delivery
     // village, because on a direct order this is the person who runs the parcel to
     // the door. Agents opt into villages via service_villages in their own profile.
-    Promise.all([api.getOrder(orderId), api.getEligibleAgents(orderId, 'delivery')])
-      .then(([ord, elig]) => {
+    // The destination-hub candidates ride along so the "Transit to Hub" toggle is
+    // instant (best-effort: a failure leaves an empty list, never blocks verify).
+    Promise.all([
+      api.getOrder(orderId),
+      api.getEligibleAgents(orderId, 'delivery'),
+      api.getDeliveryHubs(orderId).catch(() => null),
+    ])
+      .then(([ord, elig, hubs]) => {
         if (!active) return;
         setOrder(ord.order);
         setMatched(elig.matched || []);
@@ -49,6 +67,12 @@ export function VerifySheet({
         // ready-first, so matched[0] is that agent when any ready coverer exists.
         const best = (elig.matched || []).find((a) => a.ready_today) || (elig.matched || [])[0];
         if (best) setAgentId(best.id);
+        if (hubs) {
+          setDeliveryHubs(hubs.hubs || []);
+          setSuggestedHubId(hubs.suggested_hub_id);
+          // Pre-select what the order already carries, else the suggestion.
+          setDeliveryHubId(hubs.current_hub_id || hubs.suggested_hub_id || '');
+        }
       })
       .catch(
         (e) =>
@@ -87,6 +111,8 @@ export function VerifySheet({
         // agentId is auto-seeded from the village match on load, so switching the
         // toggle to hub would otherwise silently submit a stale pre-selection.
         agent_id: route === 'hub' ? undefined : agentId || undefined,
+        // The destination hub only applies to a via-hub order (ignored for direct).
+        delivery_hub_id: route === 'hub' ? deliveryHubId || undefined : undefined,
         coords,
       });
       /* Our own wording, not res.message: the server's is English prose composed
@@ -114,6 +140,7 @@ export function VerifySheet({
   // the agent is ready today, and how far their last GPS is from the drop.
   const agentLabel = (a: EligibleAgent) => {
     let s = a.name;
+    if (a.same_hub) s += ` · 🏭 ${t('agent.verify.sameHub', 'Same hub')}`;
     if (a.vehicle) s += ` · ${a.vehicle}`;
     s += a.ready_today
       ? ` · ✅ ${t('agent.assign.readyToday', 'Ready today')}`
@@ -178,21 +205,75 @@ export function VerifySheet({
               until then nobody knows who will run the last mile, so asking the VCO
               to guess now would only produce an assignment the hub has to redo. */}
           {route === 'hub' ? (
-            <div
-              style={{
-                fontSize: 11,
-                color: 'var(--gray)',
-                background: 'var(--surface-muted)',
-                borderRadius: 8,
-                padding: '10px 12px',
-                margin: '6px 0 14px',
-              }}
-            >
-              {t(
-                'agent.verify.hubAgentNote',
-                'This order travels to the hub first. The Hub Incharge assigns the delivery agent when it arrives.',
+            <>
+              {/* Destination hub — where the parcel transits to. Auto-suggested from
+                  the consumer's delivery area; the VCO can override. */}
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: 'var(--forest)',
+                  margin: '6px 0 8px',
+                }}
+              >
+                {t('agent.verify.destHub', 'Destination hub')}
+              </div>
+              {deliveryHubs.length ? (
+                <select
+                  className="a-select"
+                  value={deliveryHubId}
+                  onChange={(e) => setDeliveryHubId(e.target.value)}
+                  aria-label={t('agent.verify.destHub', 'Destination hub')}
+                  style={{ marginBottom: 8 }}
+                >
+                  <option value="">— {t('agent.verify.pickHub', 'Select a hub')} —</option>
+                  {deliveryHubs.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name}
+                      {h.taluk ? ` · ${h.taluk}` : ''}
+                      {h.id === suggestedHubId
+                        ? ` · ⭐ ${t('agent.verify.suggested', 'Suggested')}`
+                        : ''}
+                      {h.distance_m != null
+                        ? ` · ${t('agent.assign.km', { km: (h.distance_m / 1000).toFixed(1) })}`
+                        : ''}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--warning-fg)',
+                    background: 'var(--warning-bg)',
+                    border: '1px solid var(--gold2)',
+                    borderRadius: 8,
+                    padding: '8px 10px',
+                    marginBottom: 8,
+                  }}
+                >
+                  {t(
+                    'agent.verify.noHubs',
+                    'No hub found for the delivery area. It will use the hub stamped at ordering.',
+                  )}
+                </div>
               )}
-            </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: 'var(--gray)',
+                  background: 'var(--surface-muted)',
+                  borderRadius: 8,
+                  padding: '10px 12px',
+                  margin: '6px 0 14px',
+                }}
+              >
+                {t(
+                  'agent.verify.hubAgentNote',
+                  'This order travels to the hub first. The Hub Incharge assigns the delivery agent when it arrives.',
+                )}
+              </div>
+            </>
           ) : (
             <>
               <div

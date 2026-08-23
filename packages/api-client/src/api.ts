@@ -7,6 +7,7 @@ import type {
   MeResponse,
   ScanResponse,
   EligibleAgentsResponse,
+  DeliveryHubsResponse,
   FieldDashboardResponse,
   MyEmployeeResponse,
   User,
@@ -110,12 +111,14 @@ function toListingBody(draft: Partial<ListingPayload>): Record<string, unknown> 
 function scanBody(o: {
   route?: string;
   agentId?: string;
+  deliveryHubId?: string;
   coords?: { lat: number; lng: number };
   fromStage?: number;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   if (o.route) body.route = o.route;
   if (o.agentId) body.agent_id = o.agentId;
+  if (o.deliveryHubId) body.delivery_hub_id = o.deliveryHubId;
   if (o.coords) {
     body.lat = o.coords.lat;
     body.lng = o.coords.lng;
@@ -142,7 +145,12 @@ function scanBody(o: {
 function queuedScan(
   id: string,
   fromStage: number,
-  rest: { route?: string; agentId?: string; coords?: { lat: number; lng: number } } = {},
+  rest: {
+    route?: string;
+    agentId?: string;
+    deliveryHubId?: string;
+    coords?: { lat: number; lng: number };
+  } = {},
 ): Promise<ScanResponse> {
   // The body is built HERE rather than by the caller, so a queued scan cannot be
   // keyed by a stage it forgot to actually assert — that would park an unguarded
@@ -274,10 +282,21 @@ export const api = {
   verifyOrderOffline(
     id: string,
     fromStage: number,
-    data: { route?: string; agent_id?: string; coords?: { lat: number; lng: number } },
+    data: {
+      route?: string;
+      agent_id?: string;
+      /** Destination hub for a via-hub order (from getDeliveryHubs); ignored direct. */
+      delivery_hub_id?: string;
+      coords?: { lat: number; lng: number };
+    },
   ): Promise<ScanResponse> {
-    const { coords, route, agent_id } = data || {};
-    return queuedScan(id, fromStage, { route, agentId: agent_id, coords });
+    const { coords, route, agent_id, delivery_hub_id } = data || {};
+    return queuedScan(id, fromStage, {
+      route,
+      agentId: agent_id,
+      deliveryHubId: delivery_hub_id,
+      coords,
+    });
   },
   /* Name the last-mile Delivery Agent on an order sitting At Hub.
    * NOT a scan and NOT a status change — POST /assign only writes the agent
@@ -299,6 +318,11 @@ export const api = {
   getEligibleAgents(id: string, leg?: string): Promise<EligibleAgentsResponse> {
     const qs = leg ? '?leg=' + encodeURIComponent(leg) : '';
     return apiFetch<EligibleAgentsResponse>('GET', '/orders/' + id + '/eligible-agents' + qs);
+  },
+  /** Candidate destination hubs for a via-hub order, with a deterministic suggestion
+   *  (the consumer's taluk hub, else nearest). The VCO picks one at verify. */
+  getDeliveryHubs(id: string): Promise<DeliveryHubsResponse> {
+    return apiFetch<DeliveryHubsResponse>('GET', '/orders/' + id + '/delivery-hubs');
   },
   setRoute(id: string, route: string): Promise<{ message?: string }> {
     return apiFetch('PATCH', '/orders/' + id + '/route', { route });

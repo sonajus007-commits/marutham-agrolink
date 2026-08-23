@@ -201,6 +201,9 @@ export interface EligibleAgent {
   service_villages?: string[];
   /** The taluk hub responsible for this agent, if set. */
   hub_id?: string | null;
+  /** Is the agent's home hub the same as this leg's hub (seller's pickup hub on a
+   *  collection leg, the delivery hub on a last-mile leg)? Ranked first. */
+  same_hub?: boolean;
   /** Did the agent mark themselves "ready for delivery" TODAY (IST)? */
   ready_today?: boolean;
   /** Does the agent's coverage include the order's delivery village / taluk? */
@@ -218,6 +221,25 @@ export interface EligibleAgentsResponse {
   /** The delivery taluk, when the address carried one. */
   taluk?: string | null;
   leg?: string;
+}
+
+/** One destination-hub candidate for a via-hub order (GET /orders/:id/delivery-hubs). */
+export interface DeliveryHubCandidate {
+  id: string;
+  name: string;
+  taluk: string | null;
+  /** Is this hub in the consumer's own taluk (the exact-area match)? */
+  same_taluk: boolean;
+  /** Metres from the consumer's delivery pin, when both carry one. */
+  distance_m: number | null;
+}
+
+export interface DeliveryHubsResponse {
+  /** The hub currently stamped on the order (from placement), if any. */
+  current_hub_id: string | null;
+  /** The deterministic pick — the consumer's taluk hub, else nearest. */
+  suggested_hub_id: string | null;
+  hubs: DeliveryHubCandidate[];
 }
 
 /* ── Hubs (GET/PATCH /api/hubs) ── */

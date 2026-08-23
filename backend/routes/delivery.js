@@ -6,6 +6,7 @@ const { distanceMeters } = require('../utils/geo');
 const { SPLIT_ROUTE } = require('../utils/orderSplit');
 const { rollupToParent } = require('../utils/orderRollup');
 const { geocodeAddress, geocodingEnabled } = require('../utils/geocode');
+const { suggestDeliveryHubs } = require('../utils/hubSuggest');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -373,6 +374,28 @@ router.post('/:id/scan', async (req, res) => {
       extra.route_auto = route;
     }
 
+    // On a HUB order the VCO also picks the DESTINATION hub the parcel transits to
+    // (candidates + suggestion from GET /orders/:id/delivery-hubs). Absent/empty
+    // leaves whatever was stamped at placement (from the consumer's taluk). A present
+    // value must be a real hub — a bad id would be a Postgres FK 500, not a 400.
+    if (
+      req.body.delivery_hub_id !== undefined &&
+      req.body.delivery_hub_id !== null &&
+      req.body.delivery_hub_id !== ''
+    ) {
+      const { data: destHub, error: destErr } = await supabase
+        .from('hubs')
+        .select('id')
+        .eq('id', req.body.delivery_hub_id)
+        .maybeSingle();
+      if (destErr) {
+        console.error('verify delivery_hub_id lookup failed:', destErr.message);
+        return res.status(500).json({ error: 'Could not verify the destination hub.' });
+      }
+      if (!destHub) return res.status(400).json({ error: 'That destination hub does not exist.' });
+      extra.delivery_hub_id = req.body.delivery_hub_id;
+    }
+
     let assignedName = null;
     if (agent_id) {
       // maybeSingle + a read error check: unread, a database fault made `agent` null
@@ -737,7 +760,10 @@ router.get('/:id/eligible-agents', async (req, res) => {
 
   const { data: order, error: oe } = await supabase
     .from('orders')
-    .select('id, village, delivery_village, district, delivery_address, delivered_lat, delivered_lng')
+    .select(
+      'id, village, delivery_village, district, delivery_address, delivered_lat, ' +
+        'delivered_lng, pickup_hub_id, delivery_hub_id',
+    )
     .eq('id', req.params.id)
     .single();
   if (oe || !order) return res.status(404).json({ error: 'Order not found.' });
@@ -810,6 +836,13 @@ router.get('/:id/eligible-agents', async (req, res) => {
     return { cv, ct };
   };
 
+  // The hub this leg is worked out of: the PICKUP hub on a collection leg (the
+  // seller's hub — a direct-delivery agent is picked from here), the DELIVERY hub on
+  // a last-mile leg (the hub the parcel transited to). An agent "belongs to the same
+  // hub" when their home hub matches it. Null on either side ⇒ no same-hub bonus,
+  // never a crash.
+  const legHubId = leg === 'delivery' ? order.delivery_hub_id : order.pickup_hub_id;
+
   const shape = (a) => {
     const { cv, ct } = covers(a);
     const distance_m =
@@ -823,6 +856,7 @@ router.get('/:id/eligible-agents', async (req, res) => {
       vehicle: a.agent_vehicle || '',
       service_villages: a.service_villages || [],
       hub_id: a.hub_id || null,
+      same_hub: !!(legHubId && a.hub_id && a.hub_id === legHubId),
       ready_today: a.available_date === today,
       covers_village: cv,
       covers_taluk: ct,
@@ -830,9 +864,11 @@ router.get('/:id/eligible-agents', async (req, res) => {
     };
   };
 
-  // Ready-first, then better coverage (village > taluk > none), then nearest, then
-  // name — the order the picker defaults to and displays in.
+  // Same hub first (a direct pickup should go to an agent of the seller's own hub),
+  // then ready-first, then better coverage (village > taluk > none), then nearest,
+  // then name — the order the picker defaults to and displays in.
   const rankKey = (s) => [
+    s.same_hub ? 0 : 1,
     s.ready_today ? 0 : 1,
     s.covers_village ? 0 : s.covers_taluk ? 1 : 2,
     s.distance_m ?? Infinity,
@@ -862,6 +898,43 @@ router.get('/:id/eligible-agents', async (req, res) => {
   const allSorted = [...shaped].sort(bySort);
 
   res.json({ leg, village: village || null, taluk: taluk || null, matched, all: allSorted });
+});
+
+// ── GET /orders/:id/delivery-hubs  (VCO/admin — destination hub for a hub order) ─
+// When the VCO routes an order VIA HUB, the parcel needs a destination hub to take
+// the line-haul to. This returns the candidate hubs for the CONSUMER's delivery
+// area (every active taluk hub in the delivery district) with a deterministic
+// suggestion (the hub in the consumer's own taluk, else nearest) — the VCO confirms
+// or overrides it in a dropdown. Same guard as eligible-agents: the VCO picks the
+// route at verify, senior admins via the assign permission.
+router.get('/:id/delivery-hubs', async (req, res) => {
+  if (req.user.admin_role !== 'VCO' && !can(req.user, 'delivery_assignment', 'assign')) {
+    return res.status(403).json({ error: 'Delivery assignment permission required.' });
+  }
+
+  const { data: order, error: oe } = await supabase
+    .from('orders')
+    .select('id, district, delivery_address, delivery_hub_id, delivered_lat, delivered_lng')
+    .eq('id', req.params.id)
+    .single();
+  if (oe || !order) return res.status(404).json({ error: 'Order not found.' });
+
+  // Resolve the delivery location from the consumer address (its own district/taluk
+  // win over the order's), and the pin for the distance sort.
+  const da = order.delivery_address || {};
+  const lat = order.delivered_lat ?? (typeof da.lat === 'number' ? da.lat : null);
+  const lng = order.delivered_lng ?? (typeof da.lng === 'number' ? da.lng : null);
+  const { suggested_hub_id, hubs } = await suggestDeliveryHubs(supabase, {
+    state: (da.state || '').trim() || null,
+    district: (da.district || '').trim() || order.district || null,
+    taluk: (da.taluk || '').trim() || null,
+    lat: typeof lat === 'number' ? lat : null,
+    lng: typeof lng === 'number' ? lng : null,
+  });
+
+  // Keep whatever the order already carries as the current pick (stamped at
+  // placement from the consumer taluk); the suggestion is the default when unset.
+  res.json({ current_hub_id: order.delivery_hub_id || null, suggested_hub_id, hubs });
 });
 
 // Pickup-origin fallback for the map: the tracking line should start where the
