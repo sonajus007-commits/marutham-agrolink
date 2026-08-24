@@ -276,6 +276,49 @@ test('PATCH /employees/:id/approve — a removed employee cannot be approved', a
   assert.equal(db.callsTo('employees', 'update').length, 0, 'no Employee ID may be issued to a removed employee');
 });
 
+// ── designation change syncs the linked login role ───────────────────────────
+// The tracker record and the login are two rows sharing an emp_id. A designation
+// change on the tracker must follow through to the login's admin_role, or the Users
+// page keeps showing the old role and RBAC keeps granting the old permissions.
+
+test('PATCH /employees/:id — a mapped designation change updates the linked login role', async () => {
+  const db = fakeSupabase({
+    'employees:update': { data: { ...LIVE_EMP, designation: 'Delivery Agent' } },
+    'users:update':     { data: [{ id: 'u-asha' }] },
+  });
+  const app = await mount(db);
+  const res = await app.patch('/e1', { designation: 'Delivery Agent' });
+
+  assert.equal(res.status, 200);
+  const userUpdates = db.callsTo('users', 'update');
+  assert.equal(userUpdates.length, 1, 'the linked login is updated');
+  assert.equal(userUpdates[0].payload.admin_role, 'Delivery Agent');
+  // scoped to the staff login sharing this emp_id
+  assert.ok(userUpdates[0].filters.some((f) => f[0] === 'eq' && f[1] === 'emp_id' && f[2] === 'MATN00006'));
+});
+
+test('PATCH /employees/:id — an org title with no mapped login role does NOT touch a login', async () => {
+  const db = fakeSupabase({
+    'employees:update': { data: { ...LIVE_EMP, designation: 'General Manager' } },
+  });
+  const app = await mount(db);
+  const res = await app.patch('/e1', { designation: 'General Manager' });
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('users', 'update').length, 0, 'no arbitrary title is turned into a login role');
+});
+
+test('PATCH /employees/:id — editing a non-designation field leaves the login alone', async () => {
+  const db = fakeSupabase({
+    'employees:update': { data: { ...LIVE_EMP, email: 'asha@example.com' } },
+  });
+  const app = await mount(db);
+  const res = await app.patch('/e1', { email: 'asha@example.com' });
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('users', 'update').length, 0);
+});
+
 // ── restore ──────────────────────────────────────────────────────────────────
 
 test('POST /employees/:id/restore — brings back the record and the login', async () => {

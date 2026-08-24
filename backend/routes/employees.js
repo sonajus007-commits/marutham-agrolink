@@ -1,8 +1,9 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
-const { requirePermission, can } = require('../middleware/permissions');
+const { requirePermission, can, roleIdForAdminRole } = require('../middleware/permissions');
 const { stateCode } = require('../utils/codeGen');
+const { loginRoleForDesignation } = require('../utils/designationRole');
 
 const router = express.Router();
 
@@ -292,7 +293,41 @@ router.patch('/:id', requirePermission('employee_management', 'edit'), async (re
     .select().maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: 'Employee not found, or has been removed. Restore them first to make changes.' });
-  res.json({ message: 'Employee updated.', employee: data });
+
+  // Keep the linked login in sync. The employee tracker and the login (a `users` row
+  // sharing this emp_id) are separate records, and a login is issued from the
+  // designation at creation. When the designation changes here, the login's role must
+  // follow — otherwise the Users page keeps showing the old role and RBAC still grants
+  // the old permissions. Only designations that map to a distinct login role are
+  // propagated; an org/management title (no mapped role) is left alone rather than
+  // turned into an arbitrary — possibly privileged — login role. Best-effort: a sync
+  // failure is logged but does not fail the employee edit that already succeeded.
+  let loginSync = null;
+  if (updates.designation !== undefined && data.emp_id) {
+    const newRole = loginRoleForDesignation(data.designation);
+    if (newRole) {
+      const roleId = await roleIdForAdminRole(newRole);
+      const patch = { admin_role: newRole, updated_at: new Date().toISOString() };
+      if (roleId) patch.role_id = roleId; // null would strip RBAC → leave the old one
+      const { data: synced, error: syncErr } = await supabase
+        .from('users')
+        .update(patch)
+        .eq('emp_id', data.emp_id)
+        .eq('role', 'admin')
+        .is('deleted_at', null)
+        .select('id');
+      if (syncErr) {
+        console.error(`Employee ${data.emp_id}: login role sync failed:`, syncErr.message);
+      } else if (synced && synced.length) {
+        loginSync = { role: newRole, count: synced.length };
+      }
+    }
+  }
+
+  res.json({
+    message: loginSync ? `Employee updated. Login role set to ${loginSync.role}.` : 'Employee updated.',
+    employee: data,
+  });
 });
 
 // ── PATCH /employees/:id/approve ──────────────────────────────────────────────

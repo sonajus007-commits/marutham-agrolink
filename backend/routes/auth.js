@@ -50,24 +50,11 @@ const STATE_LEVEL_ROLES = new Set(['Regional Manager', 'State Head', 'Head Offic
   'HR Admin', 'HR Manager', 'Zonal Manager']);
 
 // Employee-master designation → staff login role (admin_role) used for access
-// control. Designations that have a distinct login role map to it (e.g.
-// "Collection Officer(VCO)" → "VCO"); management/org titles with no distinct role
-// use the designation itself. Mirrors DESIGNATION_TO_ROLE in the admin UI.
-const DESIGNATION_TO_ROLE = {
-  'Collection Officer(VCO)': 'VCO',
-  'VCO':                     'VCO',
-  // Operations-department field titles from the designation catalog: a Field
-  // Associate is the village collection officer (VCO); a Delivery Associate is a
-  // Delivery Agent. Without these, deriving the login role fell through to the raw
-  // title, which no role may create → a 403 on every field-staff login.
-  'Field Associate':         'VCO',
-  'Delivery Associate':      'Delivery Agent',
-  'Delivery Agent':          'Delivery Agent',
-  'Hub Incharge':            'Hub Incharge',
-  'District Manager':        'District Manager',
-  'Regional Manager':        'Regional Manager',
-  'State Head':              'State Head',
-};
+// control. Single source of truth lives in utils/designationRole (shared with the
+// employee edit flow, which keeps a linked login's role in sync). A management/org
+// title with no distinct login role is not a key there; the create flow below falls
+// back to the raw designation for it.
+const { DESIGNATION_TO_ROLE } = require('../utils/designationRole');
 
 // Counter format: [A-Z][01-99] — always visually alphanumeric.
 // Sequence: A01, A02 … A99, B01 … Z99  (2,574 slots per name prefix).
