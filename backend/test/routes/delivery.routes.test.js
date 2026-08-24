@@ -171,6 +171,46 @@ test('VCO verify without a location still succeeds and stores no coordinates', a
   assert.ok(!('verified_lat' in update), 'no lat when none was sent');
 });
 
+// A VCO flagged can_deliver runs the goods to the consumer themselves — so the
+// verifying VCO may assign the order to their own id (Part 5). The agent lookup must
+// accept a can_deliver VCO, not only a Delivery Agent.
+test('VCO verify can assign a can_deliver VCO (deliver it myself) as the agent', async () => {
+  const db = fakeSupabase({
+    'orders:select': { data: [packaged()] },
+    'orders:update': { data: { id: 'o1', status: 'VCO Verified' } },
+    'users:select': {
+      data: [
+        { id: 'v1', role: 'admin', admin_role: 'VCO', can_deliver: true,
+          fname: 'Vco', lname: '', phone: '900', agent_vehicle: null, deleted_at: null },
+      ],
+    },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { route: 'direct', agent_id: 'v1' });
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('orders', 'update')[0].payload.agent_id, 'v1');
+});
+
+// A plain VCO (no can_deliver flag) still cannot be handed a delivery.
+test('VCO verify rejects a VCO without can_deliver as the agent', async () => {
+  const db = fakeSupabase({
+    'orders:select': { data: [packaged()] },
+    'users:select': {
+      data: [
+        { id: 'v2', role: 'admin', admin_role: 'VCO', can_deliver: false,
+          fname: 'Plain', deleted_at: null },
+      ],
+    },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { route: 'direct', agent_id: 'v2' });
+
+  assert.equal(res.status, 400);
+  assert.match(res.body.error, /cannot take deliveries/);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
 // ── The hub lane ────────────────────────────────────────────────────────────────
 // The hub map is  … VCO Verified(2) → In Transit(3) → At Hub(4) → Picked Up(5) →
 // Out for Delivery(6) → Delivered(7). Note 'Picked Up' sits AFTER 'At Hub' here and

@@ -9,6 +9,7 @@ import {
 } from '@marutham/api-client';
 import type { Order } from '@marutham/lib';
 import { useToast } from '../../../components/Toast';
+import { useAuth } from '../../../auth/AuthContext';
 import { getCurrentPosition } from '../../../native/geolocation';
 
 export function VerifySheet({
@@ -24,6 +25,11 @@ export function VerifySheet({
 }) {
   const { t } = useTranslation();
   const toast = useToast();
+  const { user: me } = useAuth();
+  // A VCO flagged can_deliver may run this order to the consumer themselves — so the
+  // verifying VCO can assign it to their own id, even where the matched list is empty
+  // (they need not have this village in their service_areas to hand-carry it).
+  const iCanDeliver = me?.role === 'admin' && me?.admin_role === 'VCO' && !!me?.can_deliver;
   const [order, setOrder] = useState<Order | null>(null);
   const [matched, setMatched] = useState<EligibleAgent[]>([]);
   const [all, setAll] = useState<EligibleAgent[]>([]);
@@ -63,9 +69,11 @@ export function VerifySheet({
         setOrder(ord.order);
         setMatched(elig.matched || []);
         setAll(elig.all || []);
-        // Default to the best coverer who is ready today; matched is already sorted
-        // ready-first, so matched[0] is that agent when any ready coverer exists.
-        const best = (elig.matched || []).find((a) => a.ready_today) || (elig.matched || [])[0];
+        // Only an agent who is available for duty today can be pre-selected — an
+        // off-duty agent is not offered at all (see the ready-only lists below). If
+        // none is on duty, leave the picker on "assign later"; a can_deliver VCO can
+        // still choose to run it themselves.
+        const best = (elig.matched || []).find((a) => a.ready_today);
         if (best) setAgentId(best.id);
         if (hubs) {
           setDeliveryHubs(hubs.hubs || []);
@@ -134,7 +142,13 @@ export function VerifySheet({
     }
   }
 
+  // Only agents available for duty today are offered (Part 4): a Delivery Agent must
+  // be on duty to be assignable. The verifying VCO themselves is offered separately
+  // (Part 5) and is never in these lists.
+  const matchedReady = matched.filter((a) => a.ready_today && a.id !== me?.id);
   const others = all.filter((a) => !matched.some((m) => m.id === a.id));
+  const othersReady = others.filter((a) => a.ready_today && a.id !== me?.id);
+  const noneOnDuty = matchedReady.length === 0 && othersReady.length === 0;
 
   // Option text carries the availability signal a <select> can't badge: whether
   // the agent is ready today, and how far their last GPS is from the drop.
@@ -286,7 +300,7 @@ export function VerifySheet({
               >
                 {t('agent.verify.deliveryAgent', 'Delivery agent')}
               </div>
-              {matched.length ? (
+              {matchedReady.length ? (
                 <div
                   style={{
                     fontSize: 11,
@@ -298,7 +312,7 @@ export function VerifySheet({
                     marginBottom: 8,
                   }}
                 >
-                  ✓ {t('agent.verify.matched', { count: matched.length })}
+                  ✓ {t('agent.verify.matched', { count: matchedReady.length })}
                 </div>
               ) : (
                 <div
@@ -312,10 +326,20 @@ export function VerifySheet({
                     marginBottom: 8,
                   }}
                 >
-                  {t(
-                    'agent.verify.noMatch',
-                    'No agent is tagged to this village. Pick one manually.',
-                  )}
+                  {noneOnDuty
+                    ? iCanDeliver
+                      ? t(
+                          'agent.verify.noneOnDutySelf',
+                          'No delivery agent is on duty. Deliver it yourself, or assign later.',
+                        )
+                      : t(
+                          'agent.verify.noneOnDuty',
+                          'No delivery agent is on duty right now. Assign later.',
+                        )
+                    : t(
+                        'agent.verify.noMatch',
+                        'No on-duty agent covers this village. Pick one below.',
+                      )}
                 </div>
               )}
               <select
@@ -325,18 +349,24 @@ export function VerifySheet({
                 aria-label={t('agent.verify.deliveryAgent', 'Delivery agent')}
               >
                 <option value="">— {t('agent.verify.assignLater', 'Assign later')} —</option>
-                {matched.length ? (
-                  <optgroup label={t('agent.verify.covers', 'Covers this village')}>
-                    {matched.map((a) => (
+                {/* Part 5: the verifying VCO can hand-carry it to the consumer. */}
+                {iCanDeliver && me?.id ? (
+                  <option value={me.id}>
+                    🛵 {t('agent.verify.deliverMyself', 'Deliver it myself')}
+                  </option>
+                ) : null}
+                {matchedReady.length ? (
+                  <optgroup label={t('agent.verify.covers', 'Covers this village · on duty')}>
+                    {matchedReady.map((a) => (
                       <option key={a.id} value={a.id}>
                         {agentLabel(a)}
                       </option>
                     ))}
                   </optgroup>
                 ) : null}
-                {others.length ? (
-                  <optgroup label={t('agent.verify.others', 'Other agents in district')}>
-                    {others.map((a) => (
+                {othersReady.length ? (
+                  <optgroup label={t('agent.verify.others', 'Other agents on duty in district')}>
+                    {othersReady.map((a) => (
                       <option key={a.id} value={a.id}>
                         {agentLabel(a)}
                       </option>

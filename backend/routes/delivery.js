@@ -403,7 +403,7 @@ router.post('/:id/scan', async (req, res) => {
       // a wrong answer about someone who is one.
       const { data: agent, error: agentErr } = await supabase
         .from('users')
-        .select('id, fname, lname, phone, agent_vehicle, role, admin_role')
+        .select('id, fname, lname, phone, agent_vehicle, role, admin_role, can_deliver')
         .eq('id', agent_id)
         .is('deleted_at', null)          // a removed agent cannot take a delivery
         .maybeSingle();
@@ -411,8 +411,14 @@ router.post('/:id/scan', async (req, res) => {
         console.error('Delivery agent lookup failed:', agentErr.message);
         return res.status(500).json({ error: 'Could not look up that agent. Please try again.' });
       }
-      if (!agent || agent.role !== 'admin' || agent.admin_role !== 'Delivery Agent') {
-        return res.status(400).json({ error: 'Selected user is not a Delivery Agent.' });
+      // A last-mile delivery may be taken by a Delivery Agent, or by a VCO who is
+      // flagged can_deliver (they run the goods from the farmer to the consumer
+      // themselves — including the verifying VCO assigning it to their own id).
+      const isDeliveryAgent = agent && agent.role === 'admin' && agent.admin_role === 'Delivery Agent';
+      const isDeliveryVCO =
+        agent && agent.role === 'admin' && agent.admin_role === 'VCO' && agent.can_deliver === true;
+      if (!isDeliveryAgent && !isDeliveryVCO) {
+        return res.status(400).json({ error: 'Selected user cannot take deliveries.' });
       }
       assignedName = agent.fname + (agent.lname ? ' ' + agent.lname : '');
       extra.agent_id      = agent.id;
@@ -697,14 +703,20 @@ router.post('/:id/assign', async (req, res) => {
 
   const { data: agent, error: ae } = await supabase
     .from('users')
-    .select('id, fname, lname, phone, agent_vehicle, role, admin_role')
+    .select('id, fname, lname, phone, agent_vehicle, role, admin_role, can_deliver')
     .eq('id', agent_id)
     .is('deleted_at', null)          // a removed agent cannot take a delivery
     .single();
 
   if (ae || !agent) return res.status(404).json({ error: 'Agent not found.' });
-  if (agent.role !== 'admin' || agent.admin_role !== 'Delivery Agent') {
-    return res.status(400).json({ error: 'Selected user is not a Delivery Agent.' });
+  // A Delivery Agent, or a VCO flagged can_deliver (the same pool eligible-agents
+  // offers for a last-mile leg), may be assigned.
+  const canTakeDelivery =
+    agent.role === 'admin' &&
+    (agent.admin_role === 'Delivery Agent' ||
+      (agent.admin_role === 'VCO' && agent.can_deliver === true));
+  if (!canTakeDelivery) {
+    return res.status(400).json({ error: 'Selected user cannot take deliveries.' });
   }
 
   const agentName = agent.fname + (agent.lname ? ' ' + agent.lname : '');

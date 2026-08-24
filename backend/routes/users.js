@@ -45,7 +45,7 @@ router.get('/', requirePermission('user_management', 'view'), async (req, res) =
   try {
     let q = supabase
       .from('users')
-      .select('id,login_id,fname,lname,phone,role,admin_role,gender,district,state,status,agent_vehicle,subscription_expires_at,subscription_plan,created_at')
+      .select('id,login_id,fname,lname,phone,role,admin_role,gender,district,state,village_town,country,hub_id,can_deliver,status,agent_vehicle,subscription_expires_at,subscription_plan,created_at')
       .is('deleted_at', null)          // removed staff are not in the user list
       .order('created_at', { ascending: false });
 
@@ -390,7 +390,7 @@ router.get('/:id', requirePermission('user_management', 'view'), async (req, res
   }
   const { data, error } = await supabase
     .from('users')
-    .select('id,login_id,fname,lname,phone,alt_phone,email,role,admin_role,seller_type,gender,status,approval_status,district,state,village_town,city,taluk,pincode,street1,street2,house_no,landmark,bank_name,bank_account,ifsc,gst_number,business_name,business_type,aadhar,emp_id,employment_type,agent_vehicle,subscription_expires_at,subscription_plan,subscription_amount,created_at,updated_at')
+    .select('id,login_id,fname,lname,phone,country_code,alt_phone,email,role,admin_role,seller_type,gender,status,approval_status,district,state,country,village_town,city,taluk,pincode,street1,street2,house_no,landmark,hub_id,can_deliver,bank_name,bank_account,ifsc,gst_number,business_name,business_type,aadhar,emp_id,employment_type,agent_vehicle,subscription_expires_at,subscription_plan,subscription_amount,created_at,updated_at')
     .eq('id', req.params.id)
     .single();
   if (error) return res.status(404).json({ error: 'User not found.' });

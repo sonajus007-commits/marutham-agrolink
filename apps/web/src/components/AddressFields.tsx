@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Field, Input, Select, FIELD_ERR_CLASS } from '@marutham/ui';
 import type { SavedAddress } from '@marutham/lib';
@@ -97,6 +98,19 @@ export function AddressFields({
   const { states, districtsOf, taluksOf } = useLocations();
   const villageHints = useVillageSuggestions(value.state, value.district, value.taluk);
   const set = (patch: Partial<SavedAddress>) => onChange({ ...value, ...patch });
+
+  /* The location tree is entirely Indian, so any address that has a state belongs to
+     India. Selecting a state defaults Country below, but a record loaded with a state
+     already set and a blank country (legacy data, or an edit form seeded from the API)
+     never fires that handler — so default it here on load too. Only fills a blank; a
+     value the user (or the record) already carries is left untouched, and the Country
+     field stays editable. */
+  useEffect(() => {
+    if (value.state && !(value.country && value.country.trim()) && !locked.country) {
+      set({ country: 'India' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value.state, value.country, locked.country]);
 
   /** Everything <Field> needs for one address key, so no call site re-derives it. */
   const field = (key: AddressFieldKey, alwaysRequired = false) => ({
