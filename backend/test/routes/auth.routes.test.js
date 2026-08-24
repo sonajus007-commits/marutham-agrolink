@@ -408,3 +408,141 @@ describe('POST /auth/create-staff — designation → login role', () => {
     assert.equal(supa.callsTo('users', 'insert').length, 0);
   });
 });
+
+// ── Password lifecycle + inactivity lock (migration 049) ──────────────────────
+// Enforced in evaluateAccess, so it applies to BOTH login paths. A refused login
+// carries a `password_action` telling the client to drop into the reset flow.
+describe('POST /auth/login — password lifecycle', () => {
+  const bcrypt = require('bcryptjs');
+  const OLD = '2020-01-01T00:00:00Z';          // > 90 days ago, always
+  const now = () => new Date().toISOString();
+
+  // An admin (never a farmer, so maybeSuspendOnExpiry can't interfere) with a valid
+  // password, overridable lifecycle fields.
+  async function ACTIVE(extra) {
+    return {
+      id: 'u1', login_id: 'MATN00099', phone: '9100000099',
+      role: 'admin', admin_role: 'VCO', status: 'active', approval_status: 'approved',
+      deleted_at: null, password_hash: await bcrypt.hash('secret123', 4),
+      must_change_password: false, login_locked_at: null,
+      password_changed_at: now(), last_login_at: now(),
+      ...extra,
+    };
+  }
+
+  const login = () => ({ phone: '9100000099', password: 'secret123' });
+  let app, mute;
+  afterEach(async () => { if (mute) mute.restore(); if (app) await app.close(); });
+
+  test('must_change_password refuses login with password_action=must_reset', async () => {
+    const supa = fakeSupabase({
+      'users:select': { data: [await ACTIVE({ must_change_password: true })] },
+      'user_login_history:insert': { data: [] },
+    });
+    app = await mountRoute('auth', { supabase: supa, user: null });
+    const res = await app.post('/login', login());
+
+    assert.equal(res.status, 403);
+    assert.equal(res.body.password_action, 'must_reset');
+    assert.equal(res.body.token, undefined);
+  });
+
+  test('a password older than 90 days is expired', async () => {
+    const supa = fakeSupabase({
+      'users:select': { data: [await ACTIVE({ password_changed_at: OLD })] },
+      'user_login_history:insert': { data: [] },
+    });
+    app = await mountRoute('auth', { supabase: supa, user: null });
+    const res = await app.post('/login', login());
+
+    assert.equal(res.status, 403);
+    assert.equal(res.body.password_action, 'expired');
+  });
+
+  test('an already-locked account is refused with password_action=locked', async () => {
+    const supa = fakeSupabase({
+      'users:select': { data: [await ACTIVE({ login_locked_at: OLD })] },
+      'user_login_history:insert': { data: [] },
+    });
+    app = await mountRoute('auth', { supabase: supa, user: null });
+    const res = await app.post('/login', login());
+
+    assert.equal(res.status, 403);
+    assert.equal(res.body.password_action, 'locked');
+  });
+
+  test('90 days without a login stamps the lock at login time, then refuses', async () => {
+    const supa = fakeSupabase({
+      'users:select': { data: [await ACTIVE({ last_login_at: OLD })] },
+      'users:update': { data: [{ id: 'u1' }] },
+      'user_login_history:insert': { data: [] },
+    });
+    app = await mountRoute('auth', { supabase: supa, user: null });
+    const res = await app.post('/login', login());
+
+    assert.equal(res.status, 403);
+    assert.equal(res.body.password_action, 'locked');
+    const locked = supa.callsTo('users', 'update').find((c) => 'login_locked_at' in c.payload);
+    assert.ok(locked && locked.payload.login_locked_at, 'the inactivity lock is written');
+  });
+});
+
+// A reset is the one action that lifts the lock, clears must_change, and restarts the
+// 90-day clock — without touching `status` (a subscription-suspended seller stays so).
+describe('POST /auth/reset-password — unlocks the lifecycle', () => {
+  let app;
+  afterEach(async () => { if (app) await app.close(); });
+
+  test('clears the lock, the initial-password flag, and stamps password_changed_at', async () => {
+    const realRandom = Math.random;
+    Math.random = () => 0;                       // known OTP: 100000
+    try {
+      const supa = fakeSupabase({
+        'users:select': { data: [{ id: 'u1', status: 'active', deleted_at: null }] },
+        'users:update': { data: [{ id: 'u1' }] },
+      });
+      app = await mountRoute('auth', { supabase: supa, user: null });
+      await app.post('/send-otp', { phone: '9100000099' });
+      const res = await app.post('/reset-password', {
+        phone: '9100000099', otp: '100000', new_password: 'brandnew1',
+      });
+
+      assert.equal(res.status, 200, res.text);
+      const upd = supa.callsTo('users', 'update')[0].payload;
+      assert.equal(upd.must_change_password, false);
+      assert.equal(upd.login_locked_at, null);
+      assert.equal(upd.login_lock_reason, null);
+      assert.ok(upd.password_changed_at, 'the 90-day clock restarts');
+      assert.ok(upd.password_hash, 'the new password is set');
+    } finally {
+      Math.random = realRandom;
+    }
+  });
+});
+
+// create-staff issues a temporary password → the new staffer must reset before signing
+// in (policy decision B: admin/system-created logins only).
+describe('POST /auth/create-staff — forces initial password reset', () => {
+  const HEAD_OFFICE = { id: 'ho1', role: 'admin', role_key: 'head_office', admin_role: 'Head Office' };
+  let app;
+  afterEach(async () => { if (app) await app.close(); });
+
+  test('the new staff login is flagged must_change_password with a fresh clock', async () => {
+    const supa = fakeSupabase({
+      'employees:select': { data: [{ emp_id: 'MATNPDK0007', designation: 'Field Associate', employment_type: 'Permanent', status: 'active', approval_status: 'approved' }] },
+      'users:select': { data: [] },
+      'users:insert': { data: [{ id: 'u-new', login_id: 'MATNPDK0007' }] },
+    });
+    app = await mountRoute('auth', { supabase: supa, user: HEAD_OFFICE });
+    const res = await app.post('/create-staff', {
+      fname: 'Field', lname: 'Worker', phone: '9100000123', password: 'secret123',
+      gender: 'Male', state: 'Tamil Nadu', district: 'Pudukkottai', taluk: 'Alangudi',
+      pincode: '622001', aadhar: '123412341234', village_town: 'Alangudi', emp_id: 'MATNPDK0007',
+    });
+
+    assert.equal(res.status, 201, res.text);
+    const insert = supa.callsTo('users', 'insert')[0].payload;
+    assert.equal(insert.must_change_password, true);
+    assert.ok(insert.password_changed_at, 'the clock starts at creation');
+  });
+});

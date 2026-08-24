@@ -158,6 +158,51 @@ async function withPerms(u) {
 // If a seller's subscription has lapsed, drop them to 'suspended' so they can
 // still log in and renew (renewals pay the plan fee only — no ₹100). Mutates
 // `user` in place and records the change. Returns true if it suspended them.
+// Password lifecycle policy (migration 049). One knob each, in days.
+const PASSWORD_MAX_AGE_DAYS = 90; // a password older than this is expired → must reset
+const INACTIVITY_MAX_DAYS   = 90; // no successful login for this long → login locked
+const LIFECYCLE_MS_PER_DAY  = 24 * 60 * 60 * 1000;
+
+// True when `ts` (an ISO timestamp or null) is older than `days` days. A null/absent
+// timestamp is treated as NOT stale: a brand-new account (no login yet) or a row that
+// predates the column must never be locked or expired by the mere absence of data.
+function olderThanDays(ts, days) {
+  if (!ts) return false;
+  return Date.now() - new Date(ts).getTime() > days * LIFECYCLE_MS_PER_DAY;
+}
+
+// Lazy inactivity lock, checked at login (mirrors maybeSuspendOnExpiry). If the last
+// successful login is more than INACTIVITY_MAX_DAYS ago, stamp a DEDICATED login lock —
+// deliberately separate from the seller `status` machine, so a lapsed-subscription
+// suspension and an inactivity lock never shadow one another. The only way back in is a
+// password reset, which clears the lock. Best-effort by the same rule as
+// maybeSuspendOnExpiry: a failed write must not claim a lock it did not take.
+async function maybeLockOnInactivity(user) {
+  if (user.login_locked_at) return true;                                   // already locked
+  if (!olderThanDays(user.last_login_at, INACTIVITY_MAX_DAYS)) return false;
+  const now = new Date().toISOString();
+  const reason = `No login for ${INACTIVITY_MAX_DAYS}+ days`;
+  const { error } = await supabase.from('users')
+    .update({ login_locked_at: now, login_lock_reason: reason, updated_at: now })
+    .eq('id', user.id);
+  if (error) {
+    console.error(`Failed to lock inactive account ${user.id}:`, error.message);
+    return false;
+  }
+  user.login_locked_at = now;
+  user.login_lock_reason = reason;
+  return true;
+}
+
+// Stamp a successful login so the inactivity clock restarts. Best-effort: a failed
+// write must never fail the login it is only recording.
+async function stampLoginSuccess(userId) {
+  const { error } = await supabase.from('users')
+    .update({ last_login_at: new Date().toISOString() })
+    .eq('id', userId);
+  if (error) console.error(`Failed to stamp last_login_at for ${userId}:`, error.message);
+}
+
 async function maybeSuspendOnExpiry(user) {
   if (user.role === 'farmer' && user.status === 'active' && user.subscription_expires_at
       && new Date(user.subscription_expires_at) < new Date()) {
@@ -213,6 +258,29 @@ function evaluateAccess(user) {
       account_status: 'blocked',
     } };
   }
+  // Password lifecycle (migration 049). These gate EVERY login method, OTP included —
+  // OTP is the way you RESET the password, not a way to skip the policy. The path back
+  // in is always the same: Forgot password → OTP → new password, which clears the lock
+  // and restarts both clocks. `password_action` tells the client which message to show
+  // and to drop the user straight into the reset flow.
+  if (user.login_locked_at) {
+    return { ok: false, code: 403, body: {
+      error: `Your account was locked after ${INACTIVITY_MAX_DAYS} days without a login. Reset your password to sign in again.`,
+      password_action: 'locked',
+    } };
+  }
+  if (user.must_change_password) {
+    return { ok: false, code: 403, body: {
+      error: 'Set your own password before signing in. Use “Forgot password” to choose a new one.',
+      password_action: 'must_reset',
+    } };
+  }
+  if (olderThanDays(user.password_changed_at, PASSWORD_MAX_AGE_DAYS)) {
+    return { ok: false, code: 403, body: {
+      error: `Your password has expired (${PASSWORD_MAX_AGE_DAYS}-day policy). Reset it to continue.`,
+      password_action: 'expired',
+    } };
+  }
   // 'suspended' sellers may log in, but must pay before the home page unlocks.
   return { ok: true, needsPayment: user.role === 'farmer' && user.status === 'suspended' };
 }
@@ -225,6 +293,9 @@ function evaluateAccess(user) {
 function loginOutcome(user) {
   if (user.deleted_at) return 'removed';
   if (user.status === 'blocked') return 'blocked';
+  if (user.login_locked_at) return 'inactive_locked';
+  if (user.must_change_password) return 'must_change_password';
+  if (olderThanDays(user.password_changed_at, PASSWORD_MAX_AGE_DAYS)) return 'password_expired';
   return user.approval_status || 'rejected';
 }
 
@@ -302,6 +373,9 @@ router.post('/register', async (req, res) => {
 
   const newUser = {
     login_id, phone, password_hash, role,
+    // Self-registered: they chose this password, so it starts a fresh 90-day clock and
+    // they are NOT forced to change it (must_change_password stays false by default).
+    password_changed_at: new Date().toISOString(),
     fname, lname, email, alt_phone,
     gender: gender || null,
     country_code: country_code || '+91',
@@ -386,8 +460,11 @@ router.post('/login', loginLimiter, async (req, res) => {
     return res.status(401).json({ error: 'Invalid phone number or password.' });
   }
 
-  // Lapsed subscription → suspend (they can still log in to renew).
+  // Lapsed subscription → suspend (they can still log in to renew). Long inactivity →
+  // lock (they cannot log in until they reset). Both run before the access gate reads
+  // the resulting state.
   await maybeSuspendOnExpiry(user);
+  await maybeLockOnInactivity(user);
 
   const access = evaluateAccess(user);
   if (!access.ok) {
@@ -397,6 +474,7 @@ router.post('/login', loginLimiter, async (req, res) => {
   }
 
   await logLogin(req, { user_id: user.id, login_id: user.login_id, method: 'password', outcome: 'success' });
+  await stampLoginSuccess(user.id);
 
   const token = signToken(user.id);
   res.json({
@@ -477,8 +555,11 @@ router.post('/verify-otp', async (req, res) => {
     return res.status(401).json({ error: 'Account not found.' });
   }
 
-  // Lapsed subscription → suspend, then apply the same access gate as password login.
+  // Lapsed subscription → suspend; long inactivity → lock. Then the same access gate
+  // as password login (OTP does not bypass the password lifecycle — it is how you
+  // reset, via /reset-password, not a way around expiry or the lock).
   await maybeSuspendOnExpiry(user);
+  await maybeLockOnInactivity(user);
   const access = evaluateAccess(user);
   if (!access.ok) {
     const outcome = loginOutcome(user);
@@ -487,6 +568,7 @@ router.post('/verify-otp', async (req, res) => {
   }
 
   await logLogin(req, { user_id: user.id, login_id: user.login_id, method: 'otp', outcome: 'success' });
+  await stampLoginSuccess(user.id);
 
   const token = signToken(user.id);
   res.json({
@@ -523,10 +605,13 @@ router.post('/change-password', requireAuth, async (req, res) => {
   const ok = await bcrypt.compare(current_password, fullUser.password_hash);
   if (!ok) return res.status(401).json({ error: 'Current password is incorrect.' });
 
+  const nowIso = new Date().toISOString();
   const password_hash = await bcrypt.hash(new_password, 12);
   const { error } = await supabase
     .from('users')
-    .update({ password_hash, updated_at: new Date().toISOString() })
+    // A logged-in password change also restarts the 90-day clock and clears any
+    // initial-password requirement (they have just chosen their own).
+    .update({ password_hash, password_changed_at: nowIso, must_change_password: false, updated_at: nowIso })
     .eq('id', req.user.id);
 
   if (error) return res.status(500).json({ error: 'Could not update password.' });
@@ -560,9 +645,21 @@ router.post('/reset-password', resetLimiter, async (req, res) => {
   // in the ten minutes before the removal is still valid after it, and this route trusts
   // nothing but the OTP — so the only reliable place to refuse a removed account is the
   // statement that would otherwise set their new password.
+  const nowIso = new Date().toISOString();
   const { data: updated, error } = await supabase
     .from('users')
-    .update({ password_hash, updated_at: new Date().toISOString() })
+    .update({
+      password_hash,
+      // A reset is the one action that satisfies the whole lifecycle: it sets a fresh
+      // password (restarting the 90-day clock), clears the initial-password flag, and
+      // lifts an inactivity lock. It does NOT touch `status`, so a seller suspended for
+      // an unpaid subscription stays suspended — this only clears the login lock.
+      password_changed_at: nowIso,
+      must_change_password: false,
+      login_locked_at: null,
+      login_lock_reason: null,
+      updated_at: nowIso,
+    })
     .eq('phone', phone)
     .is('deleted_at', null)
     .select('id');
@@ -687,6 +784,11 @@ router.post('/create-staff', requireAuth, async (req, res) => {
     login_id, phone, password_hash,
     role: 'admin', admin_role,
     ...(role_id ? { role_id } : {}),
+    // Admin-created staff logins ship with a temporary password: force the new staffer
+    // to set their own before they can sign in (policy decision B). The 90-day clock
+    // still starts now, so a login they never activate also expires on schedule.
+    must_change_password: true,
+    password_changed_at: new Date().toISOString(),
     fname, lname: lname || '',
     gender: gender || null,
     district: district || req.user.district,

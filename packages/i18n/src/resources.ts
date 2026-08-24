@@ -7,6 +7,7 @@ export const resources = {
       brand: 'Marutham Agrolink',
       'login.title': 'Sign in',
       'login.phone': 'Phone number',
+      'login.phoneOrId': 'Phone number or Login ID',
       'login.password': 'Password',
       'login.submit': 'Sign in',
       'login.error': 'Login failed. Check your credentials.',
@@ -35,6 +36,11 @@ export const resources = {
       'login.backToLogin': '← Back to sign in',
       'login.pwMismatch': 'Passwords do not match.',
       'login.pwShort': 'Password must be at least 6 characters.',
+      'login.pwMustReset':
+        'Set your own password before signing in. Request an OTP to choose a new one.',
+      'login.pwExpired': 'Your password has expired. Request an OTP to set a new one.',
+      'login.pwLocked':
+        'Your account was locked after 90 days without a login. Request an OTP to set a new password.',
       'login.noAccount': 'New here?',
       'login.createAccount': 'Create an account',
       // Registration (pre-login)
@@ -2089,6 +2095,7 @@ export const resources = {
       brand: 'மருதம் அக்ரோலிங்க்',
       'login.title': 'உள்நுழைக',
       'login.phone': 'தொலைபேசி எண்',
+      'login.phoneOrId': 'தொலைபேசி எண் அல்லது உள்நுழைவு ஐடி',
       'login.password': 'கடவுச்சொல்',
       'login.submit': 'உள்நுழைக',
       'login.error': 'உள்நுழைவு தோல்வி. விவரங்களைச் சரிபார்க்கவும்.',
@@ -2117,6 +2124,11 @@ export const resources = {
       'login.backToLogin': '← உள்நுழைவுக்குத் திரும்பு',
       'login.pwMismatch': 'கடவுச்சொற்கள் பொருந்தவில்லை.',
       'login.pwShort': 'கடவுச்சொல் குறைந்தது 6 எழுத்துகள் இருக்க வேண்டும்.',
+      'login.pwMustReset':
+        'உள்நுழைவதற்கு முன் உங்கள் சொந்தக் கடவுச்சொல்லை அமைக்கவும். புதியதைத் தேர்ந்தெடுக்க OTP கோரவும்.',
+      'login.pwExpired': 'உங்கள் கடவுச்சொல் காலாவதியாகிவிட்டது. புதியதை அமைக்க OTP கோரவும்.',
+      'login.pwLocked':
+        '90 நாட்கள் உள்நுழையாததால் உங்கள் கணக்கு பூட்டப்பட்டது. புதிய கடவுச்சொல் அமைக்க OTP கோரவும்.',
       'login.noAccount': 'புதியவரா?',
       'login.createAccount': 'கணக்கை உருவாக்கு',
       // Registration (pre-login)

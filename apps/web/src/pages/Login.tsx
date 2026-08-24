@@ -2,7 +2,7 @@ import { useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@marutham/ui';
-import { api } from '@marutham/api-client';
+import { api, ApiError } from '@marutham/api-client';
 import { useAuth } from '../auth/AuthContext';
 
 type Mode = 'password' | 'otp' | 'forgot';
@@ -31,6 +31,9 @@ export function Login() {
     setSent(false);
     setDevOtp(null);
     setOtp('');
+    // The password tab accepts a Login ID; OTP/forgot are phone-only. Clear the
+    // identifier on a tab switch so a Login ID can't linger in the phone field.
+    setPhone('');
     setPassword('');
     setNewPassword('');
     setConfirm('');
@@ -49,12 +52,44 @@ export function Login() {
     }
   }
 
+  // A refused login can carry a password_action (must_reset / expired / locked): the
+  // account is barred by the 90-day password policy until the password is reset. Drop
+  // the user into the reset flow (Forgot password → OTP) with a message that says why.
+  // Returns true when it handled the error, false to fall back to the normal banner.
+  function toResetIfNeeded(err: unknown): boolean {
+    const action =
+      err instanceof ApiError && err.payload && typeof err.payload === 'object'
+        ? (err.payload as { password_action?: string }).password_action
+        : undefined;
+    if (!action) return false;
+    const msg =
+      action === 'expired'
+        ? t('login.pwExpired', 'Your password has expired. Request an OTP to set a new one.')
+        : action === 'locked'
+          ? t(
+              'login.pwLocked',
+              'Your account was locked after 90 days without a login. Request an OTP to set a new password.',
+            )
+          : t(
+              'login.pwMustReset',
+              'Set your own password before signing in. Request an OTP to choose a new one.',
+            );
+    switchMode('forgot'); // switch clears error/ok first…
+    setError(msg); // …so this message survives into the reset screen.
+    return true;
+  }
+
   const onPasswordLogin = (e: FormEvent) => {
     e.preventDefault();
-    void guard(async () => {
-      await login(phone.trim(), password);
-      navigate('/', { replace: true });
-    });
+    setError('');
+    setOk('');
+    setBusy(true);
+    login(phone.trim(), password)
+      .then(() => navigate('/', { replace: true }))
+      .catch((err) => {
+        if (!toResetIfNeeded(err)) setError(err instanceof Error ? err.message : t('login.error'));
+      })
+      .finally(() => setBusy(false));
   };
 
   const onSendOtp = (e: FormEvent) => {
@@ -72,10 +107,15 @@ export function Login() {
 
   const onVerifyOtp = (e: FormEvent) => {
     e.preventDefault();
-    void guard(async () => {
-      await loginWithOtp(phone.trim(), otp.trim());
-      navigate('/', { replace: true });
-    });
+    setError('');
+    setOk('');
+    setBusy(true);
+    loginWithOtp(phone.trim(), otp.trim())
+      .then(() => navigate('/', { replace: true }))
+      .catch((err) => {
+        if (!toResetIfNeeded(err)) setError(err instanceof Error ? err.message : t('login.error'));
+      })
+      .finally(() => setBusy(false));
   };
 
   const onReset = (e: FormEvent) => {
@@ -178,7 +218,11 @@ export function Login() {
         {mode === 'password' ? (
           <div {...panelProps}>
             <form onSubmit={onPasswordLogin}>
-              <Phone value={phone} onChange={setPhone} label={t('login.phone')} />
+              {/* Staff sign in with their Login ID / Employee ID, consumers with their
+                  phone — the backend accepts any of the three. Only this password tab
+                  takes an identifier; OTP and forgot-password still key on the phone the
+                  SMS goes to, so they keep the phone-only field. */}
+              <Identifier value={phone} onChange={setPhone} label={t('login.phoneOrId')} />
               <div className="field">
                 <label htmlFor="password">{t('login.password')}</label>
                 <input
@@ -345,6 +389,37 @@ function Phone({
         autoComplete="username"
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 10))}
+        required
+      />
+    </div>
+  );
+}
+
+// The password-login identifier: a phone number OR a Login ID / Employee ID (e.g.
+// HO001, MATN00025, SHTN_SENA01). Unlike Phone it must not strip letters — but it
+// keeps to the characters a real identifier uses (letters, digits, underscore) so a
+// stray separator can't be typed, mirroring the server's identifier allowlist.
+function Identifier({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+}) {
+  return (
+    <div className="field">
+      <label htmlFor="phone">{label}</label>
+      <input
+        id="phone"
+        type="text"
+        autoComplete="username"
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        value={value}
+        onChange={(e) => onChange(e.target.value.replace(/[^A-Za-z0-9_]/g, '').slice(0, 64))}
         required
       />
     </div>

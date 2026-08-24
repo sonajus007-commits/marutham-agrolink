@@ -17,10 +17,14 @@ export function setApiBase(base: string): void {
 
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  /** The parsed JSON error body, so callers can read fields beyond `error`
+   *  (e.g. the login lifecycle's `password_action`). */
+  payload: unknown;
+  constructor(message: string, status: number, payload?: unknown) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.payload = payload;
   }
 }
 
@@ -55,7 +59,7 @@ export async function apiFetch<T = unknown>(
     const msg =
       (data && typeof data === 'object' && 'error' in data && (data as { error?: string }).error) ||
       `Request failed (${res.status})`;
-    throw new ApiError(String(msg), res.status);
+    throw new ApiError(String(msg), res.status, data);
   }
   return data as T;
 }

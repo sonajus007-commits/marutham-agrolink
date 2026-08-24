@@ -308,7 +308,42 @@ app.listen(PORT, () => {
   scheduleSubscriptionChecks();
   schedulePriceSync();
   scheduleListingReset();
+  scheduleInactivityLock();
 });
+
+// ── Daily inactivity lock — no login for 90+ days → login_locked_at ────────────
+// Login also locks these lazily (routes/auth.js maybeLockOnInactivity), but that only
+// fires when the dormant account tries to sign in. This nightly sweep stamps the lock
+// proactively so the admin console shows a dormant account as locked before then. It
+// leaves `status` untouched — the lock is a dedicated field, so a lapsed-subscription
+// suspension and an inactivity lock never overwrite each other. Idempotent: only rows
+// not already locked, with a last_login_at past the window, are touched.
+function scheduleInactivityLock() {
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  const INACTIVITY_MAX_DAYS = 90;
+
+  async function runSweep() {
+    try {
+      const cutoff = new Date(Date.now() - INACTIVITY_MAX_DAYS * MS_PER_DAY).toISOString();
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('users')
+        .update({ login_locked_at: now, login_lock_reason: `No login for ${INACTIVITY_MAX_DAYS}+ days`, updated_at: now })
+        .is('login_locked_at', null)
+        .is('deleted_at', null)
+        .lt('last_login_at', cutoff)
+        .select('id');
+      if (error) { console.error('[INACTIVITY LOCK] Sweep error:', error.message); return; }
+      if (data && data.length) console.log(`[INACTIVITY LOCK] Locked ${data.length} dormant account(s).`);
+    } catch (err) {
+      console.error('[INACTIVITY LOCK] Error:', err.message);
+    }
+  }
+
+  runSweep();
+  setInterval(runSweep, MS_PER_DAY);
+  console.log('[INACTIVITY LOCK] Daily scheduler started');
+}
 
 // ── Daily subscription expiry checker ─────────────────────────────────────────
 function scheduleSubscriptionChecks() {

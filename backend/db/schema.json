@@ -1572,6 +1572,10 @@
           "type": "text",
           "notNull": false
         },
+        "last_login_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
         "lname": {
           "type": "text",
           "notNull": false
@@ -1579,6 +1583,23 @@
         "login_id": {
           "type": "text",
           "notNull": true
+        },
+        "login_lock_reason": {
+          "type": "text",
+          "notNull": false
+        },
+        "login_locked_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "must_change_password": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "false"
+        },
+        "password_changed_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
         },
         "password_hash": {
           "type": "text",
