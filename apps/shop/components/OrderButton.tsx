@@ -1,6 +1,7 @@
 'use client';
 
 import { PENDING_ORDER_KEY, PORTAL_LOGIN, PORTAL_SHOP } from '@/lib/portal';
+import { useLoginModal } from '@/components/auth/LoginModalProvider';
 
 /* The login boundary — the one place the public shop touches the private portal.
  *
@@ -15,6 +16,7 @@ import { PENDING_ORDER_KEY, PORTAL_LOGIN, PORTAL_SHOP } from '@/lib/portal';
  * product on the floor at the moment of highest intent. Hence the Express proxy
  * — see backend/server.js. */
 export function OrderButton({ productId, label }: { productId: string; label: string }) {
+  const modal = useLoginModal();
   function go() {
     try {
       localStorage.setItem(PENDING_ORDER_KEY, productId);
@@ -22,7 +24,14 @@ export function OrderButton({ productId, label }: { productId: string; label: st
       /* private mode / storage disabled — the visitor still gets to sign in. */
     }
     const signedIn = !!localStorage.getItem('ma_token');
-    window.location.href = signedIn ? PORTAL_SHOP : PORTAL_LOGIN;
+    if (signedIn) {
+      window.location.href = PORTAL_SHOP;
+      return;
+    }
+    // Not signed in: open the sign-in overlay on THIS page (the product stays
+    // remembered above). Fall back to the portal login if the provider is absent.
+    if (modal) modal.openLogin();
+    else window.location.href = PORTAL_LOGIN;
   }
 
   return (

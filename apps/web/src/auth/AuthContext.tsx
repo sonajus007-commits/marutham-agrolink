@@ -69,6 +69,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         void disablePushForSession(); // drop this device's token before clearing the session
         clearSession();
         setUser(null);
+        // Return to the public home page at the origin root (the shop landing),
+        // NOT the portal's /app/login. Sign-in starts at "/" (the login overlay)
+        // and logout ends there, so the whole loop begins and ends on the home
+        // page. "/" is outside the SPA basename, so this is a full navigation out
+        // of the portal — which also guarantees a clean slate for the next user.
+        if (typeof window !== 'undefined') window.location.href = '/';
       },
       updateUser(next) {
         const token = getToken();

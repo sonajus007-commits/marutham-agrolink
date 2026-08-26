@@ -120,6 +120,19 @@ body {
   overflow-wrap: break-word;
 }
 
+/* Sign-in overlay entrance — a small pop as the card appears over the home
+ * page. Respects reduced-motion via the block below (it kills animations). */
+@keyframes loginPop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* Every animation in this app is a Framer Motion entrance. Honour the OS
  * setting rather than shipping motion someone has asked not to receive. */
 @media (prefers-reduced-motion: reduce) {

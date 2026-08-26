@@ -1,7 +1,6 @@
 import { MaruthamLogo } from '@/components/brand/MaruthamLogo';
-import { Button } from '@/components/ui/Button';
 import { LangToggle } from '@/components/LangToggle';
-import { PORTAL_LOGIN } from '@/lib/portal';
+import { LoginButton } from '@/components/auth/LoginButton';
 import type { Dict, Lang } from '@/lib/dict';
 import type { LandingCopy } from '@/lib/landing';
 
@@ -59,13 +58,7 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
 
         <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3 lg:ml-0">
           <LangToggle current={lang} />
-          <Button
-            href={PORTAL_LOGIN}
-            variant="primary"
-            className="px-4 py-2.5 text-caption whitespace-nowrap md:px-6"
-          >
-            {t.nav.login}
-          </Button>
+          <LoginButton label={t.nav.login} />
         </div>
       </div>
     </header>

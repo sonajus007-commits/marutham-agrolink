@@ -1,21 +1,15 @@
 /* ─────────────────────────────────────────────────────────────────────────────
- * PLACEHOLDER — REPLACE THIS FILE WITH THE OFFICIAL LOGO.
+ * The official Marutham AgroLink identity. The square mark (lotus + scales + MA
+ * monogram) lives at public/brand/mark.png; the full illustrated badge is at
+ * public/brand/malogo.png. Every surface imports <MaruthamLogo />, so the header
+ * pairs the mark with the Cormorant wordmark and the mark alone covers the
+ * favicon / app-icon / footer slots.
  *
- * The real logo is a lotus mark + wordmark that lives outside this repo. This
- * component exists so every surface already imports <MaruthamLogo /> and the
- * swap is one file, not a search-and-replace across the site.
- *
- * To replace: drop the asset in apps/shop/public/brand/ and render it here.
- * Keep the props below — callers rely on them.
- *
- *   <MaruthamLogo />                 header default
+ *   <MaruthamLogo />                 header default (mark + wordmark)
  *   <MaruthamLogo variant="mark" />  square mark alone (favicon, app icon, footer)
  *   <MaruthamLogo tone="onDark" />   for the forest-900 footer and CTA bands
  *
- * What this placeholder deliberately does NOT do: invent a logotype. It draws
- * the wordmark in the brand's secondary face — which per the token file is what
- * Cormorant Garamond is FOR ("wordmark only, part of the logo") — plus a neutral
- * mark. Nothing here should be mistaken for the real identity.
+ * Callers rely on the props below — keep them.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 export type LogoTone = 'onLight' | 'onDark';
@@ -65,19 +59,21 @@ export function MaruthamLogo({
   );
 }
 
-/* A neutral placeholder mark — a leaf in a ring. Geometric on purpose: it must
- * not read as a finished logo, and it must not depend on a system font. */
+/* The official square mark (lotus + scales + MA monogram), lives at
+ * public/brand/mark.png. It has a light ground, so on dark surfaces we frame it
+ * in a rounded white tile — that reads as a deliberate badge rather than a
+ * pasted-on rectangle. On light surfaces the tile is invisible. */
 function Mark({ tone }: { tone: LogoTone }) {
-  const ring = tone === 'onDark' ? 'var(--color-leaf-300)' : 'var(--color-forest-700)';
-  const fill = tone === 'onDark' ? 'var(--color-surface)' : 'var(--color-forest-500)';
+  const tile = tone === 'onDark' ? 'bg-white ring-1 ring-white/25 p-0.5' : '';
   return (
-    <svg viewBox="0 0 32 32" className="h-8 w-8 shrink-0" aria-hidden="true" focusable="false">
-      <circle cx="16" cy="16" r="15" fill="none" stroke={ring} strokeWidth="1.5" />
-      <path
-        d="M16 24c0-5 2.5-9 7-11-0.5 5.5-3 9.5-7 11zM16 24c0-5-2.5-9-7-11 0.5 5.5 3 9.5 7 11z"
-        fill={fill}
+    <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tile}`}>
+      {/* Static brand asset; next/image adds no benefit for a fixed-size mark. */}
+      <img
+        src="/brand/mark.png"
+        alt=""
+        aria-hidden="true"
+        className="h-full w-full rounded-md object-contain"
       />
-      <line x1="16" y1="24" x2="16" y2="17" stroke={ring} strokeWidth="1.3" strokeLinecap="round" />
-    </svg>
+    </span>
   );
 }

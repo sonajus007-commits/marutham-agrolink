@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang } from '@/lib/dict';
 import { SITE_URL } from '@/lib/site';
+import { LoginModalProvider } from '@/components/auth/LoginModalProvider';
 import './globals.css';
 
 /* The metadata a crawler reads. This is the whole reason the shop is server-
@@ -22,6 +23,12 @@ export const metadata: Metadata = {
     type: 'website',
   },
   robots: { index: true, follow: true },
+  // Browser-tab favicon + iOS home-screen icon. The files live in public/ and
+  // are the Marutham mark; without this Next emits no <link rel="icon"> at all.
+  icons: {
+    icon: [{ url: '/favicon-32.png', sizes: '32x32', type: 'image/png' }],
+    apple: [{ url: '/apple-touch-icon.png' }],
+  },
   // Makes the marketplace installable/standalone on iOS, where Apple ignores the
   // web manifest and reads these tags instead.
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'AgroLink' },
@@ -53,7 +60,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <LoginModalProvider lang={lang}>{children}</LoginModalProvider>
+      </body>
     </html>
   );
 }

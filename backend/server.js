@@ -207,7 +207,16 @@ function isShopPath(pathname) {
     // the product pages — and without a line here they fall through to the
     // static site and 404.
     pathname === '/sitemap.xml' ||
-    pathname === '/robots.txt'
+    pathname === '/robots.txt' ||
+    // The shop's own brand + PWA assets live in apps/shop/public and are served
+    // by Next at the origin root. The <link rel="icon">, the web manifest and the
+    // <MaruthamLogo> images all point here; without these lines they 404 through
+    // the front door and the tab shows no favicon / the manifest never loads.
+    pathname === '/favicon-32.png' ||
+    pathname === '/apple-touch-icon.png' ||
+    pathname === '/manifest.webmanifest' ||
+    pathname.startsWith('/icons/') ||
+    pathname.startsWith('/brand/')
   );
 }
 
