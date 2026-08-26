@@ -1,9 +1,22 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, CSSProperties } from 'react';
 import { cn } from './lib/cn';
 
+/* Tone drives the tinted icon chip. Kept to the brand's own hues (greens + the
+ * pink/gold accents) so a wall of tiles reads as one system rather than a
+ * rainbow. The chip is a soft wash of the hue with the icon in the full hue. */
+export type StatTone = 'green' | 'leaf' | 'pink' | 'gold';
+const TONE_VAR: Record<StatTone, string> = {
+  green: '--forest',
+  leaf: '--leaf',
+  pink: '--accent',
+  gold: '--gold',
+};
+
 export interface StatTileProps {
-  /** Emoji today, a Lucide icon once the screens are migrated. */
+  /** A line icon (preferred) or an emoji. Rendered inside a tinted chip. */
   icon?: ReactNode;
+  /** Tint for the icon chip. Defaults to brand green. */
+  tone?: StatTone;
   label: string;
   value: string | number;
   hint?: string | null;
@@ -22,6 +35,7 @@ export interface StatTileProps {
 
 export function StatTile({
   icon,
+  tone = 'green',
   label,
   value,
   hint,
@@ -30,17 +44,29 @@ export function StatTile({
   selected,
   className,
 }: StatTileProps) {
-  const base = 'bg-surface rounded-base p-3 text-center shadow-xs border';
+  const toneVar = TONE_VAR[tone];
+  const base =
+    'ma-stat bg-surface rounded-xl p-4 text-left shadow-xs border flex flex-col items-start gap-0';
   const inner = (
     <>
+      {icon ? (
+        <span
+          aria-hidden="true"
+          className="ma-chip mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl text-[1.1rem] [&_svg]:h-[1.3rem] [&_svg]:w-[1.3rem]"
+          style={{ '--chip-hue': `var(${toneVar})` } as CSSProperties}
+        >
+          {icon}
+        </span>
+      ) : null}
       <div
-        className="text-2xl font-black text-primary"
+        className="text-primary text-2xl leading-none font-extrabold"
         style={accent ? { color: accent } : undefined}
       >
-        {icon ? <span aria-hidden="true">{icon} </span> : null}
         {value}
       </div>
-      <div className="text-2xs font-bold uppercase tracking-wider text-fg-muted mt-1">{label}</div>
+      <div className="text-2xs text-fg-muted mt-1.5 font-bold tracking-wider uppercase">
+        {label}
+      </div>
       {hint ? <div className="text-xs text-fg-muted mt-0.5">{hint}</div> : null}
       {/* A non-colour cue for the selected filter: the bar is present or absent,
           a shape change a colour-blind user still reads (axe flagged colour-only
@@ -49,7 +75,7 @@ export function StatTile({
         <div
           aria-hidden="true"
           className={cn(
-            'mx-auto mt-2 h-0.5 w-8 rounded-full transition-opacity',
+            'mt-2.5 h-0.5 w-8 rounded-full transition-opacity',
             selected ? 'bg-primary opacity-100' : 'opacity-0',
           )}
         />
@@ -68,7 +94,7 @@ export function StatTile({
       aria-pressed={selected}
       className={cn(
         base,
-        'w-full cursor-pointer transition hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf',
+        'w-full cursor-pointer transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf',
         selected ? 'border-primary shadow-base' : 'border-surface-muted',
         className,
       )}

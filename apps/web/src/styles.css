@@ -442,3 +442,50 @@ h6 {
   background: var(--info);
   color: var(--white);
 }
+
+/* ── "The Mix" icon chips ──────────────────────────────────────────────────
+   A duotone line-icon on a soft gradient tint that lifts on hover. Shared by
+   StatTile (KPIs), the consumer quick actions, and any chip that adds `ma-chip`.
+   The hue is passed per-instance via the --chip-hue custom property. */
+.ma-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--chip-hue, var(--forest));
+  background: linear-gradient(
+    158deg,
+    color-mix(in srgb, var(--chip-hue, var(--forest)) 22%, transparent) 0%,
+    color-mix(in srgb, var(--chip-hue, var(--forest)) 9%, transparent) 100%
+  );
+  box-shadow:
+    0 5px 13px color-mix(in srgb, var(--chip-hue, var(--forest)) 16%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--white) 45%, transparent);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.ma-chip svg {
+  display: block;
+}
+/* Duotone glyph: a soft filled silhouette under a crisp line, both currentColor. */
+.ma-duo__fill {
+  fill: currentColor;
+  stroke: none;
+  opacity: 0.26;
+}
+.ma-duo__line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* The chip lifts when its card is hovered. */
+.ma-stat:hover .ma-chip,
+.cons-qa__card:hover:not(:disabled) .ma-chip {
+  transform: translateY(-1px);
+  box-shadow:
+    0 9px 20px color-mix(in srgb, var(--chip-hue, var(--forest)) 26%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--white) 55%, transparent);
+}

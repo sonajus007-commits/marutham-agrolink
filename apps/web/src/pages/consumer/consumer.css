@@ -42,11 +42,11 @@
 .cons-side__item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 11px 13px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   background: transparent;
   /* --fg-muted, NOT --gray: the named grey is only AA on white, and on the app
    * background it lands just under 4.5:1. --fg-muted is the AA-safe one. */
@@ -55,20 +55,42 @@
   font-weight: 500;
   text-align: left;
   cursor: pointer;
+  transition:
+    background var(--duration-base) ease,
+    color var(--duration-base) ease;
 }
 .cons-side__item:hover {
   background: var(--surface-muted);
-  color: var(--text);
+  color: var(--forest);
 }
 .cons-side__item.is-active {
-  /* Dark Green is the spec's stated "sidebar active" colour. */
-  background: var(--forest-dark);
+  /* Forest fill for the active item — the landing's primary colour, with a soft
+   * shadow so the pill lifts off the sidebar like the landing's buttons do. */
+  background: var(--forest);
   color: var(--white);
   font-weight: 600;
+  box-shadow: 0 6px 16px rgba(22, 61, 47, 0.22);
 }
 .cons-side__icon {
-  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   line-height: 1;
+  /* Icons carry the brand green even on inactive rows, so the rail reads as a
+     green line-icon set rather than flat grey glyphs. The label keeps its own
+     (muted) colour for legibility. */
+  color: var(--forest-soft);
+}
+.cons-side__icon svg {
+  width: 19px;
+  height: 19px;
+}
+.cons-side__item:hover .cons-side__icon {
+  color: var(--forest);
+}
+.cons-side__item.is-active .cons-side__icon {
+  color: var(--white);
 }
 .cons-side__label {
   flex: 1;
@@ -109,39 +131,49 @@
   }
 }
 
-/* App header */
+/* App header — glassy + sticky, mirroring the public landing's chrome
+ * (translucent surface, blur, hairline border) so the portal reads as the same
+ * site rather than a separate app. */
 .cons-hdr {
-  background: var(--surface);
-  padding: 10px 16px;
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 12px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: sticky;
   top: 0;
   z-index: 50;
-  border-bottom: 1px solid var(--success-bg);
-  box-shadow: 0 2px 12px rgba(31, 107, 59, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
 }
 .cons-hdr__brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   text-decoration: none;
 }
+/* The wordmark lockup, matched to the landing's <MaruthamLogo>: the name in the
+ * serif face in forest (NOT gold — the landing uses forest for the wordmark),
+ * with the sub-label stacked beneath. */
 .cons-hdr__name {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 19px;
-  color: var(--gold);
+  font-size: 21px;
+  line-height: 1.05;
+  color: var(--forest);
   font-weight: 700;
+  letter-spacing: -0.01em;
 }
 .cons-hdr__name span {
-  color: var(--forest);
+  color: var(--forest-soft);
 }
 .cons-hdr__tag {
   font-size: 9px;
-  color: var(--leaf);
-  letter-spacing: 1px;
+  color: var(--forest-soft);
+  letter-spacing: 1.8px;
   text-transform: uppercase;
+  font-weight: 600;
+  margin-top: 1px;
 }
 .cons-hdr__right {
   display: flex;
@@ -149,35 +181,46 @@
   gap: 8px;
 }
 
-/* Hero */
+/* Hero — a rounded welcome card (not a full-bleed band), to match the landing's
+ * rounded, shadowed surfaces. A subtle deep-green gradient with a faint leaf
+ * glow in the corner. */
 .cons-hero {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: linear-gradient(135deg, var(--forest), var(--forest-soft));
+  gap: 14px;
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(126, 200, 122, 0.28) 0%, transparent 55%),
+    linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%);
   color: var(--white);
-  padding: 16px;
-  margin: 0;
+  padding: 20px 22px;
+  margin: 14px;
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(22, 61, 47, 0.22);
+  overflow: hidden;
 }
 .cons-hero__icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.12);
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  color: var(--white);
   flex-shrink: 0;
 }
 .cons-hero h2 {
-  font-size: 18px;
-  font-weight: 800;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 .cons-hero p {
-  font-size: 11px;
-  color: var(--tint-400);
-  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.82);
+  margin-top: 3px;
 }
 
 /* Tab nav */
@@ -1058,15 +1101,16 @@
 .cons-qa__card {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   background: var(--surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
+  border-radius: 16px;
   cursor: pointer;
   text-align: left;
   font-family: inherit;
+  box-shadow: 0 1px 2px rgba(22, 61, 47, 0.04);
   transition:
     border-color var(--duration-base) ease,
     transform var(--duration-base) ease,
@@ -1075,7 +1119,7 @@
 .cons-qa__card:hover:not(:disabled) {
   border-color: var(--leaf);
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(31, 107, 59, 0.1);
+  box-shadow: 0 10px 24px rgba(22, 61, 47, 0.1);
 }
 .cons-qa__card:focus-visible {
   outline: 2px solid var(--leaf);
@@ -1085,12 +1129,22 @@
    dashboard); a disabled action loses its pointer and its lift, not its legibility. */
 .cons-qa__card:disabled {
   cursor: not-allowed;
-  background: var(--tint-25);
+  background: var(--surface-muted);
+  box-shadow: none;
 }
+/* Tinted icon chip (colour set inline per action). SVG sized inside. */
 .cons-qa__icon {
-  font-size: 22px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   flex-shrink: 0;
+}
+.cons-qa__icon svg {
+  width: 21px;
+  height: 21px;
 }
 .cons-qa__body {
   display: flex;

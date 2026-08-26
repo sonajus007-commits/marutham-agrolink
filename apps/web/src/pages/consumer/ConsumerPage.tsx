@@ -1,6 +1,17 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ComponentType, type SVGProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TabBar, IconButton, LangToggle } from '@marutham/ui';
+import {
+  HomeIcon,
+  BagIcon,
+  CartIcon,
+  PackageIcon,
+  MapPinIcon,
+  SettingsIcon,
+  UserIcon,
+  LogOutIcon,
+  LeafIcon,
+} from '../../components/icons';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
 import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider } from '../../components/Toast';
@@ -67,13 +78,23 @@ function ConsumerInner() {
    * Wallet & Points, Notifications and Support, none of which exist yet — same
    * reasoning as the KPI row in HomeTab, which omits them rather than inventing
    * numbers. They arrive in Phase 2 with their backends. */
-  const navItems: { id: Tab; icon: string; label: string; badge?: number }[] = [
-    { id: 'home', icon: '🏠', label: t('consumer.nav.dashboard', 'Dashboard') },
-    { id: 'shop', icon: '🛒', label: t('consumer.nav.browse', 'Browse Products') },
-    { id: 'cart', icon: '🧺', label: t('consumer.nav.cart', 'My Cart'), badge: cart.count },
-    { id: 'orders', icon: '📦', label: t('consumer.nav.orders', 'My Orders'), badge: activeCount },
-    { id: 'addresses', icon: '📍', label: t('consumer.nav.addresses', 'My Addresses') },
-    { id: 'profile', icon: '⚙️', label: t('consumer.nav.account', 'Account Settings') },
+  const navItems: {
+    id: Tab;
+    Icon: ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
+    label: string;
+    badge?: number;
+  }[] = [
+    { id: 'home', Icon: HomeIcon, label: t('consumer.nav.dashboard', 'Dashboard') },
+    { id: 'shop', Icon: BagIcon, label: t('consumer.nav.browse', 'Browse Products') },
+    { id: 'cart', Icon: CartIcon, label: t('consumer.nav.cart', 'My Cart'), badge: cart.count },
+    {
+      id: 'orders',
+      Icon: PackageIcon,
+      label: t('consumer.nav.orders', 'My Orders'),
+      badge: activeCount,
+    },
+    { id: 'addresses', Icon: MapPinIcon, label: t('consumer.nav.addresses', 'My Addresses') },
+    { id: 'profile', Icon: SettingsIcon, label: t('consumer.nav.account', 'Account Settings') },
   ];
 
   return (
@@ -110,10 +131,10 @@ function ConsumerInner() {
             aria-label={t('consumer.profile')}
             title={t('consumer.profile')}
           >
-            👤
+            <UserIcon size={18} />
           </IconButton>
           <IconButton onClick={logout} aria-label={t('consumer.logout')}>
-            ⎋
+            <LogOutIcon size={18} />
           </IconButton>
         </div>
       </header>
@@ -132,7 +153,7 @@ function ConsumerInner() {
                     onClick={() => setTab(it.id)}
                   >
                     <span className="cons-side__icon" aria-hidden="true">
-                      {it.icon}
+                      <it.Icon size={18} />
                     </span>
                     <span className="cons-side__label">{it.label}</span>
                     {it.badge ? <span className="cons-side__badge">{it.badge}</span> : null}
@@ -143,7 +164,7 @@ function ConsumerInner() {
           </ul>
           <button type="button" className="cons-side__item cons-side__logout" onClick={logout}>
             <span className="cons-side__icon" aria-hidden="true">
-              ⎋
+              <LogOutIcon size={18} />
             </span>
             <span className="cons-side__label">{t('consumer.logout')}</span>
           </button>
@@ -151,7 +172,9 @@ function ConsumerInner() {
 
         <div className="cons-main">
           <div className="cons-hero">
-            <div className="cons-hero__icon">🌿</div>
+            <div className="cons-hero__icon">
+              <LeafIcon size={24} />
+            </div>
             <div>
               <h2>
                 {t('consumer.welcome')}, {user.fname}!

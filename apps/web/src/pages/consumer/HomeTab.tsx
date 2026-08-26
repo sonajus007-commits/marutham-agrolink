@@ -24,6 +24,16 @@ import {
   type Order,
   type Product,
 } from '@marutham/lib';
+import {
+  TruckDuo,
+  CheckCircleDuo,
+  CalendarDuo,
+  WalletDuo,
+  SparklesDuo,
+  CartDuo,
+  RepeatDuo,
+  BagDuo,
+} from '../../components/icons';
 import { useOrders } from './OrdersContext';
 import { useConsumerData } from './ConsumerDataContext';
 import { useCart } from './CartContext';
@@ -120,7 +130,8 @@ export function HomeTab({
   const quickActions: QuickAction[] = [
     {
       id: 'shop',
-      icon: '🛒',
+      icon: <CartDuo />,
+      tone: 'green',
       title: t('consumer.home.qa.shop'),
       subtitle: hasCart
         ? t('consumer.home.qa.shopCount', '{{count}} items in your cart', { count: cart.count })
@@ -130,7 +141,8 @@ export function HomeTab({
     },
     {
       id: 'again',
-      icon: '🔁',
+      icon: <RepeatDuo />,
+      tone: 'leaf',
       title: t('consumer.home.qa.buyAgain'),
       subtitle: t('consumer.home.qa.buyAgainSub'),
       onClick: () => setQa('again'),
@@ -138,7 +150,8 @@ export function HomeTab({
     },
     {
       id: 'track',
-      icon: '🛵',
+      icon: <TruckDuo />,
+      tone: 'pink',
       title: t('consumer.home.qa.track'),
       subtitle: t('consumer.home.qa.trackSub'),
       onClick: () => setQa('track'),
@@ -146,7 +159,8 @@ export function HomeTab({
     },
     {
       id: 'browse',
-      icon: '🥬',
+      icon: <BagDuo />,
+      tone: 'gold',
       title: t('consumer.home.qa.browse'),
       subtitle: t('consumer.home.qa.browseSub'),
       onClick: onGoToShop,
@@ -164,7 +178,8 @@ export function HomeTab({
             buyer to exactly this view, ready to open another tile. */}
         <div className="cons-kpis">
           <StatTile
-            icon="🚚"
+            icon={<TruckDuo />}
+            tone="green"
             label={t('consumer.home.activeOrders')}
             value={groups.active.length}
             hint={t('consumer.home.inProgress')}
@@ -172,7 +187,8 @@ export function HomeTab({
             selected={view === 'active'}
           />
           <StatTile
-            icon="✅"
+            icon={<CheckCircleDuo />}
+            tone="leaf"
             label={t('consumer.home.completed')}
             value={groups.delivered.length}
             hint={t('consumer.home.delivered')}
@@ -180,7 +196,8 @@ export function HomeTab({
             selected={view === 'completed'}
           />
           <StatTile
-            icon="📅"
+            icon={<CalendarDuo />}
+            tone="pink"
             label={t('consumer.home.thisMonth', 'Orders this month')}
             value={thisMonth}
             // The month name follows the UI language: interpolating an English
@@ -188,21 +205,21 @@ export function HomeTab({
             hint={t('consumer.home.thisMonthHint', 'Placed in {{month}}', {
               month: now.toLocaleString(i18n.language, { month: 'long' }),
             })}
-            accent="var(--accent)"
             onClick={() => setView('month')}
             selected={view === 'month'}
           />
           <StatTile
-            icon="💰"
+            icon={<WalletDuo />}
+            tone="gold"
             label={t('consumer.home.totalSpent', 'Total spent')}
             value={fmtMoney(totalSpent)}
             hint={t('consumer.home.totalSpentHint', 'On delivered orders')}
-            accent="var(--info)"
             onClick={() => setView('spent')}
             selected={view === 'spent'}
           />
           <StatTile
-            icon="🎉"
+            icon={<SparklesDuo />}
+            tone="green"
             label={t('consumer.home.totalSaved', 'Total saved')}
             value={fmtMoney(totalSaved)}
             hint={t('consumer.home.totalSavedHint', 'Across your orders')}
