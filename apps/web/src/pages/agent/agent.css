@@ -8,38 +8,45 @@
   flex-direction: column;
 }
 
+/* Glassy + sticky header, mirroring the public landing's chrome. */
 .agent-hdr {
-  background: var(--surface);
-  padding: 10px 16px;
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 12px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: sticky;
   top: 0;
   z-index: 50;
-  border-bottom: 1px solid var(--success-bg);
-  box-shadow: 0 2px 12px rgba(31, 107, 59, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
 }
 .agent-hdr__brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   text-decoration: none;
 }
+/* The wordmark in forest (NOT gold — the landing uses forest for the wordmark). */
 .agent-hdr__name {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 19px;
-  color: var(--gold);
+  font-size: 21px;
+  line-height: 1.05;
+  color: var(--forest);
   font-weight: 700;
+  letter-spacing: -0.01em;
 }
 .agent-hdr__name span {
-  color: var(--forest);
+  color: var(--forest-soft);
 }
 .agent-hdr__tag {
   font-size: 9px;
-  color: var(--leaf);
-  letter-spacing: 1px;
+  color: var(--forest-soft);
+  letter-spacing: 1.8px;
   text-transform: uppercase;
+  font-weight: 600;
+  margin-top: 1px;
 }
 .agent-hdr__right {
   display: flex;
@@ -95,11 +102,14 @@
   color: var(--forest);
 }
 .agent-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--tint-300);
   background: var(--surface);
   color: var(--forest);
   border-radius: 10px;
-  padding: 6px 11px;
+  padding: 7px 10px;
   font-size: 14px;
   cursor: pointer;
 }
@@ -148,30 +158,50 @@
 .agent-side__item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 11px 13px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   background: transparent;
   color: var(--fg-muted);
   font-size: 14px;
   font-weight: 500;
   text-align: left;
   cursor: pointer;
+  transition:
+    background var(--duration-base) ease,
+    color var(--duration-base) ease;
 }
 .agent-side__item:hover {
   background: var(--surface-muted);
-  color: var(--text);
+  color: var(--forest);
 }
 .agent-side__item.is-active {
-  background: var(--forest-dark);
+  /* Forest fill with a soft shadow so the active pill lifts, matching the
+   * landing's buttons. */
+  background: var(--forest);
   color: var(--white);
   font-weight: 600;
+  box-shadow: 0 6px 16px rgba(22, 61, 47, 0.22);
 }
 .agent-side__icon {
-  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   line-height: 1;
+  color: var(--forest-soft);
+}
+.agent-side__icon svg {
+  width: 19px;
+  height: 19px;
+}
+.agent-side__item:hover .agent-side__icon {
+  color: var(--forest);
+}
+.agent-side__item.is-active .agent-side__icon {
+  color: var(--white);
 }
 .agent-side__label {
   flex: 1;

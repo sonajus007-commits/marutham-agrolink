@@ -1,4 +1,13 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, EmptyState, Modal, Skeleton, Spinner, StatTile } from '@marutham/ui';
 import { api } from '@marutham/api-client';
@@ -14,6 +23,16 @@ import {
   type Order,
   type Payout,
 } from '@marutham/lib';
+import {
+  PackageDuo,
+  TruckDuo,
+  CheckCircleDuo,
+  ClockDuo,
+  SproutDuo,
+  PlusDuo,
+  WalletDuo,
+  UserDuo,
+} from '../../components/icons';
 import { FadeIn } from '../../components/FadeIn';
 import { FarmerOrderRow } from './FarmerOrderRow';
 import { FarmerOrderSheet } from './FarmerOrderSheet';
@@ -105,16 +124,17 @@ export function FarmerHomeTab({
       <FadeIn>
         <div className="fm-kpis">
           <StatTile
-            icon="📦"
+            icon={<PackageDuo />}
+            tone="gold"
             label={t('farmer.home.kpi.toPack')}
             value={packOrders.length}
             hint={t('farmer.home.kpi.toPackHint')}
-            accent="var(--warning-strong)"
             onClick={() => setView('pack')}
             selected={view === 'pack'}
           />
           <StatTile
-            icon="🚚"
+            icon={<TruckDuo />}
+            tone="green"
             label={t('farmer.home.kpi.inProgress')}
             value={groups.active.length}
             hint={t('farmer.home.kpi.inProgressHint')}
@@ -122,25 +142,26 @@ export function FarmerHomeTab({
             selected={view === 'active'}
           />
           <StatTile
-            icon="✅"
+            icon={<CheckCircleDuo />}
+            tone="leaf"
             label={t('farmer.home.kpi.delivered')}
             value={groups.delivered.length}
             hint={t('farmer.home.kpi.deliveredHint')}
-            accent="var(--forest)"
             onClick={() => setView('delivered')}
             selected={view === 'delivered'}
           />
           <StatTile
-            icon="⏳"
+            icon={<ClockDuo />}
+            tone="pink"
             label={t('farmer.home.kpi.awaiting')}
             value={fmtMoney(earnings.awaiting)}
             hint={t('farmer.home.kpi.awaitingHint')}
-            accent="var(--info)"
             onClick={() => setView('awaiting')}
             selected={view === 'awaiting'}
           />
           <StatTile
-            icon="🌱"
+            icon={<SproutDuo />}
+            tone="green"
             label={t('farmer.home.kpi.listings')}
             value={liveListings.length}
             hint={t('farmer.home.kpi.listingsHint')}
@@ -170,13 +191,15 @@ export function FarmerHomeTab({
           <h2 className="fm-section-title">{t('farmer.home.qa.title')}</h2>
           <div className="fm-qa__grid">
             <QaCard
-              icon="➕"
+              icon={<PlusDuo />}
+              tone="green"
               title={t('farmer.home.qa.addProduct')}
               subtitle={t('farmer.home.qa.addProductSub')}
               onClick={() => onGoTo('products')}
             />
             <QaCard
-              icon="📦"
+              icon={<PackageDuo />}
+              tone="gold"
               title={t('farmer.home.qa.packOrders')}
               subtitle={
                 packOrders.length > 0
@@ -187,13 +210,15 @@ export function FarmerHomeTab({
               disabled={packOrders.length === 0}
             />
             <QaCard
-              icon="💰"
+              icon={<WalletDuo />}
+              tone="leaf"
               title={t('farmer.home.qa.earnings')}
               subtitle={t('farmer.home.qa.earningsSub')}
               onClick={() => onGoTo('earnings')}
             />
             <QaCard
-              icon="👤"
+              icon={<UserDuo />}
+              tone="pink"
               title={t('farmer.home.qa.profile')}
               subtitle={t('farmer.home.qa.profileSub')}
               onClick={() => onGoTo('profile')}
@@ -276,14 +301,25 @@ export function FarmerHomeTab({
   );
 }
 
+/* Tint for the action's icon chip — kept to the brand hues, mirroring StatTile. */
+type QaTone = 'green' | 'leaf' | 'pink' | 'gold';
+const QA_TONE_VAR: Record<QaTone, string> = {
+  green: '--forest',
+  leaf: '--leaf',
+  pink: '--accent',
+  gold: '--gold',
+};
+
 function QaCard({
   icon,
+  tone = 'green',
   title,
   subtitle,
   onClick,
   disabled,
 }: {
-  icon: string;
+  icon: ReactNode;
+  tone?: QaTone;
   title: string;
   subtitle: string;
   onClick: () => void;
@@ -291,7 +327,11 @@ function QaCard({
 }) {
   return (
     <button type="button" className="fm-qa__card" onClick={onClick} disabled={disabled}>
-      <span className="fm-qa__icon" aria-hidden="true">
+      <span
+        className="fm-qa__icon ma-chip"
+        aria-hidden="true"
+        style={{ '--chip-hue': `var(${QA_TONE_VAR[tone]})` } as CSSProperties}
+      >
         {icon}
       </span>
       <span className="fm-qa__body">

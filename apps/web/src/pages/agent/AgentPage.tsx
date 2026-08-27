@@ -1,6 +1,15 @@
-import { useState } from 'react';
+import { useState, type ComponentType, type SVGProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TabBar } from '@marutham/ui';
+import {
+  HomeIcon,
+  ClipboardIcon,
+  TruckIcon,
+  CheckCircleIcon,
+  SettingsIcon,
+  UserIcon,
+  LogOutIcon,
+} from '../../components/icons';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
 import { api } from '@marutham/api-client';
 import { statusKey } from '@marutham/lib';
@@ -101,11 +110,16 @@ function AgentPageInner() {
   // The operational tab's label/icon and the day's finished-tab label differ by
   // role: a VCO collects and completes; a Delivery Agent tracks and delivers.
   const workBadge = stats ? stats.queue : undefined;
-  const navItems: { id: Tab; icon: string; label: string; badge?: number }[] = [
-    { id: 'overview', icon: '🏠', label: t('agent.nav.overview', 'Overview') },
+  const navItems: {
+    id: Tab;
+    Icon: ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
+    label: string;
+    badge?: number;
+  }[] = [
+    { id: 'overview', Icon: HomeIcon, label: t('agent.nav.overview', 'Overview') },
     {
       id: 'work',
-      icon: isVCO ? '📋' : '🚚',
+      Icon: isVCO ? ClipboardIcon : TruckIcon,
       label: isVCO
         ? canDeliver
           ? t('agent.nav.collectionsDelivery', 'Collections & Delivery')
@@ -115,10 +129,10 @@ function AgentPageInner() {
     },
     {
       id: 'done',
-      icon: '✅',
+      Icon: CheckCircleIcon,
       label: isVCO ? t('agent.nav.completed', 'Completed') : t('agent.nav.delivered', 'Delivered'),
     },
-    { id: 'profile', icon: '⚙️', label: t('agent.nav.profile', 'Profile') },
+    { id: 'profile', Icon: SettingsIcon, label: t('agent.nav.profile', 'Profile') },
   ];
 
   return (
@@ -161,10 +175,10 @@ function AgentPageInner() {
             aria-pressed={tab === 'profile'}
             aria-label={t('agent.profile')}
           >
-            👤
+            <UserIcon size={18} />
           </button>
           <button className="agent-iconbtn" onClick={logout} aria-label={t('agent.exit')}>
-            ⎋
+            <LogOutIcon size={18} />
           </button>
         </div>
       </header>
@@ -184,7 +198,7 @@ function AgentPageInner() {
                     onClick={() => setTab(it.id)}
                   >
                     <span className="agent-side__icon" aria-hidden="true">
-                      {it.icon}
+                      <it.Icon size={18} />
                     </span>
                     <span className="agent-side__label">{it.label}</span>
                     {it.badge ? <span className="agent-side__badge">{it.badge}</span> : null}
@@ -195,7 +209,7 @@ function AgentPageInner() {
           </ul>
           <button type="button" className="agent-side__item agent-side__logout" onClick={logout}>
             <span className="agent-side__icon" aria-hidden="true">
-              ⎋
+              <LogOutIcon size={18} />
             </span>
             <span className="agent-side__label">{t('agent.profile.signOut')}</span>
           </button>
@@ -206,7 +220,7 @@ function AgentPageInner() {
             className="agent-tabbar"
             items={navItems.map((it) => ({
               id: it.id,
-              label: `${it.icon} ${it.label}`,
+              label: it.label,
               badge: it.badge,
             }))}
             active={tab}

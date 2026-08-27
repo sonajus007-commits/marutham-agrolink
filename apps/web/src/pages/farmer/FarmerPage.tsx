@@ -1,6 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ComponentType, type SVGProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TabBar, IconButton, LangToggle } from '@marutham/ui';
+import {
+  HomeIcon,
+  WalletIcon,
+  WheatIcon,
+  PackageIcon,
+  UserIcon,
+  LogOutIcon,
+} from '../../components/icons';
 import { api } from '@marutham/api-client';
 import { isOrderCancelled, needsSubscriptionPayment, type Order } from '@marutham/lib';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
@@ -97,12 +105,17 @@ function FarmerInner() {
    * consumer page wears. Only one of the two navigations is visible at a time
    * (CSS hides the tab bar on desktop, the sidebar on phones), so there is no
    * duplicate tab stop. */
-  const navItems: { id: Tab; icon: string; label: string; badge?: number }[] = [
-    { id: 'home', icon: '🏠', label: t('farmer.nav.home', 'Dashboard') },
-    { id: 'earnings', icon: '💰', label: t('farmer.nav.earnings', 'Earnings') },
-    { id: 'products', icon: '🌾', label: t('farmer.nav.products', 'My Products') },
-    { id: 'orders', icon: '📦', label: t('farmer.nav.orders', 'Orders'), badge: packCount },
-    { id: 'profile', icon: '👤', label: t('farmer.nav.profile', 'Profile') },
+  const navItems: {
+    id: Tab;
+    Icon: ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
+    label: string;
+    badge?: number;
+  }[] = [
+    { id: 'home', Icon: HomeIcon, label: t('farmer.nav.home', 'Dashboard') },
+    { id: 'earnings', Icon: WalletIcon, label: t('farmer.nav.earnings', 'Earnings') },
+    { id: 'products', Icon: WheatIcon, label: t('farmer.nav.products', 'My Products') },
+    { id: 'orders', Icon: PackageIcon, label: t('farmer.nav.orders', 'Orders'), badge: packCount },
+    { id: 'profile', Icon: UserIcon, label: t('farmer.nav.profile', 'Profile') },
   ];
 
   return (
@@ -129,7 +142,7 @@ function FarmerInner() {
             ]}
           />
           <IconButton onClick={logout} aria-label={t('farmer.logout')}>
-            ⎋
+            <LogOutIcon size={18} />
           </IconButton>
         </div>
       </header>
@@ -148,7 +161,7 @@ function FarmerInner() {
                     onClick={() => setTab(it.id)}
                   >
                     <span className="fm-side__icon" aria-hidden="true">
-                      {it.icon}
+                      <it.Icon size={18} />
                     </span>
                     <span className="fm-side__label">{it.label}</span>
                     {it.badge ? <span className="fm-side__badge">{it.badge}</span> : null}
@@ -159,7 +172,7 @@ function FarmerInner() {
           </ul>
           <button type="button" className="fm-side__item fm-side__logout" onClick={logout}>
             <span className="fm-side__icon" aria-hidden="true">
-              ⎋
+              <LogOutIcon size={18} />
             </span>
             <span className="fm-side__label">{t('farmer.logout')}</span>
           </button>
@@ -168,7 +181,7 @@ function FarmerInner() {
         <div className="fm-main">
           <div className="fm-hero">
             <div className="fm-hero__icon" aria-hidden="true">
-              🌾
+              <WheatIcon size={24} />
             </div>
             <div>
               <h2>

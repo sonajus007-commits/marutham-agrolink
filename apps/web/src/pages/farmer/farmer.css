@@ -9,18 +9,25 @@
   flex-direction: column;
 }
 
+/* Glassy + sticky header, mirroring the public landing's chrome (translucent
+ * surface, blur, hairline border) so the portal reads as the same site. */
 .fm-hdr {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
-  background: var(--white);
-  border-bottom: 1px solid var(--surface-muted);
+  padding: 12px 20px;
+  background: color-mix(in srgb, var(--white) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid var(--border-subtle);
 }
 .fm-hdr__brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   text-decoration: none;
 }
 .fm-hdr__logo {
@@ -28,20 +35,25 @@
   height: 32px;
   object-fit: contain;
 }
+/* The wordmark in forest (NOT gold — the landing uses forest for the wordmark). */
 .fm-hdr__name {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 19px;
-  color: var(--gold);
+  font-size: 21px;
+  line-height: 1.05;
+  color: var(--forest);
   font-weight: 700;
+  letter-spacing: -0.01em;
 }
 .fm-hdr__name span {
-  color: var(--forest);
+  color: var(--forest-soft);
 }
 .fm-hdr__tag {
   font-size: 9px;
-  color: var(--leaf);
-  letter-spacing: 1px;
+  color: var(--forest-soft);
+  letter-spacing: 1.8px;
   text-transform: uppercase;
+  font-weight: 600;
+  margin-top: 1px;
 }
 .fm-hdr__right {
   display: flex;
@@ -49,33 +61,44 @@
   gap: 8px;
 }
 
+/* Hero — a rounded welcome card (not a full-bleed band) with a faint leaf glow. */
 .fm-hero {
-  background: linear-gradient(135deg, var(--forest), var(--forest-soft));
+  position: relative;
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(126, 200, 122, 0.28) 0%, transparent 55%),
+    linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%);
   color: var(--white);
-  padding: 16px;
+  padding: 20px 22px;
+  margin: 14px;
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(22, 61, 47, 0.22);
+  overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 .fm-hero__icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--white);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
 }
 .fm-hero h2 {
-  font-size: 18px;
-  font-weight: 800;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 .fm-hero p {
-  font-size: 11px;
-  color: var(--tint-400);
-  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.82);
+  margin-top: 3px;
 }
 
 .fm-card {
@@ -729,15 +752,16 @@
 .fm-qa__card {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   background: var(--surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
+  border-radius: 16px;
   cursor: pointer;
   text-align: left;
   font-family: inherit;
+  box-shadow: 0 1px 2px rgba(22, 61, 47, 0.04);
   transition:
     border-color var(--duration-base) ease,
     transform var(--duration-base) ease,
@@ -746,7 +770,7 @@
 .fm-qa__card:hover:not(:disabled) {
   border-color: var(--leaf);
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(31, 107, 59, 0.1);
+  box-shadow: 0 10px 24px rgba(22, 61, 47, 0.1);
 }
 .fm-qa__card:focus-visible {
   outline: 2px solid var(--leaf);
@@ -754,12 +778,22 @@
 }
 .fm-qa__card:disabled {
   cursor: not-allowed;
-  background: var(--tint-25);
+  background: var(--surface-muted);
+  box-shadow: none;
 }
+/* Tinted icon chip (colour set inline per action). SVG sized inside. */
 .fm-qa__icon {
-  font-size: 22px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   flex-shrink: 0;
+}
+.fm-qa__icon svg {
+  width: 21px;
+  height: 21px;
 }
 .fm-qa__body {
   display: flex;
@@ -920,30 +954,50 @@
 .fm-side__item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 11px 13px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   background: transparent;
   color: var(--fg-muted);
   font-size: 14px;
   font-weight: 500;
   text-align: left;
   cursor: pointer;
+  transition:
+    background var(--duration-base) ease,
+    color var(--duration-base) ease;
 }
 .fm-side__item:hover {
   background: var(--surface-muted);
-  color: var(--text);
+  color: var(--forest);
 }
 .fm-side__item.is-active {
-  background: var(--forest-dark);
+  /* Forest fill with a soft shadow so the active pill lifts, matching the
+   * landing's buttons. */
+  background: var(--forest);
   color: var(--white);
   font-weight: 600;
+  box-shadow: 0 6px 16px rgba(22, 61, 47, 0.22);
 }
 .fm-side__icon {
-  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   line-height: 1;
+  color: var(--forest-soft);
+}
+.fm-side__icon svg {
+  width: 19px;
+  height: 19px;
+}
+.fm-side__item:hover .fm-side__icon {
+  color: var(--forest);
+}
+.fm-side__item.is-active .fm-side__icon {
+  color: var(--white);
 }
 .fm-side__label {
   flex: 1;

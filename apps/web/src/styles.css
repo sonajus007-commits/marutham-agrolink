@@ -483,7 +483,8 @@ h6 {
 }
 /* The chip lifts when its card is hovered. */
 .ma-stat:hover .ma-chip,
-.cons-qa__card:hover:not(:disabled) .ma-chip {
+.cons-qa__card:hover:not(:disabled) .ma-chip,
+.fm-qa__card:hover:not(:disabled) .ma-chip {
   transform: translateY(-1px);
   box-shadow:
     0 9px 20px color-mix(in srgb, var(--chip-hue, var(--forest)) 26%, transparent),

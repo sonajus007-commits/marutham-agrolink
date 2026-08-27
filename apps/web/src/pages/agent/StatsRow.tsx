@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { StatTile } from '@marutham/ui';
 import { fmtMoney, type AgentStats } from '@marutham/lib';
+import { ClipboardDuo, CheckCircleDuo, PackageDuo, WalletDuo } from '../../components/icons';
 
 export function StatsRow({
   stats,
@@ -19,12 +20,16 @@ export function StatsRow({
     <div className="agent-stats">
       {/* To Verify / In Queue — the active work waiting on them → Work tab. */}
       <StatTile
+        icon={<ClipboardDuo />}
+        tone="green"
         label={isVCO ? t('agent.stat.toVerify') : t('agent.stat.inQueue')}
         value={stats ? stats.queue : dash}
         onClick={() => onNavigate('work')}
       />
       {/* Verified / Delivered — what they've finished → Done tab. */}
       <StatTile
+        icon={<CheckCircleDuo />}
+        tone="leaf"
         label={isVCO ? t('agent.stat.verified') : t('agent.stat.delivered')}
         value={stats ? stats.completed : dash}
         onClick={() => onNavigate('done')}
@@ -32,6 +37,8 @@ export function StatsRow({
       {/* VCO: orders in the pipeline → Work. Agent: COD collected is money, not a
           list, so it is left non-selectable. */}
       <StatTile
+        icon={isVCO ? <PackageDuo /> : <WalletDuo />}
+        tone="gold"
         label={isVCO ? t('agent.stat.inPipeline') : t('agent.stat.cod')}
         value={stats ? stats.codOrPipeline : isVCO ? dash : fmtMoney(0)}
         onClick={isVCO ? () => onNavigate('work') : undefined}
