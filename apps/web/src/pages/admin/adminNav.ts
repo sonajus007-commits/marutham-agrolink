@@ -7,8 +7,31 @@
  * permissions, and this file simply reflects them, so the two can never drift.
  */
 
+import type { ComponentType, SVGProps } from 'react';
 import type { User } from '@marutham/api-client';
 import { can, canSeeDashboard, isManagementUser } from '@marutham/lib';
+import {
+  BarChartIcon,
+  LandmarkIcon,
+  TruckIcon,
+  BuildingIcon,
+  PackageIcon,
+  TrendingUpIcon,
+  FactoryIcon,
+  MapIcon,
+  RotateCcwIcon,
+  WalletIcon,
+  UsersIcon,
+  ShieldIcon,
+  ClipboardIcon,
+  WheatIcon,
+  FilePenIcon,
+  UserIcon,
+  TagIcon,
+} from '../../components/icons';
+
+/** A line-icon component (inherits size + currentColor). */
+type NavIcon = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
 
 // Matches the router basename (Vite's base without its trailing slash): '/app' on
 // the web, '' in a native Capacitor build served from the webview root.
@@ -59,7 +82,7 @@ export function adminHome(user: User | null | undefined): string | null {
 export interface AdminNavItem {
   id: string;
   labelKey: string;
-  icon: string;
+  Icon: NavIcon;
   to: string;
   /** Capability needed to see this item. Omitted = any management user. */
   requires?: NavRequirement;
@@ -76,81 +99,81 @@ export const ADMIN_NAV: AdminNavSection[] = [
     id: 'operations',
     items: [
       // The generic business Overview — any management user.
-      { id: 'overview', labelKey: 'admin.nav.overview', icon: '📊', to: '/admin' },
+      { id: 'overview', labelKey: 'admin.nav.overview', Icon: BarChartIcon, to: '/admin' },
       {
         id: 'executive',
         labelKey: 'admin.nav.executive',
-        icon: '🏛️',
+        Icon: LandmarkIcon,
         to: '/admin/executive',
         requires: { dashboard: 'executive' },
       },
       {
         id: 'operations',
         labelKey: 'admin.nav.operations',
-        icon: '🚚',
+        Icon: TruckIcon,
         to: '/admin/operations',
         requires: { dashboard: 'operations' },
       },
       {
         id: 'adminhead',
         labelKey: 'admin.nav.adminhead',
-        icon: '🏢',
+        Icon: BuildingIcon,
         to: '/admin/adminhead',
         requires: { dashboard: 'adminhead' },
       },
       {
         id: 'orders',
         labelKey: 'admin.nav.orders',
-        icon: '📦',
+        Icon: PackageIcon,
         to: '/admin/orders',
         requires: { module: 'orders' },
       },
       {
         id: 'hub-dashboard',
         labelKey: 'admin.nav.hubDashboard',
-        icon: '📈',
+        Icon: TrendingUpIcon,
         to: '/admin/hub-dashboard',
         requires: { dashboard: 'hub' },
       },
       {
         id: 'hub',
         labelKey: 'admin.nav.hub',
-        icon: '🏭',
+        Icon: FactoryIcon,
         to: '/admin/hub',
         requires: { module: 'warehouse_hub', action: 'edit' },
       },
       {
         id: 'hubs',
         labelKey: 'admin.nav.hubs',
-        icon: '🗺️',
+        Icon: MapIcon,
         to: '/admin/hubs',
         requires: { module: 'hub_management', action: 'view' },
       },
       {
         id: 'returns',
         labelKey: 'admin.nav.returns',
-        icon: '↩️',
+        Icon: RotateCcwIcon,
         to: '/admin/returns',
         requires: { module: 'returns_refunds' },
       },
       {
         id: 'payouts',
         labelKey: 'admin.nav.payouts',
-        icon: '💸',
+        Icon: WalletIcon,
         to: '/admin/payouts',
         requires: { module: 'settlement_sellers' },
       },
       {
         id: 'users',
         labelKey: 'admin.nav.users',
-        icon: '👥',
+        Icon: UsersIcon,
         to: '/admin/users',
         requires: { module: 'user_management' },
       },
       {
         id: 'roles',
         labelKey: 'admin.nav.roles',
-        icon: '🔐',
+        Icon: ShieldIcon,
         to: '/admin/roles',
         requires: { module: 'role_permission_management' },
       },
@@ -163,21 +186,21 @@ export const ADMIN_NAV: AdminNavSection[] = [
       {
         id: 'registrations',
         labelKey: 'admin.nav.registrations',
-        icon: '📋',
+        Icon: ClipboardIcon,
         to: '/admin/registrations',
         requires: { module: 'seller_management', action: 'edit' },
       },
       {
         id: 'listings',
         labelKey: 'admin.nav.listings',
-        icon: '🌾',
+        Icon: WheatIcon,
         to: '/admin/listings',
         requires: { module: 'product_approval', action: 'approve' },
       },
       {
         id: 'change-requests',
         labelKey: 'admin.nav.changeRequests',
-        icon: '📝',
+        Icon: FilePenIcon,
         to: '/admin/change-requests',
         requires: { module: 'seller_management', action: 'approve' },
       },
@@ -190,7 +213,7 @@ export const ADMIN_NAV: AdminNavSection[] = [
       {
         id: 'employees',
         labelKey: 'admin.nav.employees',
-        icon: '🧑‍💼',
+        Icon: UserIcon,
         to: '/admin/employees',
         requires: { module: 'employee_management' },
       },
@@ -203,7 +226,7 @@ export const ADMIN_NAV: AdminNavSection[] = [
       {
         id: 'products',
         labelKey: 'admin.nav.products',
-        icon: '🌾',
+        Icon: TagIcon,
         to: '/admin/products',
         requires: { module: 'product_approval', action: 'edit' },
       },

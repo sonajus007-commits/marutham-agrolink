@@ -11,6 +11,7 @@ import {
   type SidebarSection,
 } from '@marutham/ui';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
+import { UserIcon, LogOutIcon } from '../../components/icons';
 import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider } from '../../components/Toast';
 import { ADMIN_NAV, APP_BASE, filterAdminNav } from './adminNav';
@@ -65,7 +66,7 @@ export function AdminPage() {
     items: section.items.map((item) => ({
       id: item.id,
       label: t(item.labelKey),
-      icon: item.icon,
+      icon: <item.Icon size={18} />,
       href: APP_BASE + item.to,
       onClick: go(item.to),
     })),
@@ -113,10 +114,10 @@ export function AdminPage() {
         ]}
       />
       <IconButton onClick={() => navigate('/admin/profile')} aria-label={t('admin.profile.title')}>
-        👤
+        <UserIcon size={18} />
       </IconButton>
       <IconButton onClick={logout} aria-label={t('nav.logout')}>
-        ⎋
+        <LogOutIcon size={18} />
       </IconButton>
     </>
   );
