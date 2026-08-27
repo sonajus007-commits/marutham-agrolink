@@ -4,6 +4,19 @@ import { colors } from '@marutham/tokens';
 import { fmtMoneyInt, fmtNum } from '@marutham/lib';
 import type { FieldDashboardResponse } from '@marutham/api-client';
 import { PlaceholderSection } from '../../components/PlaceholderSection';
+import {
+  CardDuo,
+  CartDuo,
+  CheckCircleDuo,
+  ClockDuo,
+  PackageDuo,
+  RotateCcwDuo,
+  SproutDuo,
+  StarDuo,
+  UserDuo,
+  WalletDuo,
+  XCircleDuo,
+} from '../../components/icons';
 
 /* Field dashboard — tile-based, no charts (keeps the mobile field app light, as
  * the legacy field.js intended). VCO and Delivery Agent layouts.
@@ -54,51 +67,59 @@ export function FieldDashboard({
       {isVCO ? (
         <TileGrid>
           <StatTile
-            icon="🧺"
+            icon={<CartDuo />}
+            tone="green"
             label={t('agent.field.vco.collectionsToday')}
             value={fmtNum(s.collections_today)}
             accent={colors.forest}
           />
           <StatTile
-            icon="🚶"
+            icon={<UserDuo />}
+            tone="green"
             label={t('agent.field.vco.farmersToVisit')}
             value={fmtNum(s.farmers_to_visit)}
             accent={colors.gold}
           />
           <StatTile
-            icon="✅"
+            icon={<CheckCircleDuo />}
+            tone="leaf"
             label={t('agent.field.vco.productsCollected')}
             value={fmtNum(s.products_collected)}
             accent={colors.green}
           />
           <StatTile
-            icon="⏳"
+            icon={<ClockDuo />}
+            tone="pink"
             label={t('agent.field.vco.pendingCollection')}
             value={fmtNum(s.pending_collection)}
             accent={colors.gold}
             onClick={() => onNavigate('work')}
           />
           <StatTile
-            icon="❌"
+            icon={<XCircleDuo />}
+            tone="pink"
             label={t('agent.field.vco.rejectedProduce')}
             value={fmtNum(s.rejected_produce)}
             accent={colors.red}
           />
           <StatTile
-            icon="↩️"
+            icon={<RotateCcwDuo />}
+            tone="pink"
             label={t('agent.field.vco.returnsPending')}
             value={fmtNum(s.returns_pending)}
             accent={colors.bloom}
           />
           <StatTile
-            icon="💸"
+            icon={<WalletDuo />}
+            tone="gold"
             label={t('agent.field.vco.farmerPayments')}
             value={fmtNum(s.farmer_payments)}
             accent={colors.red}
             hint={fmtMoneyInt(s.farmer_payments_amount)}
           />
           <StatTile
-            icon="🧑‍🌾"
+            icon={<SproutDuo />}
+            tone="green"
             label={t('agent.field.vco.farmers')}
             value={fmtNum(s.farmers_registered)}
             accent={colors.forest}
@@ -114,21 +135,24 @@ export function FieldDashboard({
           <div className="fd-subhead">🛵 {t('agent.field.vco.deliveryTitle', 'Delivery')}</div>
           <TileGrid>
             <StatTile
-              icon="📦"
+              icon={<PackageDuo />}
+              tone="green"
               label={t('agent.field.vco.deliveriesAssigned', 'Deliveries Assigned')}
               value={fmtNum(s.deliveries_assigned)}
               accent={colors.forest}
               onClick={() => onNavigate('work')}
             />
             <StatTile
-              icon="✅"
+              icon={<CheckCircleDuo />}
+              tone="leaf"
               label={t('agent.field.vco.deliveredToday', 'Delivered Today')}
               value={fmtNum(s.deliveries_completed_today)}
               accent={colors.green}
               onClick={() => onNavigate('done')}
             />
             <StatTile
-              icon="💵"
+              icon={<WalletDuo />}
+              tone="gold"
               label={t('agent.field.vco.deliveryCod', 'COD Collected')}
               value={fmtMoneyInt(s.delivery_cod_amount)}
               accent={colors.forest}
@@ -140,14 +164,16 @@ export function FieldDashboard({
       {!isVCO ? (
         <TileGrid>
           <StatTile
-            icon="📦"
+            icon={<PackageDuo />}
+            tone="green"
             label={t('agent.field.agent.deliveriesToday')}
             value={fmtNum(s.deliveries_today)}
             accent={colors.forest}
             onClick={() => onNavigate('work')}
           />
           <StatTile
-            icon="✅"
+            icon={<CheckCircleDuo />}
+            tone="leaf"
             label={t('agent.field.agent.completed')}
             value={fmtNum(s.completed_today)}
             accent={colors.green}
@@ -155,32 +181,37 @@ export function FieldDashboard({
             onClick={() => onNavigate('done')}
           />
           <StatTile
-            icon="⏳"
+            icon={<ClockDuo />}
+            tone="pink"
             label={t('agent.field.agent.pending')}
             value={fmtNum(s.pending)}
             accent={colors.gold}
             onClick={() => onNavigate('work')}
           />
           <StatTile
-            icon="❌"
+            icon={<XCircleDuo />}
+            tone="pink"
             label={t('agent.field.agent.failed')}
             value={fmtNum(s.failed)}
             accent={colors.red}
           />
           <StatTile
-            icon="💵"
+            icon={<WalletDuo />}
+            tone="gold"
             label={t('agent.field.agent.cod')}
             value={fmtMoneyInt(s.cod_amount)}
             accent={colors.forest}
           />
           <StatTile
-            icon="💳"
+            icon={<CardDuo />}
+            tone="gold"
             label={t('agent.field.agent.digital')}
             value={fmtMoneyInt(s.digital_amount)}
             accent={colors.leaf}
           />
           <StatTile
-            icon="⭐"
+            icon={<StarDuo />}
+            tone="gold"
             label={t('agent.field.agent.rating')}
             // No rated deliveries yet is not a 0-star rating — it is no rating.
             value={s.customer_rating != null ? String(s.customer_rating) : '—'}

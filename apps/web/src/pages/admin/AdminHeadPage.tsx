@@ -22,6 +22,7 @@ import { PlaceholderSection } from '../../components/PlaceholderSection';
 import { ToneDot } from '../../components/ToneDot';
 import { AdminGeoFilter } from './AdminGeoFilter';
 import { useAdminGeo } from './AdminGeoContext';
+import { KeyDuo, MapDuo, MapPinDuo, UserDuo, WheatDuo } from '../../components/icons';
 
 /**
  * The Admin Head dashboard — Head Office, Technical Admin, HR Admin, HR Manager.
@@ -202,27 +203,32 @@ export function AdminHeadPage() {
       {/* ── The organisation at a glance ─────────────────────────────────── */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatTile
-          icon="🧑‍💼"
+          icon={<UserDuo />}
+          tone="green"
           label={t('admin.head.kpi.employees')}
           value={fmtNum(s?.employees_active ?? 0)}
         />
         <StatTile
-          icon="🔑"
+          icon={<KeyDuo />}
+          tone="gold"
           label={t('admin.head.kpi.staffLogins')}
           value={fmtNum(s?.staff_logins ?? 0)}
         />
         <StatTile
-          icon="📍"
+          icon={<MapPinDuo />}
+          tone="pink"
           label={t('admin.head.kpi.districts')}
           value={fmtNum(s?.districts_active ?? 0)}
         />
         <StatTile
-          icon="🗺️"
+          icon={<MapDuo />}
+          tone="pink"
           label={t('admin.head.kpi.states')}
           value={fmtNum(s?.states_covered ?? 0)}
         />
         <StatTile
-          icon="🌾"
+          icon={<WheatDuo />}
+          tone="green"
           label={t('admin.head.kpi.products')}
           value={fmtNum(s?.products_catalogue ?? 0)}
         />

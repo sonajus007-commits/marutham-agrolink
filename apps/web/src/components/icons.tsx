@@ -542,3 +542,163 @@ export const ClipboardDuo = (p: IconProps) => (
     }
   />
 );
+
+export const WheatDuo = (p: IconProps) => (
+  <Duo
+    {...p}
+    fillLayer={
+      <>
+        <ellipse cx="12" cy="6" rx="3" ry="2" />
+        <ellipse cx="12" cy="11" rx="3.4" ry="2.2" />
+        <ellipse cx="12" cy="16" rx="3.8" ry="2.4" />
+      </>
+    }
+    lineLayer={
+      <>
+        <path d="M2 22 16 8" />
+        <path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z" />
+        <path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z" />
+        <path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z" />
+        <path d="M20 2h2v2a4 4 0 0 1-4 4h-2V6a4 4 0 0 1 4-4Z" />
+        <path d="M11.47 17.47 13 19l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L5 19l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z" />
+        <path d="M15.47 13.47 17 15l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L9 15l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z" />
+        <path d="M19.47 9.47 21 11l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L13 11l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z" />
+      </>
+    }
+  />
+);
+
+export const FactoryDuo = (p: IconProps) => (
+  <Duo
+    {...p}
+    fillLayer={
+      <path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+    }
+    lineLayer={
+      <>
+        <path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+        <path d="M7 14v4" />
+        <path d="M12 14v4" />
+        <path d="M17 14v4" />
+      </>
+    }
+  />
+);
+
+export const RotateCcwDuo = (p: IconProps) => (
+  <Duo
+    {...p}
+    fillLayer={<circle cx="12" cy="12" r="9" />}
+    lineLayer={
+      <>
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+        <path d="M3 3v5h5" />
+      </>
+    }
+  />
+);
+
+export const MapPinDuo = (p: IconProps) => (
+  <Duo
+    {...p}
+    fillLayer={<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />}
+    lineLayer={
+      <>
+        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+        <circle cx="12" cy="10" r="3" />
+      </>
+    }
+  />
+);
+
+export const MapDuo = (p: IconProps) => (
+  <Duo
+    {...p}
+    fillLayer={<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />}
+    lineLayer={
+      <>
+        <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+        <line x1="9" x2="9" y1="3" y2="18" />
+        <line x1="15" x2="15" y1="6" y2="21" />
+      </>
+    }
+  />
+);
+
+export const TrendingUpDuo = (p: IconProps) => (
+  <Duo
+    {...p}
+    fillLayer={<path d="M22 7 13.5 15.5 8.5 10.5 2 17V22h20z" />}
+    lineLayer={
+      <>
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+        <polyline points="16 7 22 7 22 13" />
+      </>
+    }
+  />
+);
+
+export const KeyDuo = (p: IconProps) => (
+  <Duo
+    {...p}
+    fillLayer={<circle cx="7.5" cy="15.5" r="5.5" />}
+    lineLayer={
+      <>
+        <circle cx="7.5" cy="15.5" r="5.5" />
+        <path d="m21 2-9.6 9.6" />
+        <path d="m15.5 7.5 3 3L22 7l-3-3" />
+      </>
+    }
+  />
+);
+
+export const HeartDuo = (p: IconProps) => (
+  <Duo
+    {...p}
+    fillLayer={
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z" />
+    }
+    lineLayer={
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z" />
+    }
+  />
+);
+
+export const XCircleDuo = (p: IconProps) => (
+  <Duo
+    {...p}
+    fillLayer={<circle cx="12" cy="12" r="10" />}
+    lineLayer={
+      <>
+        <circle cx="12" cy="12" r="10" />
+        <path d="m15 9-6 6" />
+        <path d="m9 9 6 6" />
+      </>
+    }
+  />
+);
+
+export const CardDuo = (p: IconProps) => (
+  <Duo
+    {...p}
+    fillLayer={<rect width="20" height="14" x="2" y="5" rx="2" />}
+    lineLayer={
+      <>
+        <rect width="20" height="14" x="2" y="5" rx="2" />
+        <line x1="2" x2="22" y1="10" y2="10" />
+      </>
+    }
+  />
+);
+
+export const StarDuo = (p: IconProps) => (
+  <Duo
+    {...p}
+    fillLayer={
+      <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" />
+    }
+    lineLayer={
+      <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" />
+    }
+  />
+);

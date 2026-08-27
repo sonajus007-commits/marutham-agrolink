@@ -7,6 +7,7 @@ import { chartPalette, colors } from '@marutham/tokens';
 import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
 import { PlaceholderSection } from '../../components/PlaceholderSection';
+import { CheckCircleDuo, ClockDuo, PackageDuo, TruckDuo, WalletDuo } from '../../components/icons';
 
 /**
  * The per-hub in/out attribution dashboard (Hub Management, Phase 3). Reads the
@@ -209,21 +210,34 @@ export function HubDashboardPage() {
 function FlowTiles({ t, m }: { t: (k: string) => string; m: HubFlowMetrics | undefined }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-      <StatTile icon="📦" label={t('admin.hubDash.kpi.total')} value={m ? fmtNum(m.count) : '—'} />
       <StatTile
-        icon="🚚"
+        icon={<PackageDuo />}
+        tone="green"
+        label={t('admin.hubDash.kpi.total')}
+        value={m ? fmtNum(m.count) : '—'}
+      />
+      <StatTile
+        icon={<TruckDuo />}
+        tone="green"
         label={t('admin.hubDash.kpi.active')}
         value={m ? fmtNum(m.active) : '—'}
         accent="var(--info)"
       />
       <StatTile
-        icon="✅"
+        icon={<CheckCircleDuo />}
+        tone="leaf"
         label={t('admin.hubDash.kpi.delivered')}
         value={m ? fmtNum(m.delivered) : '—'}
       />
-      <StatTile icon="🕒" label={t('admin.hubDash.kpi.today')} value={m ? fmtNum(m.today) : '—'} />
       <StatTile
-        icon="💰"
+        icon={<ClockDuo />}
+        tone="pink"
+        label={t('admin.hubDash.kpi.today')}
+        value={m ? fmtNum(m.today) : '—'}
+      />
+      <StatTile
+        icon={<WalletDuo />}
+        tone="gold"
         label={t('admin.hubDash.kpi.revenue')}
         value={m ? fmtMoney(m.revenue) : '—'}
         accent="var(--success)"

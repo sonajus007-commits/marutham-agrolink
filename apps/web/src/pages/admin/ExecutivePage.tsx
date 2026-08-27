@@ -26,6 +26,17 @@ import { PlaceholderSection } from '../../components/PlaceholderSection';
 import { ToneDot } from '../../components/ToneDot';
 import { AdminGeoFilter } from './AdminGeoFilter';
 import { useAdminGeo } from './AdminGeoContext';
+import {
+  CalendarDuo,
+  CartDuo,
+  HeartDuo,
+  MapDuo,
+  PackageDuo,
+  RepeatDuo,
+  SparklesDuo,
+  TrendingUpDuo,
+  WalletDuo,
+} from '../../components/icons';
 
 /**
  * The executive dashboard — Board of Director / CEO / Managing Director / CFO /
@@ -247,24 +258,38 @@ export function ExecutivePage() {
       {/* ── Headline ─────────────────────────────────────────────────────── */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatTile
-          icon="💰"
+          icon={<WalletDuo />}
+          tone="gold"
           label={t('admin.exec.kpi.revenueToday')}
           value={fmtMoney(s?.revenue_today ?? 0)}
         />
         <StatTile
-          icon="📅"
+          icon={<CalendarDuo />}
+          tone="pink"
           label={t('admin.exec.kpi.revenueMtd')}
           value={fmtMoney(s?.revenue_mtd ?? 0)}
         />
         <StatTile
-          icon="📈"
+          icon={<TrendingUpDuo />}
+          tone="green"
           label={t('admin.exec.kpi.revenueYtd')}
           value={fmtMoney(s?.revenue_ytd ?? 0)}
         />
-        <StatTile icon="🛒" label={t('admin.exec.kpi.gmv')} value={fmtMoney(s?.gmv ?? 0)} />
-        <StatTile icon="📦" label={t('admin.exec.kpi.totalOrders')} value={s?.total_orders ?? 0} />
         <StatTile
-          icon="🗺️"
+          icon={<CartDuo />}
+          tone="green"
+          label={t('admin.exec.kpi.gmv')}
+          value={fmtMoney(s?.gmv ?? 0)}
+        />
+        <StatTile
+          icon={<PackageDuo />}
+          tone="green"
+          label={t('admin.exec.kpi.totalOrders')}
+          value={s?.total_orders ?? 0}
+        />
+        <StatTile
+          icon={<MapDuo />}
+          tone="pink"
           label={t('admin.exec.kpi.activeDistricts')}
           value={s?.active_districts ?? 0}
         />
@@ -391,22 +416,26 @@ export function ExecutivePage() {
         >
           <div className="grid grid-cols-2 gap-3">
             <StatTile
-              icon="🆕"
+              icon={<SparklesDuo />}
+              tone="green"
               label={t('admin.exec.customers.new')}
               value={data?.customers.new ?? 0}
             />
             <StatTile
-              icon="🔁"
+              icon={<RepeatDuo />}
+              tone="leaf"
               label={t('admin.exec.customers.repeat')}
               value={data?.customers.repeat ?? 0}
             />
             <StatTile
-              icon="💚"
+              icon={<HeartDuo />}
+              tone="leaf"
               label={t('admin.exec.customers.retention')}
               value={`${data?.customers.retention_pct ?? 0}%`}
             />
             <StatTile
-              icon="🧺"
+              icon={<CartDuo />}
+              tone="green"
               label={t('admin.exec.customers.avgBasket')}
               value={fmtMoney(data?.customers.avg_basket ?? 0)}
             />

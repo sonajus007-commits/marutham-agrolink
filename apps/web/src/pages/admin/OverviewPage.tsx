@@ -9,6 +9,7 @@ import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
 import { useAdminGeo } from './AdminGeoContext';
 import { AdminGeoFilter } from './AdminGeoFilter';
+import { CartDuo, PackageDuo, TruckDuo, WalletDuo, WheatDuo } from '../../components/icons';
 
 /**
  * The admin Overview. GET /dashboard is role-scoped server-side, so the same
@@ -190,14 +191,16 @@ export function OverviewPage() {
           <button> whenever onClick is present (see StatTile). */}
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatTile
-          icon="📦"
+          icon={<PackageDuo />}
+          tone="green"
           label={t('admin.overview.kpi.orders')}
           value={k?.total_orders ?? '—'}
           hint={t('admin.overview.kpi.ordersHint')}
           onClick={() => navigate('/admin/orders')}
         />
         <StatTile
-          icon="💰"
+          icon={<WalletDuo />}
+          tone="gold"
           label={t('admin.overview.kpi.gmv')}
           value={k ? fmtMoney(k.gmv_rupees) : '—'}
           hint={t('admin.overview.kpi.gmvHint')}
@@ -205,7 +208,8 @@ export function OverviewPage() {
           onClick={() => navigate('/admin/payouts')}
         />
         <StatTile
-          icon="🚚"
+          icon={<TruckDuo />}
+          tone="green"
           label={t('admin.overview.kpi.active')}
           value={k?.active_orders ?? '—'}
           hint={t('admin.overview.kpi.activeHint')}
@@ -213,14 +217,16 @@ export function OverviewPage() {
           onClick={() => navigate('/admin/orders')}
         />
         <StatTile
-          icon="🌾"
+          icon={<WheatDuo />}
+          tone="green"
           label={t('admin.overview.kpi.farmers')}
           value={k?.total_farmers ?? '—'}
           hint={t('admin.overview.kpi.farmersHint')}
           onClick={() => navigate('/admin/users?kind=farmer')}
         />
         <StatTile
-          icon="🛒"
+          icon={<CartDuo />}
+          tone="green"
           label={t('admin.overview.kpi.consumers')}
           value={k?.total_consumers ?? '—'}
           hint={t('admin.overview.kpi.consumersHint')}

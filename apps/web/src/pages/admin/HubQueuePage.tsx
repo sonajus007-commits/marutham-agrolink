@@ -7,6 +7,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
 import { useAdminGeo } from './AdminGeoContext';
 import { AdminGeoFilter } from './AdminGeoFilter';
+import { FactoryDuo, TruckDuo } from '../../components/icons';
 
 /* Hub Incharge queue — the last section the legacy console still owned.
  *
@@ -83,8 +84,18 @@ export function HubQueuePage() {
       <AdminGeoFilter className="mb-4" />
 
       <div className="mb-4 grid grid-cols-2 gap-3">
-        <StatTile label={t('admin.hub.arriving')} value={String(arriving.length)} icon="🚚" />
-        <StatTile label={t('admin.hub.ready')} value={String(ready.length)} icon="🏭" />
+        <StatTile
+          label={t('admin.hub.arriving')}
+          value={String(arriving.length)}
+          icon={<TruckDuo />}
+          tone="green"
+        />
+        <StatTile
+          label={t('admin.hub.ready')}
+          value={String(ready.length)}
+          icon={<FactoryDuo />}
+          tone="green"
+        />
       </div>
 
       {error ? (

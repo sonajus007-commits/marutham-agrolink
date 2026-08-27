@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Button, ChartContainer, StatTile } from '@marutham/ui';
@@ -21,6 +28,17 @@ import { PlaceholderSection } from '../../components/PlaceholderSection';
 import { ToneDot } from '../../components/ToneDot';
 import { AdminGeoFilter } from './AdminGeoFilter';
 import { useAdminGeo } from './AdminGeoContext';
+import {
+  CalendarDuo,
+  CheckCircleDuo,
+  ClockDuo,
+  PackageDuo,
+  RotateCcwDuo,
+  SparklesDuo,
+  SproutDuo,
+  TruckDuo,
+  WalletDuo,
+} from '../../components/icons';
 
 /**
  * The operations dashboard — District Manager & Hub Incharge (their district),
@@ -196,33 +214,39 @@ export function OperationsPage() {
       {/* ── Today ────────────────────────────────────────────────────────── */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatTile
-          icon="🆕"
+          icon={<SparklesDuo />}
+          tone="green"
           label={t('admin.ops.kpi.ordersToday')}
           value={fmtNum(s?.orders_today ?? 0)}
         />
         <StatTile
-          icon="💰"
+          icon={<WalletDuo />}
+          tone="gold"
           label={t('admin.ops.kpi.revenueToday')}
           value={fmtMoney(s?.revenue_today ?? 0)}
         />
         <StatTile
-          icon="📅"
+          icon={<CalendarDuo />}
+          tone="pink"
           label={t('admin.ops.kpi.revenueWeek')}
           value={fmtMoney(s?.revenue_week ?? 0)}
         />
         <StatTile
-          icon="📦"
+          icon={<PackageDuo />}
+          tone="green"
           label={t('admin.ops.kpi.activeOrders')}
           value={fmtNum(s?.active_orders ?? 0)}
         />
         <StatTile
-          icon="✅"
+          icon={<CheckCircleDuo />}
+          tone="leaf"
           label={t('admin.ops.kpi.deliveredToday')}
           value={fmtNum(s?.delivered_today ?? 0)}
           accent={semantic.light.success}
         />
         <StatTile
-          icon="⏳"
+          icon={<ClockDuo />}
+          tone="pink"
           label={t('admin.ops.kpi.pendingDeliveries')}
           value={fmtNum(s?.pending_deliveries ?? 0)}
           accent={semantic.light.warning}
@@ -236,25 +260,29 @@ export function OperationsPage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <ActionLink
             to="/admin/registrations"
-            icon="🧑‍🌾"
+            icon={<SproutDuo />}
+            tone="green"
             label={t('admin.ops.actions.approveFarmers')}
             count={data?.farmers.pending_approval}
           />
           <ActionLink
             to="/admin/orders"
-            icon="🛵"
+            icon={<TruckDuo />}
+            tone="green"
             label={t('admin.ops.actions.assignDelivery')}
             count={data?.summary.pending_deliveries}
           />
           <ActionLink
             to="/admin/returns"
-            icon="↩️"
+            icon={<RotateCcwDuo />}
+            tone="pink"
             label={t('admin.ops.actions.handleReturns')}
             count={data?.quality.pending_returns}
           />
           <ActionLink
             to="/admin/payouts"
-            icon="💸"
+            icon={<WalletDuo />}
+            tone="gold"
             label={t('admin.ops.actions.farmerPayouts')}
             count={data?.payments.pending_count}
           />
@@ -501,14 +529,23 @@ export function OperationsPage() {
  * "open in new tab" must work. The count is the backlog waiting behind it — and
  * it is only a badge when there is something to do, because a grey "0" beside
  * "Approve Farmers" is noise pretending to be information. */
+const ACTION_TONE_VAR: Record<'green' | 'leaf' | 'pink' | 'gold', string> = {
+  green: '--forest',
+  leaf: '--leaf',
+  pink: '--accent',
+  gold: '--gold',
+};
+
 function ActionLink({
   to,
   icon,
+  tone = 'green',
   label,
   count,
 }: {
   to: string;
-  icon: string;
+  icon: ReactNode;
+  tone?: 'green' | 'leaf' | 'pink' | 'gold';
   label: string;
   count?: number;
 }) {
@@ -516,9 +553,15 @@ function ActionLink({
   return (
     <Link
       to={to}
-      className="flex items-center gap-2 rounded-xl border border-subtle bg-surface p-3 text-sm font-bold text-fg no-underline hover:border-primary hover:text-primary"
+      className="ma-action flex items-center gap-2.5 rounded-xl border border-subtle bg-surface p-3 text-sm font-bold text-fg no-underline hover:border-primary hover:text-primary"
     >
-      <span aria-hidden="true">{icon}</span>
+      <span
+        aria-hidden="true"
+        className="ma-chip inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg [&_svg]:h-[1.15rem] [&_svg]:w-[1.15rem]"
+        style={{ '--chip-hue': `var(${ACTION_TONE_VAR[tone]})` } as CSSProperties}
+      >
+        {icon}
+      </span>
       <span className="flex-1">{label}</span>
       {n > 0 ? (
         <span className="rounded-full bg-primary px-2 py-0.5 text-xs tabular-nums text-primary-on">
