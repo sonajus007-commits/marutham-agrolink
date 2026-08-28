@@ -50,7 +50,7 @@ function Steps({ steps, tone }: { steps: { t: string; d: string }[]; tone: 'leaf
 
 export function FarmerJourney({ c }: { c: LandingCopy }) {
   return (
-    <Section id="farmers" tone="mist" aria-labelledby="farmer-h">
+    <Section id="farmers" thinai="marutham" aria-labelledby="farmer-h">
       <div className="grid items-center gap-12 lg:grid-cols-[1fr_1fr] lg:gap-20">
         <div className="min-w-0">
           <SectionHeader
@@ -81,7 +81,7 @@ export function FarmerJourney({ c }: { c: LandingCopy }) {
 
 export function ConsumerJourney({ c }: { c: LandingCopy }) {
   return (
-    <Section id="consumers" tone="surface" aria-labelledby="consumer-h">
+    <Section id="consumers" thinai="mullai" aria-labelledby="consumer-h">
       <div className="grid items-center gap-12 lg:grid-cols-[1fr_1fr] lg:gap-20">
         {/* image first on desktop, second on mobile — the mirror of the section above */}
         <Reveal kind="scale" className="lg:order-1">

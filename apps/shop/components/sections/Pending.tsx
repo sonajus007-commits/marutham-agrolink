@@ -29,7 +29,7 @@ import { Button } from '@/components/ui/Button';
 
 export function Testimonials({ c }: { c: LandingCopy }) {
   return (
-    <Section id="testimonials" tone="bg" aria-labelledby="testi-h">
+    <Section id="testimonials" thinai="neithal" aria-labelledby="testi-h">
       <SectionHeader
         id="testi-h"
         eyebrow={c.testimonials.eyebrow}
@@ -47,7 +47,7 @@ export function Testimonials({ c }: { c: LandingCopy }) {
 
 export function Pricing({ c }: { c: LandingCopy }) {
   return (
-    <Section id="pricing" tone="bg" aria-labelledby="pricing-h">
+    <Section id="pricing" thinai="neithal" aria-labelledby="pricing-h">
       <SectionHeader
         id="pricing-h"
         eyebrow={c.pricing.eyebrow}
@@ -71,7 +71,7 @@ export function Pricing({ c }: { c: LandingCopy }) {
 
 export function LatestUpdates({ c }: { c: LandingCopy }) {
   return (
-    <Section id="updates" tone="sky" aria-labelledby="updates-h">
+    <Section id="updates" thinai="kurinji" aria-labelledby="updates-h">
       <SectionHeader
         id="updates-h"
         eyebrow={c.updates.eyebrow}
@@ -88,7 +88,7 @@ export function LatestUpdates({ c }: { c: LandingCopy }) {
 
 export function DownloadApp({ c }: { c: LandingCopy }) {
   return (
-    <Section id="download" tone="forestDeep" aria-labelledby="dl-h">
+    <Section id="download" tone="forestDeep" photo="kurinji" aria-labelledby="dl-h">
       <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_1fr]">
         <SectionHeader
           id="dl-h"

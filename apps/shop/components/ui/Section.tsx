@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Reveal } from './Reveal';
+import { landscapeBg } from '@/lib/landscapeBg';
 
 /* Section shell — the brief's spacing rules in one place.
  *
@@ -23,22 +24,103 @@ const TONE: Record<SectionTone, string> = {
   forestDeep: 'bg-forest-900 text-surface',
 };
 
+/* The five Sangam landscapes. When a section names one, it sets that ground, lays
+ * the terrain line-art behind the content, and prints the thinai's name in the
+ * corner. Grounds + terrain classes live in globals.css; the tag copy is here.
+ * `ink` is the corner label's colour — all clear AA on their (light) ground. */
+export type Thinai = 'marutham' | 'mullai' | 'neithal' | 'kurinji' | 'palai';
+
+/* `rgb` is the ground colour as an "r,g,b" triple, so a photo scrim can be built
+ * from it at any alpha. The scrim is the ground tint at high opacity: the photo
+ * shows through as texture (~8–12%) while dark body text keeps full contrast —
+ * the same discipline the flat grounds already guarantee. */
+const THINAI: Record<Thinai, { ta: string; en: string; ink: string; rgb: string }> = {
+  marutham: { ta: 'மருதம்', en: 'Marutham', ink: '#ad1457', rgb: '253,242,246' },
+  mullai: { ta: 'முல்லை', en: 'Mullai', ink: '#2e7d4f', rgb: '238,247,241' },
+  neithal: { ta: 'நெய்தல்', en: 'Neithal', ink: '#1f5f8b', rgb: '234,244,251' },
+  kurinji: { ta: 'குறிஞ்சி', en: 'Kurinji', ink: '#4b3ba3', rgb: '240,238,251' },
+  palai: { ta: 'பாலை', en: 'Palai', ink: '#8b5e3c', rgb: '250,244,234' },
+};
+
 interface SectionProps {
   id?: string;
   tone?: SectionTone;
   children: ReactNode;
   className?: string;
+  /** Sit this section on one of the five Ainthinai landscapes. Overrides `tone`. */
+  thinai?: Thinai;
+  /* On a DARK-tone band (forest / forestDeep), optionally lay a landscape photo
+   * behind the white text under a DARK scrim. Reuses the same public/landscapes
+   * files as the light thinai sections; with no file the band stays solid forest.
+   * Ignored when `thinai` is set (that path owns the background). */
+  photo?: Thinai;
   'aria-labelledby'?: string;
 }
 
-export function Section({ id, tone = 'surface', children, className = '', ...rest }: SectionProps) {
+const DARK_TONES: SectionTone[] = ['forest', 'forestDeep'];
+
+export function Section({
+  id,
+  tone = 'surface',
+  children,
+  className = '',
+  thinai,
+  photo,
+  ...rest
+}: SectionProps) {
+  const ground = thinai ? `ground-${thinai} text-fg` : TONE[tone];
+  const tag = thinai ? THINAI[thinai] : null;
+  /* A photo backdrop when one exists for this landscape; terrain art otherwise. */
+  const thinaiPhoto = thinai ? landscapeBg(thinai) : null;
+  /* Dark-band photo: only on a dark tone, only when a file exists. */
+  const darkPhoto = !thinai && photo && DARK_TONES.includes(tone) ? landscapeBg(photo) : null;
   return (
     <section
       id={id}
-      className={`${TONE[tone]} px-6 py-[60px] md:px-10 md:py-20 lg:py-[120px] ${className}`}
+      className={`${ground} relative overflow-hidden px-6 py-[60px] md:px-10 md:py-20 lg:py-[120px] ${className}`}
       aria-labelledby={rest['aria-labelledby']}
     >
-      <div className="mx-auto w-full max-w-[1440px]">{children}</div>
+      {thinai && thinaiPhoto && tag ? (
+        <>
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url("${thinaiPhoto}")` }}
+            aria-hidden="true"
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(180deg, rgba(${tag.rgb},0.94) 0%, rgba(${tag.rgb},0.88) 100%)`,
+            }}
+            aria-hidden="true"
+          />
+        </>
+      ) : thinai ? (
+        <div className={`terrain terrain-${thinai}`} aria-hidden="true" />
+      ) : darkPhoto ? (
+        <>
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url("${darkPhoto}")` }}
+            aria-hidden="true"
+          />
+          {/* Dark scrim keeps white text at full contrast over any photo. */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(180deg, rgba(22,61,47,0.86) 0%, rgba(22,61,47,0.92) 100%)',
+            }}
+            aria-hidden="true"
+          />
+        </>
+      ) : null}
+      {tag ? (
+        <span className="thinai-tag" style={{ color: tag.ink }} aria-hidden="true">
+          {tag.ta} · {tag.en}
+        </span>
+      ) : null}
+      <div className="relative mx-auto w-full max-w-[1440px]">{children}</div>
     </section>
   );
 }

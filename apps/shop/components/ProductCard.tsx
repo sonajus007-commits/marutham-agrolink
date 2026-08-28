@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { homepagePrice, productEmoji, fmtMoney, type Product } from '@marutham/lib';
 import { OrderButton } from '@/components/OrderButton';
+import { produceImage } from '@/lib/produceImage';
 import type { Dict } from '@/lib/dict';
 
 /* One product in a grid — used by the homepage and the /products catalogue.
@@ -13,15 +14,30 @@ import type { Dict } from '@/lib/dict';
 export function ProductCard({ t, product }: { t: Dict; product: Product }) {
   const price = homepagePrice(product);
   const href = `/products/${product.id}`;
+  const img = produceImage(product.name, product.regional_name);
 
   return (
     <li className="rounded-2xl border border-border bg-surface p-4 text-center transition-shadow hover:shadow-lg">
       {/* One link wrapping picture + name: two adjacent links to the same place
-          are a known screen-reader annoyance, and the emoji is decorative. */}
-      <Link href={href} className="block no-underline">
-        <span className="block text-5xl" aria-hidden="true">
-          {productEmoji(product.name)}
-        </span>
+          are a known screen-reader annoyance, and the picture is decorative. A
+          real photo where we have one (public/produce), the emoji otherwise. */}
+      <Link href={href} className="group block no-underline">
+        {img ? (
+          <span className="block aspect-[4/3] w-full overflow-hidden rounded-xl bg-mist">
+            <img
+              src={img}
+              alt={product.name}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          </span>
+        ) : (
+          <span
+            className="flex aspect-[4/3] w-full items-center justify-center rounded-xl bg-mist text-6xl"
+            aria-hidden="true"
+          >
+            {productEmoji(product.name)}
+          </span>
+        )}
         <span className="mt-2 inline-block rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-forest">
           {t.fresh.badge}
         </span>

@@ -31,7 +31,7 @@ import { PORTAL_REGISTER } from '@/lib/portal';
 export function BusinessFeatures({ c }: { c: LandingCopy }) {
   const icons = [Boxes, Scale, Users];
   return (
-    <Section id="business" tone="sand" aria-labelledby="biz-h">
+    <Section id="business" thinai="palai" aria-labelledby="biz-h">
       <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.05fr] lg:gap-20">
         <div className="min-w-0">
           <SectionHeader
@@ -82,7 +82,7 @@ export function BusinessFeatures({ c }: { c: LandingCopy }) {
 export function MobileApp({ c }: { c: LandingCopy }) {
   const icons = [WifiOff, Smartphone, MapPin];
   return (
-    <Section id="mobile" tone="forest" aria-labelledby="mob-h">
+    <Section id="mobile" tone="forest" photo="marutham" aria-labelledby="mob-h">
       <div className="grid items-center gap-12 lg:grid-cols-[1fr_1fr] lg:gap-20">
         <Reveal kind="scale" className="lg:order-2">
           <ImageSlot
@@ -125,7 +125,7 @@ export function MobileApp({ c }: { c: LandingCopy }) {
 export function Sustainability({ c }: { c: LandingCopy }) {
   const icons = [Recycle, MapPin, Users];
   return (
-    <Section id="sustainability" tone="mist" aria-labelledby="sus-h">
+    <Section id="sustainability" thinai="palai" aria-labelledby="sus-h">
       <div className="grid items-center gap-12 lg:grid-cols-[1fr_1fr] lg:gap-20">
         <Reveal kind="scale">
           <ImageSlot
@@ -167,7 +167,7 @@ export function Sustainability({ c }: { c: LandingCopy }) {
 export function MarketplaceFeatures({ c }: { c: LandingCopy }) {
   const icons = [MapPin, Star, RotateCcw, Boxes];
   return (
-    <Section id="marketplace" tone="surface" aria-labelledby="mkt-h">
+    <Section id="marketplace" thinai="marutham" aria-labelledby="mkt-h">
       <SectionHeader
         id="mkt-h"
         eyebrow={c.marketplace.eyebrow}
@@ -197,7 +197,7 @@ export function MarketplaceFeatures({ c }: { c: LandingCopy }) {
  * click. Every answer is true of the product today. */
 export function FAQ({ c }: { c: LandingCopy }) {
   return (
-    <Section id="faq" tone="surface" aria-labelledby="faq-h">
+    <Section id="faq" thinai="mullai" aria-labelledby="faq-h">
       <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
         <SectionHeader id="faq-h" eyebrow={c.faq.eyebrow} accent="leaf" title={c.faq.title} />
         <ul className="flex list-none flex-col p-0">
@@ -234,7 +234,7 @@ export function Contact({ c }: { c: LandingCopy }) {
     { icon: Mail, label: c.contact.email },
   ];
   return (
-    <Section id="contact" tone="surface" aria-labelledby="contact-h">
+    <Section id="contact" thinai="marutham" aria-labelledby="contact-h">
       <div className="grid gap-12 lg:grid-cols-[1fr_1fr] lg:gap-20">
         <SectionHeader
           id="contact-h"

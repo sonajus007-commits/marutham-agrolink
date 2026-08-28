@@ -1,34 +1,61 @@
 import { Leaf, ShieldCheck, Truck } from 'lucide-react';
+import type { Product } from '@marutham/lib';
 import { PORTAL_REGISTER } from '@/lib/portal';
+import type { Dict } from '@/lib/dict';
 import type { LandingCopy } from '@/lib/landing';
 import { Button } from '@/components/ui/Button';
 import { Reveal } from '@/components/ui/Reveal';
-import { ImageSlot } from '@/components/ui/Placeholder';
+import { FreshPicks } from '@/components/sections/FreshPicks';
+import { landscapeBg } from '@/lib/landscapeBg';
 
-/* Hero — asymmetric, copy left / image right.
+/* Hero — the front door, sitting on Marutham, the farmland (the brand's own
+ * thinai). Copy left; an informative "fresh today" card right, in place of the
+ * old logo medallion — the visitor sees real produce and the value flow at once.
  *
- * No gradient wash and no full-bleed photo behind text: the brief asks to avoid
- * unnecessary gradients, and text over an unknown future photograph is a
- * contrast bug waiting for whichever image lands. The photo sits in its own
- * column where it can be anything and still be legible beside it. */
-export function Hero({ c }: { c: LandingCopy }) {
+ * Colour comes from FILLS: the bloom-gradient wash and the faint Marutham terrain
+ * (paddy furrows + a river) behind everything. Body text stays on the light
+ * ground at its audited ink colours; the one accent that is type, the hero's
+ * second line, is large-display size — the only place the gradient is allowed. */
+export function Hero({ c, t, products }: { c: LandingCopy; t: Dict; products: Product[] }) {
   const icons = [ShieldCheck, Truck, Leaf];
+  const trustTints = ['text-blossom-ink', 'text-water-ink', 'text-leaf-ink'];
+  /* A farmland photo when one is dropped in; the bloom wash + terrain otherwise. */
+  const photo = landscapeBg('marutham');
 
   return (
-    <section className="bg-surface px-6 pt-16 pb-[60px] md:px-10 md:pt-24 md:pb-20 lg:pb-[120px]">
-      <div className="mx-auto grid w-full max-w-[1440px] items-center gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-20">
-        {/* min-w-0 is doing real work here. A grid item defaults to min-width:auto,
-            so it refuses to shrink below its longest word — and overflow-wrap:
-            break-word permits a break WITHOUT reducing min-content width, so it
-            alone does not help. Together they let the Tamil hero wrap instead of
-            widening the page to 509px. */}
+    <section
+      className={`ground-marutham relative overflow-hidden px-6 pt-16 pb-[60px] md:px-10 md:pt-20 md:pb-20 lg:pb-[110px] ${photo ? '' : 'wash-bloom'}`}
+    >
+      {photo ? (
+        <>
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url("${photo}")` }}
+            aria-hidden="true"
+          />
+          {/* Horizontal scrim: near-solid on the left where the copy sits,
+              lighter on the right where the (solid) card sits. */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(90deg, rgba(253,242,246,0.97) 0%, rgba(253,242,246,0.86) 46%, rgba(253,242,246,0.60) 100%)',
+            }}
+            aria-hidden="true"
+          />
+        </>
+      ) : (
+        <div className="terrain terrain-marutham" aria-hidden="true" />
+      )}
+      <span className="thinai-tag" style={{ color: '#ad1457' }} aria-hidden="true">
+        மருதம் · Marutham
+      </span>
+
+      <div className="relative mx-auto grid w-full max-w-[1440px] items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
         <div className="flex min-w-0 flex-col gap-7">
           <Reveal kind="fade">
-            {/* max-w-full + items-start: an inline-flex pill will not wrap on its
-                own, so the Tamil badge (a longer string than the English) grew to
-                483px and took the page with it. */}
-            <span className="border-border bg-bg text-forest-700 inline-flex max-w-full items-start gap-2 rounded-full border px-4 py-1.5 text-caption font-semibold">
-              <Leaf className="mt-[3px] h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="border-blossom-500/30 bg-surface-raised/80 text-blossom-ink inline-flex max-w-full items-center gap-2 rounded-full border px-4 py-1.5 text-caption font-semibold shadow-[0_2px_12px_rgba(217,92,138,0.12)] backdrop-blur-sm">
+              <Leaf className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               {c.hero.badge}
             </span>
           </Reveal>
@@ -37,7 +64,7 @@ export function Hero({ c }: { c: LandingCopy }) {
             <h1 className="text-forest-900 text-[2.5rem] leading-[1.05] font-bold tracking-tight text-balance sm:text-[3.25rem] lg:text-hero">
               {c.hero.titleA}
               <br />
-              <span className="text-forest-500">{c.hero.titleB}</span>
+              <span className="text-bloom-gradient">{c.hero.titleB}</span>
             </h1>
           </Reveal>
 
@@ -62,7 +89,7 @@ export function Hero({ c }: { c: LandingCopy }) {
                 const Icon = icons[i];
                 return (
                   <li key={label} className="flex items-center gap-2">
-                    <Icon className="text-forest-500 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <Icon className={`${trustTints[i]} h-4 w-4 shrink-0`} aria-hidden="true" />
                     {label}
                   </li>
                 );
@@ -72,11 +99,7 @@ export function Hero({ c }: { c: LandingCopy }) {
         </div>
 
         <Reveal kind="scale" delay={0.1}>
-          <ImageSlot
-            aspect="aspect-[4/5]"
-            slotLabel={c.imageSlot.label}
-            description="A Marutham farmer in their field, holding just-harvested produce. Natural light, shot on the farm — not a stock studio image."
-          />
+          <FreshPicks products={products} t={t} c={c} />
         </Reveal>
       </div>
     </section>

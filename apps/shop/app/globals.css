@@ -133,6 +133,203 @@ body {
   }
 }
 
+/* ── The "Marutham Flower" theme layer ────────────────────────────────────────
+ *
+ * The identity is a pink lotus over a forest-green field (see public/brand). This
+ * block gives the page that identity as reusable decoration: a tiled lotus
+ * watermark, a running-notes ticker, drifting petals, and a few brand gradients.
+ *
+ * Colour discipline is unchanged. Every gradient here is a FILL behind non-text
+ * area or a large-display wash — the blossom/forest/gold -500s are used exactly
+ * where the palette says they may be (fills, large display), and body text keeps
+ * its audited ink siblings. Nothing here paints small type in an accent.
+ *
+ * All motion below is killed by the prefers-reduced-motion block that follows. */
+
+/* Lotus watermark — a stylised 8-petal blossom, tiled very faintly. Used as a
+ * section backdrop (`.lotus-field`) so a ground reads as "Marutham" without a
+ * photograph. The colour rides on `color:` so a caller tints it per section. */
+.lotus-field {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='%23d95c8a' fill-opacity='0.06'%3E%3Cpath d='M60 34c4 8 4 16 0 24-4-8-4-16 0-24zm0 52c-4-8-4-16 0-24 4 8 4 16 0 24zM34 60c8-4 16-4 24 0-8 4-16 4-24 0zm52 0c-8 4-16 4-24 0 8-4 16-4 24 0zM42 42c7 3 12 8 15 15-7-3-12-8-15-15zm36 36c-7-3-12-8-15-15 7 3 12 8 15 15zm0-36c-3 7-8 12-15 15 3-7 8-12 15-15zM42 78c3-7 8-12 15-15-3 7-8 12-15 15z'/%3E%3Ccircle cx='60' cy='60' r='5' fill='%23d9a441' fill-opacity='0.12'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+
+/* A warmer variant for dark grounds — leaf-green petals on forest. */
+.lotus-field-dark {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='%239fd3a5' fill-opacity='0.07'%3E%3Cpath d='M60 34c4 8 4 16 0 24-4-8-4-16 0-24zm0 52c-4-8-4-16 0-24 4 8 4 16 0 24zM34 60c8-4 16-4 24 0-8 4-16 4-24 0zm52 0c-8 4-16 4-24 0 8-4 16-4 24 0zM42 42c7 3 12 8 15 15-7-3-12-8-15-15zm36 36c-7-3-12-8-15-15 7 3 12 8 15 15zm0-36c-3 7-8 12-15 15 3-7 8-12 15-15zM42 78c3-7 8-12 15-15-3 7-8 12-15 15z'/%3E%3Ccircle cx='60' cy='60' r='5' fill='%23d9a441' fill-opacity='0.16'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+
+/* Brand gradient washes — fills only. */
+.wash-bloom {
+  background-image:
+    radial-gradient(120% 120% at 12% 8%, rgba(217, 92, 138, 0.16) 0%, transparent 46%),
+    radial-gradient(110% 110% at 88% 6%, rgba(62, 146, 204, 0.14) 0%, transparent 44%),
+    radial-gradient(140% 140% at 78% 96%, rgba(217, 164, 65, 0.16) 0%, transparent 50%),
+    radial-gradient(120% 120% at 20% 100%, rgba(62, 142, 90, 0.16) 0%, transparent 52%);
+}
+.wash-forest {
+  background-image: linear-gradient(135deg, #163d2f 0%, #1e5b43 58%, #2e7d4f 100%);
+}
+
+/* A gradient applied to LARGE display text only (the hero accent line). The two
+ * hues are blossom-500 and forest-500, both cleared for large display; the
+ * gradient never lands on body copy. */
+.text-bloom-gradient {
+  background-image: linear-gradient(100deg, #ad1457 0%, #d95c8a 40%, #3e8e5a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Running-notes ticker. Two identical tracks sit side by side and the pair
+ * slides left by exactly half its width, so the loop is seamless. Pauses when
+ * hovered or focused within, so a reader can stop and read a note. */
+@keyframes ma-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.ma-ticker-track {
+  display: inline-flex;
+  min-width: max-content;
+  animation: ma-marquee 42s linear infinite;
+  will-change: transform;
+}
+.ma-ticker:hover .ma-ticker-track,
+.ma-ticker:focus-within .ma-ticker-track {
+  animation-play-state: paused;
+}
+
+/* Drifting petals behind the hero. Each petal gets its own duration/offset via
+ * inline style; this is the shared float. Transform + opacity only — compositor
+ * work, no layout. */
+@keyframes ma-petal-drift {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--petal-opacity, 0.7);
+  }
+  90% {
+    opacity: var(--petal-opacity, 0.7);
+  }
+  100% {
+    transform: translateY(-38px) translateX(18px) rotate(24deg);
+    opacity: 0;
+  }
+}
+.ma-petal {
+  animation: ma-petal-drift var(--petal-dur, 9s) ease-in-out var(--petal-delay, 0s) infinite;
+}
+
+/* Slow bob for the hero logo medallion — a gentle sense of life, not a spin. */
+@keyframes ma-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+.ma-bob {
+  animation: ma-bob 6s ease-in-out infinite;
+}
+
+/* A soft breathing halo behind the medallion. */
+@keyframes ma-halo {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.8;
+  }
+}
+.ma-halo {
+  animation: ma-halo 7s ease-in-out infinite;
+}
+
+/* ── Ainthinai — the five Sangam landscapes, as section grounds ────────────────
+ *
+ * The page walks the Tamil land: each section sits on one of the five திணை
+ * (thinai) — farmland, forest, shore, mountain, arid plain. The ground is a faint
+ * tint; the terrain is drawn as faint line-art behind the content (never under
+ * the words). Marutham — the farmland — is the brand, so the hero leads with it.
+ *
+ * Grounds are the lightest tints in the palette (all clear dark body text); the
+ * terrain strokes are the brand accents as FILLS at low alpha. Kurinji indigo is
+ * the one hue outside the audited set, used only as a faint fill here. */
+.ground-marutham {
+  background-color: #fdf2f6;
+}
+.ground-mullai {
+  background-color: #eef7f1;
+}
+.ground-neithal {
+  background-color: #eaf4fb;
+}
+.ground-kurinji {
+  background-color: #f0eefb;
+}
+.ground-palai {
+  background-color: #faf4ea;
+}
+.terrain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.terrain-marutham {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'140'%20height%3D'120'%20viewBox%3D'0%200%20140%20120'%3E%3Cg%20stroke%3D'%23d95c8a'%20stroke-opacity%3D'0.1'%20fill%3D'none'%20stroke-width%3D'1.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cpath%20d%3D'M0%2030%20H140'%2F%3E%3Cpath%20d%3D'M0%2066%20H140'%2F%3E%3Cpath%20d%3D'M0%20102%20H140'%2F%3E%3C%2Fg%3E%3Cg%20stroke%3D'%233e92cc'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'2'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cpath%20d%3D'M18%200%20Q40%2040%2024%2072%20T40%20120'%2F%3E%3C%2Fg%3E%3Cg%20stroke%3D'%233e8e5a'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'1.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cpath%20d%3D'M60%2030%20l-4%20-9%20M60%2030%20l4%20-9%20M60%2030%20v-11'%2F%3E%3Cpath%20d%3D'M98%2066%20l-4%20-9%20M98%2066%20l4%20-9%20M98%2066%20v-11'%2F%3E%3Cpath%20d%3D'M120%20102%20l-4%20-9%20M120%20102%20l4%20-9%20M120%20102%20v-11'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E")
+    0 0 / 140px 120px;
+  background-repeat: repeat;
+}
+.terrain-mullai {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'140'%20height%3D'120'%20viewBox%3D'0%200%20140%20120'%3E%3Cg%20stroke%3D'%233e8e5a'%20stroke-opacity%3D'0.12'%20fill%3D'none'%20stroke-width%3D'1.5'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cpath%20d%3D'M0%2060%20Q35%2034%2070%2060%20T140%2060'%2F%3E%3Cpath%20d%3D'M0%20100%20Q35%2078%2070%20100%20T140%20100'%2F%3E%3C%2Fg%3E%3Cg%20stroke%3D'%233e8e5a'%20stroke-opacity%3D'0.12'%20fill%3D'none'%20stroke-width%3D'1.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cpath%20d%3D'M28%2044%20v-14'%2F%3E%3Ccircle%20cx%3D'28'%20cy%3D'24'%20r%3D'7'%20fill%3D'%233e8e5a'%20fill-opacity%3D'0.09'%2F%3E%3Cpath%20d%3D'M104%2084%20v-14'%2F%3E%3Ccircle%20cx%3D'104'%20cy%3D'64'%20r%3D'7'%20fill%3D'%233e8e5a'%20fill-opacity%3D'0.09'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E")
+    0 0 / 140px 120px;
+  background-repeat: repeat;
+}
+.terrain-neithal {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'140'%20height%3D'120'%20viewBox%3D'0%200%20140%20120'%3E%3Cg%20stroke%3D'%233e92cc'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cpath%20d%3D'M0%2034%20Q17%2022%2034%2034%20T68%2034%20T102%2034%20T136%2034'%2F%3E%3Cpath%20d%3D'M0%2062%20Q17%2050%2034%2062%20T68%2062%20T102%2062%20T136%2062'%2F%3E%3Cpath%20d%3D'M0%2090%20Q17%2078%2034%2090%20T68%2090%20T102%2090%20T136%2090'%2F%3E%3C%2Fg%3E%3Cg%20stroke%3D'%233e92cc'%20stroke-opacity%3D'0.15'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cpath%20d%3D'M92%2020%20h22%20l-5%209%20h-12%20z'%2F%3E%3Cpath%20d%3D'M103%2020%20v-9'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E")
+    0 0 / 140px 120px;
+  background-repeat: repeat;
+}
+.terrain-kurinji {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'140'%20height%3D'120'%20viewBox%3D'0%200%20140%20120'%3E%3Cg%20stroke%3D'%236d5bd0'%20stroke-opacity%3D'0.13'%20fill%3D'none'%20stroke-width%3D'1.5'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cpath%20d%3D'M0%2046%20L18%2018%20L36%2046%20M36%2046%20L54%2020%20L72%2046%20M72%2046%20L90%2016%20L108%2046%20M108%2046%20L126%2020%20L140%2046'%2F%3E%3Cpath%20d%3D'M-10%20104%20L14%2072%20L38%20104%20M38%20104%20L62%2074%20L86%20104%20M86%20104%20L110%2070%20L134%20104%20L150%20104'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E")
+    0 0 / 140px 120px;
+  background-repeat: repeat;
+}
+.terrain-palai {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'140'%20height%3D'120'%20viewBox%3D'0%200%20140%20120'%3E%3Ccircle%20cx%3D'30'%20cy%3D'30'%20r%3D'9'%20fill%3D'%23d9a441'%20fill-opacity%3D'0.12'%2F%3E%3Cg%3E%3Cpath%20d%3D'M43.0%2030.0%20L49.0%2030.0'%20stroke%3D'%23b07a3c'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3Cpath%20d%3D'M41.3%2036.5%20L46.5%2039.5'%20stroke%3D'%23b07a3c'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3Cpath%20d%3D'M36.5%2041.3%20L39.5%2046.5'%20stroke%3D'%23b07a3c'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3Cpath%20d%3D'M30.0%2043.0%20L30.0%2049.0'%20stroke%3D'%23b07a3c'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3Cpath%20d%3D'M23.5%2041.3%20L20.5%2046.5'%20stroke%3D'%23b07a3c'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3Cpath%20d%3D'M18.7%2036.5%20L13.5%2039.5'%20stroke%3D'%23b07a3c'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3Cpath%20d%3D'M17.0%2030.0%20L11.0%2030.0'%20stroke%3D'%23b07a3c'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3Cpath%20d%3D'M18.7%2023.5%20L13.5%2020.5'%20stroke%3D'%23b07a3c'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3Cpath%20d%3D'M23.5%2018.7%20L20.5%2013.5'%20stroke%3D'%23b07a3c'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3Cpath%20d%3D'M30.0%2017.0%20L30.0%2011.0'%20stroke%3D'%23b07a3c'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3Cpath%20d%3D'M36.5%2018.7%20L39.5%2013.5'%20stroke%3D'%23b07a3c'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3Cpath%20d%3D'M41.3%2023.5%20L46.5%2020.5'%20stroke%3D'%23b07a3c'%20stroke-opacity%3D'0.14'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3C%2Fg%3E%3Cg%20stroke%3D'%23b07a3c'%20stroke-opacity%3D'0.12'%20fill%3D'none'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cpath%20d%3D'M0%2096%20Q35%2078%2070%2096%20T140%2096'%2F%3E%3Cpath%20d%3D'M100%2060%20v-16%20M100%2052%20l-8%20-7%20M100%2050%20l9%20-8'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E")
+    0 0 / 140px 120px;
+  background-repeat: repeat;
+}
+/* The small thinai name in a section's corner (மருதம் · Marutham). Decorative label. */
+.thinai-tag {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  z-index: 1;
+}
+@media (min-width: 768px) {
+  .thinai-tag {
+    right: 2.5rem;
+  }
+}
+
 /* Every animation in this app is a Framer Motion entrance. Honour the OS
  * setting rather than shipping motion someone has asked not to receive. */
 @media (prefers-reduced-motion: reduce) {
