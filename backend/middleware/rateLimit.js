@@ -25,6 +25,13 @@ const identifierKey = (req) => {
   return `${ipKeyGenerator(req.ip)}:${String(id).slice(0, 64)}`;
 };
 
+// For AUTHENTICATED write endpoints: key by the user (their id) when signed in,
+// falling back to the IP subnet otherwise. A shared office/carrier IP therefore
+// does not lump many real users into one bucket, and a single account cannot
+// escape its budget by moving IPs. Only used AFTER requireAuth, so req.user is set.
+const userOrIpKey = (req) =>
+  req.user && req.user.id ? `u:${req.user.id}` : ipKeyGenerator(req.ip);
+
 const tooMany = (res, retryMs) => res.status(429).json({
   error: 'Too many attempts. Please wait a minute and try again.',
   retry_after_seconds: Math.ceil(retryMs / 1000),
@@ -60,4 +67,44 @@ const resetLimiter = rateLimit({
   handler: (req, res, _next, opts) => tooMany(res, opts.windowMs),
 });
 
-module.exports = { loginLimiter, otpLimiter, resetLimiter };
+// Registration: mass-signup / resource abuse is the threat (each register can also
+// trigger downstream work). Pre-auth, so keyed by IP subnet. 20 / hour.
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip),
+  handler: (req, res, _next, opts) => tooMany(res, opts.windowMs),
+});
+
+// Order placement (checkout): checkout abuse / order flooding is the threat — each
+// order runs the multi-vendor split, stock checks and payout wiring. Per user.
+// 30 / 15 min is far above any real shopper.
+const orderLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+  handler: (req, res, _next, opts) => tooMany(res, opts.windowMs),
+});
+
+// Payment: a payment call is the most sensitive write. Per user, 20 / 15 min.
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+  handler: (req, res, _next, opts) => tooMany(res, opts.windowMs),
+});
+
+module.exports = {
+  loginLimiter,
+  otpLimiter,
+  resetLimiter,
+  registerLimiter,
+  orderLimiter,
+  paymentLimiter,
+};

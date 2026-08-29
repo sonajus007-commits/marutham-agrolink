@@ -2,6 +2,7 @@ const express  = require('express');
 const crypto   = require('crypto');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { paymentLimiter } = require('../middleware/rateLimit');
 const { validateBody, z } = require('../middleware/validate');
 const { getPlan, planList, REGISTRATION_CHARGE, concessionFor, discountedAmount } = require('../utils/subscriptionPlans');
 const notify   = require('../utils/notify');
@@ -58,7 +59,7 @@ router.get('/plans', (req, res) => {
 // Body: { plan }.  SIMULATED payment (prototype) — marks the payment successful
 // immediately and activates the account. Replace the "simulated success" block
 // with a real gateway (e.g. Razorpay) verification when ready.
-router.post('/pay', sellersOnly, validateBody(paySchema), async (req, res) => {
+router.post('/pay', paymentLimiter, sellersOnly, validateBody(paySchema), async (req, res) => {
   const planName = req.body.plan;
   const plan = getPlan(planName);
   if (!plan) {

@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const QRCode = require('qrcode');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { orderLimiter } = require('../middleware/rateLimit');
 const { can } = require('../middleware/permissions');
 const { validateBody, z } = require('../middleware/validate');
 const { generateOrderCode } = require('../utils/codeGen');
@@ -61,7 +62,7 @@ const CANCELLABLE_STAGES = [0, 1]; // Order Placed, Packaged — not once picked
 
 // ── POST /orders  (consumer only) ────────────────────────────────────────────
 // Body: { items: [{product_id, farmer_id, qty}], pay_method, address? }
-router.post('/', consumersOnly, validateBody(createOrderSchema), async (req, res) => {
+router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), async (req, res) => {
   const { items, pay_method, delivery_fee: clientDeliveryFee, delivery_address } = req.body;
 
   // ── Ordering window: 8 PM – 8 AM IST only ────────────────────────────────

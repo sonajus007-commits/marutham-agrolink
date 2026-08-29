@@ -4,7 +4,12 @@ const jwt = require('jsonwebtoken');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { permissionPayload, roleIdForAdminRole } = require('../middleware/permissions');
-const { loginLimiter, otpLimiter, resetLimiter } = require('../middleware/rateLimit');
+const {
+  loginLimiter,
+  otpLimiter,
+  resetLimiter,
+  registerLimiter,
+} = require('../middleware/rateLimit');
 const { distCode, stateCode } = require('../utils/codeGen');
 const { geocodeAddress, geocodingEnabled } = require('../utils/geocode');
 const notify = require('../utils/notify');
@@ -300,7 +305,7 @@ function loginOutcome(user) {
 }
 
 // ── POST /auth/register ───────────────────────────────────────────────────────
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
   const {
     phone, password, role,
     fname, lname, email, alt_phone,
