@@ -350,3 +350,38 @@ test('DELETE /:id — a non-Head-Office admin is refused (403)', async () => {
   app = await mountRoute('products', { supabase: db, user: DM });
   assert.equal((await app.request('DELETE', '/p1')).status, 403);
 });
+
+// ── GET /products/categories (facets) + the paginated shape ───────────────────
+test('GET /products/categories — distinct categories with counts, blanks skipped', async () => {
+  const db = fakeSupabase({
+    'products:select': {
+      data: [
+        { category: 'Vegetables' }, { category: 'Vegetables' }, { category: 'Fruits' },
+        { category: null }, { category: '   ' },
+      ],
+    },
+  });
+  app = await mountRoute('products', { supabase: db, user: null });
+  const res = await app.get('/categories'); // router is mounted at /, so /api/products/categories
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body.categories, [
+    { name: 'Fruits', count: 1 },
+    { name: 'Vegetables', count: 2 },
+  ]);
+});
+
+test('GET /products — returns a numeric count (not coerced to a rupee string)', async () => {
+  const db = fakeSupabase({
+    'products:select': {
+      data: [{ id: 'p1', name: 'Okra', product_district_prices: [], product_ratings: [] }],
+      count: 22,
+    },
+  });
+  app = await mountRoute('products', { supabase: db, user: null });
+  const res = await app.get('/');
+  assert.equal(res.status, 200);
+  // count MUST stay the integer 22 — the money middleware coerces fields named
+  // like money (total/amount/...); this pins that `count` is not one of them.
+  assert.strictEqual(res.body.count, 22);
+  assert.ok('limit' in res.body && 'offset' in res.body, 'paging metadata present');
+});
