@@ -1,3 +1,4 @@
+import Image from 'next/image';
 /* ─────────────────────────────────────────────────────────────────────────────
  * The official Marutham AgroLink identity. The square mark (lotus + scales + MA
  * monogram) lives at public/brand/mark.png; the full illustrated badge is at
@@ -74,11 +75,12 @@ function Mark({ tone }: { tone: LogoTone }) {
     <span
       className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${tile}`}
     >
-      {/* Static brand asset; next/image adds no benefit for a fixed-size mark. */}
-      <img
+      <Image
         src="/brand/malogo-full.jpg"
         alt=""
         aria-hidden="true"
+        width={40}
+        height={40}
         className="h-full w-full rounded-md object-contain"
       />
     </span>

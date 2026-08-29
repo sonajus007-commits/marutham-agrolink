@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import {
   homepagePrice,
@@ -144,11 +145,16 @@ export default async function ProductPage({ params }: Params) {
               is no longer the one place a product shows only an emoji. */}
           <div className="w-full shrink-0 sm:w-72">
             {img ? (
-              <img
-                src={img}
-                alt={product.name}
-                className="bg-mist aspect-square w-full rounded-2xl object-cover"
-              />
+              <span className="bg-mist relative block aspect-square w-full overflow-hidden rounded-2xl">
+                <Image
+                  src={img}
+                  alt={product.name}
+                  fill
+                  sizes="(min-width: 640px) 18rem, 100vw"
+                  className="object-cover"
+                  priority
+                />
+              </span>
             ) : (
               <div
                 className="bg-mist flex aspect-square w-full items-center justify-center rounded-2xl text-8xl"

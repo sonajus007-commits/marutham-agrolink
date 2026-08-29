@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { homepagePrice, productEmoji, fmtMoney, type Product } from '@marutham/lib';
 import { OrderButton } from '@/components/OrderButton';
 import { AddToCartButton } from '@/components/cart/AddToCartButton';
@@ -35,11 +36,15 @@ export function ProductCard({
           real photo where we have one (public/produce), the emoji otherwise. */}
       <Link href={href} className="group block no-underline">
         {img ? (
-          <span className="block aspect-[4/3] w-full overflow-hidden rounded-xl bg-mist">
-            <img
+          <span className="relative block aspect-[4/3] w-full overflow-hidden rounded-xl bg-mist">
+            {/* Local produce photo → next/image: responsive srcset, lazy load,
+                WebP/AVIF. `fill` fills the aspect-ratio box above. */}
+            <Image
               src={img}
               alt={product.name}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              fill
+              sizes="(min-width: 1024px) 18vw, (min-width: 640px) 30vw, 45vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           </span>
         ) : (
