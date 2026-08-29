@@ -97,6 +97,35 @@ router.get('/', async (req, res) => {
   res.json({ products, count: count ?? products.length, limit, offset });
 });
 
+// ── GET /products/categories ──────────────────────────────────────────────────
+// The distinct categories the catalogue carries, with a product count each — for
+// the category rail and the /category/:slug pages. Defined BEFORE /:id so
+// "categories" is not swallowed as a product id. ?available=true counts only
+// buyable products. Only the `category` column is read, so the payload is small
+// even for a large catalogue.
+router.get('/categories', async (req, res) => {
+  const { available } = req.query;
+  let query = supabase.from('products').select('category');
+  if (available !== undefined) query = query.eq('available', available === 'true');
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('GET /products/categories error:', error);
+    return res.status(500).json({ error: 'Could not fetch categories.' });
+  }
+
+  const counts = new Map();
+  for (const row of data) {
+    const name = (row.category || '').trim();
+    if (name) counts.set(name, (counts.get(name) || 0) + 1);
+  }
+  const categories = [...counts.entries()]
+    .map(([name, count]) => ({ name, count })) // `count`, not `total` — money middleware
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  res.json({ categories });
+});
+
 // ── GET /products/:id ─────────────────────────────────────────────────────────
 // Full detail: product + each farmer's listing + that farmer's rating for this
 // product. PUBLIC, so it runs optionalAuth: a signed-in customer sees who they

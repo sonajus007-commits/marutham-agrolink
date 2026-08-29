@@ -67,6 +67,20 @@ export async function getPublicStats(): Promise<PublicStats> {
   });
 }
 
+export interface CategoryFacet {
+  name: string;
+  count: number;
+}
+
+/* The distinct categories the catalogue carries, with a count each. Used by the
+ * category pages (to resolve a slug → the exact category name) and available to
+ * any facet UI. `availableOnly` counts only buyable products. */
+export async function getCategories(availableOnly = false): Promise<CategoryFacet[]> {
+  const path = `/products/categories${availableOnly ? '?available=true' : ''}`;
+  const data = await getJson<{ categories?: CategoryFacet[] }>(path, { categories: [] });
+  return data.categories || [];
+}
+
 export interface CatalogueParams {
   q?: string;
   category?: string;

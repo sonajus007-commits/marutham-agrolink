@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Product } from '@marutham/lib';
+import { categorySlug } from '@/lib/categorySlug';
 import type { Dict } from '@/lib/dict';
 import { Section, SectionHeader } from '@/components/ui/Section';
 import { Reveal } from '@/components/ui/Reveal';
@@ -95,7 +96,7 @@ export function CategoryRail({ products, t }: { products: Product[]; t: Dict }) 
         {cats.map((cat, i) => (
           <Reveal as="li" key={cat.name} kind="fade-up" delay={i * 0.04}>
             <Link
-              href={`/products?category=${encodeURIComponent(cat.name)}`}
+              href={`/category/${categorySlug(cat.name)}`}
               className="group flex flex-col items-center gap-2 text-center no-underline"
               aria-label={`${cat.name} — ${t.categories.count(cat.count)}`}
             >

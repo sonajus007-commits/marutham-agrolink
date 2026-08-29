@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
-import { getAllProducts } from '@/lib/api';
+import { getAllProducts, getCategories } from '@/lib/api';
+import { categorySlug } from '@/lib/categorySlug';
 import { FARMER_STORIES } from '@/lib/farmerStories';
 import { absoluteUrl } from '@/lib/site';
 
@@ -17,12 +18,18 @@ import { absoluteUrl } from '@/lib/site';
 export const revalidate = 300;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const products = await getAllProducts();
+  const [products, categories] = await Promise.all([getAllProducts(), getCategories()]);
   const now = new Date();
 
   return [
     { url: absoluteUrl('/'), lastModified: now, changeFrequency: 'daily', priority: 1 },
     { url: absoluteUrl('/products'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
+    ...categories.map((c) => ({
+      url: absoluteUrl(`/category/${categorySlug(c.name)}`),
+      lastModified: now,
+      changeFrequency: 'daily' as const,
+      priority: 0.75,
+    })),
     { url: absoluteUrl('/farmers'), lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
     ...FARMER_STORIES.map((s) => ({
       url: absoluteUrl(`/farmer/${s.id}`),
