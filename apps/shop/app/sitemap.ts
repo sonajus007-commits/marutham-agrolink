@@ -30,6 +30,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily' as const,
       priority: 0.75,
     })),
+    {
+      url: absoluteUrl('/how-it-works'),
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    { url: absoluteUrl('/about'), lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: absoluteUrl('/contact'), lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: absoluteUrl('/farmers'), lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
     ...FARMER_STORIES.map((s) => ({
       url: absoluteUrl(`/farmer/${s.id}`),

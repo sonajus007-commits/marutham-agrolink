@@ -210,6 +210,12 @@ function isShopPath(pathname) {
     pathname === '/farmers' ||
     pathname.startsWith('/farmer/') ||
     pathname.startsWith('/category/') ||
+    // Informational / static pages.
+    pathname === '/about' ||
+    pathname === '/how-it-works' ||
+    pathname === '/contact' ||
+    pathname === '/terms' ||
+    pathname === '/privacy' ||
     // Next generates these (app/sitemap.ts, app/robots.ts). They are the shop's
     // whole reason for existing — a crawler that cannot fetch them will not find
     // the product pages — and without a line here they fall through to the

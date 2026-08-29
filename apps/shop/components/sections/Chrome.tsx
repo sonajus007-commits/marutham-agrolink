@@ -50,8 +50,8 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
   const NAV = [
     { href: '/products', label: t.nav.shop },
     { href: '/#categories', label: t.nav.categories },
-    { href: '/#farmers', label: t.nav.farmers },
-    { href: '/#how-it-works', label: t.nav.how },
+    { href: '/farmers', label: t.nav.farmers },
+    { href: '/how-it-works', label: t.nav.how },
   ];
 
   return (
@@ -110,32 +110,32 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
 
 export function SiteFooter({ t, c }: { t: Dict; c: LandingCopy }) {
   const L = c.footer.links;
-  /* Hrefs point only at destinations that still exist after the home page was
-     trimmed to the model: the catalogue, the three homepage sections, and the
-     portal register route. Labels are unchanged. */
+  /* Hrefs point at real destinations: the catalogue + categories, the static
+     info pages (/how-it-works, /about, /contact) and the portal register route.
+     Labels are unchanged. */
   const cols = [
     {
       h: c.footer.marketplace,
       links: [
         { href: '/products', l: L.all },
-        { href: '/#categories', l: L.how },
-        { href: '/#how-it-works', l: L.pricing },
+        { href: '/how-it-works', l: L.how },
+        { href: '/#categories', l: L.pricing },
       ],
     },
     {
       h: c.footer.farmers,
       links: [
-        { href: '/#farmers', l: L.selling },
+        { href: '/farmers', l: L.selling },
         { href: '/app/register', l: L.business },
-        { href: '/#how-it-works', l: L.questions },
+        { href: '/how-it-works', l: L.questions },
       ],
     },
     {
       h: c.footer.company,
       links: [
-        { href: '/#how-it-works', l: L.why },
-        { href: '/#farmers', l: L.sustainability },
-        { href: '/products', l: L.contact },
+        { href: '/about', l: L.why },
+        { href: '/about', l: L.sustainability },
+        { href: '/contact', l: L.contact },
       ],
     },
   ];
@@ -172,8 +172,24 @@ export function SiteFooter({ t, c }: { t: Dict; c: LandingCopy }) {
           ))}
         </div>
 
-        <div className="border-forest-500/30 text-leaf-300 mt-12 border-t pt-6 text-[0.75rem]">
-          © {new Date().getFullYear()} {t.footer.rights}
+        <div className="border-forest-500/30 mt-12 flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-leaf-300 text-[0.75rem]">
+            © {new Date().getFullYear()} {t.footer.rights}
+          </p>
+          <ul className="flex list-none flex-wrap gap-x-5 gap-y-2 p-0 text-[0.75rem]">
+            {[
+              { href: '/about', l: t.htmlLang === 'ta' ? 'எங்களைப் பற்றி' : 'About' },
+              { href: '/contact', l: t.htmlLang === 'ta' ? 'தொடர்பு' : 'Contact' },
+              { href: '/terms', l: t.htmlLang === 'ta' ? 'விதிமுறைகள்' : 'Terms' },
+              { href: '/privacy', l: t.htmlLang === 'ta' ? 'தனியுரிமை' : 'Privacy' },
+            ].map((x) => (
+              <li key={x.href}>
+                <a href={x.href} className="text-leaf-300 hover:text-surface no-underline">
+                  {x.l}
+                </a>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </footer>
