@@ -31,6 +31,10 @@ export function CartView({ copy }: { copy: CartCopy }) {
   function checkout() {
     let signedIn = false;
     try {
+      // One-shot intent the portal's ConsumerPage reads on mount → opens the
+      // cart tab, so the shopper lands on their cart (not the consumer home),
+      // whether we hand off directly or via sign-in.
+      localStorage.setItem('ma_intent_tab', 'cart');
       signedIn = !!localStorage.getItem('ma_token');
     } catch {
       /* storage disabled — treat as signed out */

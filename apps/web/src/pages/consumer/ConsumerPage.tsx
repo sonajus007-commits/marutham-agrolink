@@ -1,4 +1,4 @@
-import { useCallback, useState, type ComponentType, type SVGProps } from 'react';
+import { useCallback, useEffect, useState, type ComponentType, type SVGProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TabBar, IconButton, LangToggle } from '@marutham/ui';
 import {
@@ -56,6 +56,22 @@ function ConsumerInner() {
   const [openOrderId, setOpenOrderId] = useState<string | null>(null);
 
   const closeOrder = useCallback(() => setOpenOrderId(null), []);
+
+  /* Deep-link intent from the public shop's cart. When a shopper hits "Proceed
+   * to checkout" on the Next /cart, it drops a one-shot `ma_intent_tab` flag and
+   * hands off here (directly if signed in, or via sign-in). Read it once on
+   * mount and open the matching tab, so they land on their cart rather than the
+   * consumer home. Same-origin localStorage, so it survives the login redirect. */
+  useEffect(() => {
+    let intent: string | null = null;
+    try {
+      intent = localStorage.getItem('ma_intent_tab');
+      if (intent) localStorage.removeItem('ma_intent_tab');
+    } catch {
+      /* storage disabled — just start on home */
+    }
+    if (intent === 'cart') setTab('cart');
+  }, []);
 
   // A placed order lands in the list the moment the user sees the Orders tab.
   const onOrderPlaced = useCallback(() => {
