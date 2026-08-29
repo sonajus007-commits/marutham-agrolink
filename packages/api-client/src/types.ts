@@ -65,6 +65,11 @@ export interface User {
   emp_id?: string | null;
   /* Seller (farmer/retailer) fields. Money arrives as rupee strings. */
   seller_type?: 'Farmer' | 'Retailer' | null;
+  /* Farmer public-profile opt-in (migration 050). Nothing is shown publicly
+     unless public_profile is true. */
+  public_profile?: boolean | null;
+  public_bio?: string | null;
+  public_photo_url?: string | null;
   subscription_plan?: string | null;
   subscription_expires_at?: string | null;
   subscription_amount?: string | null;

@@ -190,6 +190,15 @@ export const api = {
   patchMe(data: Record<string, unknown>): Promise<{ user: User }> {
     return apiFetch<{ user: User }>('PATCH', '/auth/me', data);
   },
+  /** A farmer sets their own public-profile consent + bio + photo (migration 050).
+   *  Farmer role only; the server validates and gates it. */
+  setPublicProfile(data: {
+    public_profile?: boolean;
+    public_bio?: string | null;
+    public_photo_url?: string | null;
+  }): Promise<{ public_profile: boolean }> {
+    return apiFetch<{ public_profile: boolean }>('PATCH', '/farmers/me/public-profile', data);
+  },
   /** Provision the login account for an approved, active employee. Admin-only; the
    *  server derives the login role from the employee's designation and enforces which
    *  roles the caller may create. */

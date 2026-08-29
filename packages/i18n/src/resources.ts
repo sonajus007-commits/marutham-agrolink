@@ -1087,6 +1087,21 @@ export const resources = {
       'farmer.profile.title': 'My Profile',
       'farmer.profile.loginId': 'Your Login ID',
       'farmer.profile.loginNote': 'Use this ID or phone number to login',
+      'farmer.public.title': 'Public farmer profile',
+      'farmer.public.desc':
+        'Choose to appear on the public “Meet our farmers” page. Your name and village stay private until you turn this on.',
+      'farmer.public.toggle': 'Show my profile publicly',
+      'farmer.public.on': 'Public',
+      'farmer.public.off': 'Private',
+      'farmer.public.bio': 'Your story',
+      'farmer.public.bioPlaceholder':
+        'A sentence or two about your farm and your life with Marutham…',
+      'farmer.public.photo': 'Photo URL (optional)',
+      'farmer.public.photoHint': 'An https:// link to a photo of you. Optional.',
+      'farmer.public.save': 'Save public profile',
+      'farmer.public.saved': 'Public profile updated.',
+      'farmer.public.note':
+        'Only your name, village, district, story and photo are ever shown. Your phone, email and bank details are never public.',
       'farmer.profile.name': 'Full Name',
       'farmer.profile.type': 'Account',
       'farmer.profile.phone': 'Phone',
@@ -3196,6 +3211,21 @@ export const resources = {
       'farmer.profile.title': 'என் சுயவிவரம்',
       'farmer.profile.loginId': 'உங்கள் உள்நுழைவு ஐடி',
       'farmer.profile.loginNote': 'உள்நுழைய இந்த ஐடி அல்லது தொலைபேசி எண்ணைப் பயன்படுத்தவும்',
+      'farmer.public.title': 'பொது விவசாயி சுயவிவரம்',
+      'farmer.public.desc':
+        'பொது “எங்கள் விவசாயிகள்” பக்கத்தில் தோன்ற தேர்வு செய்யுங்கள். இதை இயக்கும் வரை உங்கள் பெயரும் ஊரும் தனிப்பட்டதாகவே இருக்கும்.',
+      'farmer.public.toggle': 'என் சுயவிவரத்தைப் பொதுவில் காட்டு',
+      'farmer.public.on': 'பொது',
+      'farmer.public.off': 'தனிப்பட்ட',
+      'farmer.public.bio': 'உங்கள் கதை',
+      'farmer.public.bioPlaceholder':
+        'உங்கள் பண்ணை மற்றும் மருதத்துடன் உங்கள் வாழ்க்கை பற்றி ஓரிரு வாக்கியங்கள்…',
+      'farmer.public.photo': 'புகைப்பட URL (விருப்பம்)',
+      'farmer.public.photoHint': 'உங்கள் புகைப்படத்திற்கான https:// இணைப்பு. விருப்பம்.',
+      'farmer.public.save': 'பொது சுயவிவரத்தைச் சேமி',
+      'farmer.public.saved': 'பொது சுயவிவரம் புதுப்பிக்கப்பட்டது.',
+      'farmer.public.note':
+        'உங்கள் பெயர், ஊர், மாவட்டம், கதை, புகைப்படம் மட்டுமே காட்டப்படும். உங்கள் தொலைபேசி, மின்னஞ்சல், வங்கி விவரங்கள் ஒருபோதும் பொது அல்ல.',
       'farmer.profile.name': 'முழுப் பெயர்',
       'farmer.profile.type': 'கணக்கு',
       'farmer.profile.phone': 'தொலைபேசி',

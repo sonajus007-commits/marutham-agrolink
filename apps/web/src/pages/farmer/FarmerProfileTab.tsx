@@ -16,6 +16,7 @@ import { ChangePasswordCard } from '../../components/ChangePasswordCard';
 import { BankDetailsCard } from './BankDetailsCard';
 import { FarmLocationCard } from './FarmLocationCard';
 import { ShopHoursCard } from './ShopHoursCard';
+import { PublicProfileCard } from './PublicProfileCard';
 
 /* Self-service fields a seller may edit directly (applied immediately via
  * PATCH /auth/me): email + the full address (shared AddressFields). State &
@@ -231,6 +232,7 @@ export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
           per-listing cutoff instead. */}
       {user.seller_type === 'Retailer' ? <ShopHoursCard /> : null}
       <FarmLocationCard />
+      <PublicProfileCard />
       <BankDetailsCard />
       <ChangePasswordCard />
     </>
