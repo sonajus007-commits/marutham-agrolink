@@ -11,30 +11,11 @@
  * active-tab highlight (usePathname), the live cart badge (localStorage), and
  * the login overlay. */
 
-import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Home, ShoppingBag, LayoutGrid, ShoppingCart, User } from 'lucide-react';
-import { PORTAL_SHOP } from '@/lib/portal';
 import { useLoginModal } from '@/components/auth/LoginModalProvider';
+import { useCart } from '@/components/cart/CartProvider';
 import type { Dict } from '@/lib/dict';
-
-const CART_KEY = 'ma_cart_v2';
-
-function readCartCount(): number {
-  try {
-    const raw = localStorage.getItem(CART_KEY);
-    if (!raw) return 0;
-    const items = JSON.parse(raw);
-    if (!Array.isArray(items)) return 0;
-    return items.reduce((n: number, it: unknown) => {
-      const qty =
-        typeof it === 'object' && it && 'qty' in it ? Number((it as { qty: unknown }).qty) : 1;
-      return n + (Number.isFinite(qty) && qty > 0 ? qty : 1);
-    }, 0);
-  } catch {
-    return 0;
-  }
-}
 
 /* Only the plain nav strings — never the whole Dict. This is a Client Component,
  * and the Dict carries function-valued keys (categories.count, product metaDesc)
@@ -42,20 +23,7 @@ function readCartCount(): number {
 export function MobileNav({ nav }: { nav: Dict['nav'] }) {
   const pathname = usePathname();
   const modal = useLoginModal();
-  const [count, setCount] = useState(0);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    setReady(true);
-    setCount(readCartCount());
-    const sync = () => setCount(readCartCount());
-    window.addEventListener('storage', sync);
-    window.addEventListener('focus', sync);
-    return () => {
-      window.removeEventListener('storage', sync);
-      window.removeEventListener('focus', sync);
-    };
-  }, []);
+  const { count, ready } = useCart();
 
   const isHome = pathname === '/';
   const isShop = pathname.startsWith('/products');
@@ -89,7 +57,7 @@ export function MobileNav({ nav }: { nav: Dict['nav'] }) {
         <LayoutGrid className="h-5 w-5" aria-hidden="true" />
         {nav.categories}
       </a>
-      <a href={PORTAL_SHOP} className={`${base} ${idle} relative`}>
+      <a href="/cart" className={`${base} ${idle} relative`}>
         <span className="relative">
           <ShoppingCart className="h-5 w-5" aria-hidden="true" />
           {ready && count > 0 ? (

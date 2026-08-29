@@ -1,59 +1,20 @@
 'use client';
 
-/* The header cart control — the public shop's read side of the ratified
- * cart/checkout seam. The cart itself lives in ONE origin-scoped localStorage
- * key, `ma_cart_v2`, written by the portal's CartContext; here we only read it
- * to show a live count and hand off to the portal cart (PORTAL_SHOP). Same
- * origin, so the key is shared — see lib/portal.ts.
- *
- * SSR renders a plain icon (count 0, no badge) so the server and first client
- * paint match; the real count fills in on mount and stays current via the
- * `storage` event (another tab / the portal) and window focus. */
+/* The header cart control. Reads the shared cart via the CartProvider (over
+ * ma_cart_v2) and links to the public /cart page, which hands off to the portal
+ * checkout. SSR shows no badge (count 0); it fills in on mount. */
 
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { ShoppingCart } from 'lucide-react';
-import { PORTAL_SHOP } from '@/lib/portal';
-
-const CART_KEY = 'ma_cart_v2';
-
-function readCount(): number {
-  try {
-    const raw = localStorage.getItem(CART_KEY);
-    if (!raw) return 0;
-    const items = JSON.parse(raw);
-    if (!Array.isArray(items)) return 0;
-    // Sum quantities when present, else count distinct lines.
-    return items.reduce((n: number, it: unknown) => {
-      const qty =
-        typeof it === 'object' && it && 'qty' in it ? Number((it as { qty: unknown }).qty) : 1;
-      return n + (Number.isFinite(qty) && qty > 0 ? qty : 1);
-    }, 0);
-  } catch {
-    return 0;
-  }
-}
+import { useCart } from '@/components/cart/CartProvider';
 
 export function CartLink({ label }: { label: string }) {
-  const [count, setCount] = useState(0);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    setReady(true);
-    setCount(readCount());
-    const sync = () => setCount(readCount());
-    window.addEventListener('storage', sync);
-    window.addEventListener('focus', sync);
-    return () => {
-      window.removeEventListener('storage', sync);
-      window.removeEventListener('focus', sync);
-    };
-  }, []);
-
+  const { count, ready } = useCart();
   const showBadge = ready && count > 0;
 
   return (
-    <a
-      href={PORTAL_SHOP}
+    <Link
+      href="/cart"
       aria-label={showBadge ? `${label} (${count})` : label}
       className="text-forest-800 hover:text-forest-900 hover:bg-mist relative inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors"
     >
@@ -63,6 +24,6 @@ export function CartLink({ label }: { label: string }) {
           {count > 99 ? '99+' : count}
         </span>
       ) : null}
-    </a>
+    </Link>
   );
 }

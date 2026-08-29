@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { homepagePrice, productEmoji, fmtMoney, type Product } from '@marutham/lib';
 import { OrderButton } from '@/components/OrderButton';
+import { AddToCartButton } from '@/components/cart/AddToCartButton';
 import { produceImage } from '@/lib/produceImage';
 import type { Dict } from '@/lib/dict';
 
@@ -80,7 +81,19 @@ export function ProductCard({
         </p>
       ) : null}
 
-      <OrderButton productId={String(product.id)} label={t.fresh.order} />
+      <div className="mt-3">
+        {price ? (
+          <AddToCartButton
+            productId={String(product.id)}
+            name={product.name}
+            unit={price.unit}
+            price={price.amount}
+            label={t.fresh.add}
+          />
+        ) : (
+          <OrderButton productId={String(product.id)} label={t.fresh.order} />
+        )}
+      </div>
     </li>
   );
 }

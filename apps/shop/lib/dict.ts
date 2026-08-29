@@ -43,6 +43,7 @@ export interface Dict {
     empty: string;
     badge: string;
     order: string;
+    add: string;
     viewAll: string;
     unavailable: string;
   };
@@ -140,6 +141,7 @@ const en: Dict = {
     empty: 'No products available right now. Check back soon! 🌱',
     badge: 'Farm Fresh',
     order: 'Login to Order',
+    add: 'Add',
     viewAll: 'View All Products →',
     unavailable: 'Price on request',
   },
@@ -259,6 +261,7 @@ const ta: Dict = {
     empty: 'தற்போது பொருட்கள் எதுவும் இல்லை. விரைவில் மீண்டும் பாருங்கள்! 🌱',
     badge: 'வயல் புதிது',
     order: 'ஆர்டர் செய்ய உள்நுழைய',
+    add: 'சேர்',
     viewAll: 'அனைத்தையும் பார்க்க →',
     unavailable: 'விலை கோரிக்கையின் பேரில்',
   },

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang } from '@/lib/dict';
 import { SITE_URL } from '@/lib/site';
 import { LoginModalProvider } from '@/components/auth/LoginModalProvider';
+import { CartProvider } from '@/components/cart/CartProvider';
 import { MobileNav } from '@/components/MobileNav';
 import './globals.css';
 
@@ -65,8 +66,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           never hidden behind it; removed at lg where the bar is gone. */}
       <body className="pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
         <LoginModalProvider lang={lang}>
-          {children}
-          <MobileNav nav={DICT[lang].nav} />
+          <CartProvider>
+            {children}
+            <MobileNav nav={DICT[lang].nav} />
+          </CartProvider>
         </LoginModalProvider>
       </body>
     </html>

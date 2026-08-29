@@ -216,6 +216,7 @@ function isShopPath(pathname) {
     pathname === '/contact' ||
     pathname === '/terms' ||
     pathname === '/privacy' ||
+    pathname === '/cart' ||
     // Next generates these (app/sitemap.ts, app/robots.ts). They are the shop's
     // whole reason for existing — a crawler that cannot fetch them will not find
     // the product pages — and without a line here they fall through to the
