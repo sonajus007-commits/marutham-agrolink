@@ -67,6 +67,35 @@ export async function getPublicStats(): Promise<PublicStats> {
   });
 }
 
+export interface PublicFarmer {
+  id: string;
+  name: string | null;
+  village: string | null;
+  district: string | null;
+  bio: string | null;
+  photo_url: string | null;
+}
+
+/* Farmers who CONSENTED to appear publicly (migration 050 + the consent-gated
+ * /farmers/public endpoint). Empty until a farmer opts in — the /farmers pages
+ * then fall back to the illustrative sample stories. */
+export async function getPublicFarmers(): Promise<PublicFarmer[]> {
+  const data = await getJson<{ farmers?: PublicFarmer[] }>('/farmers/public', { farmers: [] });
+  return data.farmers || [];
+}
+
+/** One consented farmer, or null when the id is unknown or opted out (404). */
+export async function getPublicFarmer(id: string): Promise<PublicFarmer | null> {
+  const res = await fetch(`${API}/farmers/public/${encodeURIComponent(id)}`, {
+    next: { revalidate: REVALIDATE_SECONDS },
+    headers: { Accept: 'application/json' },
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`[shop] GET /farmers/public/${id} → HTTP ${res.status}`);
+  const data = (await res.json()) as { farmer?: PublicFarmer };
+  return data.farmer ?? null;
+}
+
 export interface CategoryFacet {
   name: string;
   count: number;

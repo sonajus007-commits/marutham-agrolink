@@ -1,8 +1,114 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requirePermission } = require('../middleware/permissions');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
+
+// ── Farmer PUBLIC profiles (consent-gated) ────────────────────────────────────
+// A grower is anonymised on public pages by default (utils/publicShape.js). These
+// routes serve ONLY farmers who opted in (public_profile = true, migration 050),
+// and ONLY an allow-list of public-safe columns — never phone/email/bank/id-docs.
+// No auth: this is what the public /farmers pages read.
+const PUBLIC_FARMER_COLUMNS = 'id, fname, lname, village_town, district, public_bio, public_photo_url';
+
+function shapePublicFarmer(f) {
+  const name = [f.fname, f.lname].filter(Boolean).join(' ').trim();
+  return {
+    id: f.id,
+    name: name || null,
+    village: f.village_town || null,
+    district: f.district || null,
+    bio: f.public_bio || null,
+    photo_url: f.public_photo_url || null,
+  };
+}
+
+// GET /farmers/public — the consented farmer directory. Defined before any
+// param route so "public" is never read as a farmer id.
+router.get('/public', async (_req, res) => {
+  const { data, error } = await supabase
+    .from('users')
+    .select(PUBLIC_FARMER_COLUMNS)
+    .eq('role', 'farmer')
+    .eq('public_profile', true)
+    .order('fname', { ascending: true });
+
+  if (error) {
+    console.error('GET /farmers/public error:', error.message);
+    return res.status(500).json({ error: 'Could not load farmers.' });
+  }
+  res.json({ farmers: (data || []).map(shapePublicFarmer) });
+});
+
+// GET /farmers/public/:id — one consented farmer, or 404. An opted-out or unknown
+// farmer is a real 404, never a leak.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+router.get('/public/:id', async (req, res) => {
+  // A non-uuid id (e.g. a sample-story slug the shop probes first) is simply not
+  // a farmer — 404, rather than letting Postgres reject the invalid uuid as a 500.
+  if (!UUID_RE.test(req.params.id)) return res.status(404).json({ error: 'Farmer not found.' });
+
+  const { data, error } = await supabase
+    .from('users')
+    .select(PUBLIC_FARMER_COLUMNS)
+    .eq('id', req.params.id)
+    .eq('role', 'farmer')
+    .eq('public_profile', true)
+    .maybeSingle();
+
+  if (error) {
+    console.error('GET /farmers/public/:id error:', error.message);
+    return res.status(500).json({ error: 'Could not load farmer.' });
+  }
+  if (!data) return res.status(404).json({ error: 'Farmer not found.' });
+  res.json({ farmer: shapePublicFarmer(data) });
+});
+
+// PATCH /farmers/me/public-profile — a farmer sets their own consent + bio/photo.
+// This is the ONLY way public_profile flips on: the farmer chooses it.
+router.patch('/me/public-profile', requireAuth, async (req, res) => {
+  if (req.user.role !== 'farmer') {
+    return res.status(403).json({ error: 'Only farmers have a public profile.' });
+  }
+
+  const update = {};
+  if (typeof req.body.public_profile === 'boolean') update.public_profile = req.body.public_profile;
+
+  if (req.body.public_bio !== undefined) {
+    const bio = req.body.public_bio === null ? null : String(req.body.public_bio).trim();
+    if (bio && bio.length > 600) {
+      return res.status(400).json({ error: 'Your story must be 600 characters or fewer.' });
+    }
+    update.public_bio = bio || null;
+  }
+
+  if (req.body.public_photo_url !== undefined) {
+    const url = req.body.public_photo_url === null ? null : String(req.body.public_photo_url).trim();
+    // Only an https URL — never javascript:/data: schemes rendered into an <img>.
+    if (url && !/^https:\/\/[^\s]{1,2048}$/.test(url)) {
+      return res.status(400).json({ error: 'Photo must be an https URL.' });
+    }
+    update.public_photo_url = url || null;
+  }
+
+  if (Object.keys(update).length === 0) {
+    return res.status(400).json({ error: 'Nothing to update.' });
+  }
+
+  const { data, error } = await supabase
+    .from('users')
+    .update(update)
+    .eq('id', req.user.id)
+    .select(PUBLIC_FARMER_COLUMNS + ', public_profile')
+    .maybeSingle();
+
+  if (error) {
+    console.error('PATCH /farmers/me/public-profile error:', error.message);
+    return res.status(500).json({ error: 'Could not update your profile.' });
+  }
+  res.json({ public_profile: data?.public_profile ?? false, farmer: data ? shapePublicFarmer(data) : null });
+});
 
 // ── GET /farmers  ─────────────────────────────────────────────────────────────
 // Returns farmers in the admin's scope with aggregated performance stats.

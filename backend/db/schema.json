@@ -13,7 +13,7 @@
           "primaryKey": true
         },
         "next_seq": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "default": "1"
         },
@@ -85,7 +85,7 @@
           "notNull": false
         },
         "id": {
-          "type": "int64",
+          "type": "bigint",
           "notNull": true,
           "primaryKey": true
         },
@@ -317,7 +317,7 @@
           "references": "users.id"
         },
         "farmer_price": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true
         },
         "id": {
@@ -521,7 +521,7 @@
     "order_items": {
       "columns": {
         "base_farmer_price": {
-          "type": "int32",
+          "type": "integer",
           "notNull": false
         },
         "farmer_id": {
@@ -534,11 +534,11 @@
           "notNull": false
         },
         "farmer_price": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true
         },
         "govt_price": {
-          "type": "int32",
+          "type": "integer",
           "notNull": false
         },
         "id": {
@@ -557,7 +557,7 @@
           "references": "orders.id"
         },
         "price": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true
         },
         "product_code": {
@@ -583,7 +583,7 @@
           "notNull": false
         },
         "rating_value": {
-          "type": "int32",
+          "type": "integer",
           "notNull": false
         },
         "unit": {
@@ -655,7 +655,7 @@
           "notNull": false
         },
         "delivery": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "default": "0"
         },
@@ -701,7 +701,7 @@
           "notNull": false
         },
         "handling": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "default": "0"
         },
@@ -712,12 +712,12 @@
           "primaryKey": true
         },
         "item_total": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "default": "0"
         },
         "market_fee": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "default": "0"
         },
@@ -744,7 +744,7 @@
           "references": "hubs.id"
         },
         "refund_amt": {
-          "type": "int32",
+          "type": "integer",
           "notNull": false
         },
         "refund_to": {
@@ -761,7 +761,7 @@
           "notNull": false
         },
         "saved": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "default": "0"
         },
@@ -775,11 +775,11 @@
           "notNull": false
         },
         "split_seq": {
-          "type": "int32",
+          "type": "smallint",
           "notNull": false
         },
         "stage": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "default": "0"
         },
@@ -789,7 +789,7 @@
           "default": "Order Placed"
         },
         "total": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "default": "0"
         },
@@ -815,7 +815,7 @@
     "payouts": {
       "columns": {
         "amount": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true
         },
         "created_at": {
@@ -865,7 +865,7 @@
           "notNull": true
         },
         "handling": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "default": "0"
         },
@@ -876,7 +876,7 @@
           "primaryKey": true
         },
         "market_price": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true
         },
         "product_id": {
@@ -900,7 +900,7 @@
           "primaryKey": true
         },
         "num_ratings": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "default": "0"
         },
@@ -910,7 +910,7 @@
           "references": "products.id"
         },
         "sum_stars": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "default": "0"
         }
@@ -1049,7 +1049,7 @@
           "notNull": true
         },
         "sort": {
-          "type": "int32",
+          "type": "smallint",
           "notNull": true,
           "default": "0"
         }
@@ -1069,7 +1069,7 @@
           "references": "rbac_modules.key"
         },
         "role_id": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "primaryKey": true,
           "references": "rbac_roles.id"
@@ -1085,7 +1085,7 @@
           "references": "rbac_modules.key"
         },
         "role_id": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "primaryKey": true,
           "references": "rbac_roles.id"
@@ -1105,7 +1105,7 @@
           "default": "now()"
         },
         "id": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "primaryKey": true
         },
@@ -1123,7 +1123,7 @@
           "notNull": true
         },
         "tier": {
-          "type": "int32",
+          "type": "smallint",
           "notNull": true,
           "default": "5"
         }
@@ -1146,7 +1146,7 @@
           "notNull": false
         },
         "price": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true
         },
         "product_code": {
@@ -1227,7 +1227,7 @@
           "references": "orders.id"
         },
         "refund_amt": {
-          "type": "int32",
+          "type": "integer",
           "notNull": false
         },
         "refund_to": {
@@ -1268,17 +1268,17 @@
           "notNull": true
         },
         "plan_amount": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "default": "0"
         },
         "registration_charge": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "default": "0"
         },
         "total_amount": {
-          "type": "int32",
+          "type": "integer",
           "notNull": true,
           "default": "0"
         },
@@ -1309,7 +1309,7 @@
           "notNull": false
         },
         "id": {
-          "type": "int64",
+          "type": "bigint",
           "notNull": true,
           "primaryKey": true
         },
@@ -1331,7 +1331,7 @@
           "default": "now()"
         },
         "id": {
-          "type": "int64",
+          "type": "bigint",
           "notNull": true,
           "primaryKey": true
         },
@@ -1621,8 +1621,21 @@
           "type": "text",
           "notNull": false
         },
+        "public_bio": {
+          "type": "text",
+          "notNull": false
+        },
+        "public_photo_url": {
+          "type": "text",
+          "notNull": false
+        },
+        "public_profile": {
+          "type": "boolean",
+          "notNull": true,
+          "default": "false"
+        },
         "registration_charge": {
-          "type": "int32",
+          "type": "integer",
           "notNull": false,
           "default": "0"
         },
@@ -1635,7 +1648,7 @@
           "notNull": true
         },
         "role_id": {
-          "type": "int32",
+          "type": "integer",
           "notNull": false,
           "references": "rbac_roles.id"
         },
@@ -1652,11 +1665,11 @@
           "notNull": true
         },
         "shop_close_hour": {
-          "type": "int32",
+          "type": "smallint",
           "notNull": false
         },
         "shop_open_hour": {
-          "type": "int32",
+          "type": "smallint",
           "notNull": false
         },
         "state": {
@@ -1677,7 +1690,7 @@
           "notNull": false
         },
         "subscription_amount": {
-          "type": "int32",
+          "type": "integer",
           "notNull": false,
           "default": "0"
         },
