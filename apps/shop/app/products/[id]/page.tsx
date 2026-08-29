@@ -12,12 +12,15 @@ import {
   HOME_DISTRICT,
   type PublicListing,
 } from '@marutham/lib';
-import { getProduct } from '@/lib/api';
+import { getProduct, getCatalogue } from '@/lib/api';
+import { produceImage } from '@/lib/produceImage';
+import { categorySlug } from '@/lib/categorySlug';
 import { absoluteUrl } from '@/lib/site';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Dict, type Lang } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
 import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
 import { OrderButton } from '@/components/OrderButton';
+import { ProductCard } from '@/components/ProductCard';
 
 /* A public product page — the reason the API moved off the root.
  *
@@ -86,6 +89,30 @@ export default async function ProductPage({ params }: Params) {
   const price = homepagePrice(product);
   const offers = sortedOffers(listings);
   const districts = districtPriceRows(product);
+  const img = produceImage(product.name, product.regional_name);
+
+  // A few more products from the same category, minus this one. One bounded call.
+  const related = product.category
+    ? (await getCatalogue({ category: product.category, limit: 6 })).products
+        .filter((p) => String(p.id) !== String(product.id))
+        .slice(0, 5)
+    : [];
+
+  const inStock = product.available;
+  const availLabel = inStock
+    ? l === 'ta'
+      ? 'இப்போது கிடைக்கிறது'
+      : 'Available now'
+    : l === 'ta'
+      ? 'தற்போது இல்லை'
+      : 'Out of season';
+  const relatedLabel = product.category
+    ? l === 'ta'
+      ? `மேலும் ${product.category}`
+      : `More in ${product.category}`
+    : l === 'ta'
+      ? 'மேலும் காண'
+      : 'More to explore';
 
   // Absolute — a crawler cannot resolve "/products/x" out of a JSON-LD blob.
   const jsonLd = productJsonLd({
@@ -112,37 +139,75 @@ export default async function ProductPage({ params }: Params) {
 
         {/* ── The product ────────────────────────────────────────────────── */}
         <section className="mt-6 flex flex-col gap-8 sm:flex-row sm:items-start">
-          <div
-            className="flex h-40 w-full shrink-0 items-center justify-center rounded-2xl bg-muted text-8xl sm:w-56"
-            aria-hidden="true"
-          >
-            {productEmoji(product.name)}
+          {/* A real produce photo where we have one (public/produce), the emoji
+              otherwise — matching the catalogue and homepage, so the detail page
+              is no longer the one place a product shows only an emoji. */}
+          <div className="w-full shrink-0 sm:w-72">
+            {img ? (
+              <img
+                src={img}
+                alt={product.name}
+                className="bg-mist aspect-square w-full rounded-2xl object-cover"
+              />
+            ) : (
+              <div
+                className="bg-mist flex aspect-square w-full items-center justify-center rounded-2xl text-8xl"
+                aria-hidden="true"
+              >
+                {productEmoji(product.name)}
+              </div>
+            )}
           </div>
 
           <div className="min-w-0 flex-1">
-            <h1 className="font-display text-4xl font-bold text-forest">{product.name}</h1>
+            <h1 className="text-forest-900 text-3xl font-bold tracking-tight md:text-4xl">
+              {product.name}
+            </h1>
             {product.regional_name ? (
-              <p className="mt-1 text-lg text-fg-muted">{product.regional_name}</p>
+              <p className="text-fg-muted mt-1 text-lg">{product.regional_name}</p>
             ) : null}
 
-            <div className="mt-3 flex flex-wrap gap-2">
-              {product.category ? <Tag>{product.category}</Tag> : null}
-              {product.product_group ? <Tag>{product.product_group}</Tag> : null}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-caption font-bold ${
+                  inStock ? 'bg-mist text-forest-700' : 'text-fg-muted border-border border'
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`h-2 w-2 rounded-full ${inStock ? 'bg-[#2e7d4f]' : 'bg-fg-muted'}`}
+                />
+                {availLabel}
+              </span>
+              {product.avg_rating ? (
+                <span className="bg-gold text-fg inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-caption font-bold">
+                  <span aria-hidden="true">★</span>
+                  {product.avg_rating}
+                </span>
+              ) : null}
+              {product.category ? (
+                <Link
+                  href={`/category/${categorySlug(product.category)}`}
+                  className="bg-muted text-forest hover:bg-mist rounded-full px-3 py-1 text-caption font-bold no-underline"
+                >
+                  {product.category}
+                </Link>
+              ) : null}
               {product.exotic ? <Tag>Exotic</Tag> : null}
             </div>
 
             <p className="mt-5">
               {price ? (
                 <>
-                  <span className="font-display text-4xl font-extrabold text-forest">
+                  <span className="text-forest-900 text-4xl font-extrabold tracking-tight">
                     {fmtMoney(price.amount)}
                   </span>
-                  <span className="ml-1 text-sm font-semibold text-fg-muted">
+                  <span className="text-fg-muted ml-1 text-sm font-semibold">
                     {t.product.perUnit} {price.unit} · {HOME_DISTRICT}
                   </span>
                 </>
               ) : (
-                <span className="text-sm font-semibold text-fg-muted">{t.fresh.unavailable}</span>
+                <span className="text-fg-muted text-sm font-semibold">{t.fresh.unavailable}</span>
               )}
             </p>
 
@@ -154,6 +219,17 @@ export default async function ProductPage({ params }: Params) {
 
         <Offers t={t} offers={offers} unit={price?.unit || (product.unit as string) || ''} />
         <DistrictPrices t={t} rows={districts} unit={(product.unit as string) || ''} />
+
+        {related.length > 0 ? (
+          <section className="mt-14 pb-4">
+            <h2 className="text-forest-900 text-2xl font-bold tracking-tight">{relatedLabel}</h2>
+            <ul className="mt-6 grid list-none grid-cols-2 gap-4 p-0 sm:grid-cols-3 lg:grid-cols-5">
+              {related.map((p) => (
+                <ProductCard key={p.id} t={t} product={p} />
+              ))}
+            </ul>
+          </section>
+        ) : null}
       </main>
 
       <SiteFooter t={t} c={LANDING[l]} />
