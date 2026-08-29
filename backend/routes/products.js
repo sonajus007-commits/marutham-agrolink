@@ -15,23 +15,55 @@ const requireCatalogEdit = requirePermission('product_approval', 'edit');
 const requireCatalogDelete = requirePermission('product_approval', 'delete');
 
 // ── GET /products ─────────────────────────────────────────────────────────────
-// Filters: ?group=  ?district=  ?available=true|false
+// Filters:  ?group=  ?district=  ?available=true|false  ?category=  ?q=
+// Sort:     ?sort=name|newest        (default name)
+// Paging:   ?limit=  ?offset=        (default limit 24, capped at 100)
+//
+// The response is BOUNDED — it never returns the whole catalogue in one call, so
+// a large catalogue cannot flood the API or the client. `count` is the total
+// number of rows that match the filters (before paging), for building pager UI.
+// It is named `count`, NOT `total`: the money-coercing response middleware would
+// rewrite a field called `total` into a rupee string.
+const PRODUCTS_PAGE_DEFAULT = 24;
+const PRODUCTS_PAGE_MAX = 100;
+
 router.get('/', async (req, res) => {
-  const { group, district, available } = req.query;
+  const { group, district, available, category, q, sort } = req.query;
+
+  const limit = Math.min(
+    Math.max(parseInt(req.query.limit, 10) || PRODUCTS_PAGE_DEFAULT, 1),
+    PRODUCTS_PAGE_MAX,
+  );
+  const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
 
   let query = supabase
     .from('products')
-    .select(`
+    .select(
+      `
       *,
       product_district_prices ( district, market_price, handling ),
       product_ratings ( farmer_id, sum_stars, num_ratings )
-    `)
-    .order('name');
+    `,
+      { count: 'exact' },
+    );
 
-  if (group)     query = query.eq('product_group', group);
+  // Sort: name (default) or newest-first. Price sort is not offered here because
+  // price lives per-district in a child table, not on the product row.
+  query = sort === 'newest' ? query.order('created_at', { ascending: false }) : query.order('name');
+
+  if (group) query = query.eq('product_group', group);
+  if (category) query = query.ilike('category', category); // exact, case-insensitive
   if (available !== undefined) query = query.eq('available', available === 'true');
+  // Search matches the English name or the regional (Tamil) name. `*` is the
+  // PostgREST wildcard inside an .or() filter string.
+  if (q && String(q).trim()) {
+    const term = String(q).trim().replace(/[%,()*]/g, ''); // strip filter-syntax chars
+    if (term) query = query.or(`name.ilike.*${term}*,regional_name.ilike.*${term}*`);
+  }
 
-  const { data, error } = await query;
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
   if (error) {
     console.error('GET /products error:', error);
     return res.status(500).json({ error: 'Could not fetch products.' });
@@ -60,7 +92,9 @@ router.get('/', async (req, res) => {
     };
   });
 
-  res.json({ products });
+  // `count` is the total matching rows (all pages); named count, not total, on
+  // purpose — see the note above the handler.
+  res.json({ products, count: count ?? products.length, limit, offset });
 });
 
 // ── GET /products/:id ─────────────────────────────────────────────────────────

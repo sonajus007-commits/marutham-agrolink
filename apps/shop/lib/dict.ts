@@ -72,6 +72,14 @@ export interface Dict {
     metaDesc: string;
     count: string;
     empty: string;
+    searchPlaceholder: string;
+    sortLabel: string;
+    sortName: string;
+    sortNewest: string;
+    prev: string;
+    next: string;
+    resultsFor: (q: string) => string;
+    showing: (from: number, to: number, total: number) => string;
   };
   product: {
     home: string;
@@ -182,6 +190,14 @@ const en: Dict = {
       'Fair prices for farmers, fresh produce for families.',
     count: 'products',
     empty: 'No products available right now. Check back soon! 🌱',
+    searchPlaceholder: 'Search produce…',
+    sortLabel: 'Sort',
+    sortName: 'Name A–Z',
+    sortNewest: 'Newest first',
+    prev: 'Previous',
+    next: 'Next',
+    resultsFor: (q) => `Results for “${q}”`,
+    showing: (from, to, total) => `Showing ${from}–${to} of ${total}`,
   },
   product: {
     home: 'Home',
@@ -293,6 +309,14 @@ const ta: Dict = {
       'விவசாயிகளுக்கு நியாயமான விலை, குடும்பங்களுக்கு புதிய காய்கறிகள்.',
     count: 'பொருட்கள்',
     empty: 'தற்போது பொருட்கள் எதுவும் இல்லை. விரைவில் மீண்டும் பாருங்கள்! 🌱',
+    searchPlaceholder: 'பொருட்களைத் தேடுங்கள்…',
+    sortLabel: 'வரிசைப்படுத்து',
+    sortName: 'பெயர் அ–ஃ',
+    sortNewest: 'புதியவை முதலில்',
+    prev: 'முந்தையது',
+    next: 'அடுத்தது',
+    resultsFor: (q) => `“${q}” க்கான முடிவுகள்`,
+    showing: (from, to, total) => `${total} இல் ${from}–${to} காட்டப்படுகிறது`,
   },
   product: {
     home: 'முகப்பு',

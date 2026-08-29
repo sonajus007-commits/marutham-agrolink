@@ -44,7 +44,10 @@ async function getJson<T>(path: string, fallback: T): Promise<T> {
 }
 
 export async function getAvailableProducts(): Promise<Product[]> {
-  const data = await getJson<{ products?: Product[] }>('/products?available=true', {});
+  /* The homepage derives its category rail + Fresh Today + hero from the whole
+   * available set. The API now bounds every response, so ask for a generous page
+   * (100, the API's max) rather than relying on the old unbounded default. */
+  const data = await getJson<{ products?: Product[] }>('/products?available=true&limit=100', {});
   return data.products || [];
 }
 
@@ -64,10 +67,54 @@ export async function getPublicStats(): Promise<PublicStats> {
   });
 }
 
-/** The whole public catalogue, for the /products index. */
+export interface CatalogueParams {
+  q?: string;
+  category?: string;
+  sort?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface CataloguePage {
+  products: Product[];
+  /** Total rows matching the filters, across all pages. */
+  count: number;
+  page: number;
+  limit: number;
+  pageCount: number;
+}
+
+/* One page of the catalogue, filtered/searched/sorted server-side. This is the
+ * bounded read the /products page and search use — the API never returns the
+ * whole catalogue at once. */
+export async function getCatalogue(params: CatalogueParams = {}): Promise<CataloguePage> {
+  const limit = params.limit ?? 24;
+  const page = Math.max(params.page ?? 1, 1);
+  const offset = (page - 1) * limit;
+
+  const qs = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  if (params.q?.trim()) qs.set('q', params.q.trim());
+  if (params.category?.trim()) qs.set('category', params.category.trim());
+  if (params.sort) qs.set('sort', params.sort);
+
+  const data = await getJson<{ products?: Product[]; count?: number }>(`/products?${qs}`, {});
+  const products = data.products || [];
+  const count = data.count ?? products.length;
+  return { products, count, page, limit, pageCount: Math.max(Math.ceil(count / limit), 1) };
+}
+
+/* The WHOLE catalogue, paged through — for the sitemap, which needs every URL.
+ * Bounded per request (100 at a time) but complete overall; a hard page cap
+ * keeps a runaway catalogue from looping forever. */
 export async function getAllProducts(): Promise<Product[]> {
-  const data = await getJson<{ products?: Product[] }>('/products', {});
-  return data.products || [];
+  const limit = 100;
+  const out: Product[] = [];
+  for (let page = 1; page <= 100; page++) {
+    const { products } = await getCatalogue({ page, limit });
+    out.push(...products);
+    if (products.length < limit) break;
+  }
+  return out;
 }
 
 /** A product and the live offers under it, as an anonymous visitor sees them. */
