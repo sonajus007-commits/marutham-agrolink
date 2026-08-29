@@ -1,10 +1,9 @@
 import { Leaf, ShieldCheck, Truck } from 'lucide-react';
-import type { Product } from '@marutham/lib';
 import { PORTAL_REGISTER } from '@/lib/portal';
-import type { Dict } from '@/lib/dict';
+import type { Lang } from '@/lib/dict';
 import type { LandingCopy } from '@/lib/landing';
 import { Button } from '@/components/ui/Button';
-import { ProduceBasket } from '@/components/sections/ProduceBasket';
+import { HeroStories } from '@/components/sections/HeroStories';
 
 /* Hero — the front door, rebuilt to the approved "premium farm-to-home" model:
  * a bold forest-green panel, white headline with a pink second line, a pink
@@ -14,7 +13,7 @@ import { ProduceBasket } from '@/components/sections/ProduceBasket';
  *
  * The headline is NOT wrapped in a scroll reveal: it is the LCP element and the
  * page's whole message, so it must paint immediately, never wait on an observer. */
-export function Hero({ c, t, products }: { c: LandingCopy; t: Dict; products: Product[] }) {
+export function Hero({ c, lang }: { c: LandingCopy; lang: Lang }) {
   const icons = [ShieldCheck, Truck, Leaf];
 
   return (
@@ -72,10 +71,9 @@ export function Hero({ c, t, products }: { c: LandingCopy; t: Dict; products: Pr
           </ul>
         </div>
 
-        {/* The produce basket — real photographed produce, always visible (not
-            wrapped in a scroll reveal: it is above the fold and part of the
-            hero's message). */}
-        <ProduceBasket products={products} t={t} />
+        {/* Recent farmer stories, auto-scrolling. Always visible (not wrapped in
+            a scroll reveal: it is above the fold and part of the hero). */}
+        <HeroStories lang={lang} />
       </div>
     </section>
   );

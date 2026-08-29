@@ -7,6 +7,7 @@ import { Hero } from '@/components/sections/Hero';
 import { CategoryRail } from '@/components/sections/CategoryRail';
 import { FreshToday } from '@/components/sections/FreshToday';
 import { FarmToHome } from '@/components/sections/FarmToHome';
+import { FarmerStories } from '@/components/sections/FarmerStories';
 import { MeetFarmers } from '@/components/sections/MeetFarmers';
 
 /* The public marketplace homepage — a Server Component.
@@ -35,10 +36,11 @@ export default async function HomePage() {
     <>
       <SiteHeader t={t} lang={lang} />
       <main>
-        <Hero c={c} t={t} products={products} />
+        <Hero c={c} lang={lang} />
         <CategoryRail products={products} t={t} />
         <FreshToday products={products} t={t} />
         <FarmToHome lang={lang} />
+        <FarmerStories lang={lang} />
         <MeetFarmers products={products} lang={lang} />
       </main>
       <SiteFooter t={t} c={c} />
