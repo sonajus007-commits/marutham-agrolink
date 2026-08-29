@@ -11,13 +11,24 @@ import type { Dict } from '@/lib/dict';
  * ended at a sign-in wall: you could not read about a tomato without an account,
  * and a crawler had exactly one page to index. The title and the picture are the
  * link; the order button stays a button, because it hands off to the portal. */
-export function ProductCard({ t, product }: { t: Dict; product: Product }) {
+export function ProductCard({
+  t,
+  product,
+  className = '',
+}: {
+  t: Dict;
+  product: Product;
+  /** Extra classes on the <li> — e.g. a fixed width when used in the marquee. */
+  className?: string;
+}) {
   const price = homepagePrice(product);
   const href = `/products/${product.id}`;
   const img = produceImage(product.name, product.regional_name);
 
   return (
-    <li className="rounded-2xl border border-border bg-surface p-4 text-center transition-shadow hover:shadow-lg">
+    <li
+      className={`rounded-2xl border border-border bg-surface p-4 text-center transition-shadow hover:shadow-lg ${className}`}
+    >
       {/* One link wrapping picture + name: two adjacent links to the same place
           are a known screen-reader annoyance, and the picture is decorative. A
           real photo where we have one (public/produce), the emoji otherwise. */}

@@ -1,8 +1,31 @@
+import { MapPin, Search } from 'lucide-react';
 import { MaruthamLogo } from '@/components/brand/MaruthamLogo';
 import { LangToggle } from '@/components/LangToggle';
 import { LoginButton } from '@/components/auth/LoginButton';
+import { CartLink } from '@/components/CartLink';
 import type { Dict, Lang } from '@/lib/dict';
 import type { LandingCopy } from '@/lib/landing';
+
+/* A search field, as a plain GET form so it needs no client JS and works from a
+ * Server Component: submitting navigates to /products?q=… The catalogue is the
+ * honest destination today; the query wiring lands with the P3 search endpoint.
+ * `role="search"` + a labelled input keep it accessible. */
+function SearchForm({ t, className = '' }: { t: Dict; className?: string }) {
+  return (
+    <form action="/products" role="search" className={`min-w-0 ${className}`}>
+      <label className="border-border bg-bg focus-within:border-forest-500 flex items-center gap-2.5 rounded-full border px-4 py-2.5 transition-colors">
+        <Search className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
+        <input
+          type="search"
+          name="q"
+          placeholder={t.nav.search}
+          aria-label={t.nav.search}
+          className="text-fg placeholder:text-fg-muted min-w-0 flex-1 bg-transparent text-caption outline-none"
+        />
+      </label>
+    </form>
+  );
+}
 
 /* Header and footer.
  *
@@ -21,19 +44,21 @@ import type { LandingCopy } from '@/lib/landing';
  * that drops the toggle takes the site away from the people it is for. */
 
 export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
+  /* The nav names only what exists on the trimmed home page: the catalogue, and
+     the three homepage sections (their ids: #categories, #farmers,
+     #how-it-works). About Us / Offers from the model wait for their own pages. */
   const NAV = [
     { href: '/products', label: t.nav.shop },
-    { href: '/#why', label: t.nav.why },
+    { href: '/#categories', label: t.nav.categories },
     { href: '/#farmers', label: t.nav.farmers },
-    { href: '/#faq', label: t.nav.faq },
-    { href: '/#contact', label: t.nav.contact },
+    { href: '/#how-it-works', label: t.nav.how },
   ];
 
   return (
     <header className="border-border bg-surface/85 sticky top-0 z-50 border-b backdrop-blur-md">
       {/* min-w-0 on the row and shrink on the brand: the Tamil sign-in label is
           longer than the English one and pushed the header past 390px. */}
-      <div className="mx-auto flex w-full max-w-[1440px] min-w-0 items-center gap-4 px-6 py-3.5 md:gap-6 md:px-10">
+      <div className="mx-auto flex w-full max-w-[1440px] min-w-0 items-center gap-3 px-6 py-3.5 md:gap-5 md:px-10">
         {/* shrink-0, not shrink: a squeezed box does not squeeze the text inside
             it, so the wordmark painted over the toggle. It drops to the mark
             alone below sm instead. */}
@@ -41,8 +66,20 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
           <MaruthamLogo compact />
         </a>
 
-        <nav aria-label="Primary" className="ml-auto hidden lg:block">
-          <ul className="flex list-none items-center gap-8 p-0">
+        {/* Service area. Marutham serves Pudukkottai today, so this states a fact
+            rather than asking for a location it cannot yet act on. Hidden on the
+            tightest widths where the search + controls need the room. */}
+        <span className="text-fg-muted hidden shrink-0 items-center gap-1.5 text-caption font-medium xl:inline-flex">
+          <MapPin className="text-blossom-ink h-4 w-4 shrink-0" aria-hidden="true" />
+          {t.nav.location}
+        </span>
+
+        {/* Search takes the middle on md+; on small screens it drops to its own
+            full-width row below (the reference model's mobile layout). */}
+        <SearchForm t={t} className="hidden flex-1 md:block" />
+
+        <nav aria-label="Primary" className="hidden shrink-0 lg:block">
+          <ul className="flex list-none items-center gap-6 p-0">
             {NAV.map((n) => (
               <li key={n.href}>
                 <a
@@ -56,10 +93,16 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
           </ul>
         </nav>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3 lg:ml-0">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 md:gap-2.5 lg:ml-0">
           <LangToggle current={lang} />
+          <CartLink label={t.nav.cart} />
           <LoginButton label={t.nav.login} />
         </div>
+      </div>
+
+      {/* Mobile search row — full width, below the brand bar. */}
+      <div className="border-border/60 border-t px-6 py-2.5 md:hidden">
+        <SearchForm t={t} />
       </div>
     </header>
   );
@@ -67,29 +110,32 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
 
 export function SiteFooter({ t, c }: { t: Dict; c: LandingCopy }) {
   const L = c.footer.links;
+  /* Hrefs point only at destinations that still exist after the home page was
+     trimmed to the model: the catalogue, the three homepage sections, and the
+     portal register route. Labels are unchanged. */
   const cols = [
     {
       h: c.footer.marketplace,
       links: [
         { href: '/products', l: L.all },
-        { href: '/#marketplace', l: L.how },
-        { href: '/#pricing', l: L.pricing },
+        { href: '/#categories', l: L.how },
+        { href: '/#how-it-works', l: L.pricing },
       ],
     },
     {
       h: c.footer.farmers,
       links: [
         { href: '/#farmers', l: L.selling },
-        { href: '/#business', l: L.business },
-        { href: '/#faq', l: L.questions },
+        { href: '/app/register', l: L.business },
+        { href: '/#how-it-works', l: L.questions },
       ],
     },
     {
       h: c.footer.company,
       links: [
-        { href: '/#why', l: L.why },
-        { href: '/#sustainability', l: L.sustainability },
-        { href: '/#contact', l: L.contact },
+        { href: '/#how-it-works', l: L.why },
+        { href: '/#farmers', l: L.sustainability },
+        { href: '/products', l: L.contact },
       ],
     },
   ];

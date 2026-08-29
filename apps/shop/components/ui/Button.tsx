@@ -14,7 +14,16 @@ import { ArrowRight } from 'lucide-react';
  * only — so `water` keeps its label at 18px/600, which clears the large-text
  * bar. Anything smaller must use `secondary` instead. */
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'text' | 'onDark' | 'water' | 'earth';
+type Variant =
+  | 'primary'
+  | 'secondary'
+  | 'ghost'
+  | 'text'
+  | 'onDark'
+  | 'onDarkOutline'
+  | 'blossom'
+  | 'water'
+  | 'earth';
 
 const BASE =
   'inline-flex items-center justify-center gap-2 rounded-full font-semibold no-underline ' +
@@ -30,6 +39,13 @@ const VARIANT: Record<Variant, string> = {
   text: 'text-forest-700 px-0 py-1 hover:text-forest-900',
   onDark:
     'bg-surface text-forest-900 px-7 py-3.5 shadow-[0_2px_10px_rgba(0,0,0,0.2)] hover:bg-leaf-300',
+  /* White outline for a dark ground (the green hero's secondary CTA). White on
+     forest-700/900 is 9.7:1, so both border and label clear AA at any size. */
+  onDarkOutline: 'border-2 border-surface/60 text-surface px-7 py-3 hover:bg-surface/12',
+  /* The Marutham-pink CTA. blossom-500 is a FILL: white on it is 3.5:1, which
+     clears the AA-large bar (3:1) but not the normal one — so, exactly like
+     `water`, the label is held at 18px/600 (text-body) and never smaller. */
+  blossom: 'bg-blossom-500 text-surface px-7 py-3.5 text-body hover:brightness-105',
   /* 18px/600 keeps this at the AA-large bar white-on-water requires. */
   water: 'bg-water-500 text-surface px-7 py-3.5 text-body hover:brightness-95',
   earth: 'bg-earth-500 text-surface px-7 py-3.5 hover:brightness-95',

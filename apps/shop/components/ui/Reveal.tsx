@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 /* Scroll reveal. One component, four entrances — so the whole site animates the
  * same way and no section invents its own timing.
@@ -46,6 +46,8 @@ interface Props {
 
 export function Reveal({ children, kind = 'fade-up', delay = 0, className, as = 'div' }: Props) {
   const reduced = useReducedMotion();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const MotionTag = motion[as];
 
   /* Reveal is almost always a grid or flex child, and such a child defaults to
@@ -54,7 +56,13 @@ export function Reveal({ children, kind = 'fade-up', delay = 0, className, as = 
    * longer. min-w-0 first so a caller's own class can still override it. */
   const cls = `min-w-0 ${className ?? ''}`.trim();
 
-  if (reduced) {
+  /* Fail-open: the server render and the first client paint are plain, VISIBLE
+   * children — never opacity:0. Only after mount do we swap in the motion
+   * element that starts hidden and reveals on scroll. So with JS disabled, a
+   * slow hydration, or a viewport observer that never fires (some embedded
+   * browsers), the content is always readable rather than a blank panel. Reduced
+   * motion keeps it plain forever. */
+  if (reduced || !mounted) {
     const Tag = as;
     return <Tag className={cls}>{children}</Tag>;
   }

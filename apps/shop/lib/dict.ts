@@ -28,6 +28,13 @@ export interface Dict {
     farmers: string;
     faq: string;
     contact: string;
+    search: string;
+    location: string;
+    cart: string;
+    home: string;
+    categories: string;
+    account: string;
+    how: string;
   };
   hero: { titleA: string; titleB: string; sub: string; ctaShop: string; ctaSell: string };
   fresh: {
@@ -104,6 +111,13 @@ const en: Dict = {
     farmers: 'For farmers',
     faq: 'FAQ',
     contact: 'Contact',
+    search: 'Search fresh produce, farmers…',
+    location: 'Pudukkottai, Tamil Nadu',
+    cart: 'Cart',
+    home: 'Home',
+    categories: 'Categories',
+    account: 'Account',
+    how: 'How It Works',
   },
   hero: {
     titleA: 'Fresh from our farms,',
@@ -208,6 +222,13 @@ const ta: Dict = {
     farmers: 'விவசாயிகளுக்கு',
     faq: 'கேள்விகள்',
     contact: 'தொடர்பு',
+    search: 'புதிய காய்கறிகள், விவசாயிகளைத் தேடுங்கள்…',
+    location: 'புதுக்கோட்டை, தமிழ்நாடு',
+    cart: 'கூடை',
+    home: 'முகப்பு',
+    categories: 'வகைகள்',
+    account: 'கணக்கு',
+    how: 'எப்படி வேலை செய்கிறது',
   },
   hero: {
     titleA: 'எங்கள் வயல்களில் இருந்து,',

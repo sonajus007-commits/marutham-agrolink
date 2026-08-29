@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang } from '@/lib/dict';
 import { SITE_URL } from '@/lib/site';
 import { LoginModalProvider } from '@/components/auth/LoginModalProvider';
+import { MobileNav } from '@/components/MobileNav';
 import './globals.css';
 
 /* The metadata a crawler reads. This is the whole reason the shop is server-
@@ -60,8 +61,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           rel="stylesheet"
         />
       </head>
-      <body>
-        <LoginModalProvider lang={lang}>{children}</LoginModalProvider>
+      {/* Bottom padding on mobile clears the fixed MobileNav so the footer is
+          never hidden behind it; removed at lg where the bar is gone. */}
+      <body className="pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <LoginModalProvider lang={lang}>
+          {children}
+          <MobileNav nav={DICT[lang].nav} />
+        </LoginModalProvider>
       </body>
     </html>
   );

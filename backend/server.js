@@ -216,7 +216,12 @@ function isShopPath(pathname) {
     pathname === '/apple-touch-icon.png' ||
     pathname === '/manifest.webmanifest' ||
     pathname.startsWith('/icons/') ||
-    pathname.startsWith('/brand/')
+    pathname.startsWith('/brand/') ||
+    // Real produce photos (apps/shop/public/produce), shown on the homepage's
+    // Fresh Today grid + category rail and on ProductCard. Same story as /brand/:
+    // without this line they 404 through the front door and every card falls back
+    // to its emoji, so the storefront looks empty of photography.
+    pathname.startsWith('/produce/')
   );
 }
 

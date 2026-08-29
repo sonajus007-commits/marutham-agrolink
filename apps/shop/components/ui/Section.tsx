@@ -30,16 +30,15 @@ const TONE: Record<SectionTone, string> = {
  * `ink` is the corner label's colour — all clear AA on their (light) ground. */
 export type Thinai = 'marutham' | 'mullai' | 'neithal' | 'kurinji' | 'palai';
 
-/* `rgb` is the ground colour as an "r,g,b" triple, so a photo scrim can be built
- * from it at any alpha. The scrim is the ground tint at high opacity: the photo
- * shows through as texture (~8–12%) while dark body text keeps full contrast —
- * the same discipline the flat grounds already guarantee. */
-const THINAI: Record<Thinai, { ta: string; en: string; ink: string; rgb: string }> = {
-  marutham: { ta: 'மருதம்', en: 'Marutham', ink: '#ad1457', rgb: '253,242,246' },
-  mullai: { ta: 'முல்லை', en: 'Mullai', ink: '#2e7d4f', rgb: '238,247,241' },
-  neithal: { ta: 'நெய்தல்', en: 'Neithal', ink: '#1f5f8b', rgb: '234,244,251' },
-  kurinji: { ta: 'குறிஞ்சி', en: 'Kurinji', ink: '#4b3ba3', rgb: '240,238,251' },
-  palai: { ta: 'பாலை', en: 'Palai', ink: '#8b5e3c', rgb: '250,244,234' },
+/* The retired landscapes now map to plain commercial ground tones, alternating
+ * clean white / pale-green / warm-sand so adjacent sections still read as
+ * distinct slides without any pastel wash. */
+const THINAI_TONE: Record<Thinai, SectionTone> = {
+  marutham: 'surface',
+  mullai: 'mist',
+  neithal: 'surface',
+  kurinji: 'bg',
+  palai: 'sand',
 };
 
 interface SectionProps {
@@ -68,10 +67,12 @@ export function Section({
   photo,
   ...rest
 }: SectionProps) {
-  const ground = thinai ? `ground-${thinai} text-fg` : TONE[tone];
-  const tag = thinai ? THINAI[thinai] : null;
-  /* A photo backdrop when one exists for this landscape; terrain art otherwise. */
-  const thinaiPhoto = thinai ? landscapeBg(thinai) : null;
+  /* Ainthinai landscape theme retired from the public marketplace (2026-08) — the
+   * homepage converges on the clean "premium farm-to-home" commerce look. A
+   * `thinai` now just maps to a plain ground tone; the pastel wash, terrain art
+   * and corner tag are no longer drawn. The prop stays accepted so the ~13
+   * section call-sites need not all change at once. */
+  const ground = TONE[thinai ? THINAI_TONE[thinai] : tone];
   /* Dark-band photo: only on a dark tone, only when a file exists. */
   const darkPhoto = !thinai && photo && DARK_TONES.includes(tone) ? landscapeBg(photo) : null;
   return (
@@ -80,24 +81,7 @@ export function Section({
       className={`${ground} relative overflow-hidden px-6 py-[60px] md:px-10 md:py-20 lg:py-[120px] ${className}`}
       aria-labelledby={rest['aria-labelledby']}
     >
-      {thinai && thinaiPhoto && tag ? (
-        <>
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url("${thinaiPhoto}")` }}
-            aria-hidden="true"
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `linear-gradient(180deg, rgba(${tag.rgb},0.94) 0%, rgba(${tag.rgb},0.88) 100%)`,
-            }}
-            aria-hidden="true"
-          />
-        </>
-      ) : thinai ? (
-        <div className={`terrain terrain-${thinai}`} aria-hidden="true" />
-      ) : darkPhoto ? (
+      {darkPhoto ? (
         <>
           <div
             className="absolute inset-0 bg-cover bg-center"
@@ -114,11 +98,6 @@ export function Section({
             aria-hidden="true"
           />
         </>
-      ) : null}
-      {tag ? (
-        <span className="thinai-tag" style={{ color: tag.ink }} aria-hidden="true">
-          {tag.ta} · {tag.en}
-        </span>
       ) : null}
       <div className="relative mx-auto w-full max-w-[1440px]">{children}</div>
     </section>

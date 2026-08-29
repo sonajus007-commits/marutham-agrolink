@@ -330,6 +330,27 @@ body {
   }
 }
 
+/* Fresh Today marquee — a slow, seamless auto-scroll of produce cards. The track
+ * holds the cards twice, so translateX(-50%) lands exactly on the start of the
+ * second copy and the loop has no visible jump. It eases to a stop on hover so a
+ * shopper can read a card, and the reduced-motion rule below stops it entirely
+ * for anyone who asked not to receive motion. */
+@keyframes ma-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.ma-marquee {
+  animation: ma-marquee 32s linear infinite;
+  will-change: transform;
+}
+.ma-marquee:hover {
+  animation-play-state: paused;
+}
+
 /* Every animation in this app is a Framer Motion entrance. Honour the OS
  * setting rather than shipping motion someone has asked not to receive. */
 @media (prefers-reduced-motion: reduce) {

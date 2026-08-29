@@ -36,8 +36,12 @@ export function MaruthamLogo({
   label = 'Marutham AgroLink',
   compact = false,
 }: Props) {
-  const ink = tone === 'onDark' ? 'text-surface' : 'text-forest-700';
-  const sub = tone === 'onDark' ? 'text-leaf-300' : 'text-forest-500';
+  /* The official wordmark colours (per the user): "Marutham" in Marutham pink,
+     "AgroLink" in green. These are the brand identity and must be used verbatim
+     on every surface. On the dark footer "Marutham" keeps a light pink and
+     "AgroLink" a light green so both stay legible. */
+  const ink = tone === 'onDark' ? 'text-[#FCC9DD]' : 'text-blossom-ink';
+  const sub = tone === 'onDark' ? 'text-leaf-300' : 'text-forest-700';
 
   return (
     <span className={`inline-flex items-center gap-2.5 ${className}`} aria-label={label} role="img">
@@ -48,7 +52,7 @@ export function MaruthamLogo({
             Marutham
           </span>
           <span
-            className={`text-[0.6rem] font-semibold tracking-[0.18em] uppercase ${sub}`}
+            className={`text-[0.62rem] font-bold tracking-[0.18em] uppercase ${sub}`}
             aria-hidden="true"
           >
             AgroLink
@@ -59,17 +63,20 @@ export function MaruthamLogo({
   );
 }
 
-/* The official square mark (lotus + scales + MA monogram), lives at
- * public/brand/mark.png. It has a light ground, so on dark surfaces we frame it
- * in a rounded white tile — that reads as a deliberate badge rather than a
- * pasted-on rectangle. On light surfaces the tile is invisible. */
+/* The official MALOGO badge (farmers + hub scene + MA monogram + lotus scales),
+ * lives at public/brand/malogo-full.jpg. It has a light ground, so on dark
+ * surfaces we frame it in a rounded white tile — that reads as a deliberate
+ * badge rather than a pasted-on rectangle. On light surfaces the tile is
+ * invisible. Slightly larger than the old mark so the illustration stays legible. */
 function Mark({ tone }: { tone: LogoTone }) {
   const tile = tone === 'onDark' ? 'bg-white ring-1 ring-white/25 p-0.5' : '';
   return (
-    <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tile}`}>
+    <span
+      className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${tile}`}
+    >
       {/* Static brand asset; next/image adds no benefit for a fixed-size mark. */}
       <img
-        src="/brand/mark.png"
+        src="/brand/malogo-full.jpg"
         alt=""
         aria-hidden="true"
         className="h-full w-full rounded-md object-contain"
