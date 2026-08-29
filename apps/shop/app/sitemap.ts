@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getAllProducts } from '@/lib/api';
+import { FARMER_STORIES } from '@/lib/farmerStories';
 import { absoluteUrl } from '@/lib/site';
 
 /* /sitemap.xml — how a crawler finds the product pages at all.
@@ -22,6 +23,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: absoluteUrl('/'), lastModified: now, changeFrequency: 'daily', priority: 1 },
     { url: absoluteUrl('/products'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
+    { url: absoluteUrl('/farmers'), lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
+    ...FARMER_STORIES.map((s) => ({
+      url: absoluteUrl(`/farmer/${s.id}`),
+      lastModified: now,
+      changeFrequency: 'weekly' as const,
+      priority: 0.6,
+    })),
     ...products.map((p) => ({
       url: absoluteUrl(`/products/${p.id}`),
       // Produce prices move daily, so a crawler that caches for a week shows

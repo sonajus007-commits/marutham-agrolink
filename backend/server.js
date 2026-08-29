@@ -202,6 +202,14 @@ function isShopPath(pathname) {
     pathname.startsWith('/_next/') ||
     pathname === '/products' ||
     pathname.startsWith('/products/') ||
+    // Public marketplace pages the Next shop owns. This allow-list must grow with
+    // each new top-level public route (a legacy static site is the fallback, so
+    // an unlisted shop route 404s through the front door rather than reaching
+    // Next). /farmers + /farmer/:slug are the farmer directory/profiles;
+    // /category/:slug is the coming category pages.
+    pathname === '/farmers' ||
+    pathname.startsWith('/farmer/') ||
+    pathname.startsWith('/category/') ||
     // Next generates these (app/sitemap.ts, app/robots.ts). They are the shop's
     // whole reason for existing — a crawler that cannot fetch them will not find
     // the product pages — and without a line here they fall through to the

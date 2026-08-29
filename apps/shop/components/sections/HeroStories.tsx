@@ -43,7 +43,7 @@ export function HeroStories({ lang }: { lang: Lang }) {
           {label}
         </span>
         <Link
-          href="/#farmer-stories"
+          href="/farmers"
           className="shrink-0 text-caption font-semibold text-white/85 no-underline hover:text-white"
         >
           {seeAll}

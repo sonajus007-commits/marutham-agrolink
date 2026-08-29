@@ -121,6 +121,11 @@ export function recentStories(limit = FARMER_STORIES.length): FarmerStory[] {
   return [...FARMER_STORIES].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, limit);
 }
 
+/** One story by its slug (the `id`), for the /farmer/[slug] page. */
+export function getStory(slug: string): FarmerStory | undefined {
+  return FARMER_STORIES.find((s) => s.id === slug);
+}
+
 /** The one-word "sample" marker, per language. */
 export function sampleLabel(lang: Lang): string {
   return lang === 'ta' ? 'மாதிரி' : 'Sample';
