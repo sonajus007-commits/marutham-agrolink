@@ -28,11 +28,16 @@ app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1));
 // referrer policy. A tuned CSP is a documented post-UAT hardening item.
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 
-// CORS. Pinned to an allowlist from CORS_ORIGINS (comma-separated) when set; falls back
-// to open only when it is not, so a same-origin dev box still works. Set CORS_ORIGINS in
-// any deployment that serves the API on a different origin than the frontend.
+// CORS. Pinned to an allowlist from CORS_ORIGINS (comma-separated) when set;
+// otherwise CLOSED (origin: false — no Access-Control-Allow-Origin at all), NOT
+// open. This is safe because the whole app is one origin: the browser only ever
+// talks to :3000, which proxies both the shop and the /app portal, and every
+// client fetch to /api is same-origin (same-origin requests don't need CORS).
+// So a dev box and a same-origin deployment both work with CORS off. Set
+// CORS_ORIGINS to the exact allowed origins (e.g. the mobile app) for any
+// deployment that serves the API on a DIFFERENT origin than a client.
 const corsOrigins = (process.env.CORS_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
-app.use(cors(corsOrigins.length ? { origin: corsOrigins, credentials: true } : {}));
+app.use(cors(corsOrigins.length ? { origin: corsOrigins, credentials: true } : { origin: false }));
 
 app.use(express.json());
 
