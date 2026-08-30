@@ -1029,6 +1029,8 @@ export interface OperationsDashboardResponse {
     delivered_today: number;
     pending_deliveries: number;
   };
+  /** Field staff on duty right now in scope (A5, migration 057). */
+  staff: OnDutyStaff;
   delivery_status: {
     /** Order status → count of active orders sitting at it. Keys are whatever
      *  statuses actually occur, so the UI must not assume a fixed set. */
@@ -1084,8 +1086,28 @@ export interface HubDashboardResponse {
   /** Active-order status → count, across every IN parcel in scope. */
   in_status: Record<string, number>;
   out_status: Record<string, number>;
+  /** Transit throughput: parcels in motion through the hub, and aging (At Hub too
+   *  long). Replaces stock-on-hand in the transit-only model. */
+  transit: {
+    inbound: number;
+    at_hub: number;
+    out_for_delivery: number;
+    delivered_today: number;
+    aging: number;
+    sla_hours: number;
+  };
+  /** Field staff on duty right now in scope (A5, migration 057). */
+  staff: OnDutyStaff;
+  /** Live alerts (e.g. aging parcels at the hub). */
+  alerts: ExecutiveAlert[];
   /** See HUB_PLACEHOLDERS in backend/routes/dashboard.js. */
   placeholders: string[];
+}
+
+export interface OnDutyStaff {
+  on_duty: number;
+  vcos: number;
+  agents: number;
 }
 
 /* ── Listing approvals (GET /listings/admin/pending, PATCH /listings/:id/status) ──

@@ -262,6 +262,32 @@ function istParts(d) {
   const t = new Date(new Date(d).getTime() + IST_MS);
   return { y: t.getUTCFullYear(), m: t.getUTCMonth(), day: t.getUTCDate(), date: t };
 }
+const istToday = () => new Date(Date.now() + IST_MS).toISOString().slice(0, 10);
+
+// Field staff on duty right now (checked in today, not checked out) — from
+// staff_attendance (migration 057). Optionally scoped to one district. Best-effort:
+// a failed read returns zeros, never breaks the dashboard. Powers the on-shift /
+// agents-online tiles that used to be placeholders (A5).
+async function onDutyCounts(district) {
+  let q = supabase
+    .from('staff_attendance')
+    .select('admin_role')
+    .eq('work_date', istToday())
+    .not('checked_in_at', 'is', null)
+    .is('checked_out_at', null);
+  if (district) q = q.eq('district', district);
+  const { data, error } = await q;
+  if (error) {
+    console.error('onDutyCounts failed:', error.message);
+    return { on_duty: 0, vcos: 0, agents: 0 };
+  }
+  const rows = data || [];
+  return {
+    on_duty: rows.length,
+    vcos: rows.filter((r) => r.admin_role === 'VCO').length,
+    agents: rows.filter((r) => r.admin_role === 'Delivery Agent').length,
+  };
+}
 
 // Resolve the optional ?state=/?district= drill-down to a Set of districts to
 // scope by (null = no geo filter). A district pins exactly one; a state expands
@@ -538,7 +564,10 @@ function cancelledOrdersCount(orders) { return orders.filter(o => o.cancelled).l
 const OPS_DISTRICT_KEYS = new Set(['district_manager', 'hub_incharge', 'hub_manager']);
 const OPS_REGION_KEYS   = new Set(['regional_manager', 'state_head', 'zonal_manager']);
 
-const OPS_PLACEHOLDERS = ['hub_stock', 'farmer_visits', 'vco_attendance', 'agents_online', 'transfer_stock'];
+// vco_attendance + agents_online are now real (on-duty staff, A5); hub_stock and
+// transfer_stock are inventory concepts that do not exist in a transit-only model.
+// farmer_visits remains a genuine future feature.
+const OPS_PLACEHOLDERS = ['farmer_visits'];
 
 router.get('/operations', async (req, res) => {
   const u = req.user;
@@ -691,6 +720,8 @@ router.get('/operations', async (req, res) => {
     alerts.push({ type: 'assign', severity, params: { count: unassigned }, message: `${unassigned} order${unassigned > 1 ? 's' : ''} ready but no delivery agent assigned — check regional agent coverage.` });
   }
 
+  const staff = await onDutyCounts(filterDistrict);
+
   res.json({
     scope,
     // Only an unscoped role may use the console State/District filter here.
@@ -698,6 +729,7 @@ router.get('/operations', async (req, res) => {
     filter: { state: filterState, district: filterDistrict },
     generated_at: new Date().toISOString(),
     summary,
+    staff,
     delivery_status: { status_breakdown: statusBreakdown, agents_total: agents.length },
     collections,
     quality,
@@ -1019,7 +1051,9 @@ router.get('/adminhead', async (req, res) => {
 // the container and again per child. Counting only real parcels (route !== 'split')
 // keeps IN and OUT on the same footing: the physical things that move.
 // ═══════════════════════════════════════════════════════════════════════════════
-const HUB_PLACEHOLDERS = ['hub_capacity', 'staff_on_shift', 'stock_on_hand'];
+// Emptied: staff_on_shift is now real (staff on duty, A5); hub_capacity and
+// stock_on_hand are inventory concepts that do not exist in a transit-only hub.
+const HUB_PLACEHOLDERS = [];
 
 router.get('/hub', async (req, res) => {
   const u = req.user;
@@ -1068,7 +1102,7 @@ router.get('/hub', async (req, res) => {
   // ── Pull orders and attribute them ──────────────────────────────────────────
   const { data: allOrders, error: oErr } = await supabase
     .from('orders')
-    .select('id, total, status, cancelled, route, pickup_hub_id, delivery_hub_id, created_at, delivered_at');
+    .select('id, code, total, status, cancelled, route, pickup_hub_id, delivery_hub_id, created_at, delivered_at, updated_at');
   if (oErr) {
     console.error('GET /dashboard/hub orders load failed:', oErr.message);
     return res.status(500).json({ error: 'Could not load hub orders.' });
@@ -1115,6 +1149,38 @@ router.get('/hub', async (req, res) => {
     out:   metrics(outAll.filter((o) => o.delivery_hub_id === h.id)),
   }));
 
+  // ── Transit throughput — the "what's moving through my hub" view that replaces
+  // stock-on-hand in a transit-only model. All from the order statuses above. A
+  // parcel bound for this hub is IN TRANSIT (inbound), AT HUB (on the floor,
+  // awaiting last-mile), or OUT FOR DELIVERY (dispatched). "Aging" = At Hub with no
+  // movement (updated_at) for over the SLA — a parcel sitting still is a late
+  // delivery forming, the real risk here.
+  const HUB_SLA_HOURS = 6;
+  const live = outAll.filter((o) => !o.cancelled);
+  const atHub = live.filter((o) => o.status === 'At Hub');
+  const agingCut = Date.now() - HUB_SLA_HOURS * 3600 * 1000;
+  const aging = atHub.filter((o) => o.updated_at && new Date(o.updated_at).getTime() < agingCut);
+  const transit = {
+    inbound:          live.filter((o) => o.status === 'In Transit').length,
+    at_hub:           atHub.length,
+    out_for_delivery: live.filter((o) => o.status === 'Out for Delivery').length,
+    delivered_today:  live.filter((o) => o.status === 'Delivered' && isToday(o.delivered_at)).length,
+    aging:            aging.length,
+    sla_hours:        HUB_SLA_HOURS,
+  };
+
+  const staff = await onDutyCounts(scope.district);
+
+  const alerts = [];
+  if (transit.aging > 0) {
+    alerts.push({
+      type: 'hub_aging',
+      severity: transit.aging >= 5 ? 'high' : 'medium',
+      params: { count: transit.aging, hours: HUB_SLA_HOURS },
+      message: `${transit.aging} parcel${transit.aging > 1 ? 's have' : ' has'} been at the hub over ${HUB_SLA_HOURS}h without dispatch.`,
+    });
+  }
+
   res.json({
     scope,
     generated_at: new Date().toISOString(),
@@ -1122,6 +1188,9 @@ router.get('/hub', async (req, res) => {
     totals: { in: metrics(inAll), out: metrics(outAll) },
     in_status:  statusOf(inAll),
     out_status: statusOf(outAll),
+    transit,
+    staff,
+    alerts,
     placeholders: HUB_PLACEHOLDERS,
   });
 });

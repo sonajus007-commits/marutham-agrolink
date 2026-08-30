@@ -300,6 +300,16 @@ export function OperationsPage() {
           footer={
             <p className="text-xs text-fg-muted">
               {t('admin.ops.delivery.agents', { count: data?.delivery_status.agents_total ?? 0 })}
+              {data?.staff ? (
+                <>
+                  {' · '}
+                  <span style={{ color: 'var(--green)' }}>
+                    {t('admin.ops.delivery.onDuty', '{{count}} field staff on duty now', {
+                      count: data.staff.on_duty,
+                    })}
+                  </span>
+                </>
+              ) : null}
             </p>
           }
         >

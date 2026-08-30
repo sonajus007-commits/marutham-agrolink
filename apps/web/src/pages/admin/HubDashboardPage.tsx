@@ -109,6 +109,52 @@ export function HubDashboardPage() {
         </div>
       ) : (
         <>
+          {/* Right now — parcels physically moving through the hub, plus staff on
+              duty. The transit-only equivalent of "stock on hand". */}
+          <h2 className="mb-2 text-sm font-bold text-fg">
+            ⚡ {t('admin.hubDash.now', 'Right now')}
+          </h2>
+          {data?.transit && data.transit.aging > 0 ? (
+            <div className="mb-3 rounded-lg border border-warning bg-warning-bg p-3 text-sm text-warning-fg">
+              ⚠{' '}
+              {t(
+                'admin.hubDash.aging',
+                '{{count}} parcel(s) at the hub over {{hours}}h without dispatch.',
+                {
+                  count: data.transit.aging,
+                  hours: data.transit.sla_hours,
+                },
+              )}
+            </div>
+          ) : null}
+          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <StatTile
+              label={t('admin.hubDash.atHub', 'At the hub')}
+              value={fmtNum(data?.transit?.at_hub ?? 0)}
+              tone="green"
+            />
+            <StatTile
+              label={t('admin.hubDash.inbound', 'Inbound')}
+              value={fmtNum(data?.transit?.inbound ?? 0)}
+              tone="green"
+            />
+            <StatTile
+              label={t('admin.hubDash.ofd', 'Out for delivery')}
+              value={fmtNum(data?.transit?.out_for_delivery ?? 0)}
+              tone="green"
+            />
+            <StatTile
+              label={t('admin.hubDash.deliveredToday', 'Delivered today')}
+              value={fmtNum(data?.transit?.delivered_today ?? 0)}
+              tone="green"
+            />
+            <StatTile
+              label={t('admin.hubDash.onDuty', 'Staff on duty')}
+              value={fmtNum(data?.staff?.on_duty ?? 0)}
+              tone="green"
+            />
+          </div>
+
           {/* Incoming — goods entering the network through this hub's taluk. */}
           <h2 className="mb-2 text-sm font-bold text-fg">
             📥 {t('admin.hubDash.in')}
@@ -194,14 +240,16 @@ export function HubDashboardPage() {
         </>
       )}
 
-      <div className="mt-6">
-        <PlaceholderSection
-          placeholders={data?.placeholders}
-          title={t('admin.hubDash.ph.title')}
-          subtitle={t('admin.hubDash.ph.sub')}
-          loading={loading && !data}
-        />
-      </div>
+      {data?.placeholders && data.placeholders.length > 0 ? (
+        <div className="mt-6">
+          <PlaceholderSection
+            placeholders={data.placeholders}
+            title={t('admin.hubDash.ph.title')}
+            subtitle={t('admin.hubDash.ph.sub')}
+            loading={loading && !data}
+          />
+        </div>
+      ) : null}
     </>
   );
 }

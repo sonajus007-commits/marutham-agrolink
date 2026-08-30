@@ -113,6 +113,41 @@ describe('GET /dashboard/hub', () => {
     assert.equal(byId[HUB_B].out.count, 1); // o1
   });
 
+  test('transit: parcels at the hub, inbound, aging alert, and staff on duty', async () => {
+    const oldTs = new Date(Date.now() - 8 * 3600 * 1000).toISOString(); // >6h → aging
+    const freshTs = new Date().toISOString();
+    const supa = fakeSupabase({
+      'hubs:select': { data: [HUB_ROW_A] },
+      'orders:select': {
+        data: [
+          { id: 'a1', total: 1000, status: 'At Hub', cancelled: false, route: '', pickup_hub_id: HUB_B, delivery_hub_id: HUB_A, created_at: oldTs, delivered_at: null, updated_at: oldTs },
+          { id: 'a2', total: 1000, status: 'At Hub', cancelled: false, route: '', pickup_hub_id: HUB_B, delivery_hub_id: HUB_A, created_at: freshTs, delivered_at: null, updated_at: freshTs },
+          { id: 'a3', total: 1000, status: 'In Transit', cancelled: false, route: '', pickup_hub_id: HUB_B, delivery_hub_id: HUB_A, created_at: freshTs, delivered_at: null, updated_at: freshTs },
+        ],
+      },
+      'staff_attendance:select': {
+        data: [
+          { admin_role: 'VCO', checked_in_at: 't', checked_out_at: null },
+          { admin_role: 'Delivery Agent', checked_in_at: 't', checked_out_at: null },
+        ],
+      },
+    });
+    app = await mountRoute('dashboard', {
+      supabase: supa,
+      user: { id: 'hm1', role: 'admin', role_key: 'hub_manager', admin_role: 'Hub Manager', district: 'Pudukkottai', dashboards: { hub: true } },
+    });
+
+    const res = await app.get('/hub');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.transit.at_hub, 2);
+    assert.equal(res.body.transit.inbound, 1);
+    assert.equal(res.body.transit.aging, 1, 'only the stale At-Hub parcel is aging');
+    assert.equal(res.body.staff.on_duty, 2);
+    assert.equal(res.body.staff.vcos, 1);
+    assert.equal(res.body.staff.agents, 1);
+    assert.ok(res.body.alerts.some((a) => a.type === 'hub_aging'), 'an aging alert is raised');
+  });
+
   test('403 for a role without the hub dashboard flag', async () => {
     const supa = fakeSupabase({ 'hubs:select': { data: [] }, 'orders:select': { data: [] } });
     app = await mountRoute('dashboard', {
