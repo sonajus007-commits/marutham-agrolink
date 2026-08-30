@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Button, EmptyState, Modal, Spinner, Select, FIELD_LABEL_CLASS } from '@marutham/ui';
-import { api } from '@marutham/api-client';
+import { api, type ProductRequest } from '@marutham/api-client';
 import {
   DEFAULT_CUTOFF,
   cutoffTimestamp,
@@ -31,6 +31,8 @@ export function ProductsTab() {
   /** The form only ever edits: a listing row already exists once approved. */
   const [editing, setEditing] = useState<FarmerListing | null>(null);
   const [requesting, setRequesting] = useState(false);
+  const [newRequesting, setNewRequesting] = useState(false);
+  const [myRequests, setMyRequests] = useState<ProductRequest[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<FarmerListing | null>(null);
 
   const load = useCallback(async () => {
@@ -43,6 +45,11 @@ export function ProductsTab() {
       ]);
       setListings(l.listings || []);
       setProducts(p.products || []);
+      // Off-catalogue product requests — best-effort, must not fail the whole tab.
+      api
+        .getProductRequests()
+        .then((r) => setMyRequests(r.requests || []))
+        .catch(() => setMyRequests([]));
     } catch (e) {
       setError(
         e instanceof Error
@@ -98,6 +105,30 @@ export function ProductsTab() {
     );
   }
 
+  async function submitNewRequest(payload: {
+    name: string;
+    unit: string;
+    regional_name?: string;
+    category?: string;
+    note?: string;
+  }) {
+    setNewRequesting(false);
+    try {
+      await api.createProductRequest(payload);
+      toast(t('farmer.newreq.done', 'Sent for review — we’ll notify you when it’s added.'), 'ok');
+      await load();
+    } catch (e) {
+      toast(
+        e instanceof Error ? e.message : t('farmer.prod.actionFailed', 'That did not work'),
+        'er',
+      );
+    }
+  }
+
+  // Only the requests still worth showing the seller: anything not yet approved
+  // (an approved one becomes a normal catalogue product they can now list).
+  const openRequests = myRequests.filter((r) => r.status !== 'approved');
+
   if (loading && listings.length === 0) return <Spinner />;
   if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
 
@@ -106,11 +137,38 @@ export function ProductsTab() {
       {/* The only way to create a listing is to request the product: approval
           creates the row, and farmer_listings is unique on (farmer, product).
           Pricing an approved product is therefore an edit, never an insert. */}
-      <div className="fm-actionbar">
+      <div
+        className="fm-actionbar"
+        style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}
+      >
         <Button onClick={() => setRequesting(true)} disabled={available.length === 0}>
           + {t('farmer.prod.request')}
         </Button>
+        {/* Off-catalogue: always available, so a seller (esp. a retailer) is never
+            blocked when what they sell isn't in the produce catalogue yet. */}
+        <Button variant="ghost" onClick={() => setNewRequesting(true)}>
+          {t('farmer.newreq.cta', "Can't find it? Request a new product")}
+        </Button>
       </div>
+
+      {openRequests.length > 0 ? (
+        <div className="fm-note" style={{ marginBottom: 12 }}>
+          <strong>{t('farmer.newreq.pendingTitle', 'Product requests')}</strong>
+          <ul style={{ margin: '6px 0 0', paddingLeft: 16 }}>
+            {openRequests.map((r) => (
+              <li key={r.id} style={{ marginBottom: 2 }}>
+                {r.name} ({r.unit}) —{' '}
+                <span style={{ color: r.status === 'rejected' ? 'var(--red)' : 'var(--sun)' }}>
+                  {r.status === 'rejected'
+                    ? t('farmer.newreq.rejected', 'not added')
+                    : t('farmer.newreq.pending', 'under review')}
+                </span>
+                {r.status === 'rejected' && r.review_reason ? ` — ${r.review_reason}` : ''}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {listings.length === 0 ? (
         <EmptyState icon="🌾">
@@ -165,6 +223,12 @@ export function ProductsTab() {
         products={available}
         onClose={() => setRequesting(false)}
         onRequest={requestProduct}
+      />
+
+      <NewProductRequestModal
+        open={newRequesting}
+        onClose={() => setNewRequesting(false)}
+        onSubmit={submitNewRequest}
       />
 
       <Modal
@@ -267,6 +331,139 @@ function RequestProductModal({
           </Select>
         </label>
       )}
+    </Modal>
+  );
+}
+
+/* Off-catalogue request: a free-text proposal for a product that isn't in the
+ * catalogue at all (a retailer's packaged goods, a produce type not yet listed).
+ * An admin reviews it and, on approval, it becomes a real catalogue product. */
+function NewProductRequestModal({
+  open,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (p: {
+    name: string;
+    unit: string;
+    regional_name?: string;
+    category?: string;
+    note?: string;
+  }) => void;
+}) {
+  const { t } = useTranslation();
+  const [name, setName] = useState('');
+  const [unit, setUnit] = useState('');
+  const [regionalName, setRegionalName] = useState('');
+  const [category, setCategory] = useState('');
+  const [note, setNote] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setName('');
+      setUnit('');
+      setRegionalName('');
+      setCategory('');
+      setNote('');
+    }
+  }, [open]);
+
+  const canSubmit = name.trim().length > 0 && unit.trim().length > 0;
+  const input = { width: '100%', padding: '8px 10px' } as const;
+
+  return (
+    <Modal
+      open={open}
+      title={t('farmer.newreq.title', 'Request a new product')}
+      subtitle={t(
+        'farmer.newreq.subtitle',
+        'Not in our catalogue yet? Tell us about it — an admin reviews it, then you can list it.',
+      )}
+      closeLabel={t('common.close', 'Close')}
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            {t('common.cancel', 'Cancel')}
+          </Button>
+          <Button
+            disabled={!canSubmit}
+            onClick={() =>
+              onSubmit({
+                name: name.trim(),
+                unit: unit.trim(),
+                regional_name: regionalName.trim() || undefined,
+                category: category.trim() || undefined,
+                note: note.trim() || undefined,
+              })
+            }
+          >
+            {t('farmer.prod.submitRequest', 'Submit request')}
+          </Button>
+        </>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <label>
+          <span className={FIELD_LABEL_CLASS}>{t('farmer.newreq.name', 'Product name')} *</span>
+          <input
+            style={input}
+            aria-label={t('farmer.newreq.name', 'Product name')}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={120}
+          />
+        </label>
+        <label>
+          <span className={FIELD_LABEL_CLASS}>
+            {t('farmer.newreq.regional', 'Name in Tamil (optional)')}
+          </span>
+          <input
+            style={input}
+            aria-label={t('farmer.newreq.regional', 'Name in Tamil (optional)')}
+            value={regionalName}
+            onChange={(e) => setRegionalName(e.target.value)}
+            maxLength={120}
+          />
+        </label>
+        <label>
+          <span className={FIELD_LABEL_CLASS}>{t('farmer.newreq.unit', 'Sold by (unit)')} *</span>
+          <input
+            style={input}
+            aria-label={t('farmer.newreq.unit', 'Sold by (unit)')}
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+            placeholder={t('farmer.newreq.unitEg', 'kg, packet, bunch, litre…')}
+            maxLength={40}
+          />
+        </label>
+        <label>
+          <span className={FIELD_LABEL_CLASS}>
+            {t('farmer.newreq.category', 'Category (optional)')}
+          </span>
+          <input
+            style={input}
+            aria-label={t('farmer.newreq.category', 'Category (optional)')}
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            maxLength={80}
+          />
+        </label>
+        <label>
+          <span className={FIELD_LABEL_CLASS}>
+            {t('farmer.newreq.note', 'Anything else (optional)')}
+          </span>
+          <textarea
+            style={{ ...input, minHeight: 60, resize: 'vertical' }}
+            aria-label={t('farmer.newreq.note', 'Anything else (optional)')}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={500}
+          />
+        </label>
+      </div>
     </Modal>
   );
 }

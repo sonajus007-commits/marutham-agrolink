@@ -72,6 +72,7 @@ const subscriptionRouter  = require('./routes/subscription');
 const locationsRouter     = require('./routes/locations');
 const employeesRouter     = require('./routes/employees');
 const notificationsRouter = require('./routes/notifications');
+const productRequestsRouter = require('./routes/productRequests');
 const rolesRouter         = require('./routes/roles');
 const hubsRouter          = require('./routes/hubs');
 
@@ -108,6 +109,7 @@ api.use('/subscription',  subscriptionRouter);
 api.use('/locations',     locationsRouter);
 api.use('/employees',     employeesRouter);
 api.use('/notifications', notificationsRouter);
+api.use('/product-requests', productRequestsRouter);
 api.use('/roles',         rolesRouter);
 api.use('/hubs',          hubsRouter);
 

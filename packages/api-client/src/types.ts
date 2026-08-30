@@ -1204,3 +1204,23 @@ export interface NotificationsResponse {
   limit: number;
   offset: number;
 }
+
+// ── Seller product requests (migration 054) ──────────────────────────────────
+export type ProductRequestStatus = 'pending' | 'approved' | 'rejected';
+export interface ProductRequest {
+  id: string;
+  requested_by: string;
+  name: string;
+  regional_name: string | null;
+  category: string | null;
+  unit: string;
+  note: string | null;
+  status: ProductRequestStatus;
+  review_reason: string | null;
+  product_id: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+export interface ProductRequestsResponse {
+  requests: ProductRequest[];
+}

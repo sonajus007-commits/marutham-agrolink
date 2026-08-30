@@ -960,6 +960,69 @@
         }
       }
     },
+    "product_requests": {
+      "columns": {
+        "category": {
+          "type": "text",
+          "notNull": false
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "note": {
+          "type": "text",
+          "notNull": false
+        },
+        "product_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "products.id"
+        },
+        "regional_name": {
+          "type": "text",
+          "notNull": false
+        },
+        "requested_by": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "users.id"
+        },
+        "review_reason": {
+          "type": "text",
+          "notNull": false
+        },
+        "reviewed_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "reviewed_by": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "status": {
+          "type": "text",
+          "notNull": true,
+          "default": "pending"
+        },
+        "unit": {
+          "type": "text",
+          "notNull": true
+        }
+      }
+    },
     "products": {
       "columns": {
         "available": {

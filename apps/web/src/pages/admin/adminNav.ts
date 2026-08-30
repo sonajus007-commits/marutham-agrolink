@@ -230,6 +230,13 @@ export const ADMIN_NAV: AdminNavSection[] = [
         to: '/admin/products',
         requires: { module: 'product_approval', action: 'edit' },
       },
+      {
+        id: 'product-requests',
+        labelKey: 'admin.nav.productRequests',
+        Icon: ClipboardIcon,
+        to: '/admin/product-requests',
+        requires: { module: 'product_approval', action: 'edit' },
+      },
     ],
   },
 ];

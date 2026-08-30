@@ -66,6 +66,9 @@ import type {
   FrequentItem,
   RolesResponse,
   NotificationsResponse,
+  ProductRequest,
+  ProductRequestStatus,
+  ProductRequestsResponse,
 } from './types';
 import type {
   Order,
@@ -820,6 +823,41 @@ export const api = {
   /** Mark one notification (by id) or all of them read. */
   markNotificationsRead(target: { id?: string; all?: boolean }): Promise<{ ok: boolean }> {
     return apiFetch<{ ok: boolean }>('POST', '/notifications/read', target);
+  },
+
+  // ── Seller product requests (migration 054) ──
+  /** A seller proposes a product that isn't in the catalogue yet. */
+  createProductRequest(payload: {
+    name: string;
+    unit: string;
+    regional_name?: string;
+    category?: string;
+    note?: string;
+  }): Promise<{ message: string; request: ProductRequest }> {
+    return apiFetch('POST', '/product-requests', payload);
+  },
+  /** A seller's own requests, or (for a reviewer) all — optionally by status. */
+  getProductRequests(status?: ProductRequestStatus): Promise<ProductRequestsResponse> {
+    const qs = status ? '?status=' + status : '';
+    return apiFetch<ProductRequestsResponse>('GET', '/product-requests' + qs);
+  },
+  /** Reviewer: approve a request, creating the catalogue product under `code`. */
+  approveProductRequest(
+    id: string,
+    body: {
+      code: string;
+      category?: string;
+      product_group?: string;
+      sub_type?: string;
+      regional_name?: string;
+      platform_fee_pct?: number;
+    },
+  ): Promise<{ message: string; product: Product }> {
+    return apiFetch('POST', '/product-requests/' + id + '/approve', body);
+  },
+  /** Reviewer: reject a request with a reason. */
+  rejectProductRequest(id: string, reason: string): Promise<{ message: string }> {
+    return apiFetch('POST', '/product-requests/' + id + '/reject', { reason });
   },
 
   // ── Role & Permission Management ────────────────────────────────────────────
