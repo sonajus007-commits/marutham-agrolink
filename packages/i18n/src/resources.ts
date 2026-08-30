@@ -1186,6 +1186,8 @@ export const resources = {
       'admin.nav.orders': 'Orders',
       'admin.nav.returns': 'Returns',
       'admin.nav.support': 'Support',
+      'admin.nav.announcements': 'Announcements',
+      'admin.nav.reports': 'Reports',
       'support.title': 'Help & Support',
       'support.raise': 'Contact support',
       'support.blurb':
@@ -3366,6 +3368,8 @@ export const resources = {
       'admin.nav.orders': 'ஆர்டர்கள்',
       'admin.nav.returns': 'திருப்பிகள்',
       'admin.nav.support': 'ஆதரவு',
+      'admin.nav.announcements': 'அறிவிப்புகள்',
+      'admin.nav.reports': 'அறிக்கைகள்',
       'support.title': 'உதவி & ஆதரவு',
       'support.raise': 'ஆதரவைத் தொடர்புகொள்',
       'support.blurb':

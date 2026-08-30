@@ -164,6 +164,20 @@ export const ADMIN_NAV: AdminNavSection[] = [
         requires: { module: 'customer_complaints', action: 'view' },
       },
       {
+        id: 'announcements',
+        labelKey: 'admin.nav.announcements',
+        Icon: BarChartIcon,
+        to: '/admin/announcements',
+        requires: { module: 'notifications', action: 'create' },
+      },
+      {
+        id: 'reports',
+        labelKey: 'admin.nav.reports',
+        Icon: FilePenIcon,
+        to: '/admin/reports',
+        requires: { module: 'reports_export', action: 'view' },
+      },
+      {
         id: 'payouts',
         labelKey: 'admin.nav.payouts',
         Icon: WalletIcon,

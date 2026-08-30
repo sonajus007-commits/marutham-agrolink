@@ -149,3 +149,41 @@ test('POST /notifications/read with neither id nor all is a 400', async () => {
   assert.equal(res.status, 400);
   assert.equal(db.callsTo('notifications', 'update').length, 0);
 });
+
+// ── broadcast (A2) ───────────────────────────────────────────────────────────
+const STAFF = { id: 's1', role: 'admin', admin_role: 'District Manager', fname: 'DM' };
+
+test('POST /notifications/broadcast — staff send one notice to every user in the audience', async () => {
+  const db = fakeSupabase({
+    'users:select': { data: [{ id: 'u1' }, { id: 'u2' }] },
+    'notifications:insert': { data: [] },
+  });
+  app = await mountRoute('notifications', { supabase: db, user: STAFF });
+  const res = await app.post('/broadcast', { audience: 'consumers', title: 'Holiday', body: 'Closed tomorrow' });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.sent, 2);
+  // one bulk insert, one row per recipient, all typed as an announcement
+  const rows = db.callsTo('notifications', 'insert')[0].payload;
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].type, 'announcement');
+});
+
+test('POST /notifications/broadcast — a consumer cannot broadcast (403)', async () => {
+  const db = fakeSupabase({});
+  app = await mountRoute('notifications', { supabase: db, user: CONSUMER });
+  const res = await app.post('/broadcast', { audience: 'all', title: 'x', body: 'y' });
+
+  assert.equal(res.status, 403);
+  assert.equal(db.callsTo('notifications', 'insert').length, 0);
+});
+
+test('POST /notifications/broadcast — an empty audience sends nothing', async () => {
+  const db = fakeSupabase({ 'users:select': { data: [] } });
+  app = await mountRoute('notifications', { supabase: db, user: STAFF });
+  const res = await app.post('/broadcast', { audience: 'sellers', district: 'Nowhere', title: 'x', body: 'y' });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.sent, 0);
+  assert.equal(db.callsTo('notifications', 'insert').length, 0);
+});

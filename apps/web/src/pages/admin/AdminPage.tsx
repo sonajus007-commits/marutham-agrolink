@@ -32,6 +32,8 @@ import { ChangeRequestsPage } from './ChangeRequestsPage';
 import { ProductsPage } from './ProductsPage';
 import { ProductRequestsPage } from './ProductRequestsPage';
 import { SupportPage } from './SupportPage';
+import { AnnouncementsPage } from './AnnouncementsPage';
+import { ReportsPage } from './ReportsPage';
 import { EmployeesPage } from './EmployeesPage';
 import { ProfilePage } from './ProfilePage';
 import { HubQueuePage } from './HubQueuePage';
@@ -151,6 +153,8 @@ export function AdminPage() {
               <Route path="products" element={<ProductsPage />} />
               <Route path="product-requests" element={<ProductRequestsPage />} />
               <Route path="support" element={<SupportPage />} />
+              <Route path="announcements" element={<AnnouncementsPage />} />
+              <Route path="reports" element={<ReportsPage />} />
               <Route path="employees" element={<EmployeesPage />} />
               <Route path="hub" element={<HubQueuePage />} />
               <Route path="hub-dashboard" element={<HubDashboardPage />} />

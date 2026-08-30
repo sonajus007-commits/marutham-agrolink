@@ -1,7 +1,9 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { can } = require('../middleware/permissions');
 const { validateBody, z } = require('../middleware/validate');
+const { notifyMany } = require('../utils/notifications');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -125,5 +127,53 @@ router.post(
     return res.json({ ok: true });
   },
 );
+
+// ── POST /notifications/broadcast ── staff announcement to a segment ─────────────
+// Sends one in-app notice to every active user in the chosen audience (optionally
+// one district). Gated on the Notifications module's 'create' — admin + the tiered
+// managers hold it. A large audience is a single bulk insert; capped so a mistake
+// can't fan out unbounded.
+const BROADCAST_CAP = 20000;
+const broadcastSchema = z.object({
+  audience: z.enum(['consumers', 'sellers', 'all']),
+  district: z.string().trim().max(80).optional(),
+  title: z.string().trim().min(1, 'A title is required.').max(120),
+  body: z.string().trim().min(1, 'A message is required.').max(1000),
+});
+
+router.post('/broadcast', validateBody(broadcastSchema), async (req, res) => {
+  if (!can(req.user, 'notifications', 'create')) {
+    return res.status(403).json({ error: 'Notifications permission required to broadcast.' });
+  }
+  const { audience, district, title, body } = req.body;
+
+  const roles =
+    audience === 'consumers' ? ['consumer'] : audience === 'sellers' ? ['farmer'] : ['consumer', 'farmer'];
+
+  let q = supabase
+    .from('users')
+    .select('id')
+    .in('role', roles)
+    .eq('status', 'active')
+    .is('deleted_at', null)
+    .limit(BROADCAST_CAP + 1);
+  if (district) q = q.eq('district', district);
+
+  const { data: rows, error } = await q;
+  if (error) {
+    console.error('POST /notifications/broadcast recipient lookup failed:', error.message);
+    return res.status(500).json({ error: 'Could not resolve the audience. Nothing was sent.' });
+  }
+  const ids = (rows || []).map((r) => r.id);
+  if (ids.length === 0) {
+    return res.json({ sent: 0, message: 'No active users match that audience.' });
+  }
+  if (ids.length > BROADCAST_CAP) {
+    return res.status(400).json({ error: `That audience is too large (>${BROADCAST_CAP}). Narrow it by district.` });
+  }
+
+  await notifyMany(ids, { type: 'announcement', title, body, data: { broadcast: true } });
+  res.json({ sent: ids.length, message: `Announcement sent to ${ids.length} ${audience}.` });
+});
 
 module.exports = router;

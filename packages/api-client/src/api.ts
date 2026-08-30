@@ -887,6 +887,29 @@ export const api = {
     return apiFetch('PATCH', '/support/' + id, body);
   },
 
+  // ── Admin: broadcast announcement (A2) ──
+  /** Send one in-app notice to a segment (staff with the notifications module). */
+  broadcastNotification(payload: {
+    audience: 'consumers' | 'sellers' | 'all';
+    district?: string;
+    title: string;
+    body: string;
+  }): Promise<{ sent: number; message: string }> {
+    return apiFetch('POST', '/notifications/broadcast', payload);
+  },
+
+  // ── Admin: CSV report export (A3) ──
+  /** Download a CSV report (orders | payouts | users) as a Blob. */
+  downloadReport(
+    type: 'orders' | 'payouts' | 'users',
+    params: { from?: string; to?: string; district?: string; role?: string } = {},
+  ): Promise<Blob> {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v) as [string, string][],
+    ).toString();
+    return apiFetchBlob('/reports/' + type + '.csv' + (qs ? '?' + qs : ''));
+  },
+
   // ── Wishlist (migration 056) ──
   /** The consumer's saved products (with catalogue detail). */
   getWishlist(): Promise<WishlistResponse> {

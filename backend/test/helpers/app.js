@@ -176,7 +176,10 @@ async function mountRoute(routeModule, { supabase, user = null }) {
     const text = await res.text();
     let json;
     try { json = text ? JSON.parse(text) : null; } catch { json = null; }
-    return { status: res.status, body: json, text };
+    // headers exposed so a non-JSON response (a CSV/PDF download) can assert its
+    // Content-Type / Content-Disposition, not just its body.
+    const headers = Object.fromEntries(res.headers.entries());
+    return { status: res.status, body: json, text, headers };
   }
 
   return {
