@@ -1,4 +1,5 @@
 // POST/DELETE /notifications/device — the native app's push-token registry.
+// GET /notifications + /unread-count + POST /read — the in-app feed (migration 053).
 // Server closed in afterEach, never inline: a failing assertion would otherwise leak
 // the listener and hang `node --test` (see project_route_tests).
 
@@ -17,6 +18,8 @@ afterEach(async () => {
     app = null;
   }
 });
+
+// ── device-token registry ────────────────────────────────────────────────────
 
 test('POST /device — registers the token against the signed-in user', async () => {
   const db = fakeSupabase();
@@ -94,4 +97,55 @@ test('DELETE /device — a failed delete is a 500', async () => {
   app = await mountRoute('notifications', { supabase: db, user: FARMER });
   const res = await app.request('DELETE', '/device', { token: 'fcm-abc' });
   assert.equal(res.status, 500);
+});
+
+// ── in-app feed (migration 053) ──────────────────────────────────────────────
+// A user reads and clears only their own bell. These lock the scoping and the
+// mark-read contract.
+
+const FEED_ROWS = [
+  { id: 'n1', type: 'order_placed', title: 'Order placed', body: 'x', data: {}, read_at: null, created_at: '2026-08-30T10:00:00Z' },
+  { id: 'n2', type: 'order_delivered', title: 'Order delivered', body: 'y', data: {}, read_at: '2026-08-30T09:00:00Z', created_at: '2026-08-30T09:00:00Z' },
+];
+
+test('GET /notifications returns the feed with an unread count, scoped to the caller', async () => {
+  const db = fakeSupabase({ 'notifications:select': { data: FEED_ROWS, count: 1 } });
+  app = await mountRoute('notifications', { supabase: db, user: CONSUMER });
+  const res = await app.get('/');
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.notifications.length, 2);
+  assert.equal(res.body.unread, 1);
+  const reads = db.callsTo('notifications', 'select');
+  assert.ok(reads.every((c) => c.filters.some((f) => f[0] === 'eq' && f[1] === 'user_id' && f[2] === 'c1')));
+});
+
+test('GET /notifications/unread-count is scoped and returns the count', async () => {
+  const db = fakeSupabase({ 'notifications:select': { data: [], count: 3 } });
+  app = await mountRoute('notifications', { supabase: db, user: CONSUMER });
+  const res = await app.get('/unread-count');
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.unread, 3);
+});
+
+test('POST /notifications/read {all:true} flips only this user\'s unread rows', async () => {
+  const db = fakeSupabase({ 'notifications:update': { data: [] } });
+  app = await mountRoute('notifications', { supabase: db, user: CONSUMER });
+  const res = await app.post('/read', { all: true });
+
+  assert.equal(res.status, 200);
+  const upd = db.callsTo('notifications', 'update')[0];
+  assert.ok(upd.payload.read_at, 'read_at is stamped');
+  assert.ok(upd.filters.some((f) => f[0] === 'eq' && f[1] === 'user_id' && f[2] === 'c1'), 'scoped to the caller');
+  assert.ok(upd.filters.some((f) => f[0] === 'is' && f[1] === 'read_at'), 'only unread rows are touched');
+});
+
+test('POST /notifications/read with neither id nor all is a 400', async () => {
+  const db = fakeSupabase({});
+  app = await mountRoute('notifications', { supabase: db, user: CONSUMER });
+  const res = await app.post('/read', {});
+
+  assert.equal(res.status, 400);
+  assert.equal(db.callsTo('notifications', 'update').length, 0);
 });

@@ -3,6 +3,7 @@ const crypto  = require('crypto');
 const supabase = require('../db/supabase');
 const { requirePermission } = require('../middleware/permissions');
 const notify = require('../utils/notify');
+const { notify: notifyInApp } = require('../utils/notifications');
 
 const router = express.Router();
 
@@ -108,6 +109,11 @@ router.post('/:id/approve', async (req, res) => {
   } catch (e) {
     console.error('Notification error (approve):', e.message);
   }
+  notifyInApp(req.params.id, {
+    type: 'registration_approved',
+    title: 'Registration approved',
+    body: 'Your registration is approved. Sign in and activate your account to start selling.',
+  });
 
   res.json({
     message: `Registration approved. ${applicant.fname} can now log in and pay to activate their account.`,
@@ -151,6 +157,11 @@ router.post('/:id/reject', async (req, res) => {
   } catch (e) {
     console.error('Notification error (reject):', e.message);
   }
+  notifyInApp(req.params.id, {
+    type: 'registration_rejected',
+    title: 'Registration update',
+    body: `Your registration could not be approved: ${reason.trim()}`,
+  });
 
   res.json({ message: `Registration rejected. Applicant has been notified.` });
 });

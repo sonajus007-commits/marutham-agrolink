@@ -8,6 +8,7 @@ const { rollupToParent } = require('../utils/orderRollup');
 const { geocodeAddress, geocodingEnabled } = require('../utils/geocode');
 const { suggestDeliveryHubs } = require('../utils/hubSuggest');
 const { agentServesOrder, coverageBlockMessage } = require('../utils/agentCoverage');
+const { notify } = require('../utils/notifications');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -180,6 +181,21 @@ async function advanceStage(order, actorLabel, extraUpdates = {}, deliveryCoords
    * is repaired by the next child event; a scan rejected because a summary row
    * failed to update is a delivery stopped for no reason. */
   await rollupToParent(order.parent_order_id);
+
+  // Notify the buyer on the transitions they actually care about — not every micro
+  // step. Best-effort (see utils/notifications); a split parcel notifies per parcel.
+  if (order.consumer_id && (newStatus === 'Out for Delivery' || newStatus === 'Delivered')) {
+    const label = order.code || 'your order';
+    notify(order.consumer_id, {
+      type: newStatus === 'Delivered' ? 'order_delivered' : 'order_out_for_delivery',
+      title: newStatus === 'Delivered' ? 'Order delivered' : 'Out for delivery',
+      body:
+        newStatus === 'Delivered'
+          ? `${label} has been delivered. Enjoy!`
+          : `${label} is out for delivery.`,
+      data: { order_id: order.id, code: order.code || null },
+    });
+  }
 
   return { updated, newStatus };
 }

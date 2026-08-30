@@ -3,6 +3,7 @@ const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { can } = require('../middleware/permissions');
 const { groupPayouts } = require('../utils/payouts');
+const { notify } = require('../utils/notifications');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -142,6 +143,21 @@ router.post('/run', async (req, res) => {
   if (error) {
     console.error('Payout run error:', error);
     return res.status(500).json({ error: 'Could not create payout records.' });
+  }
+
+  // Notify each settled seller (in-app, best-effort) — one notice per farmer even
+  // when a farmer has several payouts in the batch.
+  const byFarmer = new Map();
+  for (const p of created) {
+    byFarmer.set(p.farmer_id, (byFarmer.get(p.farmer_id) || 0) + 1);
+  }
+  for (const [farmerId, n] of byFarmer) {
+    notify(farmerId, {
+      type: 'payout',
+      title: 'Payout queued',
+      body: `${n} payout${n > 1 ? 's have' : ' has'} been queued for settlement.`,
+      data: { count: n },
+    });
   }
 
   res.status(201).json({

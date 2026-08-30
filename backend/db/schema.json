@@ -490,6 +490,46 @@
         }
       }
     },
+    "notifications": {
+      "columns": {
+        "body": {
+          "type": "text",
+          "notNull": false
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "data": {
+          "type": "jsonb",
+          "notNull": true
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "read_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "title": {
+          "type": "text",
+          "notNull": true
+        },
+        "type": {
+          "type": "text",
+          "notNull": true
+        },
+        "user_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "users.id"
+        }
+      }
+    },
     "order_history": {
       "columns": {
         "id": {

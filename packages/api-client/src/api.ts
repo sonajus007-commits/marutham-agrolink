@@ -65,6 +65,7 @@ import type {
   SpendByCategory,
   FrequentItem,
   RolesResponse,
+  NotificationsResponse,
 } from './types';
 import type {
   Order,
@@ -805,6 +806,20 @@ export const api = {
    *  the previous user's notifications. */
   unregisterPushToken(token: string): Promise<{ message: string }> {
     return apiFetch('DELETE', '/notifications/device', { token });
+  },
+
+  // ── In-app notification bell (migration 053) ──
+  /** The signed-in user's notification feed, newest first, with the unread count. */
+  getNotifications(limit = 20, offset = 0): Promise<NotificationsResponse> {
+    return apiFetch<NotificationsResponse>('GET', `/notifications?limit=${limit}&offset=${offset}`);
+  },
+  /** Cheap unread-count poll for the badge. */
+  getUnreadCount(): Promise<{ unread: number }> {
+    return apiFetch<{ unread: number }>('GET', '/notifications/unread-count');
+  },
+  /** Mark one notification (by id) or all of them read. */
+  markNotificationsRead(target: { id?: string; all?: boolean }): Promise<{ ok: boolean }> {
+    return apiFetch<{ ok: boolean }>('POST', '/notifications/read', target);
   },
 
   // ── Role & Permission Management ────────────────────────────────────────────

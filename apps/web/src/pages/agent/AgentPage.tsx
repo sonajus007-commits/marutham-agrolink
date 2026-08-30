@@ -23,6 +23,7 @@ import { ProfileContent } from './ProfileContent';
 import { OrderViewSheet } from './sheets/OrderViewSheet';
 import { DeliverSheet } from './sheets/DeliverSheet';
 import { VerifySheet } from './sheets/VerifySheet';
+import { NotificationBell } from '../../components/NotificationBell';
 import './agent.css';
 
 type SheetKind = 'view' | 'deliver' | 'verify' | null;
@@ -154,6 +155,7 @@ function AgentPageInner() {
           </div>
         </a>
         <div className="agent-hdr__right">
+          <NotificationBell />
           <div className="agent-pill">
             <div className="agent-dot" />
             <span className="agent-pill__text">{t('agent.onDuty')}</span>

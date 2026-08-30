@@ -7,6 +7,7 @@ const { orderLimiter } = require('../middleware/rateLimit');
 const { can } = require('../middleware/permissions');
 const { validateBody, z } = require('../middleware/validate');
 const { generateOrderCode, generateDeliveryCode } = require('../utils/codeGen');
+const { notify, notifyMany } = require('../utils/notifications');
 const { getFeeForSeller } = require('../utils/fees');
 const { payoutByOrder } = require('../utils/payouts');
 const { streamInvoice } = require('../utils/invoice');
@@ -502,6 +503,25 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
                   `${stockFailures.length} item(s); they remain on sale at the old quantity: ` +
                   stockFailures.join('; '));
   }
+
+  // ── 8. Notify (in-app, best-effort) — the buyer and every seller on the order ──
+  // Fire-and-forget: the order is already committed, so a notification failure is
+  // logged inside notify() and never touches this response.
+  notify(req.user.id, {
+    type: 'order_placed',
+    title: 'Order placed',
+    body: `Your order ${code} has been placed.`,
+    data: { order_id: order.id, code },
+  });
+  notifyMany(
+    resolvedItems.map((it) => it.farmer_id),
+    {
+      type: 'new_order',
+      title: 'New order received',
+      body: `You have a new order (${code}). Package it for pickup.`,
+      data: { order_id: order.id, code },
+    },
+  );
 
   res.status(201).json({
     message: 'Order placed successfully.',

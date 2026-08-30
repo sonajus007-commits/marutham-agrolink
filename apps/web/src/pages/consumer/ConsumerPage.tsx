@@ -25,6 +25,7 @@ import { OrdersTab } from './OrdersTab';
 import { OrderDetailSheet } from './OrderDetailSheet';
 import { ProfileTab } from './ProfileTab';
 import { AddressBook } from './AddressBook';
+import { NotificationBell } from '../../components/NotificationBell';
 import './consumer.css';
 
 /* 'profile' is reachable from the header 👤 button, not the nav bar — a fifth
@@ -132,6 +133,7 @@ function ConsumerInner() {
           </div>
         </a>
         <div className="cons-hdr__right">
+          <NotificationBell />
           <LangToggle
             value={i18n.language}
             onChange={(v) => setLang(v as AppLanguage)}

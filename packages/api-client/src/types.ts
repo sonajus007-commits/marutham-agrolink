@@ -1186,3 +1186,21 @@ export interface AdminHeadDashboardResponse {
   /** See ADMINHEAD_PLACEHOLDERS in backend/routes/dashboard.js. */
   placeholders: string[];
 }
+
+// ── In-app notifications (migration 053) ─────────────────────────────────────
+export interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  /** Small routing payload the bell uses to deep-link (e.g. { order_id, code }). */
+  data: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+}
+export interface NotificationsResponse {
+  notifications: NotificationItem[];
+  unread: number;
+  limit: number;
+  offset: number;
+}

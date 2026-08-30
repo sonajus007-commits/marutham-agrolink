@@ -20,6 +20,7 @@ import { FarmerOrdersTab } from './FarmerOrdersTab';
 import { FarmerHomeTab, type FarmerNavTarget } from './FarmerHomeTab';
 import { FarmerProfileTab } from './FarmerProfileTab';
 import { SubscriptionGate } from './SubscriptionGate';
+import { NotificationBell } from '../../components/NotificationBell';
 import './farmer.css';
 
 type Tab = 'home' | 'earnings' | 'products' | 'orders' | 'profile';
@@ -133,6 +134,7 @@ function FarmerInner() {
           </div>
         </a>
         <div className="fm-hdr__right">
+          <NotificationBell />
           <LangToggle
             value={i18n.language}
             onChange={(v) => setLang(v as AppLanguage)}

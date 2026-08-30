@@ -12,6 +12,7 @@ import {
 } from '@marutham/ui';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
 import { UserIcon, LogOutIcon } from '../../components/icons';
+import { NotificationBell } from '../../components/NotificationBell';
 import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider } from '../../components/Toast';
 import { ADMIN_NAV, APP_BASE, filterAdminNav } from './adminNav';
@@ -105,6 +106,7 @@ export function AdminPage() {
 
   const actions = (
     <>
+      <NotificationBell />
       <LangToggle
         value={i18n.language}
         onChange={(v) => changeLanguage(v as AppLanguage)}

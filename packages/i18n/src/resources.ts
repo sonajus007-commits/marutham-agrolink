@@ -117,6 +117,8 @@ export const resources = {
       'reg.goToLogin': 'Go to sign in',
       'nav.dashboard': 'Dashboard',
       'nav.logout': 'Logout',
+      'notif.title': 'Notifications',
+      'notif.empty': "You're all caught up",
       'dashboard.welcome': 'Welcome',
       'dashboard.proofTitle': 'Phase 0 — foundation proof',
       'dashboard.proofNote':
@@ -2226,6 +2228,8 @@ export const resources = {
       'reg.goToLogin': 'உள்நுழைவுக்குச் செல்',
       'nav.dashboard': 'டாஷ்போர்டு',
       'nav.logout': 'வெளியேறு',
+      'notif.title': 'அறிவிப்புகள்',
+      'notif.empty': 'அனைத்தும் பார்த்தாகிவிட்டது',
       'dashboard.welcome': 'வரவேற்பு',
       'dashboard.proofTitle': 'கட்டம் 0 — அடிப்படை சான்று',
       'dashboard.proofNote':
