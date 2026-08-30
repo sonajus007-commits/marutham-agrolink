@@ -178,6 +178,13 @@ export const ADMIN_NAV: AdminNavSection[] = [
         requires: { module: 'reports_export', action: 'view' },
       },
       {
+        id: 'attendance',
+        labelKey: 'admin.nav.attendance',
+        Icon: UsersIcon,
+        to: '/admin/attendance',
+        requires: { module: 'attendance', action: 'view' },
+      },
+      {
         id: 'payouts',
         labelKey: 'admin.nav.payouts',
         Icon: WalletIcon,

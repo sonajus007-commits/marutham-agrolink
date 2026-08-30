@@ -73,6 +73,8 @@ import type {
   SupportStatus,
   SupportTicketsResponse,
   WishlistResponse,
+  MyAttendanceResponse,
+  AttendanceListResponse,
 } from './types';
 import type {
   Order,
@@ -885,6 +887,29 @@ export const api = {
     body: { status?: SupportStatus; admin_note?: string; assign_me?: boolean },
   ): Promise<{ message: string; ticket: SupportTicket }> {
     return apiFetch('PATCH', '/support/' + id, body);
+  },
+
+  // ── Field-staff attendance (A5) ──
+  /** Field staff go on duty for today (optional check-in location). */
+  checkIn(coords?: { lat: number; lng: number }): Promise<MyAttendanceResponse> {
+    return apiFetch<MyAttendanceResponse>('POST', '/attendance/check-in', coords || {});
+  },
+  /** Field staff go off duty for today. */
+  checkOut(): Promise<MyAttendanceResponse> {
+    return apiFetch<MyAttendanceResponse>('POST', '/attendance/check-out');
+  },
+  /** My duty status today. */
+  getMyAttendance(): Promise<MyAttendanceResponse> {
+    return apiFetch<MyAttendanceResponse>('GET', '/attendance/me');
+  },
+  /** Manager roster: who is on duty (attendance:view). */
+  getAttendance(
+    params: { date?: string; district?: string } = {},
+  ): Promise<AttendanceListResponse> {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v) as [string, string][],
+    ).toString();
+    return apiFetch<AttendanceListResponse>('GET', '/attendance' + (qs ? '?' + qs : ''));
   },
 
   // ── Admin: broadcast announcement (A2) ──

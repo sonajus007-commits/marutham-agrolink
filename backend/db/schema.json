@@ -1348,6 +1348,54 @@
         }
       }
     },
+    "staff_attendance": {
+      "columns": {
+        "admin_role": {
+          "type": "text",
+          "notNull": false
+        },
+        "check_in_lat": {
+          "type": "double precision",
+          "notNull": false
+        },
+        "check_in_lng": {
+          "type": "double precision",
+          "notNull": false
+        },
+        "checked_in_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "checked_out_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "district": {
+          "type": "text",
+          "notNull": false
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "user_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "users.id"
+        },
+        "work_date": {
+          "type": "date",
+          "notNull": true
+        }
+      }
+    },
     "subscription_payments": {
       "columns": {
         "id": {

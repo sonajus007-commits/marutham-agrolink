@@ -85,6 +85,29 @@
   font-weight: 700;
   color: var(--forest);
 }
+/* Tappable duty toggle (migration 057). Off duty = muted, no pulse. */
+.agent-pill--btn {
+  cursor: pointer;
+}
+.agent-pill--btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.agent-pill--btn:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 2px;
+}
+.agent-pill--off {
+  background: var(--surface-muted);
+}
+.agent-pill--off .agent-dot {
+  background: var(--gray);
+  box-shadow: none;
+  animation: none;
+}
+.agent-pill--off .agent-pill__text {
+  color: var(--gray);
+}
 
 .agent-lang button {
   font-size: 12px;

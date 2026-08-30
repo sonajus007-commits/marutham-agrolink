@@ -24,6 +24,7 @@ import { OrderViewSheet } from './sheets/OrderViewSheet';
 import { DeliverSheet } from './sheets/DeliverSheet';
 import { VerifySheet } from './sheets/VerifySheet';
 import { NotificationBell } from '../../components/NotificationBell';
+import { DutyToggle } from './DutyToggle';
 import './agent.css';
 
 type SheetKind = 'view' | 'deliver' | 'verify' | null;
@@ -156,10 +157,7 @@ function AgentPageInner() {
         </a>
         <div className="agent-hdr__right">
           <NotificationBell />
-          <div className="agent-pill">
-            <div className="agent-dot" />
-            <span className="agent-pill__text">{t('agent.onDuty')}</span>
-          </div>
+          <DutyToggle />
           <div className="agent-lang">
             <button className={i18n.language === 'en' ? 'on' : ''} onClick={() => setLang('en')}>
               EN

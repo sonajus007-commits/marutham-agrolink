@@ -76,6 +76,7 @@ const productRequestsRouter = require('./routes/productRequests');
 const supportRouter = require('./routes/support');
 const wishlistRouter = require('./routes/wishlist');
 const reportsRouter = require('./routes/reports');
+const attendanceRouter = require('./routes/attendance');
 const rolesRouter         = require('./routes/roles');
 const hubsRouter          = require('./routes/hubs');
 
@@ -116,6 +117,7 @@ api.use('/product-requests', productRequestsRouter);
 api.use('/support', supportRouter);
 api.use('/wishlist', wishlistRouter);
 api.use('/reports', reportsRouter);
+api.use('/attendance', attendanceRouter);
 api.use('/roles',         rolesRouter);
 api.use('/hubs',          hubsRouter);
 

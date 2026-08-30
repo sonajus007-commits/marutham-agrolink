@@ -131,6 +131,12 @@ export const resources = {
       // ── Agent role ──
       'agent.tag': 'Delivery Agent',
       'agent.onDuty': 'On Duty',
+      'agent.offDuty': 'Off Duty',
+      'agent.duty.on': 'Checked in — on duty.',
+      'agent.duty.off': 'Checked out — off duty.',
+      'agent.duty.failed': 'Could not update duty status',
+      'agent.duty.tapOn': 'Tap to check in',
+      'agent.duty.tapOff': 'Tap to check out',
       'agent.exit': 'Exit',
       'agent.profile': 'My Profile',
       'agent.nav.label': 'Field sections',
@@ -1188,6 +1194,7 @@ export const resources = {
       'admin.nav.support': 'Support',
       'admin.nav.announcements': 'Announcements',
       'admin.nav.reports': 'Reports',
+      'admin.nav.attendance': 'Field Team',
       'support.title': 'Help & Support',
       'support.raise': 'Contact support',
       'support.blurb':
@@ -2292,6 +2299,12 @@ export const resources = {
       // ── Agent role ──
       'agent.tag': 'டெலிவரி முகவர்',
       'agent.onDuty': 'பணியில்',
+      'agent.offDuty': 'பணியில் இல்லை',
+      'agent.duty.on': 'செக்-இன் — பணியில்.',
+      'agent.duty.off': 'செக்-அவுட் — பணி முடிந்தது.',
+      'agent.duty.failed': 'பணி நிலையை மாற்ற முடியவில்லை',
+      'agent.duty.tapOn': 'செக்-இன் செய்ய தட்டவும்',
+      'agent.duty.tapOff': 'செக்-அவுட் செய்ய தட்டவும்',
       'agent.exit': 'வெளியேறு',
       'agent.profile': 'என் சுயவிவரம்',
       'agent.nav.label': 'கள பிரிவுகள்',
@@ -3370,6 +3383,7 @@ export const resources = {
       'admin.nav.support': 'ஆதரவு',
       'admin.nav.announcements': 'அறிவிப்புகள்',
       'admin.nav.reports': 'அறிக்கைகள்',
+      'admin.nav.attendance': 'கள அணி',
       'support.title': 'உதவி & ஆதரவு',
       'support.raise': 'ஆதரவைத் தொடர்புகொள்',
       'support.blurb':

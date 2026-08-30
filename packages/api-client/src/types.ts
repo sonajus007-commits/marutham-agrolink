@@ -1260,3 +1260,26 @@ export interface WishlistItem {
 export interface WishlistResponse {
   items: WishlistItem[];
 }
+
+// ── Field-staff attendance (migration 057) ───────────────────────────────────
+export type DutyStatus = 'on_duty' | 'off_duty';
+export interface AttendanceRow {
+  user_id: string;
+  name: string;
+  phone: string | null;
+  role: string | null;
+  district: string | null;
+  checked_in_at: string | null;
+  checked_out_at: string | null;
+  status: DutyStatus;
+}
+export interface MyAttendanceResponse {
+  status: DutyStatus;
+  attendance: unknown | null;
+}
+export interface AttendanceListResponse {
+  date: string;
+  on_duty: number;
+  total_staff: number;
+  attendance: AttendanceRow[];
+}
