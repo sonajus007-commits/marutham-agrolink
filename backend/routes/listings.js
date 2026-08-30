@@ -5,12 +5,60 @@ const { can } = require('../middleware/permissions');
 const { validateBody, z } = require('../middleware/validate');
 const { getFeeForSeller } = require('../utils/fees');
 const { validateImages } = require('../utils/listings');
+const { priceBandCheck, priceBandMessage } = require('../utils/priceGuard');
 const notify = require('../utils/notify');
 
 const router = express.Router();
 
 // All listing routes require login
 router.use(requireAuth);
+
+// The market reference for a product in a farmer's district: the APMC modal price
+// synced into product_district_prices (paise). Prefer the farmer's own district;
+// fall back to any district's row for the product so a sanity band still applies
+// where the local mandi has no feed. Returns { market, unit } — market null when
+// no reference exists (the band check then only enforces the ₹0 floor).
+async function marketReference(productId, district) {
+  const { data: prod } = await supabase
+    .from('products')
+    .select('unit')
+    .eq('id', productId)
+    .maybeSingle();
+  const unit = prod ? prod.unit : null;
+
+  let market = null;
+  if (district) {
+    const { data: local } = await supabase
+      .from('product_district_prices')
+      .select('market_price')
+      .eq('product_id', productId)
+      .eq('district', district)
+      .maybeSingle();
+    if (local && local.market_price > 0) market = local.market_price;
+  }
+  if (market == null) {
+    // Any district's feed for this product — a loose reference is better than none.
+    const { data: any } = await supabase
+      .from('product_district_prices')
+      .select('market_price')
+      .eq('product_id', productId)
+      .gt('market_price', 0)
+      .order('market_price', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (any && any.market_price > 0) market = any.market_price;
+  }
+  return { market, unit };
+}
+
+// Runs the price sanity guard for a listing write. Returns an error string to send
+// as a 400, or null when the price is acceptable (or no price is being set).
+async function priceGuardError(productId, farmerPrice, district) {
+  if (farmerPrice === undefined || farmerPrice === null) return null;
+  const { market, unit } = await marketReference(productId, district);
+  const check = priceBandCheck(farmerPrice, market);
+  return check.ok ? null : priceBandMessage(check, unit);
+}
 
 // Role guards kept ahead of body validation so the 403 still precedes any 400.
 function farmersOnly(req, res, next) {
@@ -201,6 +249,10 @@ router.post('/', farmersOnly, validateBody(createListingSchema), async (req, res
   if (!product) return res.status(404).json({ error: 'Product not found.' });
   if (!product.available) return res.status(400).json({ error: 'This product is not currently active.' });
 
+  // Price sanity guard: block ₹0 and prices wildly off the market reference.
+  const priceErr = await priceGuardError(product_id, farmer_price, req.user.district);
+  if (priceErr) return res.status(400).json({ error: priceErr });
+
   const { data, error } = await supabase
     .from('farmer_listings')
     .insert({
@@ -237,7 +289,7 @@ router.patch('/:id', async (req, res) => {
   // it tells the farmer their own listing has vanished.
   const { data: existing, error: existingErr } = await supabase
     .from('farmer_listings')
-    .select('id, farmer_id')
+    .select('id, farmer_id, product_id')
     .eq('id', req.params.id)
     .maybeSingle();
 
@@ -248,6 +300,12 @@ router.patch('/:id', async (req, res) => {
   if (!existing) return res.status(404).json({ error: 'Listing not found.' });
   if (existing.farmer_id !== req.user.id) {
     return res.status(403).json({ error: 'You can only edit your own listings.' });
+  }
+
+  // Same price sanity guard as create — a farmer can change the price via PATCH too.
+  if (req.body.farmer_price !== undefined) {
+    const priceErr = await priceGuardError(existing.product_id, req.body.farmer_price, req.user.district);
+    if (priceErr) return res.status(400).json({ error: priceErr });
   }
 
   // PATCH accepted `images` unvalidated — any array of anything, any size.

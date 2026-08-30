@@ -119,4 +119,12 @@ async function generateReturnCode(supabase, parentOrderCode) {
   return `RET${dc}${date}${String(seq).padStart(6, '0')}`;
 }
 
-module.exports = { generateOrderCode, generateReturnCode, distCode, stateCode };
+// A 4-digit delivery confirmation code (soft OTP), shown only to the customer.
+// crypto.randomInt is unbiased across 1000–9999; the code is a confirmation token,
+// not a secret store, so 4 digits is the right ergonomics/strength trade-off.
+const crypto = require('crypto');
+function generateDeliveryCode() {
+  return String(crypto.randomInt(1000, 10000));
+}
+
+module.exports = { generateOrderCode, generateReturnCode, generateDeliveryCode, distCode, stateCode };

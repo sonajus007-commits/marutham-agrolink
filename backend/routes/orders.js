@@ -6,7 +6,7 @@ const { requireAuth } = require('../middleware/auth');
 const { orderLimiter } = require('../middleware/rateLimit');
 const { can } = require('../middleware/permissions');
 const { validateBody, z } = require('../middleware/validate');
-const { generateOrderCode } = require('../utils/codeGen');
+const { generateOrderCode, generateDeliveryCode } = require('../utils/codeGen');
 const { getFeeForSeller } = require('../utils/fees');
 const { payoutByOrder } = require('../utils/payouts');
 const { streamInvoice } = require('../utils/invoice');
@@ -250,6 +250,10 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
     return res.status(500).json({ error: 'Could not generate order code. Ensure the code_counters migration has been applied.' });
   }
 
+  // One delivery confirmation code (soft OTP) for the whole order — the customer
+  // reads the same code to each agent, so every parcel of a split order shares it.
+  const deliveryCode = generateDeliveryCode();
+
   // Delivery-side village (consumer): chosen delivery address, else profile village.
   // Drives the hub → doorstep agent matching (Phase C), distinct from the farmer's
   // fulfilment `village` above.
@@ -331,6 +335,7 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
       // An unsplit order has exactly one seller, so its pickup hub is that seller's.
       pickup_hub_id:   isSplit ? null : (pickupHubBySeller.get(resolvedItems[0].farmer_id) ?? null),
       delivery_hub_id: deliveryHubId,
+      delivery_code:   deliveryCode,
       ...(delivery_address ? { delivery_address } : {}),
       ...destCoords,
     })
@@ -392,6 +397,7 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
         // the one consumer delivery hub.
         pickup_hub_id:   pickupHubBySeller.get(group.seller_id) ?? null,
         delivery_hub_id: deliveryHubId,
+        delivery_code:   deliveryCode, // same code across parcels — one code per order
         ...(delivery_address ? { delivery_address } : {}),
         ...destCoords,
       };
@@ -1012,9 +1018,24 @@ router.get('/:id', async (req, res) => {
     console.error('QR generation failed:', e.message);
   }
 
+  // The delivery OTP is stripped from every payload by the global redactor, so hand
+  // it back HERE — and only to the customer who owns the order — under `otp`, the key
+  // the redactor leaves alone. The customer reads this to the agent at the door; the
+  // agent, opening the same order, never receives it.
+  const otp =
+    req.user.role === 'consumer' && order.consumer_id === req.user.id ? order.delivery_code || null : undefined;
+
   // `parts` only appears on a split order, so a client that predates splitting sees
   // the response shape it has always seen.
-  res.json({ order, items, history, qr_token, qr_svg, ...(isSplitParent ? { parts } : {}) });
+  res.json({
+    order,
+    items,
+    history,
+    qr_token,
+    qr_svg,
+    ...(otp !== undefined ? { otp } : {}),
+    ...(isSplitParent ? { parts } : {}),
+  });
 });
 
 // ── GET /orders/:id/invoice.pdf  (consumer owner or staff) ────────────────────

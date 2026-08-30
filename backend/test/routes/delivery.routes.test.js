@@ -135,6 +135,52 @@ test('a delivery on an order with no pinned address stores no distance', async (
   assert.ok(!('delivery_distance_m' in update), 'nothing to compare against → no distance');
 });
 
+// ── Soft delivery OTP (migration 052) ────────────────────────────────────────────
+// A matching code confirms; a wrong code stops; a blank code still delivers (never
+// blocked) but is recorded unverified. Legacy orders (no code) verify to unverified.
+
+test('a matching delivery code confirms the delivery and notes it OTP-verified', async () => {
+  const db = dbFor(outForDelivery({ delivery_code: '4821' }));
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', { delivery_code: '4821' });
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('orders', 'update')[0].payload.status, 'Delivered');
+  const notes = db.callsTo('order_history', 'insert').map((c) => c.payload.label);
+  assert.ok(notes.includes('OTP verified'), 'the timeline records an OTP-verified delivery');
+});
+
+test('a WRONG delivery code stops the delivery (400) and writes nothing', async () => {
+  const db = dbFor(outForDelivery({ delivery_code: '4821' }));
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', { delivery_code: '0000' });
+
+  assert.equal(res.status, 400);
+  assert.match(res.body.error, /does not match/i);
+  assert.equal(db.callsTo('orders', 'update').length, 0, 'a wrong code never advances the order');
+});
+
+test('a BLANK code never blocks — the delivery closes, recorded as not OTP-verified', async () => {
+  const db = dbFor(outForDelivery({ delivery_code: '4821' }));
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', {}); // no code to hand over
+
+  assert.equal(res.status, 200, 'a missing code must never stop a real delivery');
+  assert.equal(db.callsTo('orders', 'update')[0].payload.status, 'Delivered');
+  const notes = db.callsTo('order_history', 'insert').map((c) => c.payload.label);
+  assert.ok(notes.includes('Not OTP-verified'), 'an unverified close is visible in the timeline');
+});
+
+test('a legacy order with no code delivers, recorded as not OTP-verified', async () => {
+  const db = dbFor(outForDelivery()); // no delivery_code at all
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', { delivery_code: '4821' });
+
+  assert.equal(res.status, 200);
+  const notes = db.callsTo('order_history', 'insert').map((c) => c.payload.label);
+  assert.ok(notes.includes('Not OTP-verified'), 'no stored code ⇒ nothing to verify against');
+});
+
 // ── VCO verify location ─────────────────────────────────────────────────────────
 // Verifying a Packaged order (stage 1 → VCO Verified) stamps the VCO's location.
 const VCO = { id: 'v1', role: 'admin', admin_role: 'VCO', fname: 'Vco' };

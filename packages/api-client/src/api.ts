@@ -113,6 +113,7 @@ function scanBody(o: {
   agentId?: string;
   deliveryHubId?: string;
   coords?: { lat: number; lng: number };
+  deliveryCode?: string;
   fromStage?: number;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = {};
@@ -123,6 +124,9 @@ function scanBody(o: {
     body.lat = o.coords.lat;
     body.lng = o.coords.lng;
   }
+  // The soft delivery OTP the customer reads to the agent. Optional: a blank code
+  // still delivers (server records it unverified), only a wrong one is refused.
+  if (o.deliveryCode) body.delivery_code = o.deliveryCode;
   if (o.fromStage !== undefined) body.from_stage = o.fromStage;
   return body;
 }
@@ -150,6 +154,7 @@ function queuedScan(
     agentId?: string;
     deliveryHubId?: string;
     coords?: { lat: number; lng: number };
+    deliveryCode?: string;
   } = {},
 ): Promise<ScanResponse> {
   // The body is built HERE rather than by the caller, so a queued scan cannot be
@@ -312,8 +317,14 @@ export const api = {
    * fields. The parcel moves when that agent scans it themselves (At Hub →
    * Picked Up), so the hub records the handover and the agent confirms it.
    * Online-only: a hub has signal, and there is no stage to assert. */
-  assignAgent(id: string, agentId: string): Promise<{ message?: string }> {
-    return apiFetch('POST', '/orders/' + id + '/assign', { agent_id: agentId });
+  /** `force` overrides the server's region check (an out-of-region agent). It is
+   *  honoured only for senior admins and always logged in the order timeline. */
+  assignAgent(
+    id: string,
+    agentId: string,
+    force = false,
+  ): Promise<{ message?: string; override?: boolean }> {
+    return apiFetch('POST', '/orders/' + id + '/assign', { agent_id: agentId, force });
   },
   /** Proof-of-delivery scan, offline-capable: the agent is at a doorstep, which is
    *  exactly where signal dies. `coords` is the delivery fix (geofenced server-side). */
@@ -321,8 +332,9 @@ export const api = {
     id: string,
     fromStage: number,
     coords?: { lat: number; lng: number },
+    deliveryCode?: string,
   ): Promise<ScanResponse> {
-    return queuedScan(id, fromStage, { coords });
+    return queuedScan(id, fromStage, { coords, deliveryCode });
   },
   getEligibleAgents(id: string, leg?: string): Promise<EligibleAgentsResponse> {
     const qs = leg ? '?leg=' + encodeURIComponent(leg) : '';

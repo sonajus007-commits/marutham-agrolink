@@ -284,17 +284,42 @@ test('PATCH /employees/:id/approve — a removed employee cannot be approved', a
 test('PATCH /employees/:id — a mapped designation change updates the linked login role', async () => {
   const db = fakeSupabase({
     'employees:update': { data: { ...LIVE_EMP, designation: 'Delivery Agent' } },
+    // The login is looked up (by emp_id) before syncing — it currently holds a
+    // DIFFERENT role, so the change actually fires.
+    'users:select':     { data: [{ id: 'u-asha', admin_role: 'VCO' }] },
     'users:update':     { data: [{ id: 'u-asha' }] },
   });
   const app = await mount(db);
   const res = await app.patch('/e1', { designation: 'Delivery Agent' });
 
   assert.equal(res.status, 200);
+  assert.equal(res.body.login_sync.status, 'changed');
+  assert.equal(res.body.login_sync.role, 'Delivery Agent');
+  const userLookups = db.callsTo('users', 'select');
+  assert.ok(
+    userLookups.some((c) => c.filters.some((f) => f[0] === 'eq' && f[1] === 'emp_id' && f[2] === 'MATN00006')),
+    'the linked login is found by its emp_id',
+  );
   const userUpdates = db.callsTo('users', 'update');
   assert.equal(userUpdates.length, 1, 'the linked login is updated');
   assert.equal(userUpdates[0].payload.admin_role, 'Delivery Agent');
-  // scoped to the staff login sharing this emp_id
-  assert.ok(userUpdates[0].filters.some((f) => f[0] === 'eq' && f[1] === 'emp_id' && f[2] === 'MATN00006'));
+  // scoped to the specific login row that was found
+  assert.ok(userUpdates[0].filters.some((f) => f[0] === 'eq' && f[1] === 'id' && f[2] === 'u-asha'));
+});
+
+test('PATCH /employees/:id — an unmapped designation over a live login surfaces the mismatch, silently no more', async () => {
+  const db = fakeSupabase({
+    'employees:update': { data: { ...LIVE_EMP, designation: 'General Manager' } },
+    'users:select':     { data: [{ id: 'u-asha', admin_role: 'VCO' }] },
+  });
+  const app = await mount(db);
+  const res = await app.patch('/e1', { designation: 'General Manager' });
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('users', 'update').length, 0, 'no arbitrary title is turned into a login role');
+  assert.equal(res.body.login_sync.status, 'unmapped');
+  assert.equal(res.body.login_sync.current_role, 'VCO');
+  assert.match(res.body.message, /review it if that is a mismatch/i);
 });
 
 test('PATCH /employees/:id — an org title with no mapped login role does NOT touch a login', async () => {

@@ -682,8 +682,14 @@ router.get('/operations', async (req, res) => {
   if (farmers.pending_approval > 0) alerts.push({ type: 'farmer_approval', severity: 'medium', params: { count: farmers.pending_approval }, message: `${farmers.pending_approval} farmer registration${farmers.pending_approval > 1 ? 's' : ''} awaiting approval.` });
   if (payments.stale_count > 0) alerts.push({ type: 'delayed_payment', severity: 'high', params: { count: payments.stale_count, days: 7 }, message: `${payments.stale_count} farmer payout${payments.stale_count > 1 ? 's' : ''} pending over 7 days.` });
   if (quality.pending_returns > 0) alerts.push({ type: 'returns', severity: 'medium', params: { count: quality.pending_returns }, message: `${quality.pending_returns} return${quality.pending_returns > 1 ? 's' : ''} awaiting a decision.` });
+  // Orders sitting ready with no agent are the "who is responsible?" queue — a
+  // real ownership gap, not a low-priority nag. Escalate severity with the backlog
+  // so a region with no covering agent surfaces instead of hiding at the bottom.
   const unassigned = active.filter(o => !o.agent_id && ['Packaged', 'VCO Verified', 'Picked Up'].includes(o.status)).length;
-  if (unassigned > 0) alerts.push({ type: 'assign', severity: 'low', params: { count: unassigned }, message: `${unassigned} order${unassigned > 1 ? 's' : ''} ready but no delivery agent assigned.` });
+  if (unassigned > 0) {
+    const severity = unassigned >= 5 ? 'high' : unassigned >= 2 ? 'medium' : 'low';
+    alerts.push({ type: 'assign', severity, params: { count: unassigned }, message: `${unassigned} order${unassigned > 1 ? 's' : ''} ready but no delivery agent assigned — check regional agent coverage.` });
+  }
 
   res.json({
     scope,

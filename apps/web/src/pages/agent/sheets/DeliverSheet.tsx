@@ -33,6 +33,9 @@ export function DeliverSheet({
   const [data, setData] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // The optional delivery OTP the customer reads out. Blank is fine — the delivery
+  // still goes through (recorded unverified); only a wrong code is refused server-side.
+  const [otp, setOtp] = useState('');
   // The agent's own live route to the door. This agent IS the order's assigned agent
   // and is GPS-pinging every 30 s while out delivering, so /track returns their own
   // moving position plus the destination — the very feed the consumer map consumes.
@@ -45,6 +48,7 @@ export function DeliverSheet({
     let active = true;
     setData(null);
     setError(null);
+    setOtp(''); // do not carry one order's code onto the next
     setBusy(false); // the sheet stays mounted between orders — a finished confirm
     // would otherwise leave the next order's button stuck on "Confirming…"
     api
@@ -85,7 +89,7 @@ export function DeliverSheet({
       // A doorstep is exactly where signal dies, so this one is queueable. The stage
       // we loaded rides along: if the order moved on meanwhile, the server refuses
       // the replay rather than advancing it from somewhere else.
-      await api.deliverOffline(orderId, stage, coords);
+      await api.deliverOffline(orderId, stage, coords, otp.trim() || undefined);
       toast(t('agent.deliver.done', 'Order delivered! 🎉'), 'ok');
       onChanged();
     } catch (e) {
@@ -179,6 +183,34 @@ export function DeliverSheet({
                 {fmtMoney(o.total)}
               </span>
             </div>
+          </div>
+
+          <div className="a-card">
+            <h3>🔐 {t('agent.deliver.otpTitle', 'Delivery code')}</h3>
+            <p style={{ margin: '2px 0 8px', fontSize: 13, color: 'var(--muted)' }}>
+              {t(
+                'agent.deliver.otpHelp',
+                'Ask the customer for their delivery code. Optional — you can still deliver without it.',
+              )}
+            </p>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={4}
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+              placeholder="••••"
+              aria-label={t('agent.deliver.otpTitle', 'Delivery code')}
+              style={{
+                width: '100%',
+                fontSize: 24,
+                letterSpacing: '0.4em',
+                textAlign: 'center',
+                padding: '10px 12px',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            />
           </div>
 
           <button className="confirm-btn" onClick={confirm} disabled={busy}>

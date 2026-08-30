@@ -8,6 +8,7 @@ const cors    = require('cors');
 const helmet  = require('helmet');
 const { convertTimestamps } = require('./utils/time');
 const { convertMoney } = require('./utils/money');
+const { redact } = require('./utils/redact');
 const supabase  = require('./db/supabase');
 const notify    = require('./utils/notify');
 const { syncPrices } = require('./utils/priceSync');
@@ -44,9 +45,11 @@ app.use(express.json());
 // Format all API responses:
 //   • Timestamps: UTC (DB) → IST UTC+5:30 (user-facing)
 //   • Money: paise integers (DB) → Rupees with 2 decimal places (user-facing)
+//   • Redaction: strip fields that must never leave the server in a general payload
+//     (the delivery OTP — handed to the owner separately under `otp`).
 app.use((req, res, next) => {
   const originalJson = res.json.bind(res);
-  res.json = (data) => originalJson(convertMoney(convertTimestamps(data)));
+  res.json = (data) => originalJson(redact(convertMoney(convertTimestamps(data))));
   next();
 });
 

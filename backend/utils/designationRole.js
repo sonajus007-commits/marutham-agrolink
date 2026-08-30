@@ -3,7 +3,9 @@
 // Single source of truth, shared by the create-staff-login flow (routes/auth.js,
 // which derives the login role from the designation at creation) and the employee
 // edit flow (routes/employees.js, which keeps a linked login's role in sync when the
-// designation changes). Mirrors DESIGNATION_TO_ROLE in the admin UI (employeeOptions.ts).
+// designation changes). This is a BACKEND-only map — the admin UI's employeeOptions
+// maps a designation to its career BAND (L0–L12), which is a separate HR concern, not
+// a login role, so there is no parallel login-role map to drift against.
 //
 // Designations that have a distinct login role map to it (e.g. "Collection
 // Officer(VCO)" → "VCO"); management/org titles with no distinct login role are not

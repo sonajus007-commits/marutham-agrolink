@@ -300,34 +300,62 @@ router.patch('/:id', requirePermission('employee_management', 'edit'), async (re
   // follow — otherwise the Users page keeps showing the old role and RBAC still grants
   // the old permissions. Only designations that map to a distinct login role are
   // propagated; an org/management title (no mapped role) is left alone rather than
-  // turned into an arbitrary — possibly privileged — login role. Best-effort: a sync
-  // failure is logged but does not fail the employee edit that already succeeded.
-  let loginSync = null;
+  // turned into an arbitrary — possibly privileged — login role (escalation guard).
+  //
+  // The old code did all this SILENTLY: an unmapped designation, or a linked login
+  // that now disagrees with the new designation, produced a plain "Employee updated."
+  // with no hint that a mismatch was left behind. It now always reports the linked
+  // login's state (`login_sync`) so the caller can surface it. Best-effort still: a
+  // sync failure is logged and reported, never failing the edit that already landed.
+  let login_sync = null;
   if (updates.designation !== undefined && data.emp_id) {
+    const { data: loginRows, error: loginErr } = await supabase
+      .from('users')
+      .select('id, admin_role')
+      .eq('emp_id', data.emp_id)
+      .eq('role', 'admin')
+      .is('deleted_at', null)
+      .limit(1);
+    const login = loginRows && loginRows.length ? loginRows[0] : null;
     const newRole = loginRoleForDesignation(data.designation);
-    if (newRole) {
+
+    if (loginErr) {
+      console.error(`Employee ${data.emp_id}: login lookup for role sync failed:`, loginErr.message);
+      login_sync = { status: 'error' };
+    } else if (!login) {
+      // Contract / unlinked staff, or a login was never issued — nothing to sync.
+      login_sync = { status: 'no_login' };
+    } else if (!newRole) {
+      // Unmapped org/management title: we deliberately do NOT propagate it (a raw
+      // title is not a real login role). Surface that the login keeps its old role
+      // so a real mismatch is visible instead of silent.
+      login_sync = { status: 'unmapped', current_role: login.admin_role };
+    } else if (newRole === login.admin_role) {
+      login_sync = { status: 'unchanged', role: newRole };
+    } else {
       const roleId = await roleIdForAdminRole(newRole);
       const patch = { admin_role: newRole, updated_at: new Date().toISOString() };
       if (roleId) patch.role_id = roleId; // null would strip RBAC → leave the old one
-      const { data: synced, error: syncErr } = await supabase
-        .from('users')
-        .update(patch)
-        .eq('emp_id', data.emp_id)
-        .eq('role', 'admin')
-        .is('deleted_at', null)
-        .select('id');
+      const { error: syncErr } = await supabase.from('users').update(patch).eq('id', login.id);
       if (syncErr) {
         console.error(`Employee ${data.emp_id}: login role sync failed:`, syncErr.message);
-      } else if (synced && synced.length) {
-        loginSync = { role: newRole, count: synced.length };
+        login_sync = { status: 'error', from: login.admin_role, role: newRole };
+      } else {
+        login_sync = { status: 'changed', role: newRole, from: login.admin_role };
       }
     }
   }
 
-  res.json({
-    message: loginSync ? `Employee updated. Login role set to ${loginSync.role}.` : 'Employee updated.',
-    employee: data,
-  });
+  const LOGIN_SYNC_MESSAGE = {
+    changed:   (s) => `Employee updated. Linked login role changed to ${s.role} (was ${s.from}).`,
+    unchanged: (s) => `Employee updated. Linked login role already ${s.role}.`,
+    unmapped:  (s) => `Employee updated. This designation carries no distinct login role, so the linked login keeps its current role (${s.current_role}) — review it if that is a mismatch.`,
+    no_login:  () => 'Employee updated. No linked login to sync.',
+    error:     () => 'Employee updated, but the linked login role could not be synced — set it on the Users page or retry.',
+  };
+  const message = login_sync ? LOGIN_SYNC_MESSAGE[login_sync.status](login_sync) : 'Employee updated.';
+
+  res.json({ message, employee: data, ...(login_sync ? { login_sync } : {}) });
 });
 
 // ── PATCH /employees/:id/approve ──────────────────────────────────────────────

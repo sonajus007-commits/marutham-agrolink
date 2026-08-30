@@ -118,6 +118,13 @@ export interface OrderDetail {
   history: OrderHistoryEntry[];
   qr_svg?: string;
   /**
+   * The delivery confirmation code (soft OTP), returned ONLY to the customer who
+   * owns the order — the server strips it from every other payload. The customer
+   * reads it to the delivery agent at the door. Absent for non-owners and for
+   * orders placed before the feature existed.
+   */
+  otp?: string | null;
+  /**
    * Present ONLY on a multi-vendor order, so an order placed with one seller has
    * exactly the shape it always had. Each part tracks separately and may arrive on
    * its own day.

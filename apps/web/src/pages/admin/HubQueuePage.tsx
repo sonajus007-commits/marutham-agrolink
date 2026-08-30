@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, EmptyState, Modal, Select, Spinner, StatTile } from '@marutham/ui';
-import { api, type EligibleAgent } from '@marutham/api-client';
+import { api, ApiError, type EligibleAgent } from '@marutham/api-client';
 import { fmtDate, fmtMoney, groupHubQueue, payMethodKey, type Order } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
@@ -298,12 +298,36 @@ function DispatchModal({
       toast(t('admin.hub.agentRequired', 'Pick a delivery agent.'), 'er');
       return;
     }
+    void submit(false);
+  }
+
+  // Does the assign, offering a senior admin one confirmed retry when the server
+  // blocks an out-of-region agent. `force` is never sent silently — only after the
+  // confirm below — so an out-of-region assignment always lands in the timeline.
+  async function submit(force: boolean) {
+    if (!order || !agentId) return;
     setBusy(true);
     try {
-      const res = await api.assignAgent(order.id, agentId);
+      const res = await api.assignAgent(order.id, agentId, force);
       toast(res.message || t('admin.hub.assigned', 'Delivery agent assigned.'), 'ok');
       onDone();
     } catch (e) {
+      const payload =
+        e instanceof ApiError && e.payload && typeof e.payload === 'object'
+          ? (e.payload as { reason?: string; can_override?: boolean })
+          : null;
+      if (payload?.can_override && !force) {
+        const msg = e instanceof Error ? e.message : '';
+        setBusy(false);
+        if (
+          window.confirm(
+            `${msg}\n\n${t('admin.hub.overrideConfirm', 'Assign anyway? This out-of-region assignment will be logged.')}`,
+          )
+        ) {
+          void submit(true);
+        }
+        return;
+      }
       toast(e instanceof Error ? e.message : t('admin.hub.actionFailed'), 'er');
     } finally {
       setBusy(false);

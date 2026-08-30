@@ -470,6 +470,9 @@ export const resources = {
       'agent.deliver.busy': 'Confirming…',
       'agent.deliver.cta': 'Confirm Delivered',
       'agent.deliver.ctaCod': 'Confirm Cash Collected & Delivered',
+      'agent.deliver.otpTitle': 'Delivery code',
+      'agent.deliver.otpHelp':
+        'Ask the customer for their delivery code. Optional — you can still deliver without it.',
       'agent.deliver.done': 'Order delivered! 🎉',
       'agent.deliver.failed': 'Failed to confirm',
       'agent.deliver.call': 'Call Customer',
@@ -853,6 +856,8 @@ export const resources = {
       'consumer.order.cancel': 'Cancel Order',
       'consumer.order.confirmReceived': 'Confirm Received',
       'consumer.order.confirming': 'Confirming…',
+      'consumer.order.otpTitle': 'Delivery code',
+      'consumer.order.otpHelp': 'Share this code with the delivery agent to confirm your order.',
       'consumer.order.confirmedThanks': 'Delivery confirmed — you can now rate your items.',
       'consumer.order.confirmFailed': 'Could not confirm delivery',
       'consumer.order.downloadInvoice': 'View / Print Invoice',
@@ -1692,6 +1697,7 @@ export const resources = {
       'admin.hub.assigned': 'Delivery agent assigned. They will scan their own pickup.',
       'admin.hub.pickAgent': 'Select an agent',
       'admin.hub.agentRequired': 'Pick a delivery agent.',
+      'admin.hub.overrideConfirm': 'Assign anyway? This out-of-region assignment will be logged.',
       'admin.hub.noArriving': 'No orders in transit right now.',
       'admin.hub.noReady': 'No orders waiting at the hub.',
       'admin.hub.items': '{{count}} item(s)',
@@ -2583,6 +2589,9 @@ export const resources = {
       'agent.deliver.busy': 'உறுதிப்படுத்துகிறது…',
       'agent.deliver.cta': 'வழங்கியதை உறுதிப்படுத்து',
       'agent.deliver.ctaCod': 'பணம் வாங்கியதையும் வழங்கியதையும் உறுதிப்படுத்து',
+      'agent.deliver.otpTitle': 'டெலிவரி குறியீடு',
+      'agent.deliver.otpHelp':
+        'வாடிக்கையாளரிடம் அவரது டெலிவரி குறியீட்டைக் கேளுங்கள். விருப்பமானது — இல்லாமலும் வழங்கலாம்.',
       'agent.deliver.done': 'ஆர்டர் வழங்கப்பட்டது! 🎉',
       'agent.deliver.failed': 'உறுதிப்படுத்த முடியவில்லை',
       'agent.deliver.call': 'வாடிக்கையாளரை அழை',
@@ -2973,6 +2982,9 @@ export const resources = {
       'consumer.order.cancel': 'ஆர்டரை ரத்து செய்',
       'consumer.order.confirmReceived': 'பெற்றதை உறுதிசெய்',
       'consumer.order.confirming': 'உறுதிசெய்கிறது…',
+      'consumer.order.otpTitle': 'டெலிவரி குறியீடு',
+      'consumer.order.otpHelp':
+        'உங்கள் ஆர்டரை உறுதிப்படுத்த இந்தக் குறியீட்டை டெலிவரி முகவரிடம் பகிரவும்.',
       'consumer.order.confirmedThanks':
         'வழங்கல் உறுதிசெய்யப்பட்டது — இப்போது உங்கள் பொருட்களை மதிப்பிடலாம்.',
       'consumer.order.confirmFailed': 'வழங்கலை உறுதிசெய்ய முடியவில்லை',
@@ -3809,6 +3821,8 @@ export const resources = {
       'admin.hub.assigned': 'விநியோக முகவர் ஒதுக்கப்பட்டார். அவரே தமது எடுப்பைப் பதிவு செய்வார்.',
       'admin.hub.pickAgent': 'ஒரு முகவரைத் தேர்ந்தெடுக்கவும்',
       'admin.hub.agentRequired': 'ஒரு விநியோக முகவரைத் தேர்ந்தெடுக்கவும்.',
+      'admin.hub.overrideConfirm':
+        'பகுதிக்கு வெளியே இருந்தாலும் ஒதுக்கவா? இந்த ஒதுக்கீடு பதிவு செய்யப்படும்.',
       'admin.hub.noArriving': 'தற்போது பயணத்தில் ஆர்டர்கள் இல்லை.',
       'admin.hub.noReady': 'மையத்தில் காத்திருக்கும் ஆர்டர்கள் இல்லை.',
       'admin.hub.items': '{{count}} பொருள்(கள்)',

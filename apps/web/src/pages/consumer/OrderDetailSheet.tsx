@@ -160,7 +160,7 @@ function OrderDetailBody({
   onGoToCart: () => void;
 }) {
   const { t, i18n } = useTranslation();
-  const { order: o, history, qr_svg, parts } = data;
+  const { order: o, history, qr_svg, parts, otp } = data;
   /* A multi-vendor order: one basket, but each seller's goods travel as their own
    * parcel and can arrive on different days. Only present when the order actually
    * spans sellers. */
@@ -361,6 +361,34 @@ function OrderDetailBody({
           </button>
         ) : null}
       </div>
+
+      {otp && canConfirm ? (
+        <div
+          className="ord-card"
+          style={{ textAlign: 'center', marginBottom: 16 }}
+          role="group"
+          aria-label={t('consumer.order.otpTitle', 'Delivery code')}
+        >
+          <h3>🔐 {t('consumer.order.otpTitle', 'Delivery code')}</h3>
+          <p style={{ margin: '4px 0 10px', fontSize: 13, color: 'var(--muted)' }}>
+            {t(
+              'consumer.order.otpHelp',
+              'Share this code with the delivery agent to confirm your order.',
+            )}
+          </p>
+          <div
+            style={{
+              fontSize: 34,
+              fontWeight: 800,
+              letterSpacing: '0.35em',
+              fontVariantNumeric: 'tabular-nums',
+              color: 'var(--forest)',
+            }}
+          >
+            {otp}
+          </div>
+        </div>
+      ) : null}
 
       {canConfirm ? (
         <Button

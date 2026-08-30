@@ -7,6 +7,7 @@ const { SPLIT_ROUTE } = require('../utils/orderSplit');
 const { rollupToParent } = require('../utils/orderRollup');
 const { geocodeAddress, geocodingEnabled } = require('../utils/geocode');
 const { suggestDeliveryHubs } = require('../utils/hubSuggest');
+const { agentServesOrder, coverageBlockMessage } = require('../utils/agentCoverage');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -403,7 +404,10 @@ router.post('/:id/scan', async (req, res) => {
       // a wrong answer about someone who is one.
       const { data: agent, error: agentErr } = await supabase
         .from('users')
-        .select('id, fname, lname, phone, agent_vehicle, role, admin_role, can_deliver')
+        .select(
+          'id, fname, lname, phone, agent_vehicle, role, admin_role, can_deliver, ' +
+            'district, service_areas, service_villages',
+        )
         .eq('id', agent_id)
         .is('deleted_at', null)          // a removed agent cannot take a delivery
         .maybeSingle();
@@ -414,13 +418,14 @@ router.post('/:id/scan', async (req, res) => {
       // A last-mile delivery may be taken by a Delivery Agent, or by a VCO who is
       // flagged can_deliver (they run the goods from the farmer to the consumer
       // themselves — including the verifying VCO assigning it to their own id).
-      const isDeliveryAgent = agent && agent.role === 'admin' && agent.admin_role === 'Delivery Agent';
-      const isDeliveryVCO =
-        agent && agent.role === 'admin' && agent.admin_role === 'VCO' && agent.can_deliver === true;
-      if (!isDeliveryAgent && !isDeliveryVCO) {
-        return res.status(400).json({ error: 'Selected user cannot take deliveries.' });
+      // The agent must also SERVE the order's region — the VCO picks from their own
+      // district; an out-of-region agent is a senior-admin call via POST /assign, not
+      // here. (A VCO self-assigning to their own order passes: same district.)
+      assignedName = agent ? agent.fname + (agent.lname ? ' ' + agent.lname : '') : null;
+      const serves = agentServesOrder(agent || {}, order);
+      if (!serves.ok) {
+        return res.status(400).json({ error: coverageBlockMessage(assignedName, serves), reason: serves.reason });
       }
-      assignedName = agent.fname + (agent.lname ? ' ' + agent.lname : '');
       extra.agent_id      = agent.id;
       extra.agent_name    = assignedName;
       extra.agent_phone   = agent.phone;
@@ -500,9 +505,32 @@ router.post('/:id/scan', async (req, res) => {
     result = await advanceStage(order, `Agent ${req.user.fname}`);
 
   // Out for Delivery → Delivered. The only branch that reaches Delivered, so the
-  // proof-of-delivery coordinates ride along here.
+  // proof-of-delivery coordinates ride along here — and the soft delivery OTP.
   } else if (status === 'Out for Delivery') {
+    const provided = (req.body.delivery_code == null ? '' : String(req.body.delivery_code)).trim();
+    const expected = (order.delivery_code == null ? '' : String(order.delivery_code)).trim();
+    // SOFT gate (see migration 052): only a WRONG code stops the delivery — a real
+    // wrong-recipient signal. A BLANK code always proceeds, so no legitimate delivery
+    // is ever stuck for a missing/late code; it is just recorded as unverified.
+    if (expected && provided && provided !== expected) {
+      return res.status(400).json({
+        error: 'That delivery code does not match. Check it with the customer, or leave it blank to deliver without OTP.',
+      });
+    }
     result = await advanceStage(order, `Agent ${req.user.fname}`, {}, coords.coords);
+    // Record HOW the delivery was confirmed, alongside the 'Delivered' row, so an
+    // unverified close is visible in the timeline (mirrors the geofence note).
+    if (!result.conflict && !result.error) {
+      const verified = !!(expected && provided && provided === expected);
+      const { error: otpErr } = await supabase.from('order_history').insert({
+        order_id: order.id,
+        label: verified ? 'OTP verified' : 'Not OTP-verified',
+        note: verified
+          ? 'Delivery confirmed with the customer’s OTP.'
+          : 'Delivered without OTP confirmation — no code was entered.',
+      });
+      if (otpErr) console.error(`Order ${order.id}: delivery-OTP note failed:`, otpErr.message);
+    }
 
   } else {
     return res.status(400).json({
@@ -698,28 +726,56 @@ router.post('/:id/assign', async (req, res) => {
     return res.status(403).json({ error: 'Delivery assignment permission required to assign agents.' });
   }
 
-  const { agent_id } = req.body;
+  const { agent_id, force } = req.body;
   if (!agent_id) return res.status(400).json({ error: 'agent_id is required.' });
+
+  // Load the order first so the agent can be checked against its region. The old
+  // path updated blind (one round trip) and so could stamp a wrong-region agent.
+  const { data: order, error: oe } = await supabase
+    .from('orders')
+    .select('id, district, village, delivery_village, delivery_address, route')
+    .eq('id', req.params.id)
+    .maybeSingle();
+  if (oe) return res.status(500).json({ error: 'Could not load order.' });
+  if (!order) return res.status(404).json({ error: 'Order not found.' });
+  if (isSplitParent(order)) {
+    return res.status(404).json({
+      error: 'This is a multi-seller order — assign an agent to each part instead.',
+    });
+  }
 
   const { data: agent, error: ae } = await supabase
     .from('users')
-    .select('id, fname, lname, phone, agent_vehicle, role, admin_role, can_deliver')
+    .select(
+      'id, fname, lname, phone, agent_vehicle, role, admin_role, can_deliver, ' +
+        'district, service_areas, service_villages',
+    )
     .eq('id', agent_id)
     .is('deleted_at', null)          // a removed agent cannot take a delivery
     .single();
 
   if (ae || !agent) return res.status(404).json({ error: 'Agent not found.' });
-  // A Delivery Agent, or a VCO flagged can_deliver (the same pool eligible-agents
-  // offers for a last-mile leg), may be assigned.
-  const canTakeDelivery =
-    agent.role === 'admin' &&
-    (agent.admin_role === 'Delivery Agent' ||
-      (agent.admin_role === 'VCO' && agent.can_deliver === true));
-  if (!canTakeDelivery) {
-    return res.status(400).json({ error: 'Selected user cannot take deliveries.' });
-  }
 
   const agentName = agent.fname + (agent.lname ? ' ' + agent.lname : '');
+
+  // Region accountability. `agentServesOrder` also folds in the role check
+  // (reason:'role'), so this replaces the old delivery-capable-role gate. A
+  // false result is a hard 400 unless a senior admin explicitly overrides it —
+  // that override is logged, so an out-of-region assignment is never silent.
+  const serves = agentServesOrder(agent, order);
+  const override = force === true && isSeniorAdmin(req.user.admin_role);
+  if (!serves.ok && serves.reason === 'role') {
+    return res.status(400).json({ error: coverageBlockMessage(agentName, serves) });
+  }
+  if (!serves.ok && !override) {
+    return res.status(400).json({
+      error: coverageBlockMessage(agentName, serves),
+      reason: serves.reason,
+      can_override: isSeniorAdmin(req.user.admin_role),
+    });
+  }
+  const overrode = !serves.ok && override;
+
   const { data: updated, error: ue } = await supabase
     .from('orders')
     .update({
@@ -745,16 +801,24 @@ router.post('/:id/assign', async (req, res) => {
     });
   }
 
-  // Log assignment in order history
+  // Log assignment in order history — an out-of-region override is called out
+  // explicitly so the record answers "who assigned this, and did they know?".
+  const overrideNote = overrode
+    ? ` — OUT-OF-REGION OVERRIDE (${serves.reason}): agent serves ${serves.agentRegion || 'another area'}`
+    : '';
   const { error: histErr } = await supabase.from('order_history').insert({
     order_id: req.params.id,
-    label:    'Agent Assigned',
-    note:     `${agentName} assigned by ${req.user.fname} (${req.user.admin_role})`,
+    label:    overrode ? 'Agent Assigned (override)' : 'Agent Assigned',
+    note:     `${agentName} assigned by ${req.user.fname} (${req.user.admin_role})${overrideNote}`,
     ts:       new Date().toISOString(),
   });
   if (histErr) console.error(`Order ${req.params.id}: agent-assigned history entry failed:`, histErr.message);
 
-  res.json({ message: `Agent ${agentName} assigned.`, order: updated });
+  res.json({
+    message: `Agent ${agentName} assigned.${overrode ? ' (out-of-region override logged)' : ''}`,
+    order: updated,
+    ...(overrode ? { override: true } : {}),
+  });
 });
 
 // ── GET /orders/:id/eligible-agents  (VCO/admin — agents to assign) ───────────

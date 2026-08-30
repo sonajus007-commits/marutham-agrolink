@@ -663,6 +663,10 @@
           "type": "jsonb",
           "notNull": false
         },
+        "delivery_code": {
+          "type": "text",
+          "notNull": false
+        },
         "delivery_distance_m": {
           "type": "double precision",
           "notNull": false
