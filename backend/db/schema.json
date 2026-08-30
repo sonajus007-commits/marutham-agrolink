@@ -1396,6 +1396,62 @@
         }
       }
     },
+    "support_tickets": {
+      "columns": {
+        "admin_note": {
+          "type": "text",
+          "notNull": false
+        },
+        "assigned_to": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "category": {
+          "type": "text",
+          "notNull": false
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "message": {
+          "type": "text",
+          "notNull": true
+        },
+        "order_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "orders.id"
+        },
+        "status": {
+          "type": "text",
+          "notNull": true,
+          "default": "open"
+        },
+        "subject": {
+          "type": "text",
+          "notNull": true
+        },
+        "updated_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "user_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "users.id"
+        }
+      }
+    },
     "user_audit_log": {
       "columns": {
         "action": {

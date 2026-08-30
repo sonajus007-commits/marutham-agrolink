@@ -73,6 +73,7 @@ const locationsRouter     = require('./routes/locations');
 const employeesRouter     = require('./routes/employees');
 const notificationsRouter = require('./routes/notifications');
 const productRequestsRouter = require('./routes/productRequests');
+const supportRouter = require('./routes/support');
 const rolesRouter         = require('./routes/roles');
 const hubsRouter          = require('./routes/hubs');
 
@@ -110,6 +111,7 @@ api.use('/locations',     locationsRouter);
 api.use('/employees',     employeesRouter);
 api.use('/notifications', notificationsRouter);
 api.use('/product-requests', productRequestsRouter);
+api.use('/support', supportRouter);
 api.use('/roles',         rolesRouter);
 api.use('/hubs',          hubsRouter);
 

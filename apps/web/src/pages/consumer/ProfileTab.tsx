@@ -9,6 +9,7 @@ import { AddressFields } from '../../components/AddressFields';
 import { useLocations } from '../../hooks/useLocations';
 import { AddressBook } from './AddressBook';
 import { ChangePasswordCard } from '../../components/ChangePasswordCard';
+import { HelpSupport } from '../../components/HelpSupport';
 
 /* The VALUE is what the users row stores and what the API expects; only the
  * option text is translated. genderKey mirrors the statusKey pattern. */
@@ -235,6 +236,7 @@ export function ProfileTab() {
 
       <AddressBook />
       <ChangePasswordCard />
+      <HelpSupport />
     </>
   );
 }

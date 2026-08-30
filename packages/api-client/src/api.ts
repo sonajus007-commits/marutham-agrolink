@@ -69,6 +69,9 @@ import type {
   ProductRequest,
   ProductRequestStatus,
   ProductRequestsResponse,
+  SupportTicket,
+  SupportStatus,
+  SupportTicketsResponse,
 } from './types';
 import type {
   Order,
@@ -858,6 +861,29 @@ export const api = {
   /** Reviewer: reject a request with a reason. */
   rejectProductRequest(id: string, reason: string): Promise<{ message: string }> {
     return apiFetch('POST', '/product-requests/' + id + '/reject', { reason });
+  },
+
+  // ── Support tickets (migration 055) ──
+  /** Any signed-in user raises a support ticket. */
+  createSupportTicket(payload: {
+    subject: string;
+    message: string;
+    category?: string;
+    order_id?: string;
+  }): Promise<{ message: string; ticket: SupportTicket }> {
+    return apiFetch('POST', '/support', payload);
+  },
+  /** The user's own tickets, or (for staff) the whole queue — optionally by status. */
+  getSupportTickets(status?: SupportStatus): Promise<SupportTicketsResponse> {
+    const qs = status ? '?status=' + status : '';
+    return apiFetch<SupportTicketsResponse>('GET', '/support' + qs);
+  },
+  /** Staff work a ticket: change status, leave a note, or claim it. */
+  updateSupportTicket(
+    id: string,
+    body: { status?: SupportStatus; admin_note?: string; assign_me?: boolean },
+  ): Promise<{ message: string; ticket: SupportTicket }> {
+    return apiFetch('PATCH', '/support/' + id, body);
   },
 
   // ── Role & Permission Management ────────────────────────────────────────────

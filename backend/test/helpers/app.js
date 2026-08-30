@@ -90,7 +90,10 @@ async function mountRoute(routeModule, { supabase, user = null }) {
   // previous test's cache. Purge the route and everything it reaches that touches
   // the client.
   for (const p of [routePath, SUPABASE_MODULE, AUTH_MODULE, PERMS_MODULE, NOTIFY_MODULE,
-                   path.join(__dirname, '..', '..', 'utils', 'employeeValidation.js')]) {
+                   path.join(__dirname, '..', '..', 'utils', 'employeeValidation.js'),
+                   // The in-app notifier closes over the client at module load; without
+                   // purging it, a later test's notify() writes to an earlier test's fake.
+                   path.join(__dirname, '..', '..', 'utils', 'notifications.js')]) {
     delete require.cache[p];
   }
 

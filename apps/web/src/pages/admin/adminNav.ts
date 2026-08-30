@@ -157,6 +157,13 @@ export const ADMIN_NAV: AdminNavSection[] = [
         requires: { module: 'returns_refunds' },
       },
       {
+        id: 'support',
+        labelKey: 'admin.nav.support',
+        Icon: FilePenIcon,
+        to: '/admin/support',
+        requires: { module: 'customer_complaints', action: 'view' },
+      },
+      {
         id: 'payouts',
         labelKey: 'admin.nav.payouts',
         Icon: WalletIcon,

@@ -1224,3 +1224,22 @@ export interface ProductRequest {
 export interface ProductRequestsResponse {
   requests: ProductRequest[];
 }
+
+// ── Support tickets (migration 055) ──────────────────────────────────────────
+export type SupportStatus = 'open' | 'in_progress' | 'resolved';
+export interface SupportTicket {
+  id: string;
+  user_id: string;
+  subject: string;
+  message: string;
+  category: string | null;
+  order_id: string | null;
+  status: SupportStatus;
+  assigned_to: string | null;
+  admin_note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export interface SupportTicketsResponse {
+  tickets: SupportTicket[];
+}
