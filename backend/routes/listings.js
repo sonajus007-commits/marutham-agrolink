@@ -19,26 +19,31 @@ router.use(requireAuth);
 // where the local mandi has no feed. Returns { market, unit } — market null when
 // no reference exists (the band check then only enforces the ₹0 floor).
 async function marketReference(productId, district) {
-  const { data: prod } = await supabase
+  // Every read here is a best-effort ADVISORY lookup: a failure must not block the
+  // listing, only skip the sanity band. So each error is read and logged, then we
+  // degrade to "no reference" (null) — the guard then enforces just the ₹0 floor.
+  const { data: prod, error: prodErr } = await supabase
     .from('products')
     .select('unit')
     .eq('id', productId)
     .maybeSingle();
+  if (prodErr) console.error('priceGuard: product unit lookup failed:', prodErr.message);
   const unit = prod ? prod.unit : null;
 
   let market = null;
   if (district) {
-    const { data: local } = await supabase
+    const { data: local, error: localErr } = await supabase
       .from('product_district_prices')
       .select('market_price')
       .eq('product_id', productId)
       .eq('district', district)
       .maybeSingle();
+    if (localErr) console.error('priceGuard: district market lookup failed:', localErr.message);
     if (local && local.market_price > 0) market = local.market_price;
   }
   if (market == null) {
     // Any district's feed for this product — a loose reference is better than none.
-    const { data: any } = await supabase
+    const { data: any, error: anyErr } = await supabase
       .from('product_district_prices')
       .select('market_price')
       .eq('product_id', productId)
@@ -46,6 +51,7 @@ async function marketReference(productId, district) {
       .order('market_price', { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (anyErr) console.error('priceGuard: fallback market lookup failed:', anyErr.message);
     if (any && any.market_price > 0) market = any.market_price;
   }
   return { market, unit };

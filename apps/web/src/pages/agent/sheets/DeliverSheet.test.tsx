@@ -80,7 +80,8 @@ describe('DeliverSheet', () => {
     await renderAndConfirm();
 
     await waitFor(() => expect(deliverOffline).toHaveBeenCalled());
-    expect(deliverOffline).toHaveBeenCalledWith('o1', 4, { lat: 10.5, lng: 78.8 });
+    // 4th arg is the delivery OTP — undefined here (the agent entered none).
+    expect(deliverOffline).toHaveBeenCalledWith('o1', 4, { lat: 10.5, lng: 78.8 }, undefined);
     expect(onChanged).toHaveBeenCalled();
   });
 
@@ -90,7 +91,7 @@ describe('DeliverSheet', () => {
     await renderAndConfirm();
 
     // a missing fix must never block the delivery — it just travels without coords
-    await waitFor(() => expect(deliverOffline).toHaveBeenCalledWith('o1', 4, undefined));
+    await waitFor(() => expect(deliverOffline).toHaveBeenCalledWith('o1', 4, undefined, undefined));
   });
 
   it('offline — reports the write as parked, not failed', async () => {
