@@ -7,8 +7,9 @@ interface ComingItem {
 }
 
 /**
- * Wallet, Reward Points, Cashback and Market Prices — features the buyer
- * dashboard is designed to hold but that have no backend yet. They render as
+ * Wallet, Reward Points and Cashback — features the buyer dashboard is designed to
+ * hold but that have no backend yet (Market Prices shipped — see <MarketRates>).
+ * They render as
  * dashed, em-dashed tiles that say "Coming soon", never a fabricated 0 or a mock
  * balance: the same rule the admin PlaceholderSection follows, because a number a
  * user might act on has to be real. When the endpoints land, these tiles become
@@ -20,7 +21,7 @@ export function ComingSoon() {
     { key: 'wallet', icon: '👛', label: t('consumer.home.cs.wallet') },
     { key: 'rewards', icon: '🎁', label: t('consumer.home.cs.rewards') },
     { key: 'cashback', icon: '💸', label: t('consumer.home.cs.cashback') },
-    { key: 'market', icon: '📈', label: t('consumer.home.cs.market') },
+    // 'market' (live market rates) is now real — see <MarketRates> on the home tab.
   ];
 
   return (

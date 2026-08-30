@@ -14,6 +14,7 @@ import {
   type SellerFilter,
 } from '@marutham/lib';
 import { Stars } from './Stars';
+import { useConsumerData } from './ConsumerDataContext';
 
 export function ProductCard({
   product,
@@ -33,6 +34,8 @@ export function ProductCard({
   onChangeQty: (product: Product, nextQty: number) => void;
 }) {
   const { t } = useTranslation();
+  const { isSaved, toggleSaved } = useConsumerData();
+  const saved = isSaved(product.id);
   const dp = product.district_price;
   const best = bestOffer(offers, seller);
   const custPrice = best ? offerConsumerPrice(best) : null;
@@ -95,6 +98,24 @@ export function ProductCard({
           ) : null}
         </div>
         <div className="prod-price-box">
+          <button
+            type="button"
+            className="prod-heart"
+            aria-pressed={saved}
+            aria-label={
+              saved
+                ? t('consumer.card.unsave', 'Remove from saved')
+                : t('consumer.card.save', 'Save for later')
+            }
+            title={
+              saved
+                ? t('consumer.card.unsave', 'Remove from saved')
+                : t('consumer.card.save', 'Save for later')
+            }
+            onClick={() => toggleSaved(product.id)}
+          >
+            {saved ? '❤️' : '🤍'}
+          </button>
           {custPrice != null ? (
             /* The price the customer will pay for the item, and nothing else. What
                the seller is paid is between us and the seller, and handling is an

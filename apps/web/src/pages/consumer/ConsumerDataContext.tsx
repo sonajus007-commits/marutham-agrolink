@@ -22,6 +22,10 @@ interface ConsumerData {
   setDistrict: (d: string) => void;
   loading: boolean;
   error: string | null;
+  /** Saved-product ids for the heart toggle; toggleSaved flips one (optimistic). */
+  savedIds: Set<string>;
+  isSaved: (productId: string) => boolean;
+  toggleSaved: (productId: string) => void;
 }
 
 const Ctx = createContext<ConsumerData | null>(null);
@@ -36,6 +40,46 @@ export function ConsumerDataProvider({ children }: { children: ReactNode }) {
   const [ratingsByFP, setRatingsByFP] = useState<Record<string, Rating>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+
+  // Load the saved-products set once (best-effort — a failure just leaves hearts empty).
+  useEffect(() => {
+    let active = true;
+    api
+      .getWishlist()
+      .then((res) => {
+        if (active) setSavedIds(new Set((res.items || []).map((i) => i.product_id)));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const isSaved = useCallback((id: string) => savedIds.has(id), [savedIds]);
+
+  // Optimistic toggle: flip the set now, call the API, roll back only on failure.
+  const toggleSaved = useCallback(
+    (id: string) => {
+      const wasSaved = savedIds.has(id);
+      setSavedIds((prev) => {
+        const next = new Set(prev);
+        if (wasSaved) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+      const call = wasSaved ? api.removeWishlist(id) : api.addWishlist(id);
+      call.catch(() => {
+        setSavedIds((prev) => {
+          const next = new Set(prev);
+          if (wasSaved) next.add(id);
+          else next.delete(id);
+          return next;
+        });
+      });
+    },
+    [savedIds],
+  );
 
   const load = useCallback(
     async (dist: string) => {
@@ -99,8 +143,23 @@ export function ConsumerDataProvider({ children }: { children: ReactNode }) {
       setDistrict,
       loading,
       error,
+      savedIds,
+      isSaved,
+      toggleSaved,
     }),
-    [products, productById, offersByProduct, ratingsMap, ratingsByFP, district, loading, error],
+    [
+      products,
+      productById,
+      offersByProduct,
+      ratingsMap,
+      ratingsByFP,
+      district,
+      loading,
+      error,
+      savedIds,
+      isSaved,
+      toggleSaved,
+    ],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

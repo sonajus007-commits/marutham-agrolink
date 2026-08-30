@@ -40,6 +40,7 @@ import { useCart } from './CartContext';
 import { OrderRow, orderLabel } from './OrderRow';
 import { QuickActions, type QuickAction } from './QuickActions';
 import { FreshArrivals } from './FreshArrivals';
+import { MarketRates } from './MarketRates';
 import { ComingSoon } from './ComingSoon';
 import { BuyAgainModal } from './BuyAgainModal';
 import { TrackPickerModal } from './TrackPickerModal';
@@ -65,7 +66,9 @@ export function HomeTab({
 }) {
   const { t, i18n } = useTranslation();
   const { orders, groups, loading, error } = useOrders();
-  const { products, offersByProduct } = useConsumerData();
+  const { products, offersByProduct, savedIds, productById } = useConsumerData();
+  // Saved products that are in the current catalogue (available in the buyer's area).
+  const saved = [...savedIds].map((id) => productById[id]).filter((p): p is Product => !!p);
   const cart = useCart();
 
   // Which tile's detail popup is open, or null when the dashboard is at rest.
@@ -284,6 +287,41 @@ export function HomeTab({
           </section>
         </FadeIn>
       ) : null}
+
+      {saved.length > 0 ? (
+        <FadeIn delay={0.18}>
+          <section className="cons-reco">
+            <div className="cons-reco__head">
+              <h2 className="cons-section-title">
+                ❤️ {t('consumer.home.saved', 'Saved for later')}
+              </h2>
+              <button type="button" className="cons-reco__all" onClick={onGoToShop}>
+                {t('consumer.home.browseAll', 'Browse all')} <span aria-hidden="true">→</span>
+              </button>
+            </div>
+            <div className="cons-reco__strip">
+              {saved.map((product) => (
+                <button
+                  key={product.id}
+                  type="button"
+                  className="cons-reco__card"
+                  onClick={onGoToShop}
+                  aria-label={product.name}
+                >
+                  <span className="cons-reco__emoji" aria-hidden="true">
+                    {getProductEmoji(product.name)}
+                  </span>
+                  <span className="cons-reco__name">{product.name}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </FadeIn>
+      ) : null}
+
+      <FadeIn delay={0.2}>
+        <MarketRates products={products} offersByProduct={offersByProduct} />
+      </FadeIn>
 
       {orders.length > 0 ? (
         <FadeIn delay={0.24}>

@@ -72,6 +72,7 @@ import type {
   SupportTicket,
   SupportStatus,
   SupportTicketsResponse,
+  WishlistResponse,
 } from './types';
 import type {
   Order,
@@ -884,6 +885,20 @@ export const api = {
     body: { status?: SupportStatus; admin_note?: string; assign_me?: boolean },
   ): Promise<{ message: string; ticket: SupportTicket }> {
     return apiFetch('PATCH', '/support/' + id, body);
+  },
+
+  // ── Wishlist (migration 056) ──
+  /** The consumer's saved products (with catalogue detail). */
+  getWishlist(): Promise<WishlistResponse> {
+    return apiFetch<WishlistResponse>('GET', '/wishlist');
+  },
+  /** Save a product (idempotent). */
+  addWishlist(productId: string): Promise<{ ok: boolean }> {
+    return apiFetch<{ ok: boolean }>('POST', '/wishlist', { product_id: productId });
+  },
+  /** Remove a saved product. */
+  removeWishlist(productId: string): Promise<{ ok: boolean }> {
+    return apiFetch<{ ok: boolean }>('DELETE', '/wishlist/' + productId);
   },
 
   // ── Role & Permission Management ────────────────────────────────────────────

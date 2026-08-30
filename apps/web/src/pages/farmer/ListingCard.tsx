@@ -74,12 +74,23 @@ export function ListingCard({
           {badge.icon} {t(badge.key, badge.en)}
         </span>
         {priced && listing.qty_available != null ? (
-          <span className="listing__tag">
-            {t('farmer.listing.available', '{{qty}} {{unit}} available', {
-              qty: listing.qty_available,
-              unit,
-            })}
-          </span>
+          listing.qty_available <= 0 ? (
+            <span className="listing__tag listing__tag--out">
+              ⚠ {t('farmer.listing.outOfStock', 'Out of stock')}
+            </span>
+          ) : (
+            <span
+              className={`listing__tag${Number(listing.qty_available) <= 5 ? ' listing__tag--low' : ''}`}
+            >
+              {t('farmer.listing.available', '{{qty}} {{unit}} available', {
+                qty: listing.qty_available,
+                unit,
+              })}
+              {Number(listing.qty_available) <= 5
+                ? ` · ${t('farmer.listing.lowStock', 'low')}`
+                : ''}
+            </span>
+          )
         ) : null}
         {priced && listing.time_available ? (
           <span className="listing__tag listing__tag--cutoff">

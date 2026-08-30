@@ -1883,6 +1883,31 @@
           "notNull": false
         }
       }
+    },
+    "wishlists": {
+      "columns": {
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "product_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "products.id"
+        },
+        "user_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "users.id"
+        }
+      }
     }
   }
 }

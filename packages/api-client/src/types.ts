@@ -1243,3 +1243,20 @@ export interface SupportTicket {
 export interface SupportTicketsResponse {
   tickets: SupportTicket[];
 }
+
+// ── Wishlist (migration 056) ─────────────────────────────────────────────────
+export interface WishlistItem {
+  product_id: string;
+  created_at: string;
+  product: {
+    id: string;
+    name: string;
+    regional_name: string | null;
+    unit: string;
+    category: string | null;
+    available: boolean;
+  } | null;
+}
+export interface WishlistResponse {
+  items: WishlistItem[];
+}

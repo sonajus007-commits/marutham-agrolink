@@ -495,6 +495,15 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
 
     if (writeErr) {
       stockFailures.push(`${item.product_id}/${item.farmer_id} (write: ${writeErr.message})`);
+    } else if (newQty <= 0) {
+      // Sold out AND auto-unlisted — the seller must restock/relist to keep selling,
+      // so tell them (in-app, best-effort).
+      notify(item.farmer_id, {
+        type: 'out_of_stock',
+        title: 'Sold out',
+        body: `${item.name} is out of stock and no longer listed. Update your stock to keep selling.`,
+        data: { product_id: item.product_id },
+      });
     }
   }
 

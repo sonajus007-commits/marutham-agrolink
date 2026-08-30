@@ -338,6 +338,21 @@
   text-align: right;
   margin-left: auto;
 }
+.prod-heart {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 2px 6px;
+  display: block;
+  margin-left: auto;
+}
+.prod-heart:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 .prod-price {
   font-size: 18px;
   font-weight: 800;
@@ -1024,6 +1039,78 @@
 
 /* Recommended-for-you strip (mockup's consumer dashboard). Horizontal scroll on
    narrow screens; the card is a button linking to the shop. */
+/* Today's market rates (MarketRates) */
+.cons-market {
+  margin: 14px 0;
+}
+.cons-market__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.cons-market__row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 13px;
+}
+.cons-market__emoji {
+  font-size: 20px;
+}
+.cons-market__name {
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cons-market__reg {
+  font-weight: 400;
+  color: var(--muted);
+}
+.cons-market__mandi,
+.cons-market__ours {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.cons-market__mandi {
+  color: var(--gray);
+}
+.cons-market__ours {
+  color: var(--forest);
+  font-weight: 700;
+}
+.cons-market__lbl {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.cons-market__save {
+  color: var(--green);
+  font-weight: 700;
+}
+@media (max-width: 520px) {
+  .cons-market__row {
+    grid-template-columns: auto 1fr auto;
+  }
+  .cons-market__mandi {
+    grid-column: 2;
+    grid-row: 2;
+    text-align: left;
+  }
+}
+
 .cons-reco {
   margin: 14px 0;
 }

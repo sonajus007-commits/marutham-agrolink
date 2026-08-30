@@ -479,6 +479,16 @@
   color: var(--success);
   background: var(--success-bg);
 }
+.listing__tag--low {
+  color: var(--warning-fg);
+  background: var(--warning-bg);
+  font-weight: 700;
+}
+.listing__tag--out {
+  color: var(--danger);
+  background: var(--danger-bg);
+  font-weight: 700;
+}
 .listing__tag--ok {
   color: var(--success);
   background: var(--success-bg);
