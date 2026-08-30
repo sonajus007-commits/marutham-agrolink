@@ -16,7 +16,8 @@
     "build-storybook": "storybook build",
     "build:mobile": "CAPACITOR=1 vite build",
     "cap:sync": "CAPACITOR=1 vite build && cap sync",
-    "cap:android": "cap open android"
+    "cap:android": "cap open android",
+    "cap:assets": "npx --yes @capacitor/assets@3 generate --android --iconBackgroundColor '#2E7D32' --iconBackgroundColorDark '#1B5E20' --splashBackgroundColor '#2E7D32' --splashBackgroundColorDark '#1B5E20'"
   },
   "dependencies": {
     "@capacitor/android": "^7",
