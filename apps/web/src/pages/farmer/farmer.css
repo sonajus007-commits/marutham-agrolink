@@ -29,11 +29,16 @@
   align-items: center;
   gap: 11px;
   text-decoration: none;
+  /* Let the brand shrink and truncate so the action cluster on the right is never
+     pushed off the edge (the logout icon was clipping on narrow phones). */
+  min-width: 0;
+  flex: 0 1 auto;
 }
 .fm-hdr__logo {
   width: 42px;
   height: 32px;
   object-fit: contain;
+  flex-shrink: 0;
 }
 /* The wordmark in forest (NOT gold — the landing uses forest for the wordmark). */
 .fm-hdr__name {
@@ -43,6 +48,9 @@
   color: var(--forest);
   font-weight: 700;
   letter-spacing: -0.01em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .fm-hdr__name span {
   color: var(--forest-soft);
@@ -59,6 +67,27 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  /* Never shrink or clip the action controls — the brand truncates instead. */
+  flex: 0 0 auto;
+}
+
+/* Narrow phones: tighten the header so brand + all controls fit in portrait. */
+@media (max-width: 480px) {
+  .fm-hdr {
+    padding: 10px 12px;
+  }
+  .fm-hdr__brand {
+    gap: 8px;
+  }
+  .fm-hdr__name {
+    font-size: 18px;
+  }
+  .fm-hdr__tag {
+    display: none;
+  }
+  .fm-hdr__right {
+    gap: 4px;
+  }
 }
 
 /* Hero — a rounded welcome card (not a full-bleed band) with a faint leaf glow. */

@@ -152,6 +152,10 @@
   align-items: center;
   gap: 11px;
   text-decoration: none;
+  /* Let the brand shrink and truncate on narrow screens so the action cluster on
+     the right is never pushed off the edge (the logout icon was clipping on phones). */
+  min-width: 0;
+  flex: 0 1 auto;
 }
 /* The wordmark lockup, matched to the landing's <MaruthamLogo>: the name in the
  * serif face in forest (NOT gold — the landing uses forest for the wordmark),
@@ -163,6 +167,9 @@
   color: var(--forest);
   font-weight: 700;
   letter-spacing: -0.01em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .cons-hdr__name span {
   color: var(--forest-soft);
@@ -179,6 +186,29 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  /* Never shrink or clip the action controls — the brand truncates instead. */
+  flex: 0 0 auto;
+}
+
+/* Narrow phones: tighten the header so brand + all four controls fit in portrait.
+   Trim the horizontal padding, shrink the wordmark, drop the sub-label, and close
+   up the control gaps. */
+@media (max-width: 480px) {
+  .cons-hdr {
+    padding: 10px 12px;
+  }
+  .cons-hdr__brand {
+    gap: 8px;
+  }
+  .cons-hdr__name {
+    font-size: 18px;
+  }
+  .cons-hdr__tag {
+    display: none;
+  }
+  .cons-hdr__right {
+    gap: 4px;
+  }
 }
 
 /* Hero — a rounded welcome card (not a full-bleed band), to match the landing's

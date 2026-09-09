@@ -67,7 +67,9 @@ export function Header({
         </button>
       ) : null}
 
-      {brand ? <div className="shrink-0 lg:hidden">{brand}</div> : null}
+      {/* min-w-0 (not shrink-0) so a wide brand truncates instead of pushing the
+          pinned actions cluster off the right edge on narrow phones. */}
+      {brand ? <div className="min-w-0 lg:hidden">{brand}</div> : null}
 
       {breadcrumbs ? <div className="hidden min-w-0 md:block">{breadcrumbs}</div> : null}
 
