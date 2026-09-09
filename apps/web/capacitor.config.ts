@@ -21,6 +21,15 @@ const config: CapacitorConfig = {
   appId: 'com.marutham.agrolink',
   appName: 'Marutham AgroLink',
   webDir: 'dist',
+  // Dev-only: serve the webview over http://localhost so calls to an http:// LAN
+  // backend are same-scheme (no mixed-content block); paired with
+  // usesCleartextTraffic in AndroidManifest. Revert to https for a store build.
+  server: {
+    androidScheme: 'http',
+  },
+  android: {
+    allowMixedContent: true,
+  },
   plugins: {
     // FCM-backed push. Android also needs android/app/google-services.json from your
     // Firebase project; iOS needs an APNs key wired to Firebase. See src/native/push.ts.

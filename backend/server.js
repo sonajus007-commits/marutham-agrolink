@@ -30,15 +30,18 @@ app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1));
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 
 // CORS. Pinned to an allowlist from CORS_ORIGINS (comma-separated) when set;
-// otherwise CLOSED (origin: false — no Access-Control-Allow-Origin at all), NOT
-// open. This is safe because the whole app is one origin: the browser only ever
-// talks to :3000, which proxies both the shop and the /app portal, and every
-// client fetch to /api is same-origin (same-origin requests don't need CORS).
-// So a dev box and a same-origin deployment both work with CORS off. Set
-// CORS_ORIGINS to the exact allowed origins (e.g. the mobile app) for any
-// deployment that serves the API on a DIFFERENT origin than a client.
+// otherwise it falls back to the Capacitor mobile shell's own webview origins
+// (http/https/capacitor ://localhost). The web app never needs CORS — the browser
+// only ever talks to :3000, which proxies both the shop and the /app portal, so
+// every web client fetch to /api is same-origin. But the native app's webview is a
+// SEPARATE origin (localhost) calling the LAN/deployed API cross-origin, so those
+// origins are allowed by default here — otherwise every native fetch is blocked
+// ("failed to fetch") until someone remembers to pass CORS_ORIGINS. Set
+// CORS_ORIGINS to override this default with the exact origins a deployment needs.
+const DEFAULT_CORS_ORIGINS = ['http://localhost', 'https://localhost', 'capacitor://localhost'];
 const corsOrigins = (process.env.CORS_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
-app.use(cors(corsOrigins.length ? { origin: corsOrigins, credentials: true } : { origin: false }));
+const allowedOrigins = corsOrigins.length ? corsOrigins : DEFAULT_CORS_ORIGINS;
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 
 app.use(express.json());
 

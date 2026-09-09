@@ -66,6 +66,16 @@ let registeredToken: string | null = null;
  *  unconfigured or the user declined permission. */
 export async function enablePushForSession(onMessage?: PushMessageHandler): Promise<void> {
   const native = Capacitor.isNativePlatform();
+  // Native FCM registration crashes the app HARD when Firebase isn't configured:
+  // with no android/app/google-services.json the Google Services plugin is not
+  // applied, so PushNotifications.register() calls FirebaseMessaging on an
+  // uninitialized default app and throws "Default FirebaseApp is not initialized"
+  // — a native exception on the main thread that the JS try/catch below cannot
+  // catch, so the app simply closes right after sign-in. A non-Play emulator
+  // fails this call gracefully, which is why it only bites on real devices. Gate
+  // it behind an explicit build flag: leave VITE_ENABLE_NATIVE_PUSH unset until
+  // google-services.json (and an APNs key for iOS) are actually in place.
+  if (native && import.meta.env.VITE_ENABLE_NATIVE_PUSH !== 'true') return;
   const token = native ? await registerPush(onMessage) : await getWebPushToken();
   if (!token) return;
   registeredToken = token;
