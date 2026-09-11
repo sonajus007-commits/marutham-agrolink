@@ -160,11 +160,14 @@ function ConsumerInner() {
     <div className="cons-shell">
       <header className="cons-hdr">
         <a href="/app/consumer" className="cons-hdr__brand">
-          <div className="hring" style={{ width: 42, height: 32 }}>
+          <div
+            className="hring"
+            style={{ width: 40, height: 40, borderRadius: 12, overflow: 'hidden', flexShrink: 0 }}
+          >
             <img
               src="/img/logo-sm.jpg"
-              alt="MA"
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              alt="Marutham Agrolink"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           </div>
           <div>

@@ -175,8 +175,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Two-tone wordmark: "Marutham" forest green, "Agrolink" the brand flower pink
+   (the lotus in the logo). Large bold display text, so the bright accent clears
+   AA-Large on the light header. */
 .cons-hdr__name span {
-  color: var(--forest-soft);
+  color: var(--accent);
 }
 .cons-hdr__tag {
   font-size: 9px;
