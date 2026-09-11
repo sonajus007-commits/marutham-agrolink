@@ -54,31 +54,30 @@ const ShoppingInsights = lazy(() => import('./ShoppingInsights'));
 /** Which KPI tile's detail popup is open, if any. */
 type TileView = 'active' | 'completed' | 'month' | 'spent' | 'saved';
 
-/** Emoji for a product group/category in the shortcut rail. Falls back to a
- *  basket so a newly-added group still renders a tile. */
-const CAT_EMOJI: Record<string, string> = {
-  Vegetables: '🥬',
-  Vegetable: '🥬',
-  Greens: '🥬',
-  Fruits: '🍎',
-  Fruit: '🍎',
-  'Pulses & Grains': '🌾',
-  Grains: '🌾',
-  Pulses: '🫘',
-  'Dairy & Eggs': '🥚',
-  Dairy: '🥛',
-  Eggs: '🥚',
-  Groceries: '🛒',
-  Grocery: '🛒',
-  Organic: '🌿',
-  Herbs: '🌿',
-  Beverages: '🧃',
-  'Flours & Oils': '🫙',
-  Oils: '🫙',
-  Flours: '🌾',
-  Spices: '🌶️',
+/** Emoji + a short display label for a product group in the shortcut rail.
+ *  Matched by keyword so the broad DB group names ("Dairy & Plant-Based
+ *  Alternatives", "Groceries & Pantry Staples", …) get a fitting icon and a
+ *  compact label instead of a truncated mouthful. Falls back to a basket. */
+const CAT_RULES: { test: RegExp; emoji: string; label: string }[] = [
+  { test: /veg/i, emoji: '🥦', label: 'Vegetables' },
+  { test: /fruit/i, emoji: '🍎', label: 'Fruits' },
+  { test: /produce/i, emoji: '🥬', label: 'Fresh Produce' },
+  { test: /(meat|poultry|chicken)/i, emoji: '🍗', label: 'Meat' },
+  { test: /(sea ?food|fish)/i, emoji: '🐟', label: 'Seafood' },
+  { test: /(dairy|milk|cream|cheese)/i, emoji: '🥛', label: 'Dairy' },
+  { test: /egg/i, emoji: '🥚', label: 'Eggs' },
+  { test: /(grocer|pantry|staple)/i, emoji: '🛒', label: 'Groceries' },
+  { test: /(grain|rice|pasta|flour|wheat)/i, emoji: '🌾', label: 'Grains' },
+  { test: /(pulse|dal|lentil|bean)/i, emoji: '🫘', label: 'Pulses' },
+  { test: /(oil|ghee)/i, emoji: '🫙', label: 'Oils' },
+  { test: /(beverage|drink|juice)/i, emoji: '🧃', label: 'Beverages' },
+  { test: /spice/i, emoji: '🌶️', label: 'Spices' },
+  { test: /organic/i, emoji: '🌿', label: 'Organic' },
+];
+const catMeta = (name: string): { emoji: string; label: string } => {
+  const hit = CAT_RULES.find((r) => r.test.test(name));
+  return hit ? { emoji: hit.emoji, label: hit.label } : { emoji: '🧺', label: name };
 };
-const catEmoji = (name: string): string => CAT_EMOJI[name] ?? '🧺';
 
 export function HomeTab({
   onOpenOrder,
@@ -321,20 +320,23 @@ export function HomeTab({
         <FadeIn delay={0.06}>
           <nav className="cons-cats" aria-label={t('consumer.home.categories', 'Categories')}>
             <div className="cons-cats__strip">
-              {catGroups.map((g) => (
-                <button
-                  key={g}
-                  type="button"
-                  className="cons-cat"
-                  onClick={() => onPickCategory(g)}
-                  aria-label={g}
-                >
-                  <span className="cons-cat__disc" aria-hidden="true">
-                    {catEmoji(g)}
-                  </span>
-                  <span className="cons-cat__name">{g}</span>
-                </button>
-              ))}
+              {catGroups.map((g) => {
+                const { emoji, label } = catMeta(g);
+                return (
+                  <button
+                    key={g}
+                    type="button"
+                    className="cons-cat"
+                    onClick={() => onPickCategory(g)}
+                    aria-label={label}
+                  >
+                    <span className="cons-cat__disc" aria-hidden="true">
+                      {emoji}
+                    </span>
+                    <span className="cons-cat__name">{label}</span>
+                  </button>
+                );
+              })}
             </div>
           </nav>
         </FadeIn>

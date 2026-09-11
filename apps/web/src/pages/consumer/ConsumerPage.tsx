@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ComponentType, type SVGProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TabBar, IconButton, LangToggle } from '@marutham/ui';
+import { IconButton, LangToggle } from '@marutham/ui';
 import {
   HomeIcon,
   BagIcon,
@@ -112,11 +112,24 @@ function ConsumerInner() {
   if (!user) return null;
   const setLang = (lang: AppLanguage) => changeLanguage(lang);
 
-  const tabs: { id: Tab; label: string; badge?: number }[] = [
-    { id: 'home', label: t('consumer.tab.home') },
-    { id: 'shop', label: t('consumer.tab.shop') },
-    { id: 'cart', label: t('consumer.tab.cart'), badge: cart.count },
-    { id: 'orders', label: t('consumer.tab.orders'), badge: activeCount },
+  // Fixed bottom navigation (phone) — the native-app pattern from the reference
+  // mockup: five icon+label tabs, Account included so profile is one tap away.
+  const bottomNav: {
+    id: Tab;
+    Icon: ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
+    label: string;
+    badge?: number;
+  }[] = [
+    { id: 'home', Icon: HomeIcon, label: t('consumer.tab.homeShort', 'Home') },
+    { id: 'shop', Icon: BagIcon, label: t('consumer.tab.shopShort', 'Shop') },
+    { id: 'cart', Icon: CartIcon, label: t('consumer.tab.cartShort', 'Cart'), badge: cart.count },
+    {
+      id: 'orders',
+      Icon: PackageIcon,
+      label: t('consumer.tab.ordersShort', 'Orders'),
+      badge: activeCount,
+    },
+    { id: 'profile', Icon: UserIcon, label: t('consumer.tab.accountShort', 'Account') },
   ];
 
   /* Sidebar (mockup panel 2). Only entries backed by a real feature are here:
@@ -218,24 +231,21 @@ function ConsumerInner() {
         </nav>
 
         <div className="cons-main">
-          <div className="cons-hero">
-            <div className="cons-hero__icon">
-              <LeafIcon size={24} />
+          {/* The storefront Home carries its own hero; the greeting card only
+              shows on the other tabs, where it isn't competing with it. */}
+          {tab !== 'home' ? (
+            <div className="cons-hero">
+              <div className="cons-hero__icon">
+                <LeafIcon size={24} />
+              </div>
+              <div>
+                <h2>
+                  {t('consumer.welcome')}, {user.fname}!
+                </h2>
+                <p>{t('consumer.heroSub', 'Fresh vegetables · Same morning harvest')}</p>
+              </div>
             </div>
-            <div>
-              <h2>
-                {t('consumer.welcome')}, {user.fname}!
-              </h2>
-              <p>{t('consumer.heroSub', 'Fresh vegetables · Same morning harvest')}</p>
-            </div>
-          </div>
-
-          <TabBar
-            className="cons-tabbar"
-            items={tabs}
-            active={tab}
-            onSelect={(id) => selectTab(id as Tab)}
-          />
+          ) : null}
 
           <div className="flex flex-1 flex-col gap-3 p-3.5">
             {tab === 'profile' ? (
@@ -267,6 +277,30 @@ function ConsumerInner() {
           </div>
         </div>
       </div>
+
+      {/* Fixed bottom navigation (phone), like a native shopping app. Hidden at
+          >=1024px where the sidebar takes over. Account (profile) rides here too,
+          so it is reachable without hunting for the header icon. */}
+      <nav className="cons-bottomnav" aria-label={t('consumer.nav.label', 'Consumer sections')}>
+        {bottomNav.map((it) => {
+          const on = tab === it.id;
+          return (
+            <button
+              key={it.id}
+              type="button"
+              className={`cons-bnav__item${on ? ' is-active' : ''}`}
+              aria-current={on ? 'page' : undefined}
+              onClick={() => selectTab(it.id)}
+            >
+              <span className="cons-bnav__icon" aria-hidden="true">
+                <it.Icon size={22} />
+                {it.badge ? <span className="cons-bnav__badge">{it.badge}</span> : null}
+              </span>
+              <span className="cons-bnav__label">{it.label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
       <OrderDetailSheet
         orderId={openOrderId}

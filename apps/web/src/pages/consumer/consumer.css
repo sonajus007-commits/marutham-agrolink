@@ -7,6 +7,10 @@
   background: var(--bg);
   display: flex;
   flex-direction: column;
+  /* Modern, friendly UI face for the storefront — Plus Jakarta Sans has more
+     character than the plain system sans, while headings/wordmark keep their own
+     serif. Tamil falls back to Noto Serif Tamil. */
+  font-family: 'Plus Jakarta Sans', 'Noto Serif Tamil', system-ui, sans-serif;
 }
 
 /* Body = sidebar + main (mockup panel 2, the consumer dashboard).
@@ -541,7 +545,7 @@
 }
 @media (max-width: 640px) {
   .cons-kpis {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 /* --fg-muted, not --gray: the named grey is AA on white only, and these titles sit
@@ -1207,12 +1211,14 @@
 }
 .cons-qa__grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* minmax(0, 1fr) — NOT 1fr — so a card's no-wrap subtitle can't force the track
+     wider than its share and push the page into horizontal overflow. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 @media (max-width: 640px) {
   .cons-qa__grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 .cons-qa__card {
@@ -1220,6 +1226,7 @@
   align-items: center;
   gap: 12px;
   width: 100%;
+  min-width: 0;
   padding: 14px;
   background: var(--surface);
   border: 1px solid var(--border-subtle);
@@ -1413,12 +1420,12 @@
 /* ── Coming Soon (dashed, no fabricated numbers) ───────────────────────────── */
 .cons-cs__grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 @media (max-width: 640px) {
   .cons-cs__grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 .cons-cs__tile {
@@ -1555,11 +1562,13 @@
   overflow: hidden;
   border-radius: 20px;
   padding: 22px 20px;
-  color: var(--white);
+  /* Warm cream card with dark-green type, matching the reference mockup — softer
+     and more premium than a full green block, and it lets the pink CTA pop. */
+  color: var(--forest-deep);
   background:
-    radial-gradient(130% 120% at 100% 0%, rgba(236, 64, 122, 0.24) 0%, transparent 55%),
-    linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%);
-  box-shadow: 0 14px 32px rgba(20, 80, 26, 0.28);
+    radial-gradient(120% 130% at 100% 100%, rgba(102, 187, 106, 0.22) 0%, transparent 55%),
+    linear-gradient(135deg, #f6efe0 0%, #efe3cb 100%);
+  box-shadow: 0 12px 28px rgba(120, 100, 60, 0.18);
 }
 .cons-farmhero__body {
   flex: 1;
@@ -1567,22 +1576,24 @@
 }
 .cons-farmhero__eyebrow {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 1.4px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--forest-soft);
 }
 .cons-farmhero h2 {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 30px;
+  font-size: 32px;
   line-height: 1.02;
   font-weight: 700;
   letter-spacing: -0.01em;
   margin-top: 3px;
+  color: var(--forest-deep);
 }
 .cons-farmhero p {
   font-size: 12.5px;
-  color: rgba(255, 255, 255, 0.86);
+  color: var(--forest);
+  opacity: 0.85;
   margin-top: 6px;
 }
 .cons-farmhero__cta {
@@ -1647,10 +1658,11 @@
   font-family: inherit;
 }
 .cons-cat__disc {
-  width: 62px;
-  height: 62px;
-  border-radius: 20px;
-  background: var(--success-bg);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--surface-muted);
   display: grid;
   place-items: center;
   font-size: 30px;
@@ -1659,11 +1671,17 @@
     transform var(--duration-base) ease,
     box-shadow var(--duration-base) ease;
 }
-.cons-cat:nth-child(4n + 2) .cons-cat__disc {
+.cons-cat:nth-child(5n + 1) .cons-cat__disc {
+  background: var(--success-bg);
+}
+.cons-cat:nth-child(5n + 2) .cons-cat__disc {
   background: var(--accent-bg);
 }
-.cons-cat:nth-child(4n + 3) .cons-cat__disc {
+.cons-cat:nth-child(5n + 3) .cons-cat__disc {
   background: var(--warning-bg);
+}
+.cons-cat:nth-child(5n + 4) .cons-cat__disc {
+  background: var(--tint-100);
 }
 .cons-cat:hover .cons-cat__disc {
   transform: translateY(-3px);
@@ -1717,17 +1735,18 @@
 }
 .cons-best__grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 @media (min-width: 720px) {
   .cons-best__grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 .cons-best__card {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--surface-muted);
   border-radius: 18px;
@@ -1985,4 +2004,90 @@
 }
 .live-track__call:hover {
   background: var(--forest-deep);
+}
+
+/* ── Fixed bottom navigation (phone, native-app pattern) ────────────────────
+   Replaces the old top tab strip. Five icon+label tabs; hidden at >=1024px where
+   the sidebar rail takes over. */
+.cons-bottomnav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border-subtle);
+  box-shadow: 0 -6px 22px rgba(22, 61, 47, 0.08);
+}
+.cons-bnav__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--fg-muted);
+  border-radius: 12px;
+  transition: color var(--duration-base) ease;
+}
+.cons-bnav__item.is-active {
+  color: var(--accent-fg);
+}
+.cons-bnav__item:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: -2px;
+}
+.cons-bnav__icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.cons-bnav__item.is-active .cons-bnav__icon {
+  transform: translateY(-1px);
+}
+.cons-bnav__badge {
+  position: absolute;
+  top: -6px;
+  left: 12px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-on);
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--surface);
+}
+.cons-bnav__label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+}
+/* Content must clear the fixed bar. */
+.cons-main {
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 1024px) {
+  .cons-bottomnav {
+    display: none;
+  }
+  .cons-main {
+    padding-bottom: 0;
+  }
 }
