@@ -55,8 +55,37 @@ function ConsumerInner() {
   const { activeCount, refresh } = useOrders();
   const [tab, setTab] = useState<Tab>('home');
   const [openOrderId, setOpenOrderId] = useState<string | null>(null);
+  // Seed carried from the Home storefront (search box / category rail) into the
+  // Shop tab. `nonce` bumps on every hand-off so the Shop remounts with the new
+  // initial filter; navigating to Shop from the nav clears it back to the full
+  // catalogue.
+  const [shopSeed, setShopSeed] = useState<{ search: string; group: string; nonce: number }>({
+    search: '',
+    group: 'All',
+    nonce: 0,
+  });
 
   const closeOrder = useCallback(() => setOpenOrderId(null), []);
+
+  // Tab switch used by the nav rail and tab bar. Selecting Shop directly resets
+  // any storefront filter so the buyer sees the whole catalogue.
+  const selectTab = useCallback((id: Tab) => {
+    if (id === 'shop') {
+      setShopSeed((s) =>
+        s.search || s.group !== 'All' ? { search: '', group: 'All', nonce: s.nonce + 1 } : s,
+      );
+    }
+    setTab(id);
+  }, []);
+
+  const goShopSearch = useCallback((query: string) => {
+    setShopSeed((s) => ({ search: query, group: 'All', nonce: s.nonce + 1 }));
+    setTab('shop');
+  }, []);
+  const goShopCategory = useCallback((group: string) => {
+    setShopSeed((s) => ({ search: '', group, nonce: s.nonce + 1 }));
+    setTab('shop');
+  }, []);
 
   /* Deep-link intent from the public shop's cart. When a shopper hits "Proceed
    * to checkout" on the Next /cart, it drops a one-shot `ma_intent_tab` flag and
@@ -168,7 +197,7 @@ function ConsumerInner() {
                     type="button"
                     className={`cons-side__item${on ? ' is-active' : ''}`}
                     aria-current={on ? 'page' : undefined}
-                    onClick={() => setTab(it.id)}
+                    onClick={() => selectTab(it.id)}
                   >
                     <span className="cons-side__icon" aria-hidden="true">
                       <it.Icon size={18} />
@@ -205,7 +234,7 @@ function ConsumerInner() {
             className="cons-tabbar"
             items={tabs}
             active={tab}
-            onSelect={(id) => setTab(id as Tab)}
+            onSelect={(id) => selectTab(id as Tab)}
           />
 
           <div className="flex flex-1 flex-col gap-3 p-3.5">
@@ -216,12 +245,20 @@ function ConsumerInner() {
             ) : tab === 'home' ? (
               <HomeTab
                 onOpenOrder={setOpenOrderId}
-                onGoToShop={() => setTab('shop')}
+                onGoToShop={() => selectTab('shop')}
                 onGoToOrders={() => setTab('orders')}
                 onGoToCart={() => setTab('cart')}
+                onGoToAddresses={() => setTab('addresses')}
+                onSearch={goShopSearch}
+                onPickCategory={goShopCategory}
               />
             ) : tab === 'shop' ? (
-              <ShopTab onGoToCart={() => setTab('cart')} />
+              <ShopTab
+                key={`shop-${shopSeed.nonce}`}
+                initialSearch={shopSeed.search}
+                initialGroup={shopSeed.group}
+                onGoToCart={() => setTab('cart')}
+              />
             ) : tab === 'cart' ? (
               <CartTab onOrderPlaced={onOrderPlaced} />
             ) : (

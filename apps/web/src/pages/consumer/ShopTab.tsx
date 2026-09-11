@@ -16,7 +16,18 @@ import { ProductCard } from './ProductCard';
 import { ProductDetailSheet } from './ProductDetailSheet';
 import { useToast } from '../../components/Toast';
 
-export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
+export function ShopTab({
+  onGoToCart,
+  initialSearch = '',
+  initialGroup = 'All',
+}: {
+  onGoToCart: () => void;
+  /* Seeded from the Home storefront's search box / category rail. The component
+     remounts (keyed on a nonce) whenever a new seed arrives, so these initial
+     values are re-applied cleanly on each hand-off. */
+  initialSearch?: string;
+  initialGroup?: string;
+}) {
   const { t } = useTranslation();
   const {
     products,
@@ -32,9 +43,9 @@ export function ShopTab({ onGoToCart }: { onGoToCart: () => void }) {
   const toast = useToast();
   const locations = useLocations();
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch);
   const [seller, setSeller] = useState<SellerFilter>('All');
-  const [group, setGroup] = useState('All');
+  const [group, setGroup] = useState(initialGroup);
   const [cat, setCat] = useState('All');
   const [sub, setSub] = useState('All');
   const [city, setCity] = useState('');

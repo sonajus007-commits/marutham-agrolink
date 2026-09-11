@@ -1451,6 +1451,364 @@
   color: var(--fg-muted);
 }
 
+/* ── Storefront header (MOBILEVIEW modernisation) ──────────────────────────
+   Additive shopping-home block that sits at the top of the Home tab: a delivery
+   location bar, a search field, a "Fresh from our farms" promo, a category rail
+   and a Best-Selling product grid. Nothing below it was removed — the KPIs,
+   quick actions, insights and tracking still follow. Green (--forest) + pink
+   (--accent) on light surfaces, matching the brand and the reference mockup. */
+
+/* Delivery location bar */
+.cons-loc {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cons-loc__ico {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--accent-bg);
+  color: var(--accent-fg);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.cons-loc__lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.cons-loc__val {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--forest);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cons-loc__val svg {
+  color: var(--forest-soft);
+}
+
+/* Search field with a pink action button */
+.cons-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1.5px solid var(--surface-muted);
+  border-radius: 16px;
+  padding: 6px 6px 6px 14px;
+  box-shadow: 0 3px 12px rgba(46, 125, 50, 0.06);
+}
+.cons-search:focus-within {
+  border-color: var(--leaf);
+  box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.16);
+}
+.cons-search__ico {
+  color: var(--fg-muted);
+  flex-shrink: 0;
+}
+.cons-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+}
+.cons-search__btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-on);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform var(--duration-base) ease;
+}
+.cons-search__btn:hover {
+  transform: scale(1.05);
+}
+
+/* "Fresh from our farms" promo banner */
+.cons-farmhero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: 22px 20px;
+  color: var(--white);
+  background:
+    radial-gradient(130% 120% at 100% 0%, rgba(236, 64, 122, 0.24) 0%, transparent 55%),
+    linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%);
+  box-shadow: 0 14px 32px rgba(20, 80, 26, 0.28);
+}
+.cons-farmhero__body {
+  flex: 1;
+  min-width: 0;
+}
+.cons-farmhero__eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+}
+.cons-farmhero h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 30px;
+  line-height: 1.02;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-top: 3px;
+}
+.cons-farmhero p {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.86);
+  margin-top: 6px;
+}
+.cons-farmhero__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 50px;
+  background: var(--accent);
+  color: var(--accent-on);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(236, 64, 122, 0.38);
+  transition: transform var(--duration-base) ease;
+}
+.cons-farmhero__cta:hover {
+  transform: translateY(-1px);
+}
+.cons-farmhero__art {
+  font-size: 76px;
+  line-height: 1;
+  flex-shrink: 0;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.28));
+}
+@media (max-width: 400px) {
+  .cons-farmhero__art {
+    display: none;
+  }
+  .cons-farmhero h2 {
+    font-size: 26px;
+  }
+}
+
+/* Category rail — circular shortcuts that open the Shop pre-filtered */
+.cons-cats {
+  margin: 2px -14px 0;
+}
+.cons-cats__strip {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 6px 14px 8px;
+  scrollbar-width: none;
+}
+.cons-cats__strip::-webkit-scrollbar {
+  display: none;
+}
+.cons-cat {
+  flex: 0 0 auto;
+  width: 66px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cons-cat__disc {
+  width: 62px;
+  height: 62px;
+  border-radius: 20px;
+  background: var(--success-bg);
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.1);
+  transition:
+    transform var(--duration-base) ease,
+    box-shadow var(--duration-base) ease;
+}
+.cons-cat:nth-child(4n + 2) .cons-cat__disc {
+  background: var(--accent-bg);
+}
+.cons-cat:nth-child(4n + 3) .cons-cat__disc {
+  background: var(--warning-bg);
+}
+.cons-cat:hover .cons-cat__disc {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(46, 125, 50, 0.16);
+}
+.cons-cat:focus-visible {
+  outline: none;
+}
+.cons-cat:focus-visible .cons-cat__disc {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+.cons-cat__name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  max-width: 66px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Best-Selling product grid (image-forward cards with a pink add pill) */
+.cons-best__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.cons-best__title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--forest);
+  letter-spacing: -0.01em;
+}
+.cons-best__all {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: var(--accent-fg);
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+  border-radius: 6px;
+}
+.cons-best__all:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+.cons-best__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (min-width: 720px) {
+  .cons-best__grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.cons-best__card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--surface-muted);
+  border-radius: 18px;
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 3px 12px rgba(46, 125, 50, 0.05);
+  transition:
+    transform var(--duration-base) ease,
+    box-shadow var(--duration-base) ease;
+}
+.cons-best__card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 26px rgba(46, 125, 50, 0.13);
+}
+.cons-best__card:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+.cons-best__media {
+  height: 96px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--tint-50), var(--success-bg));
+  display: grid;
+  place-items: center;
+  font-size: 46px;
+  margin-bottom: 10px;
+}
+.cons-best__name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--forest);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cons-best__unit {
+  font-size: 10px;
+  color: var(--fg-muted);
+  margin-top: 1px;
+}
+.cons-best__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+.cons-best__from {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+.cons-best__price {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--forest);
+}
+.cons-best__add {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--accent-on);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 10px rgba(236, 64, 122, 0.32);
+  transition: transform var(--duration-base) ease;
+}
+.cons-best__add:hover {
+  transform: scale(1.08);
+}
+
 /* ── Live-tracking hero (Swiggy/Zomato-style) ────────────────────────────────
    Map on top with the agent dot gliding the road route, a white panel overlapping
    its base carrying a big ETA/status headline, a horizontal progress stepper and a

@@ -33,6 +33,7 @@ import {
   CartDuo,
   RepeatDuo,
   BagDuo,
+  MapPinIcon,
 } from '../../components/icons';
 import { useOrders } from './OrdersContext';
 import { useConsumerData } from './ConsumerDataContext';
@@ -53,20 +54,52 @@ const ShoppingInsights = lazy(() => import('./ShoppingInsights'));
 /** Which KPI tile's detail popup is open, if any. */
 type TileView = 'active' | 'completed' | 'month' | 'spent' | 'saved';
 
+/** Emoji for a product group/category in the shortcut rail. Falls back to a
+ *  basket so a newly-added group still renders a tile. */
+const CAT_EMOJI: Record<string, string> = {
+  Vegetables: '🥬',
+  Vegetable: '🥬',
+  Greens: '🥬',
+  Fruits: '🍎',
+  Fruit: '🍎',
+  'Pulses & Grains': '🌾',
+  Grains: '🌾',
+  Pulses: '🫘',
+  'Dairy & Eggs': '🥚',
+  Dairy: '🥛',
+  Eggs: '🥚',
+  Groceries: '🛒',
+  Grocery: '🛒',
+  Organic: '🌿',
+  Herbs: '🌿',
+  Beverages: '🧃',
+  'Flours & Oils': '🫙',
+  Oils: '🫙',
+  Flours: '🌾',
+  Spices: '🌶️',
+};
+const catEmoji = (name: string): string => CAT_EMOJI[name] ?? '🧺';
+
 export function HomeTab({
   onOpenOrder,
   onGoToShop,
   onGoToOrders,
   onGoToCart,
+  onGoToAddresses,
+  onSearch,
+  onPickCategory,
 }: {
   onOpenOrder: (id: string) => void;
   onGoToShop: () => void;
   onGoToOrders: () => void;
   onGoToCart: () => void;
+  onGoToAddresses: () => void;
+  onSearch: (query: string) => void;
+  onPickCategory: (group: string) => void;
 }) {
   const { t, i18n } = useTranslation();
   const { orders, groups, loading, error } = useOrders();
-  const { products, offersByProduct, savedIds, productById } = useConsumerData();
+  const { products, offersByProduct, savedIds, productById, district } = useConsumerData();
   // Saved products that are in the current catalogue (available in the buyer's area).
   const saved = [...savedIds].map((id) => productById[id]).filter((p): p is Product => !!p);
   const cart = useCart();
@@ -78,6 +111,15 @@ export function HomeTab({
 
   // Which Quick-Action popup is open (Buy Again / Track picker), or null.
   const [qa, setQa] = useState<'again' | 'track' | null>(null);
+
+  // Storefront search box (MOBILEVIEW header). Submitting hands the query to the
+  // Shop tab, which is the surface built to filter and add to cart safely.
+  const [q, setQ] = useState('');
+  // Category rail — the real product groups in the buyer's catalogue, capped so
+  // the rail stays a shortcut strip rather than a full taxonomy.
+  const catGroups = [
+    ...new Set(products.map((p) => p.product_group).filter(Boolean) as string[]),
+  ].slice(0, 8);
 
   // Total-Spent popup: this month's spend by product category. Fetched lazily the
   // first time that tile is opened (the orders list carries no line items), then
@@ -173,8 +215,131 @@ export function HomeTab({
   if (loading && orders.length === 0) return <Spinner />;
   if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
 
+  const submitSearch = () => {
+    const query = q.trim();
+    if (query) onSearch(query);
+    else onGoToShop();
+  };
+
   return (
     <>
+      {/* ── Storefront header (delivery location, search, promo, categories) ──
+          Additive shopping-home block; the dashboard below is unchanged. */}
+      <FadeIn>
+        <button
+          type="button"
+          className="cons-loc"
+          onClick={onGoToAddresses}
+          aria-label={t('consumer.home.changeLocation', 'Change delivery location')}
+        >
+          <span className="cons-loc__ico" aria-hidden="true">
+            <MapPinIcon size={18} />
+          </span>
+          <span>
+            <span className="cons-loc__lbl">{t('consumer.home.deliverTo', 'Deliver to')}</span>
+            <span className="cons-loc__val">
+              {district || t('consumer.home.setLocation', 'Set your location')}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M6 9l6 6 6-6"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+          </span>
+        </button>
+      </FadeIn>
+
+      <FadeIn delay={0.02}>
+        <form
+          className="cons-search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitSearch();
+          }}
+          role="search"
+        >
+          <span className="cons-search__ico" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+              <path
+                d="M20 20l-3.2-3.2"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={t('consumer.home.searchPlaceholder', 'Search for products…')}
+            aria-label={t('consumer.home.searchProducts', 'Search for products')}
+          />
+          <button
+            type="submit"
+            className="cons-search__btn"
+            aria-label={t('consumer.home.search', 'Search')}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2.2" />
+              <path
+                d="M20 20l-3.2-3.2"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </form>
+      </FadeIn>
+
+      <FadeIn delay={0.04}>
+        <section
+          className="cons-farmhero"
+          aria-label={t('consumer.home.farmPromo', 'Fresh from our farms')}
+        >
+          <div className="cons-farmhero__body">
+            <div className="cons-farmhero__eyebrow">{t('consumer.tag')}</div>
+            <h2>{t('consumer.home.farmTitle', 'Fresh from our farms')}</h2>
+            <p>{t('consumer.home.farmSub', '100% Natural & Chemical Free')}</p>
+            <button type="button" className="cons-farmhero__cta" onClick={onGoToShop}>
+              {t('consumer.home.shopNow', 'Shop Now')} <span aria-hidden="true">→</span>
+            </button>
+          </div>
+          <span className="cons-farmhero__art" aria-hidden="true">
+            🧺
+          </span>
+        </section>
+      </FadeIn>
+
+      {catGroups.length > 0 ? (
+        <FadeIn delay={0.06}>
+          <nav className="cons-cats" aria-label={t('consumer.home.categories', 'Categories')}>
+            <div className="cons-cats__strip">
+              {catGroups.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  className="cons-cat"
+                  onClick={() => onPickCategory(g)}
+                  aria-label={g}
+                >
+                  <span className="cons-cat__disc" aria-hidden="true">
+                    {catEmoji(g)}
+                  </span>
+                  <span className="cons-cat__name">{g}</span>
+                </button>
+              ))}
+            </div>
+          </nav>
+        </FadeIn>
+      ) : null}
+
       <FadeIn>
         {/* Every tile is a button now — clicking one opens its detail popup.
             The page behind it never changes, so closing the popup returns the
@@ -256,30 +421,44 @@ export function HomeTab({
 
       {recommended.length > 0 ? (
         <FadeIn delay={0.16}>
-          <section className="cons-reco">
-            <div className="cons-reco__head">
-              <h2 className="cons-section-title">
-                {t('consumer.home.recommended', 'Recommended for You')}
-              </h2>
-              <button type="button" className="cons-reco__all" onClick={onGoToShop}>
-                {t('consumer.home.browseAll', 'Browse all')} <span aria-hidden="true">→</span>
+          <section
+            className="cons-best"
+            aria-label={t('consumer.home.bestSelling', 'Best Selling')}
+          >
+            <div className="cons-best__head">
+              <h2 className="cons-best__title">{t('consumer.home.bestSelling', 'Best Selling')}</h2>
+              <button type="button" className="cons-best__all" onClick={onGoToShop}>
+                {t('consumer.home.viewAll', 'View all')} <span aria-hidden="true">→</span>
               </button>
             </div>
-            <div className="cons-reco__strip">
+            <div className="cons-best__grid">
               {recommended.map(({ product, price }) => (
+                /* The whole card is one action — it opens the Shop filtered to
+                   this product, where the buyer picks a seller and quantity (a
+                   fresh listing's MOQ/SPQ can't be assumed here). The pink pill
+                   is the visual affordance, not a nested control. */
                 <button
                   key={product.id}
                   type="button"
-                  className="cons-reco__card"
-                  onClick={onGoToShop}
+                  className="cons-best__card"
+                  onClick={() => onSearch(product.name)}
                   aria-label={`${product.name} — ${t('consumer.home.from', 'from')} ${fmtMoney(price)}`}
                 >
-                  <span className="cons-reco__emoji" aria-hidden="true">
+                  <span className="cons-best__media" aria-hidden="true">
                     {getProductEmoji(product.name)}
                   </span>
-                  <span className="cons-reco__name">{product.name}</span>
-                  <span className="cons-reco__price">
-                    {t('consumer.home.from', 'from')} {fmtMoney(price)}
+                  <span className="cons-best__name">{product.name}</span>
+                  <span className="cons-best__unit">
+                    / {product.unit || t('consumer.card.unit', 'unit')}
+                  </span>
+                  <span className="cons-best__foot">
+                    <span>
+                      <span className="cons-best__from">{t('consumer.home.from', 'from')}</span>
+                      <span className="cons-best__price">{fmtMoney(price)}</span>
+                    </span>
+                    <span className="cons-best__add" aria-hidden="true">
+                      +
+                    </span>
                   </span>
                 </button>
               ))}
