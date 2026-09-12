@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, OrderPipeline, OrderTimeline, Sheet, Spinner, StarRating } from '@marutham/ui';
+import {
+  Button,
+  OrderJourney,
+  OrderPipeline,
+  OrderTimeline,
+  Sheet,
+  Spinner,
+  StarRating,
+} from '@marutham/ui';
 import { api, type TrackResponse } from '@marutham/api-client';
 import {
   addressLabelKey,
@@ -303,40 +311,51 @@ function OrderDetailBody({
               { count: parts.length },
             )}
           </div>
-        ) : mapView ? (
-          <LiveTracker
-            track={track!}
-            route={o.route || 'direct'}
-            status={effectiveStatus}
-            mapView={mapView}
-          />
         ) : (
           <>
-            <OrderPipeline
+            {/* Swiggy-style live map hero once the order has coordinates to draw;
+                the vertical journey timeline below always carries the full stage
+                history with timestamps. */}
+            {mapView ? (
+              <LiveTracker
+                track={track!}
+                route={o.route || 'direct'}
+                status={effectiveStatus}
+                mapView={mapView}
+              />
+            ) : null}
+            {/* Vertical journey timeline (reference's signature tracking view): the
+                full pipeline with timestamps on completed stages, the current stage
+                highlighted, and upcoming stages as hollow markers. Shown for every
+                single-parcel order — below the map when there is one, or as the
+                primary tracker when there isn't. */}
+            <OrderJourney
               nodes={buildPipeline(o.route || 'direct', effectiveStatus)}
+              history={history}
               labelFor={(l) => t(statusKey(l), l)}
+              lang={i18n.language}
+              currentLabel={t('consumer.order.current', 'Current')}
+              etaLabel={
+                track?.eta
+                  ? t('consumer.order.expectedBy', 'Expected by {{time}}', {
+                      time: fmtDate(track.eta, i18n.language),
+                    })
+                  : undefined
+              }
             />
-            {track?.agent || track?.eta ? (
+            {/* The live map already surfaces the delivery agent; only show the
+                agent card when there is no map. */}
+            {!mapView && track?.agent ? (
               <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-                {track.agent ? (
-                  <div className="track-box track-box--agent">
-                    <div className="track-box__k">
-                      🛵 {t('consumer.order.agent', 'Your Delivery Agent')}
-                    </div>
-                    <div className="track-box__v">{track.agent.name}</div>
-                    {track.agent.vehicle ? (
-                      <div className="track-box__sub">{track.agent.vehicle}</div>
-                    ) : null}
+                <div className="track-box track-box--agent">
+                  <div className="track-box__k">
+                    🛵 {t('consumer.order.agent', 'Your Delivery Agent')}
                   </div>
-                ) : null}
-                {track.eta ? (
-                  <div className="track-box track-box--eta">
-                    <div className="track-box__k">
-                      ⏱ {t('consumer.order.eta', 'Estimated Arrival')}
-                    </div>
-                    <div className="track-box__v">{fmtDate(track.eta, i18n.language)}</div>
-                  </div>
-                ) : null}
+                  <div className="track-box__v">{track.agent.name}</div>
+                  {track.agent.vehicle ? (
+                    <div className="track-box__sub">{track.agent.vehicle}</div>
+                  ) : null}
+                </div>
               </div>
             ) : null}
           </>
