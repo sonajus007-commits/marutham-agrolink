@@ -342,64 +342,6 @@ export function HomeTab({
         </FadeIn>
       ) : null}
 
-      <FadeIn>
-        {/* Every tile is a button now — clicking one opens its detail popup.
-            The page behind it never changes, so closing the popup returns the
-            buyer to exactly this view, ready to open another tile. */}
-        <div className="cons-kpis">
-          <StatTile
-            icon={<TruckDuo />}
-            tone="green"
-            label={t('consumer.home.activeOrders')}
-            value={groups.active.length}
-            hint={t('consumer.home.inProgress')}
-            onClick={() => setView('active')}
-            selected={view === 'active'}
-          />
-          <StatTile
-            icon={<CheckCircleDuo />}
-            tone="leaf"
-            label={t('consumer.home.completed')}
-            value={groups.delivered.length}
-            hint={t('consumer.home.delivered')}
-            onClick={() => setView('completed')}
-            selected={view === 'completed'}
-          />
-          <StatTile
-            icon={<CalendarDuo />}
-            tone="pink"
-            label={t('consumer.home.thisMonth', 'Orders this month')}
-            value={thisMonth}
-            // The month name follows the UI language: interpolating an English
-            // "July" into the Tamil sentence left it half-translated.
-            hint={t('consumer.home.thisMonthHint', 'Placed in {{month}}', {
-              month: now.toLocaleString(i18n.language, { month: 'long' }),
-            })}
-            onClick={() => setView('month')}
-            selected={view === 'month'}
-          />
-          <StatTile
-            icon={<WalletDuo />}
-            tone="gold"
-            label={t('consumer.home.totalSpent', 'Total spent')}
-            value={fmtMoney(totalSpent)}
-            hint={t('consumer.home.totalSpentHint', 'On delivered orders')}
-            onClick={() => setView('spent')}
-            selected={view === 'spent'}
-          />
-          <StatTile
-            icon={<SparklesDuo />}
-            tone="green"
-            label={t('consumer.home.totalSaved', 'Total saved')}
-            value={fmtMoney(totalSaved)}
-            hint={t('consumer.home.totalSavedHint', 'Across your orders')}
-            accent="var(--forest)"
-            onClick={() => setView('saved')}
-            selected={view === 'saved'}
-          />
-        </div>
-      </FadeIn>
-
       {orders.length === 0 ? (
         <FadeIn delay={0.04}>
           <EmptyState icon="🌿">
@@ -410,12 +352,6 @@ export function HomeTab({
           </EmptyState>
         </FadeIn>
       ) : null}
-
-      {/* The dashboard body is always fully visible — the KPI tiles open their
-          detail in a popup, so nothing here has to move or hide to make room. */}
-      <FadeIn delay={0.08}>
-        <QuickActions actions={quickActions} />
-      </FadeIn>
 
       <FadeIn delay={0.12}>
         <FreshArrivals onGoToShop={onGoToShop} />
@@ -428,7 +364,9 @@ export function HomeTab({
             aria-label={t('consumer.home.bestSelling', 'Best Selling')}
           >
             <div className="cons-best__head">
-              <h2 className="cons-best__title">{t('consumer.home.bestSelling', 'Best Selling')}</h2>
+              <h2 className="cons-best__title">
+                {t('consumer.home.freshPicks', "Today's Fresh Picks")}
+              </h2>
               <button type="button" className="cons-best__all" onClick={onGoToShop}>
                 {t('consumer.home.viewAll', 'View all')} <span aria-hidden="true">→</span>
               </button>
@@ -499,6 +437,68 @@ export function HomeTab({
           </section>
         </FadeIn>
       ) : null}
+
+      {/* ── Your activity ── The order/spend dashboard sits BELOW the storefront
+          now (reference is discover-first): a buyer opens the app to shop, and
+          their KPIs/quick-actions are a scroll away, not the first thing. Each
+          tile still opens its detail popup; the page behind never swaps. */}
+      <FadeIn delay={0.18}>
+        <h2 className="cons-section-title">{t('consumer.home.yourActivity', 'Your activity')}</h2>
+        <div className="cons-kpis">
+          <StatTile
+            icon={<TruckDuo />}
+            tone="green"
+            label={t('consumer.home.activeOrders')}
+            value={groups.active.length}
+            hint={t('consumer.home.inProgress')}
+            onClick={() => setView('active')}
+            selected={view === 'active'}
+          />
+          <StatTile
+            icon={<CheckCircleDuo />}
+            tone="leaf"
+            label={t('consumer.home.completed')}
+            value={groups.delivered.length}
+            hint={t('consumer.home.delivered')}
+            onClick={() => setView('completed')}
+            selected={view === 'completed'}
+          />
+          <StatTile
+            icon={<CalendarDuo />}
+            tone="pink"
+            label={t('consumer.home.thisMonth', 'Orders this month')}
+            value={thisMonth}
+            hint={t('consumer.home.thisMonthHint', 'Placed in {{month}}', {
+              month: now.toLocaleString(i18n.language, { month: 'long' }),
+            })}
+            onClick={() => setView('month')}
+            selected={view === 'month'}
+          />
+          <StatTile
+            icon={<WalletDuo />}
+            tone="gold"
+            label={t('consumer.home.totalSpent', 'Total spent')}
+            value={fmtMoney(totalSpent)}
+            hint={t('consumer.home.totalSpentHint', 'On delivered orders')}
+            onClick={() => setView('spent')}
+            selected={view === 'spent'}
+          />
+          <StatTile
+            icon={<SparklesDuo />}
+            tone="green"
+            label={t('consumer.home.totalSaved', 'Total saved')}
+            value={fmtMoney(totalSaved)}
+            hint={t('consumer.home.totalSavedHint', 'Across your orders')}
+            accent="var(--forest)"
+            onClick={() => setView('saved')}
+            selected={view === 'saved'}
+          />
+        </div>
+      </FadeIn>
+
+      <FadeIn delay={0.19}>
+        <QuickActions actions={quickActions} />
+      </FadeIn>
 
       <FadeIn delay={0.2}>
         <MarketRates products={products} offersByProduct={offersByProduct} />

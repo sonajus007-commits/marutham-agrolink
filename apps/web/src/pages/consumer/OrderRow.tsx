@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { StatusPill } from '@marutham/ui';
 import {
   fmtDateShort,
   fmtMoney,
@@ -6,6 +7,7 @@ import {
   payMethodKey,
   statusColor,
   statusKey,
+  statusTone,
   type Order,
 } from '@marutham/lib';
 
@@ -33,8 +35,11 @@ export function OrderRow({ order, onOpen }: { order: Order; onOpen: (id: string)
       />
       <span className="ord-item__main">
         <span className="ord-id">{orderLabel(order)}</span>
-        <span className="ord-loc">
-          {t(statusKey(status), status)} · {fmtDateShort(order.created_at, i18n.language)}
+        <span className="mt-1 flex flex-wrap items-center gap-1.5">
+          <StatusPill tone={statusTone(status)} size="sm" dot>
+            {t(statusKey(status), status)}
+          </StatusPill>
+          <span className="ord-loc">{fmtDateShort(order.created_at, i18n.language)}</span>
         </span>
       </span>
       <span className="ord-item__right">

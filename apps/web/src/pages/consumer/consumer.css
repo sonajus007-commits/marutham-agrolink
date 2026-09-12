@@ -1596,13 +1596,13 @@
   overflow: hidden;
   border-radius: 20px;
   padding: 22px 20px;
-  /* Warm cream card with dark-green type, matching the reference mockup — softer
-     and more premium than a full green block, and it lets the pink CTA pop. */
-  color: var(--forest-deep);
+  /* Green "Fresh & Local / Farm to Your Home" hero per the role-view reference —
+     a natural-green block with light type; the pink CTA pops against it. */
+  color: #eafaea;
   background:
-    radial-gradient(120% 130% at 100% 100%, rgba(102, 187, 106, 0.22) 0%, transparent 55%),
-    linear-gradient(135deg, var(--farm-cream) 0%, var(--farm-cream2) 100%);
-  box-shadow: 0 12px 28px rgba(120, 100, 60, 0.18);
+    radial-gradient(120% 140% at 100% 100%, rgba(168, 213, 162, 0.28) 0%, transparent 55%),
+    linear-gradient(135deg, var(--forest-deep) 0%, var(--forest-soft) 100%);
+  box-shadow: 0 12px 28px rgba(20, 80, 26, 0.28);
 }
 .cons-farmhero__body {
   flex: 1;
@@ -1613,21 +1613,21 @@
   font-weight: 800;
   letter-spacing: 1.4px;
   text-transform: uppercase;
-  color: var(--forest-soft);
+  color: var(--mint);
 }
 .cons-farmhero h2 {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 32px;
-  line-height: 1.02;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  margin-top: 3px;
-  color: var(--forest-deep);
+  font-family: var(--font-sans);
+  font-size: 27px;
+  line-height: 1.08;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 4px;
+  color: #fff;
 }
 .cons-farmhero p {
   font-size: 12.5px;
-  color: var(--forest);
-  opacity: 0.85;
+  color: #d8f0d8;
+  opacity: 0.95;
   margin-top: 6px;
 }
 .cons-farmhero__cta {
