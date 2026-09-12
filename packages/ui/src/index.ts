@@ -70,3 +70,21 @@ export { Header } from './Header';
 export type { HeaderProps } from './Header';
 export { AppShell } from './AppShell';
 export type { AppShellProps } from './AppShell';
+
+/* Phase 0 mobile-first component layer (native patterns built on the tokens). */
+export { BottomNav } from './BottomNav';
+export type { BottomNavItem, BottomNavProps } from './BottomNav';
+export { StatusPill } from './StatusPill';
+export type { StatusPillProps, PillTone } from './StatusPill';
+export { SegmentedControl } from './SegmentedControl';
+export type { SegmentedControlProps, SegmentOption } from './SegmentedControl';
+export { ActionBar } from './ActionBar';
+export type { ActionBarProps } from './ActionBar';
+export { ScanFab } from './ScanFab';
+export type { ScanFabProps } from './ScanFab';
+export { NumericInput } from './NumericInput';
+export type { NumericInputProps } from './NumericInput';
+export { PullToRefresh } from './PullToRefresh';
+export type { PullToRefreshProps } from './PullToRefresh';
+export { ToastProvider, useToast } from './Toast';
+export type { ToastOptions, ToastTone } from './Toast';
