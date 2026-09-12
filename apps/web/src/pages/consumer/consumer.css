@@ -1598,7 +1598,7 @@
   padding: 22px 20px;
   /* Green "Fresh & Local / Farm to Your Home" hero per the role-view reference —
      a natural-green block with light type; the pink CTA pops against it. */
-  color: #eafaea;
+  color: var(--white);
   background:
     radial-gradient(120% 140% at 100% 100%, rgba(168, 213, 162, 0.28) 0%, transparent 55%),
     linear-gradient(135deg, var(--forest-deep) 0%, var(--forest-soft) 100%);
@@ -1622,12 +1622,12 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   margin-top: 4px;
-  color: #fff;
+  color: var(--white);
 }
 .cons-farmhero p {
   font-size: 12.5px;
-  color: #d8f0d8;
-  opacity: 0.95;
+  color: var(--white);
+  opacity: 0.9;
   margin-top: 6px;
 }
 .cons-farmhero__cta {
