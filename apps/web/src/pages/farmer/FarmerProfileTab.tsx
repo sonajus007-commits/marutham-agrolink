@@ -60,7 +60,7 @@ function draftFrom(user: Record<string, unknown>): ProfileDraft {
 
 export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
   const { t, i18n } = useTranslation();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const { taluksOf } = useLocations();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
@@ -235,6 +235,12 @@ export function FarmerProfileTab({ onRenew }: { onRenew: () => void }) {
       <PublicProfileCard />
       <BankDetailsCard />
       <ChangePasswordCard />
+
+      {/* Sign out lives in the Profile tab so the phone header stays a clean
+          brand + bell + language bar. */}
+      <button type="button" className="fm-signout" onClick={logout}>
+        {t('farmer.logout', 'Sign Out')}
+      </button>
     </>
   );
 }

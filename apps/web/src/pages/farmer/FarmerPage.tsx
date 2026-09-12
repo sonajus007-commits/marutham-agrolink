@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ComponentType, type SVGProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TabBar, IconButton, LangToggle } from '@marutham/ui';
+import { IconButton, LangToggle } from '@marutham/ui';
 import {
   HomeIcon,
   WalletIcon,
@@ -94,29 +94,48 @@ function FarmerInner() {
   if (!user) return null;
   const setLang = (lang: AppLanguage) => changeLanguage(lang);
 
-  const tabs = [
-    { id: 'home', label: t('farmer.tab.home') },
-    { id: 'earnings', label: t('farmer.tab.earnings') },
-    { id: 'products', label: t('farmer.tab.products') },
-    { id: 'orders', label: t('farmer.tab.orders'), badge: packCount || undefined },
-    { id: 'profile', label: t('farmer.tab.profile') },
-  ];
-
   /* Desktop sidebar (>=1024px) — the same left-list / right-pane layout the
    * consumer page wears. Only one of the two navigations is visible at a time
-   * (CSS hides the tab bar on desktop, the sidebar on phones), so there is no
+   * (CSS hides the bottom nav on desktop, the sidebar on phones), so there is no
    * duplicate tab stop. */
   const navItems: {
     id: Tab;
     Icon: ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
     label: string;
+    short: string;
     badge?: number;
   }[] = [
-    { id: 'home', Icon: HomeIcon, label: t('farmer.nav.home', 'Dashboard') },
-    { id: 'earnings', Icon: WalletIcon, label: t('farmer.nav.earnings', 'Earnings') },
-    { id: 'products', Icon: WheatIcon, label: t('farmer.nav.products', 'My Products') },
-    { id: 'orders', Icon: PackageIcon, label: t('farmer.nav.orders', 'Orders'), badge: packCount },
-    { id: 'profile', Icon: UserIcon, label: t('farmer.nav.profile', 'Profile') },
+    {
+      id: 'home',
+      Icon: HomeIcon,
+      label: t('farmer.nav.home', 'Dashboard'),
+      short: t('farmer.navShort.home', 'Home'),
+    },
+    {
+      id: 'earnings',
+      Icon: WalletIcon,
+      label: t('farmer.nav.earnings', 'Earnings'),
+      short: t('farmer.navShort.earnings', 'Earnings'),
+    },
+    {
+      id: 'products',
+      Icon: WheatIcon,
+      label: t('farmer.nav.products', 'My Products'),
+      short: t('farmer.navShort.products', 'Products'),
+    },
+    {
+      id: 'orders',
+      Icon: PackageIcon,
+      label: t('farmer.nav.orders', 'Orders'),
+      short: t('farmer.navShort.orders', 'Orders'),
+      badge: packCount,
+    },
+    {
+      id: 'profile',
+      Icon: UserIcon,
+      label: t('farmer.nav.profile', 'Profile'),
+      short: t('farmer.navShort.profile', 'Profile'),
+    },
   ];
 
   return (
@@ -143,7 +162,9 @@ function FarmerInner() {
               { value: 'ta', label: 'த', className: 'tamil' },
             ]}
           />
-          <IconButton onClick={logout} aria-label={t('farmer.logout')}>
+          {/* Hidden on phones (bottom-nav Profile owns Sign Out there), kept for
+              the desktop layout — mirrors the consumer header. */}
+          <IconButton className="fm-hdr__deskonly" onClick={logout} aria-label={t('farmer.logout')}>
             <LogOutIcon size={18} />
           </IconButton>
         </div>
@@ -193,13 +214,6 @@ function FarmerInner() {
             </div>
           </div>
 
-          <TabBar
-            className="fm-tabbar"
-            items={tabs}
-            active={tab}
-            onSelect={(id) => setTab(id as Tab)}
-          />
-
           <div className="flex flex-1 flex-col gap-3 p-3.5">
             {tab === 'home' ? (
               <FarmerHomeTab
@@ -226,6 +240,29 @@ function FarmerInner() {
           </div>
         </div>
       </div>
+
+      {/* Fixed bottom navigation (phone) — the same native-app pattern as the
+          consumer app. Hidden at >=1024px where the sidebar takes over. */}
+      <nav className="fm-bottomnav" aria-label={t('farmer.nav.label', 'Seller sections')}>
+        {navItems.map((it) => {
+          const on = tab === it.id;
+          return (
+            <button
+              key={it.id}
+              type="button"
+              className={`fm-bnav__item${on ? ' is-active' : ''}`}
+              aria-current={on ? 'page' : undefined}
+              onClick={() => setTab(it.id)}
+            >
+              <span className="fm-bnav__icon" aria-hidden="true">
+                <it.Icon size={22} />
+                {it.badge ? <span className="fm-bnav__badge">{it.badge}</span> : null}
+              </span>
+              <span className="fm-bnav__label">{it.short}</span>
+            </button>
+          );
+        })}
+      </nav>
 
       {/* A suspended seller gets the blocking gate; anyone else can open it to renew. */}
       <SubscriptionGate

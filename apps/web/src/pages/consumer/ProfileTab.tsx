@@ -59,7 +59,7 @@ function draftFrom(user: Record<string, unknown>): ProfileDraft {
 
 export function ProfileTab() {
   const { t } = useTranslation();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const { taluksOf } = useLocations();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
@@ -237,6 +237,12 @@ export function ProfileTab() {
       <AddressBook />
       <ChangePasswordCard />
       <HelpSupport />
+
+      {/* Sign out lives in the Account tab — the native-app home for it — so the
+          phone header can stay a clean brand + bell + language bar. */}
+      <button type="button" className="prof-signout" onClick={logout}>
+        {t('consumer.logout', 'Sign Out')}
+      </button>
     </>
   );
 }

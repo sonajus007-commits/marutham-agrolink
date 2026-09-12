@@ -33,6 +33,8 @@ export const colors = {
   forestNight: '#0a2b10', // login radial-gradient outer stop
 
   cream: '#FFF8E1', // Cream — light page background
+  farmCream: '#f6efe0', // warm cream — farm/storefront hero gradient start
+  farmCream2: '#efe3cb', // warm cream — farm/storefront hero gradient end
   gold: '#FFC107', // Gold — ratings, premium badges, warnings
   gold2: '#e9c46a',
   sun: '#f4a261',

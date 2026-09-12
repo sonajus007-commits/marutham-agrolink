@@ -85,7 +85,11 @@ export function AdminPage() {
       className="flex items-center gap-2 no-underline"
     >
       <img src="/img/logo-sm.jpg" alt="" className="h-7 w-7 shrink-0 rounded-sm" />
-      <span className="text-md font-bold leading-tight text-primary">Marutham AgroLink</span>
+      {/* Two-tone wordmark: "Marutham" forest, "Agrolink" the brand flower pink —
+          matching the consumer, farmer and agent headers. */}
+      <span className="text-md font-bold leading-tight text-primary">
+        Marutham <span style={{ color: 'var(--accent)' }}>Agrolink</span>
+      </span>
     </a>
   );
 
@@ -95,16 +99,28 @@ export function AdminPage() {
       currentPath={currentPath}
       brand={<div className="px-1">{brand}</div>}
       footer={
-        <a
-          href={`${APP_BASE}/admin/profile`}
-          onClick={go('/admin/profile')}
-          className="block min-w-0 no-underline"
-        >
-          <div className="truncate text-sm font-semibold text-fg">
-            {user.fname || user.login_id}
-          </div>
-          <div className="truncate text-2xs text-fg-muted">{user.admin_role || 'Admin'}</div>
-        </a>
+        <div className="min-w-0">
+          <a
+            href={`${APP_BASE}/admin/profile`}
+            onClick={go('/admin/profile')}
+            className="block min-w-0 no-underline"
+          >
+            <div className="truncate text-sm font-semibold text-fg">
+              {user.fname || user.login_id}
+            </div>
+            <div className="truncate text-2xs text-fg-muted">{user.admin_role || 'Admin'}</div>
+          </a>
+          {/* Sign Out lives in the nav footer so it stays reachable on phones,
+              where the header logout icon is hidden. */}
+          <button
+            type="button"
+            onClick={logout}
+            className="mt-2 flex w-full items-center gap-2 rounded-[10px] border border-tint-300 bg-surface px-3 py-2 text-sm font-semibold text-danger"
+          >
+            <LogOutIcon size={16} />
+            {t('nav.logout', 'Sign Out')}
+          </button>
+        </div>
       }
     />
   );
@@ -120,10 +136,17 @@ export function AdminPage() {
           { value: 'ta', label: 'த', className: 'tamil' },
         ]}
       />
-      <IconButton onClick={() => navigate('/admin/profile')} aria-label={t('admin.profile.title')}>
+      {/* Profile + logout are hidden on phones (the ≡ drawer carries the profile
+          link and a Sign Out in its footer), keeping the compact header from
+          clipping. They stay for the desktop layout. */}
+      <IconButton
+        className="hidden lg:inline-flex"
+        onClick={() => navigate('/admin/profile')}
+        aria-label={t('admin.profile.title')}
+      >
         <UserIcon size={18} />
       </IconButton>
-      <IconButton onClick={logout} aria-label={t('nav.logout')}>
+      <IconButton className="hidden lg:inline-flex" onClick={logout} aria-label={t('nav.logout')}>
         <LogOutIcon size={18} />
       </IconButton>
     </>

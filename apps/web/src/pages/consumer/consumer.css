@@ -214,7 +214,13 @@
     display: none;
   }
   .cons-hdr__right {
-    gap: 4px;
+    gap: 6px;
+  }
+  /* Phone: drop the profile + logout icons from the header — the bottom-nav
+     Account tab (and its Sign Out row) own those now, so the bar stays a tidy
+     brand + bell + language cluster that fits the narrowest phones. */
+  .cons-hdr__deskonly {
+    display: none;
   }
 }
 
@@ -853,6 +859,23 @@
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
+}
+.prof-signout {
+  width: 100%;
+  margin-top: 4px;
+  padding: 13px;
+  background: var(--surface);
+  color: var(--danger-fg);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.prof-signout:hover {
+  border-color: var(--danger-fg);
+  background: var(--danger-bg);
 }
 .prof-form {
   margin-top: 14px;
@@ -1570,7 +1593,7 @@
   color: var(--forest-deep);
   background:
     radial-gradient(120% 130% at 100% 100%, rgba(102, 187, 106, 0.22) 0%, transparent 55%),
-    linear-gradient(135deg, #f6efe0 0%, #efe3cb 100%);
+    linear-gradient(135deg, var(--farm-cream) 0%, var(--farm-cream2) 100%);
   box-shadow: 0 12px 28px rgba(120, 100, 60, 0.18);
 }
 .cons-farmhero__body {

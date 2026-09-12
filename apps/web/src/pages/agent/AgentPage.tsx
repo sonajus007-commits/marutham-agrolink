@@ -1,6 +1,5 @@
 import { useState, type ComponentType, type SVGProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TabBar } from '@marutham/ui';
 import {
   HomeIcon,
   ClipboardIcon,
@@ -34,7 +33,7 @@ interface SheetState {
 }
 
 /* The four sections the field portal is split into — mirroring the Consumer and
- * Farmer portals: a left sidebar (desktop) / scrolling TabBar (phone) picks one,
+ * Farmer portals: a left sidebar (desktop) / fixed bottom nav (phone) picks one,
  * and the right pane renders it. */
 type Tab = 'overview' | 'work' | 'done' | 'profile';
 
@@ -116,9 +115,15 @@ function AgentPageInner() {
     id: Tab;
     Icon: ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
     label: string;
+    short: string;
     badge?: number;
   }[] = [
-    { id: 'overview', Icon: HomeIcon, label: t('agent.nav.overview', 'Overview') },
+    {
+      id: 'overview',
+      Icon: HomeIcon,
+      label: t('agent.nav.overview', 'Overview'),
+      short: t('agent.navShort.overview', 'Home'),
+    },
     {
       id: 'work',
       Icon: isVCO ? ClipboardIcon : TruckIcon,
@@ -127,14 +132,23 @@ function AgentPageInner() {
           ? t('agent.nav.collectionsDelivery', 'Collections & Delivery')
           : t('agent.nav.collections', 'Collections')
         : t('agent.nav.tracking', 'Delivery Tracking'),
+      short: isVCO
+        ? t('agent.navShort.collections', 'Collect')
+        : t('agent.navShort.tracking', 'Deliver'),
       badge: workBadge || undefined,
     },
     {
       id: 'done',
       Icon: CheckCircleIcon,
       label: isVCO ? t('agent.nav.completed', 'Completed') : t('agent.nav.delivered', 'Delivered'),
+      short: t('agent.navShort.done', 'Done'),
     },
-    { id: 'profile', Icon: SettingsIcon, label: t('agent.nav.profile', 'Profile') },
+    {
+      id: 'profile',
+      Icon: SettingsIcon,
+      label: t('agent.nav.profile', 'Profile'),
+      short: t('agent.navShort.profile', 'Profile'),
+    },
   ];
 
   return (
@@ -169,22 +183,29 @@ function AgentPageInner() {
               த
             </button>
           </div>
+          {/* Profile + logout hidden on phones — the bottom-nav Profile tab and its
+              Sign Out own them there, keeping the busy header (bell + duty + language)
+              from clipping. Kept for the desktop layout. */}
           <button
-            className={`agent-iconbtn${tab === 'profile' ? ' is-active' : ''}`}
+            className={`agent-iconbtn agent-hdr__deskonly${tab === 'profile' ? ' is-active' : ''}`}
             onClick={() => setTab(tab === 'profile' ? 'overview' : 'profile')}
             aria-pressed={tab === 'profile'}
             aria-label={t('agent.profile')}
           >
             <UserIcon size={18} />
           </button>
-          <button className="agent-iconbtn" onClick={logout} aria-label={t('agent.exit')}>
+          <button
+            className="agent-iconbtn agent-hdr__deskonly"
+            onClick={logout}
+            aria-label={t('agent.exit')}
+          >
             <LogOutIcon size={18} />
           </button>
         </div>
       </header>
 
       <div className="agent-body">
-        {/* Sidebar — a >=1024px enhancement; the TabBar drives phones. */}
+        {/* Sidebar — a >=1024px enhancement; the bottom nav drives phones. */}
         <nav className="agent-side" aria-label={t('agent.nav.label', 'Field sections')}>
           <ul className="agent-side__list">
             {navItems.map((it) => {
@@ -216,18 +237,6 @@ function AgentPageInner() {
         </nav>
 
         <div className="agent-main">
-          <TabBar
-            className="agent-tabbar"
-            items={navItems.map((it) => ({
-              id: it.id,
-              label: it.label,
-              badge: it.badge,
-            }))}
-            active={tab}
-            onSelect={(id) => setTab(id as Tab)}
-            aria-label={t('agent.nav.label', 'Field sections')}
-          />
-
           <div className="agent-pane">
             {tab === 'overview' ? (
               <AgentOverview
@@ -263,6 +272,29 @@ function AgentPageInner() {
           </div>
         </div>
       </div>
+
+      {/* Fixed bottom navigation (phone) — the same native-app pattern as the
+          consumer & farmer apps. Hidden at >=1024px where the sidebar takes over. */}
+      <nav className="agent-bottomnav" aria-label={t('agent.nav.label', 'Field sections')}>
+        {navItems.map((it) => {
+          const on = tab === it.id;
+          return (
+            <button
+              key={it.id}
+              type="button"
+              className={`agent-bnav__item${on ? ' is-active' : ''}`}
+              aria-current={on ? 'page' : undefined}
+              onClick={() => setTab(it.id)}
+            >
+              <span className="agent-bnav__icon" aria-hidden="true">
+                <it.Icon size={22} />
+                {it.badge ? <span className="agent-bnav__badge">{it.badge}</span> : null}
+              </span>
+              <span className="agent-bnav__label">{it.short}</span>
+            </button>
+          );
+        })}
+      </nav>
 
       {/* Order-action sheets */}
       <OrderViewSheet open={sheet.kind === 'view'} orderId={sheet.orderId} onClose={close} />
