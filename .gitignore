@@ -28,6 +28,7 @@ apps/web/.playwright/
 
 # Logs
 *.log
+backend/server.out
 
 # OS
 .DS_Store
