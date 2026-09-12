@@ -29,6 +29,14 @@ export interface AppShellProps {
   /** Names the drawer dialog for a screen reader. */
   navLabel?: string;
   className?: string;
+  /**
+   * Optional phone-only role-hub nav, pinned to the bottom below `lg` and hidden
+   * at `lg`+ where the static sidebar rail returns. Like `header`, it may be a
+   * render function handed `openNav` so a "More" destination can open the same
+   * drawer the hamburger does. When set, the main scroll area is padded so content
+   * clears the fixed bar.
+   */
+  bottomNav?: ReactNode | ((ctx: { openNav: () => void }) => ReactNode);
 }
 
 export function AppShell({
@@ -38,6 +46,7 @@ export function AppShell({
   currentPath,
   navLabel = 'Navigation',
   className,
+  bottomNav,
 }: AppShellProps) {
   const [navOpen, setNavOpen] = useState(false);
   const returnFocus = useReturnFocus(navOpen);
@@ -58,8 +67,9 @@ export function AppShell({
     return () => mq.removeEventListener('change', sync);
   }, []);
 
-  const headerNode =
-    typeof header === 'function' ? header({ openNav: () => setNavOpen(true) }) : header;
+  const openNav = () => setNavOpen(true);
+  const headerNode = typeof header === 'function' ? header({ openNav }) : header;
+  const bottomNavNode = typeof bottomNav === 'function' ? bottomNav({ openNav }) : bottomNav;
 
   return (
     <div className={cn('flex h-screen overflow-hidden bg-bg', className)}>
@@ -68,8 +78,18 @@ export function AppShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         {headerNode}
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto">
+          {children}
+          {/* Below lg the fixed role-hub bar overlays the bottom; this phone-only
+              spacer lets the last content scroll clear of it (plus gesture inset). */}
+          {bottomNavNode ? (
+            <div aria-hidden className="h-14 pb-[env(safe-area-inset-bottom)] lg:hidden" />
+          ) : null}
+        </main>
       </div>
+
+      {/* Phone role-hub — fixed to the viewport bottom, retired at lg+. */}
+      {bottomNavNode ? <div className="lg:hidden">{bottomNavNode}</div> : null}
 
       {/* Mobile drawer. lg:hidden is belt-and-suspenders with the resize effect. */}
       <Dialog.Root open={navOpen} onOpenChange={setNavOpen}>

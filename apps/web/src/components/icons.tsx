@@ -83,6 +83,16 @@ export const UserIcon = (p: IconProps) => (
   </Svg>
 );
 
+/** Three lines — the "More" destination that opens the full nav drawer, matching
+ *  the Header hamburger so the phone role-hub and the drawer read as one control. */
+export const MenuIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 6h16" />
+    <path d="M4 12h16" />
+    <path d="M4 18h16" />
+  </Svg>
+);
+
 export const LogOutIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

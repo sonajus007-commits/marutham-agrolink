@@ -278,3 +278,56 @@ export function filterAdminNav(
     .map((s) => ({ ...s, items: s.items.filter((i) => meetsRequirement(user, i.requires)) }))
     .filter((s) => s.items.length > 0);
 }
+
+/* Importance order for the phone role-hub. We never hardcode a role→items list
+ * (that is exactly the drift adminNav.ts exists to avoid): the bar is built from
+ * the role's own landing page first, then filled from this global order, keeping
+ * only what the user's granted nav actually contains. Dashboards lead, then the
+ * high-traffic operational sections. */
+const BOTTOM_NAV_ORDER = [
+  'overview',
+  'executive',
+  'operations',
+  'adminhead',
+  'hub-dashboard',
+  'hub',
+  'orders',
+  'users',
+  'employees',
+  'attendance',
+  'reports',
+  'hubs',
+  'products',
+  'payouts',
+  'roles',
+];
+
+/**
+ * The ≤4 primary destinations a management role wears in the phone bottom bar.
+ * The console shell appends a "More" entry that opens the full nav drawer, so the
+ * bar reads as role-hub + everything-else — the mobile replacement for the desktop
+ * sidebar. Returns [] for a non-management user (they have no console bar).
+ */
+export function adminBottomNav(user: User | null | undefined): AdminNavItem[] {
+  const granted = filterAdminNav(ADMIN_NAV, user).flatMap((s) => s.items);
+  if (granted.length === 0) return [];
+
+  const byId = new Map(granted.map((i) => [i.id, i]));
+  const ordered: AdminNavItem[] = [];
+  const push = (item?: AdminNavItem) => {
+    if (item && !ordered.some((o) => o.id === item.id)) ordered.push(item);
+  };
+
+  // The role's landing page always leads.
+  push(granted.find((i) => i.to === adminHome(user)));
+  // Then the global importance order, then anything else granted, to fill four.
+  for (const id of BOTTOM_NAV_ORDER) {
+    if (ordered.length >= 4) break;
+    push(byId.get(id));
+  }
+  for (const item of granted) {
+    if (ordered.length >= 4) break;
+    push(item);
+  }
+  return ordered.slice(0, 4);
+}

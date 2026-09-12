@@ -5,17 +5,18 @@ import {
   AppShell,
   Header,
   Sidebar,
+  BottomNav,
   IconButton,
   LangToggle,
   EmptyState,
   type SidebarSection,
 } from '@marutham/ui';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
-import { UserIcon, LogOutIcon } from '../../components/icons';
+import { UserIcon, LogOutIcon, MenuIcon } from '../../components/icons';
 import { NotificationBell } from '../../components/NotificationBell';
 import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider } from '../../components/Toast';
-import { ADMIN_NAV, APP_BASE, filterAdminNav } from './adminNav';
+import { ADMIN_NAV, APP_BASE, filterAdminNav, adminBottomNav } from './adminNav';
 import { AdminGeoProvider } from './AdminGeoContext';
 import { OverviewPage } from './OverviewPage';
 import { ExecutivePage } from './ExecutivePage';
@@ -153,6 +154,39 @@ export function AdminPage() {
     </>
   );
 
+  // Phone role-hub: the ≤4 primary destinations for this role plus a "More" that
+  // opens the same drawer the header hamburger does. Below `lg` this replaces the
+  // sidebar as the primary nav; at `lg`+ the static rail returns and the bar hides.
+  const bottomItems = adminBottomNav(user);
+  const fullTo = (to: string) => APP_BASE + to;
+  const isActive = (to: string) =>
+    currentPath === fullTo(to) || (to !== '/admin' && currentPath.startsWith(`${fullTo(to)}/`));
+  // A page reached from the drawer (not one of the four) lights "More" instead.
+  const activeBottom = bottomItems.find((i) => isActive(i.to))?.id ?? 'more';
+
+  const bottomNav =
+    bottomItems.length > 0
+      ? ({ openNav }: { openNav: () => void }) => (
+          <BottomNav
+            aria-label={t('admin.nav.sections', 'Sections')}
+            active={activeBottom}
+            onSelect={(id) => {
+              if (id === 'more') return openNav();
+              const item = bottomItems.find((i) => i.id === id);
+              if (item) navigate(item.to);
+            }}
+            items={[
+              ...bottomItems.map((i) => ({
+                id: i.id,
+                label: t(i.labelKey),
+                icon: <i.Icon size={22} />,
+              })),
+              { id: 'more', label: t('admin.nav.more', 'More'), icon: <MenuIcon size={22} /> },
+            ]}
+          />
+        )
+      : undefined;
+
   return (
     <ToastProvider>
       <AdminGeoProvider>
@@ -160,6 +194,7 @@ export function AdminPage() {
           currentPath={currentPath}
           sidebar={sidebar}
           header={({ openNav }) => <Header onMenuClick={openNav} brand={brand} actions={actions} />}
+          bottomNav={bottomNav}
         >
           <div className="mx-auto w-full max-w-[1100px] p-4 sm:p-6">
             <Routes>

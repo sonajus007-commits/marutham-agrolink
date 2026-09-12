@@ -1189,6 +1189,8 @@ export const resources = {
       // ── Admin / management console ──
       'admin.comingSoon': 'This section is coming in a later update.',
       'admin.nav.overview': 'Overview',
+      'admin.nav.more': 'More',
+      'admin.nav.sections': 'Sections',
       'admin.nav.orders': 'Orders',
       'admin.nav.returns': 'Returns',
       'admin.nav.support': 'Support',
@@ -3386,6 +3388,8 @@ export const resources = {
       // ── Admin / management console ──
       'admin.comingSoon': 'இந்தப் பிரிவு அடுத்த புதுப்பிப்பில் வரும்.',
       'admin.nav.overview': 'கண்ணோட்டம்',
+      'admin.nav.more': 'மேலும்',
+      'admin.nav.sections': 'பிரிவுகள்',
       'admin.nav.orders': 'ஆர்டர்கள்',
       'admin.nav.returns': 'திருப்பிகள்',
       'admin.nav.support': 'ஆதரவு',
