@@ -86,8 +86,9 @@ export function AdminPage() {
     >
       <img src="/img/logo-sm.jpg" alt="" className="h-7 w-7 shrink-0 rounded-sm" />
       {/* Two-tone wordmark: "Marutham" forest, "Agrolink" the brand flower pink —
-          matching the consumer, farmer and agent headers. */}
-      <span className="text-md font-bold leading-tight text-primary">
+          matching the consumer, farmer and agent headers. Smaller and single-line
+          on phones so the header (≡ + brand + bell + language + logout) fits. */}
+      <span className="whitespace-nowrap text-sm font-bold leading-tight text-primary lg:text-md">
         Marutham <span style={{ color: 'var(--accent)' }}>Agrolink</span>
       </span>
     </a>
@@ -136,9 +137,9 @@ export function AdminPage() {
           { value: 'ta', label: 'த', className: 'tamil' },
         ]}
       />
-      {/* Profile + logout are hidden on phones (the ≡ drawer carries the profile
-          link and a Sign Out in its footer), keeping the compact header from
-          clipping. They stay for the desktop layout. */}
+      {/* Profile is hidden on phones (the ≡ drawer carries the profile link), but
+          logout rides the header everywhere; the wordmark shrinks + stays on one
+          line to make room. */}
       <IconButton
         className="hidden lg:inline-flex"
         onClick={() => navigate('/admin/profile')}
@@ -146,7 +147,7 @@ export function AdminPage() {
       >
         <UserIcon size={18} />
       </IconButton>
-      <IconButton className="hidden lg:inline-flex" onClick={logout} aria-label={t('nav.logout')}>
+      <IconButton onClick={logout} aria-label={t('nav.logout')}>
         <LogOutIcon size={18} />
       </IconButton>
     </>

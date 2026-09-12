@@ -110,20 +110,20 @@
   --overlay-scrim: rgba(0, 0, 0, .55);
 
   /* ── Typography ── */
-  --font-sans: 'Outfit', system-ui, sans-serif;
-  --font-body: 'Noto Sans', system-ui, sans-serif;
+  --font-sans: 'Poppins', system-ui, sans-serif;
+  --font-body: 'Poppins', 'Noto Sans', system-ui, sans-serif;
   --font-serif: 'Cormorant Garamond', serif;
   --font-tamil: 'Noto Serif Tamil', serif;
-  --fs-2xs: 9px;
-  --fs-xs: 10px;
-  --fs-sm: 11px;
-  --fs-base: 12px;
-  --fs-md: 13px;
-  --fs-lg: 14px;
-  --fs-xl: 16px;
-  --fs-2xl: 20px;
-  --fs-3xl: 22px;
-  --fs-4xl: 26px;
+  --fs-2xs: 10px;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 14px;
+  --fs-md: 15px;
+  --fs-lg: 16px;
+  --fs-xl: 18px;
+  --fs-2xl: 22px;
+  --fs-3xl: 26px;
+  --fs-4xl: 32px;
   --fw-normal: 400;
   --fw-semibold: 600;
   --fw-bold: 700;

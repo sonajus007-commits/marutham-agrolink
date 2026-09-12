@@ -7,10 +7,10 @@
   background: var(--bg);
   display: flex;
   flex-direction: column;
-  /* Modern, friendly UI face for the storefront — Plus Jakarta Sans has more
-     character than the plain system sans, while headings/wordmark keep their own
-     serif. Tamil falls back to Noto Serif Tamil. */
-  font-family: 'Plus Jakarta Sans', 'Noto Serif Tamil', system-ui, sans-serif;
+  /* Phase 0: the storefront UI face is now the standardised body token
+     (Plus Jakarta Sans → Noto Sans fallback), shared across all four portals.
+     Headings/wordmark keep their own faces; Tamil resolves via the token stack. */
+  font-family: var(--font-body);
 }
 
 /* Body = sidebar + main (mockup panel 2, the consumer dashboard).
@@ -164,6 +164,11 @@
 /* The wordmark lockup, matched to the landing's <MaruthamLogo>: the name in the
  * serif face in forest (NOT gold — the landing uses forest for the wordmark),
  * with the sub-label stacked beneath. */
+/* The text column must shrink below content so the wordmark truncates instead of
+   spilling over the action cluster on a crowded phone header. */
+.cons-hdr__brand > div {
+  min-width: 0;
+}
 .cons-hdr__name {
   font-family: 'Cormorant Garamond', serif;
   font-size: 21px;
@@ -173,6 +178,9 @@
   letter-spacing: -0.01em;
   min-width: 0;
   overflow: hidden;
+  /* Keep "Marutham Agrolink" on a single line (the two words side by side) and let
+     it ellipsis rather than wrap to two rows when space is tight. */
+  white-space: nowrap;
   text-overflow: ellipsis;
 }
 /* Two-tone wordmark: "Marutham" forest green, "Agrolink" the brand flower pink
@@ -208,17 +216,17 @@
     gap: 8px;
   }
   .cons-hdr__name {
-    font-size: 18px;
+    font-size: 16px;
   }
   .cons-hdr__tag {
     display: none;
   }
   .cons-hdr__right {
-    gap: 6px;
+    gap: 5px;
   }
-  /* Phone: drop the profile + logout icons from the header — the bottom-nav
-     Account tab (and its Sign Out row) own those now, so the bar stays a tidy
-     brand + bell + language cluster that fits the narrowest phones. */
+  /* Phone: only the profile icon leaves the header (the bottom-nav Account tab
+     owns it). Logout stays put, and the wordmark shrinks + stays on one line so
+     brand + bell + language + logout all fit the narrowest phones. */
   .cons-hdr__deskonly {
     display: none;
   }

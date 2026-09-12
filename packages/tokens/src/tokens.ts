@@ -245,24 +245,31 @@ export const semantic = {
  * wordmark, Noto Serif Tamil for `ta` copy. */
 export const typography = {
   fontFamily: {
-    // Spec: Outfit for headings / KPI numbers / buttons; Noto Sans for body copy,
-    // tables, forms and general UI text (and it carries Tamil too).
-    sans: "'Outfit', system-ui, sans-serif", // headings, display, numbers, buttons
-    body: "'Noto Sans', system-ui, sans-serif", // paragraphs, tables, labels, forms
+    // Phase 0: the app standardises on Poppins per the approved role-view reference
+    // (Mobileapp.png) — one friendly, geometric mobile face for display AND body,
+    // with Noto Sans kept as a fallback so any missing glyph still resolves. This
+    // retires both the old Outfit/Noto split and the consumer-only Jakarta override.
+    sans: "'Poppins', system-ui, sans-serif", // headings, display, KPI numbers, buttons
+    body: "'Poppins', 'Noto Sans', system-ui, sans-serif", // UI, body, forms, labels
     serif: "'Cormorant Garamond', serif", // wordmark only (part of the logo)
     tamil: "'Noto Serif Tamil', serif",
   },
+  // Phase 0: mobile-first scale. The readable range lifts ~+2px off the old
+  // desktop-derived sizes and the display end grows to 32px so money figures and
+  // task counts carry real presence. A measured step (not a 12→15 jump) so the
+  // shared 1fr grid rows don't overflow on narrow phones; per-role screens push
+  // individual numbers larger in later phases.
   fontSize: {
-    '2xs': '9px',
-    xs: '10px',
-    sm: '11px',
-    base: '12px',
-    md: '13px',
-    lg: '14px',
-    xl: '16px',
-    '2xl': '20px',
-    '3xl': '22px',
-    '4xl': '26px',
+    '2xs': '10px',
+    xs: '11px',
+    sm: '12px',
+    base: '14px',
+    md: '15px',
+    lg: '16px',
+    xl: '18px',
+    '2xl': '22px',
+    '3xl': '26px',
+    '4xl': '32px',
   },
   fontWeight: { normal: '400', semibold: '600', bold: '700', black: '800' },
   lineHeight: { tight: '1.1', snug: '1.4', normal: '1.5' },

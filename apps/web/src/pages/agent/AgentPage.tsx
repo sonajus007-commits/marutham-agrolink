@@ -155,7 +155,7 @@ function AgentPageInner() {
     <div className="agent-shell">
       <header className="agent-hdr">
         <a href="/app/agent" className="agent-hdr__brand">
-          <div className="hring" style={{ width: 42, height: 32 }}>
+          <div className="hring agent-hdr__logo">
             <img
               src="/img/logo-sm.jpg"
               alt="MA"
@@ -183,9 +183,9 @@ function AgentPageInner() {
               த
             </button>
           </div>
-          {/* Profile + logout hidden on phones — the bottom-nav Profile tab and its
-              Sign Out own them there, keeping the busy header (bell + duty + language)
-              from clipping. Kept for the desktop layout. */}
+          {/* Profile stays in the bottom-nav Profile tab on phones; logout rides the
+              header everywhere. The wordmark shrinks + stays on one line to fit the
+              busy bar (bell + duty + language + logout). */}
           <button
             className={`agent-iconbtn agent-hdr__deskonly${tab === 'profile' ? ' is-active' : ''}`}
             onClick={() => setTab(tab === 'profile' ? 'overview' : 'profile')}
@@ -194,11 +194,7 @@ function AgentPageInner() {
           >
             <UserIcon size={18} />
           </button>
-          <button
-            className="agent-iconbtn agent-hdr__deskonly"
-            onClick={logout}
-            aria-label={t('agent.exit')}
-          >
+          <button className="agent-iconbtn" onClick={logout} aria-label={t('agent.exit')}>
             <LogOutIcon size={18} />
           </button>
         </div>

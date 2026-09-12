@@ -41,6 +41,11 @@
   flex-shrink: 0;
 }
 /* The wordmark in forest (NOT gold — the landing uses forest for the wordmark). */
+/* The text column must shrink below content so the wordmark truncates instead of
+   spilling over the action cluster on a crowded phone header. */
+.fm-hdr__brand > div {
+  min-width: 0;
+}
 .fm-hdr__name {
   font-family: 'Cormorant Garamond', serif;
   font-size: 21px;
@@ -50,6 +55,8 @@
   letter-spacing: -0.01em;
   min-width: 0;
   overflow: hidden;
+  /* Keep "Marutham Agrolink" on one line; ellipsis rather than wrap when tight. */
+  white-space: nowrap;
   text-overflow: ellipsis;
 }
 /* Two-tone wordmark: "Marutham" forest, "Agrolink" the brand flower pink — the
@@ -82,15 +89,16 @@
     gap: 8px;
   }
   .fm-hdr__name {
-    font-size: 18px;
+    font-size: 16px;
   }
   .fm-hdr__tag {
     display: none;
   }
   .fm-hdr__right {
-    gap: 6px;
+    gap: 5px;
   }
-  /* Phone: the header logout moves into the bottom-nav Profile tab. */
+  /* Phone: logout stays in the header; the wordmark shrinks + stays on one line
+     so brand + bell + language + logout all fit. */
   .fm-hdr__deskonly {
     display: none;
   }

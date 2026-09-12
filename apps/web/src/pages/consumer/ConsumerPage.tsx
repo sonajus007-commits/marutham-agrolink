@@ -187,9 +187,9 @@ function ConsumerInner() {
               { value: 'ta', label: 'த', className: 'tamil' },
             ]}
           />
-          {/* Profile + logout are hidden on phones (the bottom-nav Account tab and
-              its in-page Sign Out cover them), so the compact header never clips.
-              They stay for the desktop sidebar layout. */}
+          {/* Profile stays hidden on phones (the bottom-nav Account tab covers it),
+              but logout rides the header everywhere — the wordmark shrinks and stays
+              on one line to make room. */}
           <IconButton
             className="cons-hdr__deskonly"
             active={tab === 'profile'}
@@ -200,11 +200,7 @@ function ConsumerInner() {
           >
             <UserIcon size={18} />
           </IconButton>
-          <IconButton
-            className="cons-hdr__deskonly"
-            onClick={logout}
-            aria-label={t('consumer.logout')}
-          >
+          <IconButton onClick={logout} aria-label={t('consumer.logout')}>
             <LogOutIcon size={18} />
           </IconButton>
         </div>

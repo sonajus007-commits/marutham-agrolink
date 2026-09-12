@@ -162,9 +162,7 @@ function FarmerInner() {
               { value: 'ta', label: 'த', className: 'tamil' },
             ]}
           />
-          {/* Hidden on phones (bottom-nav Profile owns Sign Out there), kept for
-              the desktop layout — mirrors the consumer header. */}
-          <IconButton className="fm-hdr__deskonly" onClick={logout} aria-label={t('farmer.logout')}>
+          <IconButton onClick={logout} aria-label={t('farmer.logout')}>
             <LogOutIcon size={18} />
           </IconButton>
         </div>

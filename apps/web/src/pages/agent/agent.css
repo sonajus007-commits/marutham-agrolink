@@ -33,6 +33,17 @@
   flex: 0 1 auto;
 }
 /* The wordmark in forest (NOT gold — the landing uses forest for the wordmark). */
+/* The text column (name + tag) must be allowed to shrink below its content, or
+   the wordmark's overflow:hidden never engages and it spills over the action
+   cluster on a crowded phone header. */
+.agent-hdr__brand > div {
+  min-width: 0;
+}
+.agent-hdr__logo {
+  width: 42px;
+  height: 32px;
+  flex-shrink: 0;
+}
 .agent-hdr__name {
   font-family: 'Cormorant Garamond', serif;
   font-size: 21px;
@@ -42,6 +53,8 @@
   letter-spacing: -0.01em;
   min-width: 0;
   overflow: hidden;
+  /* Keep "Marutham Agrolink" on one line; ellipsis rather than wrap when tight. */
+  white-space: nowrap;
   text-overflow: ellipsis;
 }
 /* Two-tone wordmark: "Marutham" forest, "Agrolink" the brand flower pink —
@@ -71,22 +84,52 @@
     padding: 10px 12px;
   }
   .agent-hdr__brand {
-    gap: 8px;
+    gap: 7px;
   }
+  .agent-hdr__logo {
+    width: 34px;
+    height: 28px;
+  }
+  /* Denser than the other portals (the duty pill is an extra, wide control), so
+     the wordmark runs a touch smaller to still show in full on one line. */
   .agent-hdr__name {
-    font-size: 18px;
+    font-size: 13px;
   }
   .agent-hdr__tag {
     display: none;
   }
   .agent-hdr__right {
-    gap: 6px;
+    gap: 4px;
   }
-  /* Phone: profile + logout move into the bottom-nav Profile tab. The compound
-     selector outweighs `.agent-iconbtn { display: inline-flex }` (defined later
-     in the file at equal specificity) so the buttons actually hide. */
+  /* Phone: only the profile icon moves into the bottom-nav Profile tab (logout
+     stays in the header). The compound selector outweighs `.agent-iconbtn {
+     display: inline-flex }` (defined later at equal specificity) so it hides. */
   .agent-hdr__right .agent-hdr__deskonly {
     display: none;
+  }
+  /* Compact the action controls on phones so the duty pill + language + logout
+     leave room for the full "Marutham Agrolink" wordmark on one line. */
+  .agent-pill {
+    padding: 5px 9px;
+    gap: 4px;
+  }
+  .agent-pill__text {
+    font-size: 10px;
+  }
+  .agent-pill .agent-pill__text--full {
+    display: none;
+  }
+  /* Compound selector outweighs the base `.agent-pill__text--short { display:none }`
+     (defined later at equal specificity) so the short label actually shows. */
+  .agent-pill .agent-pill__text--short {
+    display: inline;
+  }
+  .agent-lang button {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .agent-hdr__right .agent-iconbtn {
+    padding: 6px 7px;
   }
 }
 
@@ -120,6 +163,10 @@
   font-size: 11px;
   font-weight: 700;
   color: var(--forest);
+}
+/* The short "On/Off" label is phone-only; desktop shows the full label. */
+.agent-pill__text--short {
+  display: none;
 }
 /* Tappable duty toggle (migration 057). Off duty = muted, no pulse. */
 .agent-pill--btn {

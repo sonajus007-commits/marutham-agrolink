@@ -64,8 +64,13 @@ export function DutyToggle() {
       }
     >
       <span className="agent-dot" />
-      <span className="agent-pill__text">
+      {/* Full label on desktop; a short "On/Off" on phones so the pill leaves room
+          for the wordmark. The dot's colour carries the status either way. */}
+      <span className="agent-pill__text agent-pill__text--full">
         {busy ? '…' : onDuty ? t('agent.onDuty', 'On Duty') : t('agent.offDuty', 'Off Duty')}
+      </span>
+      <span className="agent-pill__text agent-pill__text--short" aria-hidden="true">
+        {busy ? '…' : onDuty ? t('agent.onDutyShort', 'On') : t('agent.offDutyShort', 'Off')}
       </span>
     </button>
   );
