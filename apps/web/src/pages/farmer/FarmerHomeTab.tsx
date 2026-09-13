@@ -121,6 +121,28 @@ export function FarmerHomeTab({
 
   return (
     <>
+      {/* Pack-first: the seller opens the app to fulfil, so when orders are waiting
+          the home leads with them — the seller-side analog of the consumer's
+          storefront-first home. Absent entirely when nothing is waiting. */}
+      {packOrders.length > 0 ? (
+        <FadeIn>
+          <section className="fm-packbanner" aria-label={t('farmer.home.pop.pack')}>
+            <span className="fm-packbanner__icon" aria-hidden="true">
+              <PackageDuo />
+            </span>
+            <div className="fm-packbanner__body">
+              <div className="fm-packbanner__title">
+                {t('farmer.home.pack.count', { count: packOrders.length })}
+              </div>
+              <div className="fm-packbanner__sub">{t('farmer.home.pack.sub')}</div>
+            </div>
+            <div className="fm-packbanner__cta">
+              <Button onClick={() => onGoTo('orders')}>{t('farmer.home.pack.cta')} →</Button>
+            </div>
+          </section>
+        </FadeIn>
+      ) : null}
+
       <FadeIn>
         <div className="fm-kpis">
           <StatTile

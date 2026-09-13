@@ -794,12 +794,16 @@
 }
 .fm-qa__grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* minmax(0,1fr), not 1fr: a bare 1fr track is minmax(auto,1fr), whose `auto`
+     minimum is the card's min-content — and the nowrap ellipsised subtitle makes
+     that the full label width, forcing the track (and the page) wider than the
+     phone. minmax(0,…) lets the track shrink so the ellipsis actually engages. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 @media (max-width: 640px) {
   .fm-qa__grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 .fm-qa__card {
@@ -1348,4 +1352,69 @@
 }
 .fm-supply__actions {
   margin-top: 12px;
+}
+
+/* ── Pack-first action banner ───────────────────────────────────────────────
+   Leads the seller Home when orders are waiting to be packed — the seller-side
+   analog of the consumer's storefront-first home. Warm amber/gold (the same
+   urgency the "to pack" KPI + Today's Supply already use); rendered only when
+   there is at least one order to pack, so a clear queue leaves it absent. */
+.fm-packbanner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background:
+    radial-gradient(
+      120% 140% at 100% 0%,
+      color-mix(in srgb, var(--gold) 20%, transparent) 0%,
+      transparent 58%
+    ),
+    linear-gradient(135deg, var(--warning-bg) 0%, var(--surface) 100%);
+  border: 1px solid color-mix(in srgb, var(--gold) 40%, var(--border-subtle));
+  box-shadow: 0 8px 22px rgba(22, 61, 47, 0.1);
+}
+.fm-packbanner__icon {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: var(--gold);
+  color: var(--white);
+}
+.fm-packbanner__icon svg {
+  width: 26px;
+  height: 26px;
+}
+.fm-packbanner__body {
+  flex: 1;
+  min-width: 0;
+}
+.fm-packbanner__title {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--warning-fg);
+}
+.fm-packbanner__sub {
+  font-size: 11.5px;
+  color: var(--fg-muted);
+  margin-top: 2px;
+}
+.fm-packbanner__cta {
+  flex-shrink: 0;
+}
+@media (max-width: 420px) {
+  .fm-packbanner {
+    flex-wrap: wrap;
+  }
+  .fm-packbanner__cta {
+    flex-basis: 100%;
+  }
+  .fm-packbanner__cta button {
+    width: 100%;
+  }
 }

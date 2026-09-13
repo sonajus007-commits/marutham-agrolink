@@ -1,10 +1,12 @@
 import { useTranslation } from 'react-i18next';
+import { StatusPill } from '@marutham/ui';
 import {
   fmtDateShort,
   fmtMoney,
   isOrderCancelled,
   statusColor,
   statusKey,
+  statusTone,
   type Order,
 } from '@marutham/lib';
 
@@ -36,9 +38,14 @@ export function FarmerOrderRow({ order, onOpen }: { order: Order; onOpen: (o: Or
       />
       <span className="flex min-w-0 flex-1 flex-col justify-center">
         <span className="text-sm font-bold text-primary">{orderLabel(order)}</span>
-        <span className="text-2xs text-fg-muted">
-          {t(statusKey(status), status)} · {fmtDateShort(order.created_at, i18n.language)}
-          {order.village ? ` · ${order.village}` : ''}
+        <span className="mt-1 flex flex-wrap items-center gap-1.5">
+          <StatusPill tone={statusTone(status)} size="sm" dot>
+            {t(statusKey(status), status)}
+          </StatusPill>
+          <span className="text-2xs text-fg-muted">
+            {fmtDateShort(order.created_at, i18n.language)}
+            {order.village ? ` · ${order.village}` : ''}
+          </span>
         </span>
       </span>
       <span className="flex flex-col items-end justify-center">
