@@ -7,6 +7,7 @@ import {
   addressTitle,
   buildAddress,
   defaultAddressIndex,
+  fmtMoney,
   validateAddress,
   type AddressObject,
   type CartBill,
@@ -167,11 +168,22 @@ export function Checkout({ bill, onOrderPlaced }: { bill: CartBill; onOrderPlace
         )}
       </div>
 
-      <button className="cons-btn-primary" onClick={proceed} disabled={resolving}>
-        {resolving
-          ? t('consumer.checkout.checking', 'Checking availability…')
-          : `${t('consumer.checkout.proceed', 'Proceed to Pay')} →`}
-      </button>
+      {/* The Proceed CTA rides a bar pinned above the bottom nav so it stays
+          thumb-reachable however long the cart + address block scrolls; the
+          spacer reserves its height so the last field never hides behind it.
+          On desktop the bar falls back to an inline card (see consumer.css). */}
+      <div className="cons-checkoutbar__spacer" aria-hidden="true" />
+      <div className="cons-checkoutbar">
+        <div className="cons-checkoutbar__total">
+          <span className="k">{t('consumer.cart.grandTotal', 'Grand Total')}</span>
+          <span className="v">{fmtMoney(bill.total)}</span>
+        </div>
+        <button className="cons-btn-primary" onClick={proceed} disabled={resolving}>
+          {resolving
+            ? t('consumer.checkout.checking', 'Checking availability…')
+            : `${t('consumer.checkout.proceed', 'Proceed to Pay')} →`}
+        </button>
+      </div>
 
       <PaymentSheet
         open={!!pending}
