@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sheet, Spinner } from '@marutham/ui';
+import { Sheet, Spinner, ActionBar } from '@marutham/ui';
 import {
   api,
   OfflineQueuedError,
@@ -377,21 +377,31 @@ export function VerifySheet({
             </>
           )}
 
-          <button
-            className="confirm-btn"
-            style={{ borderRadius: 12, padding: 14, fontSize: 14 }}
-            onClick={confirm}
-            disabled={busy}
-          >
-            {busy
-              ? `⏳ ${t('agent.verify.busy', 'Verifying…')}`
-              : /* nothing is assigned on the hub route — the hub does that later */
-                `✓ ${
-                  route === 'hub'
-                    ? t('agent.verify.ctaHub', 'Verify & Send to Hub')
-                    : t('agent.verify.cta', 'Verify & Assign')
-                }`}
-          </button>
+          {/* Sticky action bar so Verify stays under the thumb after scrolling past
+              the route toggle, hub picker and agent list. */}
+          <ActionBar sticky>
+            <button
+              className="confirm-btn"
+              style={{
+                marginTop: 0,
+                boxShadow: 'none',
+                borderRadius: 12,
+                padding: 14,
+                fontSize: 14,
+              }}
+              onClick={confirm}
+              disabled={busy}
+            >
+              {busy
+                ? `⏳ ${t('agent.verify.busy', 'Verifying…')}`
+                : /* nothing is assigned on the hub route — the hub does that later */
+                  `✓ ${
+                    route === 'hub'
+                      ? t('agent.verify.ctaHub', 'Verify & Send to Hub')
+                      : t('agent.verify.cta', 'Verify & Assign')
+                  }`}
+            </button>
+          </ActionBar>
         </>
       )}
     </Sheet>

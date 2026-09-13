@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sheet, Spinner } from '@marutham/ui';
+import { Sheet, Spinner, ActionBar } from '@marutham/ui';
 import { api, OfflineQueuedError } from '@marutham/api-client';
 import {
   addressLabelKey,
@@ -213,13 +213,36 @@ export function DeliverSheet({
             />
           </div>
 
-          <button className="confirm-btn" onClick={confirm} disabled={busy}>
-            {busy
-              ? t('agent.deliver.busy', 'Confirming…')
-              : isCod
-                ? `✅ ${t('agent.deliver.ctaCod', 'Confirm Cash Collected & Delivered')}`
-                : `✅ ${t('agent.deliver.cta', 'Confirm Delivered')}`}
-          </button>
+          {/* The one field action rides a sticky ActionBar pinned to the foot of the
+              sheet, so a delivery agent standing at the door reaches Confirm without
+              scrolling past the map, items and payment. For a COD order the bar also
+              carries the amount to collect — the number they must have in hand as they
+              confirm. Sticky (not fixed): its normal-flow slot is the last row, so the
+              content above always clears it at the bottom of the scroll. */}
+          <ActionBar
+            sticky
+            summary={
+              isCod ? (
+                <>
+                  <span>{t('agent.deliver.collectCod', 'Collect Cash on Delivery')}</span>
+                  <span className="tabular-nums">{fmtMoney(o.total)}</span>
+                </>
+              ) : undefined
+            }
+          >
+            <button
+              className="confirm-btn"
+              style={{ marginTop: 0, boxShadow: 'none' }}
+              onClick={confirm}
+              disabled={busy}
+            >
+              {busy
+                ? t('agent.deliver.busy', 'Confirming…')
+                : isCod
+                  ? `✅ ${t('agent.deliver.ctaCod', 'Confirm Cash Collected & Delivered')}`
+                  : `✅ ${t('agent.deliver.cta', 'Confirm Delivered')}`}
+            </button>
+          </ActionBar>
         </>
       )}
     </Sheet>
