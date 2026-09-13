@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sheet, QtyStepper } from '@marutham/ui';
+import { Sheet, QtyStepper, StatusPill } from '@marutham/ui';
 import {
   offerConsumerPrice,
   offersByRating,
@@ -392,88 +392,65 @@ function OfferRow({
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
+      {/* The offer's facts as toned pills (StatusPill from the Phase-0 layer): each
+          reads by shape + colour, not the old 9px colour-only chips, and the tones
+          are AA-asserted. availability = info, the MOQ/SPQ rule = warning, the
+          per-unit saving = success with a dot. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
         {!soldOut ? (
-          <span
-            style={{
-              fontSize: 9,
-              color: 'var(--gray)',
-              background: 'var(--surface-muted)',
-              borderRadius: 4,
-              padding: '2px 6px',
-            }}
-          >
+          <StatusPill tone="info" size="sm">
             {t('consumer.detail.available', '{{qty}} {{unit}} available', {
               qty: offer.qty_available,
               unit,
             })}
-          </span>
+          </StatusPill>
         ) : null}
         {qtyRule ? (
-          <span
-            style={{
-              fontSize: 9,
-              color: 'var(--warning-fg)',
-              background: 'var(--warning-bg)',
-              borderRadius: 4,
-              padding: '2px 6px',
-            }}
-          >
+          <StatusPill tone="warning" size="sm">
             {qtyRule}
-          </span>
+          </StatusPill>
         ) : null}
         {perSave > 0 ? (
-          <span
-            style={{
-              fontSize: 9,
-              color: 'var(--success)',
-              fontWeight: 700,
-              background: 'var(--success-bg)',
-              borderRadius: 4,
-              padding: '2px 6px',
-            }}
-          >
+          <StatusPill tone="success" size="sm" dot>
             {t('consumer.detail.savePer', 'Save {{amount}}/{{unit}}', {
               amount: fmtMoney(perSave),
               unit,
             })}
-          </span>
+          </StatusPill>
         ) : null}
       </div>
 
       {soldOut ? (
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: 12,
-            color: 'var(--red)',
-            fontWeight: 700,
-            padding: 8,
-            background: 'var(--danger-bg)',
-            borderRadius: 8,
-          }}
-        >
-          {t('consumer.detail.soldOut', 'Sold out from this farmer')}
+        <div style={{ textAlign: 'center', padding: 6 }}>
+          <StatusPill tone="danger" size="md" dot>
+            {t('consumer.detail.soldOut', 'Sold out from this farmer')}
+          </StatusPill>
         </div>
       ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <QtyStepper
-            value={qty}
-            min={minQty}
-            step={step}
-            unit={unit}
-            integer={!unitAllowsDecimal(unit)}
-            onChange={setQty}
-            labels={{
-              decrease: t('consumer.qty.decrease', 'Decrease quantity'),
-              increase: t('consumer.qty.increase', 'Increase quantity'),
-              quantity: t('consumer.qty.quantity', 'Quantity'),
-            }}
-          />
-          <button className="cons-btn-sm" style={{ marginLeft: 'auto' }} onClick={add}>
-            {t('consumer.detail.add', 'Add')}
+        <>
+          <div style={{ marginBottom: 10 }}>
+            <QtyStepper
+              value={qty}
+              min={minQty}
+              step={step}
+              unit={unit}
+              integer={!unitAllowsDecimal(unit)}
+              onChange={setQty}
+              labels={{
+                decrease: t('consumer.qty.decrease', 'Decrease quantity'),
+                increase: t('consumer.qty.increase', 'Increase quantity'),
+                quantity: t('consumer.qty.quantity', 'Quantity'),
+              }}
+            />
+          </div>
+          {/* Full-width primary add — a thumb-sized target that names the live line
+              price, so the cost of this qty is explicit before the tap. qty can be
+              mid-edit (NaN/0) in the stepper, so the price falls back to the min. */}
+          <button className="cons-btn-primary" onClick={add}>
+            {t('consumer.detail.addToCart', 'Add to cart')} ·{' '}
+            {fmtMoney(custPrice * (Number.isFinite(qty) && qty > 0 ? qty : minQty))}
           </button>
-        </div>
+        </>
       )}
     </div>
   );
