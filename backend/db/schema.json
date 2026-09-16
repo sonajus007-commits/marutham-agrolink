@@ -613,6 +613,10 @@
           "type": "numeric",
           "notNull": true
         },
+        "quality": {
+          "type": "text",
+          "notNull": false
+        },
         "rated": {
           "type": "boolean",
           "notNull": true,
@@ -627,6 +631,14 @@
           "notNull": false
         },
         "unit": {
+          "type": "text",
+          "notNull": false
+        },
+        "verified_qty": {
+          "type": "numeric",
+          "notNull": false
+        },
+        "verify_note": {
           "type": "text",
           "notNull": false
         }

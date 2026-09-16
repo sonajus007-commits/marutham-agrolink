@@ -1,16 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sheet, Spinner, ActionBar } from '@marutham/ui';
+import { Sheet, Spinner, ActionBar, NumericInput } from '@marutham/ui';
 import {
   api,
   OfflineQueuedError,
   type EligibleAgent,
   type DeliveryHubCandidate,
+  type VerifyItem,
 } from '@marutham/api-client';
-import type { Order } from '@marutham/lib';
+import type { Order, OrderItem, ItemQuality } from '@marutham/lib';
 import { useToast } from '../../../components/Toast';
 import { useAuth } from '../../../auth/AuthContext';
 import { getCurrentPosition } from '../../../native/geolocation';
+
+/** Per-line state the VCO edits at collection: what they actually received and its
+ *  grade. Seeded from the ordered quantity + 'good' so an unchanged line records
+ *  "received as ordered, good". */
+interface LineCheck {
+  qty: number | null;
+  quality: ItemQuality;
+}
+const QUALITIES: ItemQuality[] = ['good', 'fair', 'poor', 'rejected'];
 
 export function VerifySheet({
   open,
@@ -41,6 +51,9 @@ export function VerifySheet({
   const [suggestedHubId, setSuggestedHubId] = useState<string | null>(null);
   const [deliveryHubId, setDeliveryHubId] = useState('');
   const [busy, setBusy] = useState(false);
+  // Per-line verification (migration 059): the order's lines and the VCO's checks.
+  const [items, setItems] = useState<OrderItem[]>([]);
+  const [checks, setChecks] = useState<Record<string, LineCheck>>({});
 
   useEffect(() => {
     if (!open || !orderId) return;
@@ -52,6 +65,8 @@ export function VerifySheet({
     setDeliveryHubs([]);
     setSuggestedHubId(null);
     setDeliveryHubId('');
+    setItems([]);
+    setChecks({});
     setBusy(false); // the sheet stays mounted between orders — a finished verify
     // would otherwise leave the next order's button stuck on "Verifying…"
     // 'delivery' leg: the agent list is matched against the CONSUMER's delivery
@@ -67,6 +82,18 @@ export function VerifySheet({
       .then(([ord, elig, hubs]) => {
         if (!active) return;
         setOrder(ord.order);
+        // Seed the per-line checks from the ordered lines: received = ordered, good.
+        // The VCO adjusts what differs before confirming.
+        const lines = (ord.items || []).filter((it): it is OrderItem & { id: string } => !!it.id);
+        setItems(lines);
+        setChecks(
+          Object.fromEntries(
+            lines.map((it) => [
+              it.id,
+              { qty: Number(it.qty) || 0, quality: 'good' as ItemQuality },
+            ]),
+          ),
+        );
         setMatched(elig.matched || []);
         setAll(elig.all || []);
         // Only an agent who is available for duty today can be pre-selected — an
@@ -109,6 +136,14 @@ export function VerifySheet({
     try {
       // Best-effort collection location; a declined permission never blocks verify.
       const coords = (await getCurrentPosition()) ?? undefined;
+      // The lines the VCO checked — received qty + grade. Every line is sent (an
+      // untouched one records "as ordered, good"); the server ignores unknown ids.
+      const itemChecks: VerifyItem[] = items
+        .filter((it) => it.id)
+        .map((it) => {
+          const c = checks[it.id as string];
+          return { id: it.id as string, verified_qty: c?.qty ?? null, quality: c?.quality };
+        });
       // Collection points are rural and often have no signal, so this is queueable.
       // The stage guard matters most here: replayed a stage late, this same body would
       // land on the pick-up branch and make the VCO the delivery agent, silently
@@ -122,6 +157,7 @@ export function VerifySheet({
         // The destination hub only applies to a via-hub order (ignored for direct).
         delivery_hub_id: route === 'hub' ? deliveryHubId || undefined : undefined,
         coords,
+        items: itemChecks.length ? itemChecks : undefined,
       });
       /* Our own wording, not res.message: the server's is English prose composed
        * server-side ("Order advanced to: Picked Up."), so echoing it would put an
@@ -165,6 +201,17 @@ export function VerifySheet({
     return s;
   };
 
+  const setLine = (id: string, patch: Partial<LineCheck>) =>
+    setChecks((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+
+  const qualityLabel = (q: ItemQuality) =>
+    ({
+      good: t('agent.verify.quality.good', 'Good'),
+      fair: t('agent.verify.quality.fair', 'Fair'),
+      poor: t('agent.verify.quality.poor', 'Poor'),
+      rejected: t('agent.verify.quality.rejected', 'Reject'),
+    })[q];
+
   return (
     <Sheet
       open={open}
@@ -188,6 +235,64 @@ export function VerifySheet({
               {t('agent.verify.village', 'Fulfilment village:')} <b>{order.village || '—'}</b>
             </div>
           </div>
+
+          {/* Per-line check: weigh what was received and grade it. Seeded to the
+              ordered quantity + Good; the VCO adjusts what differs before verifying. */}
+          {items.length ? (
+            <div className="a-card verify-items">
+              <h3>⚖️ {t('agent.verify.itemsTitle', 'Check what you received')}</h3>
+              <p style={{ margin: '2px 0 12px', fontSize: 12, color: 'var(--gray)' }}>
+                {t('agent.verify.itemsHelp', 'Weigh each line and grade it before verifying.')}
+              </p>
+              {items.map((it) => {
+                const id = it.id as string;
+                const c = checks[id] || {
+                  qty: Number(it.qty) || 0,
+                  quality: 'good' as ItemQuality,
+                };
+                const short = c.qty != null && c.qty < (Number(it.qty) || 0);
+                return (
+                  <div className="verify-line" key={id}>
+                    <div className="verify-line__head">
+                      <span className="verify-line__name">{it.name}</span>
+                      <span className="verify-line__ordered">
+                        {t('agent.verify.ordered', 'Ordered')} {it.qty} {it.unit || ''}
+                      </span>
+                    </div>
+                    <NumericInput
+                      id={`vq-${id}`}
+                      value={c.qty}
+                      onChange={(v) => setLine(id, { qty: v })}
+                      unit={it.unit || undefined}
+                      label={t('agent.verify.received', 'Received')}
+                    />
+                    {short ? (
+                      <div className="verify-line__short">
+                        ⚠️ {t('agent.verify.shortWarn', 'Less than ordered — the seller is told.')}
+                      </div>
+                    ) : null}
+                    <div
+                      className="quality-chips"
+                      role="group"
+                      aria-label={t('agent.verify.qualityLabel', 'Quality')}
+                    >
+                      {QUALITIES.map((q) => (
+                        <button
+                          type="button"
+                          key={q}
+                          className={`quality-chip quality-chip--${q}${c.quality === q ? ' on' : ''}`}
+                          aria-pressed={c.quality === q}
+                          onClick={() => setLine(id, { quality: q })}
+                        >
+                          {qualityLabel(q)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
 
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--forest)', marginBottom: 8 }}>
             {t('agent.verify.route', 'Delivery route')}

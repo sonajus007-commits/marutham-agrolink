@@ -448,6 +448,17 @@ export const resources = {
       // Agent: verify sheet (VCO)
       'agent.verify.title': 'Verify Order',
       'agent.verify.village': 'Fulfilment village:',
+      // VCO per-line verification (migration 059)
+      'agent.verify.itemsTitle': 'Check what you received',
+      'agent.verify.itemsHelp': 'Weigh each line and grade it before verifying.',
+      'agent.verify.ordered': 'Ordered',
+      'agent.verify.received': 'Received',
+      'agent.verify.shortWarn': 'Less than ordered — the seller is told.',
+      'agent.verify.qualityLabel': 'Quality',
+      'agent.verify.quality.good': 'Good',
+      'agent.verify.quality.fair': 'Fair',
+      'agent.verify.quality.poor': 'Poor',
+      'agent.verify.quality.rejected': 'Reject',
       'agent.verify.route': 'Delivery route',
       'agent.verify.deliveryAgent': 'Delivery agent',
       'agent.verify.hubAgentNote':
@@ -2671,6 +2682,17 @@ export const resources = {
       'agent.route.hubSub': 'மையம் வழியாக',
       // Agent: verify sheet (VCO)
       'agent.verify.title': 'ஆர்டரைச் சரிபார்',
+      // VCO per-line verification (migration 059)
+      'agent.verify.itemsTitle': 'பெற்றதைச் சரிபார்',
+      'agent.verify.itemsHelp': 'சரிபார்ப்பதற்கு முன் ஒவ்வொரு வரியையும் நிறுத்து தரம் பிரி.',
+      'agent.verify.ordered': 'ஆர்டர்',
+      'agent.verify.received': 'பெற்றது',
+      'agent.verify.shortWarn': 'ஆர்டரை விடக் குறைவு — விற்பனையாளருக்குத் தெரிவிக்கப்படும்.',
+      'agent.verify.qualityLabel': 'தரம்',
+      'agent.verify.quality.good': 'நல்லது',
+      'agent.verify.quality.fair': 'சராசரி',
+      'agent.verify.quality.poor': 'மோசம்',
+      'agent.verify.quality.rejected': 'நிராகரி',
       'agent.verify.village': 'நிறைவேற்றும் கிராமம்:',
       'agent.verify.route': 'வழங்கல் வழி',
       'agent.verify.deliveryAgent': 'விநியோக முகவர்',

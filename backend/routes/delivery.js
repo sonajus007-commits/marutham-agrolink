@@ -239,6 +239,98 @@ function parseScanCoords(body) {
   return { coords: { lat, lng } };
 }
 
+// ── VCO per-line verification (migration 059) ─────────────────────────────────
+// The quality grades a VCO may assign to a received line. A grade is a record, not a
+// workflow state — 'rejected' flags the line and tells the seller; it does not cancel.
+const ITEM_QUALITIES = ['good', 'fair', 'poor', 'rejected'];
+
+// Persist the received quantity + quality the VCO recorded at verify, and tell any
+// seller whose line came up short or graded poor/rejected. Best-effort by design:
+// the order has ALREADY advanced to VCO Verified by the time this runs, so a failure
+// here must not fail the request — it logs and moves on. Returns a small summary.
+async function applyItemVerification(order, rawItems, actor) {
+  const summary = { updated: 0, short: 0, flagged: 0 };
+  try {
+    // The order's real lines — the source of truth for which ids are valid, the
+    // ordered quantity to compare against, and which seller to notify.
+    const { data: lines, error: linesErr } = await supabase
+      .from('order_items')
+      .select('id, name, qty, farmer_id')
+      .eq('order_id', order.id);
+    if (linesErr) {
+      console.error(`Order ${order.id}: verify item lookup failed:`, linesErr.message);
+      return summary;
+    }
+    const byId = new Map((lines || []).map((l) => [l.id, l]));
+    const sellersToNotify = new Set();
+    const notes = [];
+
+    for (const raw of rawItems) {
+      const line = raw && raw.id ? byId.get(raw.id) : null;
+      if (!line) continue; // ignore ids that are not lines of this order
+
+      const update = {};
+      if (raw.verified_qty !== undefined && raw.verified_qty !== null && raw.verified_qty !== '') {
+        const q = Number(raw.verified_qty);
+        if (!Number.isFinite(q) || q < 0) continue; // a bad number skips the whole line
+        update.verified_qty = q;
+      }
+      if (raw.quality !== undefined && raw.quality !== null && raw.quality !== '') {
+        if (!ITEM_QUALITIES.includes(raw.quality)) continue;
+        update.quality = raw.quality;
+      }
+      if (raw.note !== undefined && raw.note !== null) {
+        update.verify_note = String(raw.note).trim().slice(0, 300) || null;
+      }
+      if (Object.keys(update).length === 0) continue;
+
+      const { error: upErr } = await supabase
+        .from('order_items')
+        .update(update)
+        .eq('id', line.id)
+        .eq('order_id', order.id); // never touch another order's line
+      if (upErr) {
+        console.error(`Order ${order.id}: verify item ${line.id} update failed:`, upErr.message);
+        continue;
+      }
+      summary.updated += 1;
+
+      const isShort = update.verified_qty !== undefined && update.verified_qty < Number(line.qty);
+      const isFlagged = update.quality === 'poor' || update.quality === 'rejected';
+      if (isShort) {
+        summary.short += 1;
+        notes.push(`${line.name}: ${update.verified_qty} vs ${line.qty} ordered`);
+      }
+      if (isFlagged) {
+        summary.flagged += 1;
+        notes.push(`${line.name}: ${update.quality}`);
+      }
+      if ((isShort || isFlagged) && line.farmer_id) sellersToNotify.add(line.farmer_id);
+    }
+
+    if (notes.length) {
+      const { error: histErr } = await supabase.from('order_history').insert({
+        order_id: order.id,
+        label: 'Verification issue',
+        note: `VCO ${actor.fname} flagged — ${notes.join('; ')}.`,
+      });
+      if (histErr) console.error(`Order ${order.id}: verify issue history failed:`, histErr.message);
+    }
+
+    for (const sellerId of sellersToNotify) {
+      notify(sellerId, {
+        type: 'verify_issue',
+        title: 'Quality/quantity check',
+        body: `The VCO flagged an item on ${order.code || 'an order'} at collection. Please review.`,
+        data: { order_id: order.id, code: order.code || null },
+      });
+    }
+  } catch (e) {
+    console.error(`Order ${order.id}: applyItemVerification threw:`, e && e.message);
+  }
+  return summary;
+}
+
 // ── POST /orders/:id/pack  (farmer only) ──────────────────────────────────────
 router.post('/:id/pack', async (req, res) => {
   if (req.user.role !== 'farmer') {
@@ -457,6 +549,13 @@ router.post('/:id/scan', async (req, res) => {
         note:     `${assignedName} assigned by VCO ${req.user.fname}.`,
       });
       if (histErr) console.error(`Order ${order.id}: agent-assigned history entry failed:`, histErr.message);
+    }
+
+    // Per-line verification the VCO recorded (received qty + quality). Optional and
+    // additive — absent, verify is exactly as before. Only after a real advance, so
+    // a stale-replay conflict never writes item data.
+    if (!result.error && !result.conflict && Array.isArray(req.body.items) && req.body.items.length) {
+      await applyItemVerification(order, req.body.items, req.user);
     }
 
   // A verified order leaves the village. Where it goes next is the VCO's route

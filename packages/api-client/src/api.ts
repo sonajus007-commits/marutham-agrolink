@@ -118,12 +118,22 @@ function toListingBody(draft: Partial<ListingPayload>): Record<string, unknown> 
 
 /* Every scan-to-advance action — VCO verify, hub dispatch, delivery — is the same
  * POST /orders/:id/scan; only the body differs. */
+/** One line a VCO verified at collection — the quantity actually received and its
+ *  quality grade. All fields but `id` optional; an empty entry is ignored server-side. */
+export interface VerifyItem {
+  id: string;
+  verified_qty?: number | null;
+  quality?: 'good' | 'fair' | 'poor' | 'rejected';
+  note?: string;
+}
+
 function scanBody(o: {
   route?: string;
   agentId?: string;
   deliveryHubId?: string;
   coords?: { lat: number; lng: number };
   deliveryCode?: string;
+  items?: VerifyItem[];
   fromStage?: number;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = {};
@@ -137,6 +147,8 @@ function scanBody(o: {
   // The soft delivery OTP the customer reads to the agent. Optional: a blank code
   // still delivers (server records it unverified), only a wrong one is refused.
   if (o.deliveryCode) body.delivery_code = o.deliveryCode;
+  // Per-line VCO verification (received qty + quality). Optional and additive.
+  if (o.items && o.items.length) body.items = o.items;
   if (o.fromStage !== undefined) body.from_stage = o.fromStage;
   return body;
 }
@@ -165,6 +177,7 @@ function queuedScan(
     deliveryHubId?: string;
     coords?: { lat: number; lng: number };
     deliveryCode?: string;
+    items?: VerifyItem[];
   } = {},
 ): Promise<ScanResponse> {
   // The body is built HERE rather than by the caller, so a queued scan cannot be
@@ -330,14 +343,17 @@ export const api = {
       /** Destination hub for a via-hub order (from getDeliveryHubs); ignored direct. */
       delivery_hub_id?: string;
       coords?: { lat: number; lng: number };
+      /** Per-line verification the VCO recorded (received qty + quality). Optional. */
+      items?: VerifyItem[];
     },
   ): Promise<ScanResponse> {
-    const { coords, route, agent_id, delivery_hub_id } = data || {};
+    const { coords, route, agent_id, delivery_hub_id, items } = data || {};
     return queuedScan(id, fromStage, {
       route,
       agentId: agent_id,
       deliveryHubId: delivery_hub_id,
       coords,
+      items,
     });
   },
   /* Name the last-mile Delivery Agent on an order sitting At Hub.

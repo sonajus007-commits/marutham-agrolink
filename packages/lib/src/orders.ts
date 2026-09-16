@@ -25,7 +25,15 @@ export interface OrderItem {
   farmer_name?: string;
   rated?: boolean;
   rating_value?: number;
+  /** VCO verification (migration 059) — the quantity actually received and its
+   *  quality grade, captured at collection. Null until a VCO records them. */
+  verified_qty?: number | string | null;
+  quality?: ItemQuality | null;
+  verify_note?: string | null;
 }
+
+/** Quality grades a VCO assigns to a received line at verification. */
+export type ItemQuality = 'good' | 'fair' | 'poor' | 'rejected';
 
 export interface OrderHistoryEntry {
   label: string;

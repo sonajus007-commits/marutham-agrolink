@@ -910,3 +910,74 @@ test('delivery-failed refuses an agent acting on another agent’s order (403)',
   assert.equal(res.status, 403);
   assert.equal(db.callsTo('orders', 'update').length, 0);
 });
+
+// ── VCO verify: per-line quantity + quality capture (migration 059) ───────────
+// Additive to verify — the order still advances to VCO Verified; the item lines are
+// updated with what was received and its grade, and a short/poor line is flagged.
+
+function verifyItemsDb(lines) {
+  return fakeSupabase({
+    'orders:select': { data: [packaged()] },
+    'orders:update': { data: { id: 'o1', status: 'VCO Verified' } },
+    'order_items:select': { data: lines },
+    'order_items:update': { data: { id: 'i1' } },
+  });
+}
+
+test('VCO verify records received qty + quality per line', async () => {
+  const db = verifyItemsDb([
+    { id: 'i1', name: 'Tomato', qty: 5, farmer_id: 'f1' },
+    { id: 'i2', name: 'Onion', qty: 3, farmer_id: 'f2' },
+  ]);
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', {
+    route: 'direct',
+    items: [
+      { id: 'i1', verified_qty: 4, quality: 'poor' },
+      { id: 'i2', verified_qty: 3, quality: 'good' },
+    ],
+  });
+
+  assert.equal(res.status, 200);
+  const updates = db.callsTo('order_items', 'update').map((c) => c.payload);
+  assert.equal(updates.length, 2);
+  assert.equal(updates[0].verified_qty, 4);
+  assert.equal(updates[0].quality, 'poor');
+  assert.equal(updates[1].verified_qty, 3);
+  // A short (4<5) and a poor line → one 'Verification issue' history row.
+  const labels = db.callsTo('order_history', 'insert').map((c) => c.payload.label);
+  assert.ok(labels.includes('Verification issue'), 'flags the short/poor line');
+});
+
+test('VCO verify ignores an item id that is not a line of this order', async () => {
+  const db = verifyItemsDb([{ id: 'i1', name: 'Tomato', qty: 5, farmer_id: 'f1' }]);
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', {
+    route: 'direct',
+    items: [{ id: 'ghost', verified_qty: 9, quality: 'good' }],
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('order_items', 'update').length, 0, 'no write for an unknown line');
+});
+
+test('VCO verify skips a line with an invalid quality grade', async () => {
+  const db = verifyItemsDb([{ id: 'i1', name: 'Tomato', qty: 5, farmer_id: 'f1' }]);
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', {
+    route: 'direct',
+    items: [{ id: 'i1', quality: 'excellent' }],
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('order_items', 'update').length, 0, 'a bad grade writes nothing');
+});
+
+test('VCO verify still advances the order when no items are sent', async () => {
+  const db = verifyItemsDb([{ id: 'i1', name: 'Tomato', qty: 5, farmer_id: 'f1' }]);
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { route: 'direct' });
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('order_items', 'update').length, 0, 'no item writes without an items array');
+});

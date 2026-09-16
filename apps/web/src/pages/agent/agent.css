@@ -985,3 +985,77 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ── VCO per-line verification (migration 059) ───────────────────────────────
+   Weigh each line (big NumericInput) and grade it. Grade chips carry colour +
+   label together. */
+.verify-line {
+  padding: 14px 0;
+  border-top: 1px solid var(--tint-300);
+}
+.verify-line:first-of-type {
+  border-top: 0;
+  padding-top: 4px;
+}
+.verify-line__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.verify-line__name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--forest);
+  min-width: 0;
+}
+.verify-line__ordered {
+  font-size: 11px;
+  color: var(--gray);
+  white-space: nowrap;
+}
+.verify-line__short {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--warning-fg);
+}
+.quality-chips {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.quality-chip {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 4px;
+  border-radius: 8px;
+  border: 1.5px solid var(--tint-300);
+  background: var(--surface);
+  color: var(--gray);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+.quality-chip.on.quality-chip--good {
+  background: var(--success-bg);
+  color: var(--success-fg);
+  border-color: var(--success-fg);
+}
+.quality-chip.on.quality-chip--fair {
+  background: var(--info-bg);
+  color: var(--info-fg);
+  border-color: var(--info-fg);
+}
+.quality-chip.on.quality-chip--poor {
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+  border-color: var(--gold2);
+}
+.quality-chip.on.quality-chip--rejected {
+  background: color-mix(in srgb, var(--red) 12%, var(--surface));
+  color: var(--red);
+  border-color: var(--red);
+}
