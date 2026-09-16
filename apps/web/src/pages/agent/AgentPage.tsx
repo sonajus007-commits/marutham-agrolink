@@ -10,6 +10,7 @@ import {
   LogOutIcon,
 } from '../../components/icons';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
+import { ScanFab } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import { statusKey } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
@@ -22,10 +23,25 @@ import { ProfileContent } from './ProfileContent';
 import { OrderViewSheet } from './sheets/OrderViewSheet';
 import { DeliverSheet } from './sheets/DeliverSheet';
 import { VerifySheet } from './sheets/VerifySheet';
+import { ScanSheet } from './ScanSheet';
 import { NotificationBell } from '../../components/NotificationBell';
 import { OfflineBar } from '../../components/OfflineBar';
 import { DutyToggle } from './DutyToggle';
 import './agent.css';
+
+/* A QR/scan glyph for the ScanFab — corner brackets + a scan line. Inherits size
+ * from the FAB (which sets svg to 1.5rem) and colour via currentColor. */
+function ScanGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path
+        d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"
+        strokeLinecap="round"
+      />
+      <line x1="4" y1="12" x2="20" y2="12" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 type SheetKind = 'view' | 'deliver' | 'verify' | null;
 interface SheetState {
@@ -69,6 +85,7 @@ function AgentPageInner() {
   useDeliveryLocationPing(onTheRoad);
 
   const [tab, setTab] = useState<Tab>('overview');
+  const [scanOpen, setScanOpen] = useState(false);
   const [sheet, setSheet] = useState<SheetState>({ kind: null, orderId: null });
   const close = () => setSheet({ kind: null, orderId: null });
   const afterChange = () => {
@@ -255,7 +272,6 @@ function AgentPageInner() {
                 error={error}
                 isVCO={isVCO}
                 canDeliver={canDeliver}
-                onScanned={onScanned}
                 onOpenView={(id) => setSheet({ kind: 'view', orderId: id })}
                 onOpenDeliver={(id) => setSheet({ kind: 'deliver', orderId: id })}
                 onOpenVerify={(id) => setSheet({ kind: 'verify', orderId: id })}
@@ -295,6 +311,19 @@ function AgentPageInner() {
           );
         })}
       </nav>
+
+      {/* Scan-first: a thumb-reachable primary action on every field tab (except the
+          profile tab). Opens the scan sheet — the fastest path to advance any order. */}
+      {tab !== 'profile' ? (
+        <ScanFab
+          extended
+          icon={<ScanGlyph />}
+          label={t('agent.scan.fab', 'Scan')}
+          onClick={() => setScanOpen(true)}
+          className="agent-scanfab"
+        />
+      ) : null}
+      <ScanSheet open={scanOpen} onClose={() => setScanOpen(false)} onScanned={onScanned} />
 
       {/* Order-action sheets */}
       <OrderViewSheet open={sheet.kind === 'view'} orderId={sheet.orderId} onClose={close} />

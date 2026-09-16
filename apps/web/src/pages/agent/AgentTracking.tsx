@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { EmptyState, Spinner } from '@marutham/ui';
 import type { OrderQueues } from '@marutham/lib';
-import { ScanBar } from './ScanBar';
 import { QueueSection } from './QueueSection';
 
 /* Delivery Tracking (Delivery Agent) / Collections (VCO) — the operational page.
@@ -15,7 +14,6 @@ export function AgentTracking({
   error,
   isVCO,
   canDeliver = false,
-  onScanned,
   onOpenView,
   onOpenDeliver,
   onOpenVerify,
@@ -27,7 +25,6 @@ export function AgentTracking({
   isVCO: boolean;
   /** A VCO who also works last-mile deliveries — shows the hub-collect lane too. */
   canDeliver?: boolean;
-  onScanned: () => void;
   onOpenView: (id: string) => void;
   onOpenDeliver: (id: string) => void;
   onOpenVerify: (id: string) => void;
@@ -122,8 +119,6 @@ export function AgentTracking({
 
   return (
     <>
-      <ScanBar onScanned={onScanned} />
-
       {loading ? (
         <Spinner label={t('agent.loadingOrders')} />
       ) : error ? (
