@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sheet, Spinner, ActionBar } from '@marutham/ui';
-import { api, OfflineQueuedError } from '@marutham/api-client';
+import {
+  api,
+  OfflineQueuedError,
+  DELIVERY_FAILURE_REASONS,
+  type DeliveryFailureReason,
+} from '@marutham/api-client';
 import {
   addressLabelKey,
   fmtMoney,
@@ -36,6 +41,12 @@ export function DeliverSheet({
   // The optional delivery OTP the customer reads out. Blank is fine — the delivery
   // still goes through (recorded unverified); only a wrong code is refused server-side.
   const [otp, setOtp] = useState('');
+  // The "couldn't deliver" branch — a reason picker that records a failed attempt
+  // without advancing the order. Closed by default; opening it reveals the reasons.
+  const [failing, setFailing] = useState(false);
+  const [failReason, setFailReason] = useState<DeliveryFailureReason | ''>('');
+  const [failNote, setFailNote] = useState('');
+  const [failBusy, setFailBusy] = useState(false);
   // The agent's own live route to the door. This agent IS the order's assigned agent
   // and is GPS-pinging every 30 s while out delivering, so /track returns their own
   // moving position plus the destination — the very feed the consumer map consumes.
@@ -51,6 +62,10 @@ export function DeliverSheet({
     setOtp(''); // do not carry one order's code onto the next
     setBusy(false); // the sheet stays mounted between orders — a finished confirm
     // would otherwise leave the next order's button stuck on "Confirming…"
+    setFailing(false); // collapse the reason picker for the next order
+    setFailReason('');
+    setFailNote('');
+    setFailBusy(false);
     api
       .getOrder(orderId)
       .then((res) => {
@@ -108,8 +123,58 @@ export function DeliverSheet({
     }
   }
 
+  // Record an attempt that could not be completed at the door. Like deliver, this is
+  // offline-queueable and asserts the stage it saw, so a late replay is refused rather
+  // than stamped on an order that has since been delivered.
+  async function submitFailed() {
+    if (!orderId || !data || !failReason) return;
+    const stage = data.order.stage;
+    if (typeof stage !== 'number') {
+      toast(
+        t('agent.err.noStage', 'Could not read this order’s stage. Reload and try again.'),
+        'er',
+      );
+      return;
+    }
+    setFailBusy(true);
+    try {
+      const coords = (await getCurrentPosition()) ?? undefined;
+      await api.reportDeliveryFailedOffline(
+        orderId,
+        stage,
+        failReason,
+        failNote.trim() || undefined,
+        coords,
+      );
+      toast(t('agent.fail.done', 'Failed attempt recorded. The customer has been notified.'), 'ok');
+      onChanged();
+    } catch (e) {
+      if (e instanceof OfflineQueuedError) {
+        toast(
+          t('agent.queued', 'No signal — saved on your device. It will sync automatically.'),
+          'ok',
+        );
+        onChanged();
+        return;
+      }
+      toast(e instanceof Error ? e.message : t('agent.fail.failed', 'Could not record it'), 'er');
+      setFailBusy(false);
+    }
+  }
+
   const o = data?.order;
   const isCod = o?.pay_method === 'Cash on Delivery';
+  const attempts = o?.delivery_attempts || 0;
+  // i18n label for each canonical reason code.
+  const reasonLabel = (r: DeliveryFailureReason) =>
+    ({
+      customer_unreachable: t('agent.fail.reason.unreachable', 'Customer unreachable'),
+      customer_absent: t('agent.fail.reason.absent', 'Customer not available'),
+      address_incorrect: t('agent.fail.reason.address', 'Address wrong or not found'),
+      customer_refused: t('agent.fail.reason.refused', 'Customer refused the order'),
+      rescheduled: t('agent.fail.reason.rescheduled', 'Asked to deliver later'),
+      other: t('agent.fail.reason.other', 'Other'),
+    })[r];
 
   return (
     <Sheet
@@ -135,6 +200,12 @@ export function DeliverSheet({
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,.7)', marginTop: 6 }}>
                 {t('agent.deliver.collectFirst', 'Collect before handing over')}
               </div>
+            </div>
+          ) : null}
+
+          {attempts > 0 ? (
+            <div className="retry-banner" role="status">
+              🔁 {t('agent.fail.retryBanner', { count: attempts })}
             </div>
           ) : null}
 
@@ -213,6 +284,51 @@ export function DeliverSheet({
             />
           </div>
 
+          {/* Couldn't-deliver branch: a reason picker that records an attempt without
+              advancing the order. Only shown once the agent opens it, so it never
+              competes with the primary Confirm action at the door. */}
+          {failing ? (
+            <div className="a-card fail-card">
+              <h3>⚠️ {t('agent.fail.title', 'Couldn’t deliver?')}</h3>
+              <p style={{ margin: '2px 0 10px', fontSize: 13, color: 'var(--muted)' }}>
+                {t(
+                  'agent.fail.help',
+                  'Pick a reason. The customer is notified and the order stays out for a retry.',
+                )}
+              </p>
+              <select
+                className="a-select"
+                value={failReason}
+                onChange={(e) => setFailReason(e.target.value as DeliveryFailureReason)}
+                aria-label={t('agent.fail.reasonLabel', 'Reason')}
+              >
+                <option value="">— {t('agent.fail.pickReason', 'Select a reason')} —</option>
+                {DELIVERY_FAILURE_REASONS.map((r) => (
+                  <option key={r} value={r}>
+                    {reasonLabel(r)}
+                  </option>
+                ))}
+              </select>
+              <textarea
+                value={failNote}
+                onChange={(e) => setFailNote(e.target.value.slice(0, 500))}
+                placeholder={t('agent.fail.notePlaceholder', 'Add a note (optional)')}
+                aria-label={t('agent.fail.noteLabel', 'Note')}
+                rows={2}
+                style={{
+                  width: '100%',
+                  marginTop: 8,
+                  padding: '10px 12px',
+                  fontSize: 14,
+                  borderRadius: 10,
+                  border: '1px solid var(--border-subtle)',
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                }}
+              />
+            </div>
+          ) : null}
+
           {/* The one field action rides a sticky ActionBar pinned to the foot of the
               sheet, so a delivery agent standing at the door reaches Confirm without
               scrolling past the map, items and payment. For a COD order the bar also
@@ -222,7 +338,7 @@ export function DeliverSheet({
           <ActionBar
             sticky
             summary={
-              isCod ? (
+              isCod && !failing ? (
                 <>
                   <span>{t('agent.deliver.collectCod', 'Collect Cash on Delivery')}</span>
                   <span className="tabular-nums">{fmtMoney(o.total)}</span>
@@ -230,18 +346,51 @@ export function DeliverSheet({
               ) : undefined
             }
           >
-            <button
-              className="confirm-btn"
-              style={{ marginTop: 0, boxShadow: 'none' }}
-              onClick={confirm}
-              disabled={busy}
-            >
-              {busy
-                ? t('agent.deliver.busy', 'Confirming…')
-                : isCod
-                  ? `✅ ${t('agent.deliver.ctaCod', 'Confirm Cash Collected & Delivered')}`
-                  : `✅ ${t('agent.deliver.cta', 'Confirm Delivered')}`}
-            </button>
+            {failing ? (
+              <>
+                <button
+                  className="confirm-btn confirm-btn--danger"
+                  style={{ marginTop: 0, boxShadow: 'none' }}
+                  onClick={submitFailed}
+                  disabled={failBusy || !failReason}
+                >
+                  {failBusy
+                    ? t('agent.fail.busy', 'Recording…')
+                    : `⚠️ ${t('agent.fail.cta', 'Record failed attempt')}`}
+                </button>
+                <button
+                  type="button"
+                  className="fail-toggle"
+                  onClick={() => setFailing(false)}
+                  disabled={failBusy}
+                >
+                  ← {t('agent.fail.back', 'Back to delivery')}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className="confirm-btn"
+                  style={{ marginTop: 0, boxShadow: 'none' }}
+                  onClick={confirm}
+                  disabled={busy}
+                >
+                  {busy
+                    ? t('agent.deliver.busy', 'Confirming…')
+                    : isCod
+                      ? `✅ ${t('agent.deliver.ctaCod', 'Confirm Cash Collected & Delivered')}`
+                      : `✅ ${t('agent.deliver.cta', 'Confirm Delivered')}`}
+                </button>
+                <button
+                  type="button"
+                  className="fail-toggle"
+                  onClick={() => setFailing(true)}
+                  disabled={busy}
+                >
+                  {t('agent.fail.open', 'Couldn’t deliver?')}
+                </button>
+              </>
+            )}
           </ActionBar>
         </>
       )}

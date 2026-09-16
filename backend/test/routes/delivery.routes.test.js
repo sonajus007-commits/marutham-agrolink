@@ -819,3 +819,94 @@ test('delivery-hubs: suggests the consumer’s own-taluk hub, lists all district
   assert.equal(res.body.hubs.length, 2);
   assert.equal(res.body.hubs[0].id, 'h_alangudi', 'the suggestion sorts first');
 });
+
+// ── POST /orders/:id/delivery-failed ─────────────────────────────────────────
+// A delivery that could not be completed at the door: records an attempt WITHOUT
+// advancing the order, so the parcel stays Out for Delivery for a retry.
+
+function failDbFor(order, updateData) {
+  return fakeSupabase({
+    'orders:select': { data: [order] },
+    'orders:update': { data: updateData === undefined ? { id: 'o1' } : updateData },
+  });
+}
+
+test('delivery-failed records an attempt and does not advance the order', async () => {
+  const db = failDbFor(outForDelivery({ delivery_attempts: 0, consumer_id: 'c1' }));
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/delivery-failed', { reason: 'customer_absent', note: 'gate locked' });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.attempts, 1);
+  const update = db.callsTo('orders', 'update')[0].payload;
+  assert.equal(update.delivery_attempts, 1);
+  assert.equal(update.last_failure_reason, 'customer_absent');
+  assert.ok(update.last_failure_at, 'stamps the failure time');
+  assert.ok(!('status' in update), 'the order status is not advanced');
+  assert.ok(!('stage' in update), 'the stage is not advanced');
+  const labels = db.callsTo('order_history', 'insert').map((c) => c.payload.label);
+  assert.ok(labels.includes('Delivery attempt failed'));
+});
+
+test('delivery-failed increments the existing attempt count', async () => {
+  const db = failDbFor(outForDelivery({ delivery_attempts: 2 }));
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/delivery-failed', { reason: 'customer_unreachable' });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.attempts, 3);
+  assert.equal(db.callsTo('orders', 'update')[0].payload.delivery_attempts, 3);
+});
+
+test('delivery-failed rejects an unknown reason (400), writing nothing', async () => {
+  const db = failDbFor(outForDelivery());
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/delivery-failed', { reason: 'bogus' });
+
+  assert.equal(res.status, 400);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+test('delivery-failed refuses an order that is not Out for Delivery (400)', async () => {
+  const db = failDbFor(outForDelivery({ stage: 3, status: 'Picked Up' }));
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/delivery-failed', { reason: 'customer_absent' });
+
+  assert.equal(res.status, 400);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+test('delivery-failed refuses a stale from_stage (409), writing nothing', async () => {
+  const db = failDbFor(outForDelivery({ stage: 4 }));
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/delivery-failed', { reason: 'customer_absent', from_stage: 3 });
+
+  assert.equal(res.status, 409);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+test('delivery-failed reports a conflict when the CAS matches no row (409)', async () => {
+  const db = failDbFor(outForDelivery(), null); // update returns no row → someone delivered it
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/delivery-failed', { reason: 'customer_absent' });
+
+  assert.equal(res.status, 409);
+});
+
+test('delivery-failed is forbidden to consumers (403)', async () => {
+  const db = failDbFor(outForDelivery());
+  app = await mountRoute('delivery', { supabase: db, user: CONSUMER });
+  const res = await app.post('/o1/delivery-failed', { reason: 'customer_absent' });
+
+  assert.equal(res.status, 403);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+test('delivery-failed refuses an agent acting on another agent’s order (403)', async () => {
+  const db = failDbFor(outForDelivery({ agent_id: 'a2' }));
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/delivery-failed', { reason: 'customer_absent' });
+
+  assert.equal(res.status, 403);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});

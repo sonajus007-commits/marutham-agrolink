@@ -178,6 +178,24 @@ function queuedScan(
   );
 }
 
+/* Canonical failed-delivery reasons — the single source shared by the field picker
+ * and the server's allow-list. Codes must match backend/routes/delivery.js. */
+export const DELIVERY_FAILURE_REASONS = [
+  'customer_unreachable',
+  'customer_absent',
+  'address_incorrect',
+  'customer_refused',
+  'rescheduled',
+  'other',
+] as const;
+export type DeliveryFailureReason = (typeof DELIVERY_FAILURE_REASONS)[number];
+export interface DeliveryFailedResponse {
+  ok: boolean;
+  message?: string;
+  attempts?: number;
+  reason?: string;
+}
+
 export const api = {
   // ── Auth ──
   login(phone: string, password: string): Promise<LoginResponse> {
@@ -345,6 +363,31 @@ export const api = {
     deliveryCode?: string,
   ): Promise<ScanResponse> {
     return queuedScan(id, fromStage, { coords, deliveryCode });
+  },
+  /** Report a delivery that could NOT be completed at the door. Does NOT advance the
+   *  order — it records an attempt (count + reason + timeline) and notifies the buyer,
+   *  leaving the parcel Out for Delivery for a retry. Offline-capable for the same
+   *  reason as deliver: a doorstep is where signal dies. `fromStage` guards a late
+   *  replay (the server 409s if the order has since moved). */
+  reportDeliveryFailedOffline(
+    id: string,
+    fromStage: number,
+    reason: DeliveryFailureReason,
+    note?: string,
+    coords?: { lat: number; lng: number },
+  ): Promise<DeliveryFailedResponse> {
+    const body: Record<string, unknown> = { from_stage: fromStage, reason };
+    if (note) body.note = note;
+    if (coords) {
+      body.lat = coords.lat;
+      body.lng = coords.lng;
+    }
+    return apiFetchOffline<DeliveryFailedResponse>(
+      'POST',
+      '/orders/' + id + '/delivery-failed',
+      body,
+      { key: `fail-${id}-${fromStage}` },
+    );
   },
   getEligibleAgents(id: string, leg?: string): Promise<EligibleAgentsResponse> {
     const qs = leg ? '?leg=' + encodeURIComponent(leg) : '';

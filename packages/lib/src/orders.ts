@@ -76,6 +76,9 @@ export interface Order {
   dispatched_lng?: number | null;
   delivered_lat?: number | null;
   delivered_lng?: number | null;
+  /** Count of failed delivery attempts (migration 058). >0 flags a re-attempt in
+   *  the agent's queue and the delivery sheet. */
+  delivery_attempts?: number | null;
   /**
    * Existing return for this order, or null. Not a column — GET /orders/:id
    * derives it from the returns table, so it is absent on the list endpoint.

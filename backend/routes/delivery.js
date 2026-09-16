@@ -560,6 +560,134 @@ router.post('/:id/scan', async (req, res) => {
   res.json({ ok: true, message: `Order advanced to: ${result.newStatus}.`, newStatus: result.newStatus });
 });
 
+// ── POST /orders/:id/delivery-failed  (Delivery Agent / hub / admin) ──────────
+// A delivery attempt that could NOT be completed at the door. Unlike a scan this
+// does not advance the stage — a failure is an exception, not a forward step. It
+// records the attempt (count + reason + timeline row), tells the customer, and
+// leaves the parcel Out for Delivery so it can be retried or reassigned.
+//
+// The canonical reasons the field picks from. Free text goes in `note`.
+const DELIVERY_FAILURE_REASONS = {
+  customer_unreachable: 'Customer unreachable',
+  customer_absent: 'Customer not available',
+  address_incorrect: 'Address wrong or not found',
+  customer_refused: 'Customer refused the order',
+  rescheduled: 'Customer asked to deliver later',
+  other: 'Other',
+};
+
+router.post('/:id/delivery-failed', async (req, res) => {
+  const u = req.user;
+
+  if (u.role === 'consumer' || u.role === 'farmer') {
+    return res.status(403).json({ error: 'Consumers and farmers cannot report a failed delivery.' });
+  }
+
+  const order = await fetchActiveOrder(req.params.id, res);
+  if (!order) return;
+
+  // A failure only makes sense during the delivery run — the parcel must be out with
+  // an agent. Before that there is no attempt to fail.
+  if (order.status !== 'Out for Delivery') {
+    return res.status(400).json({
+      error: `Only an order that is Out for Delivery can be marked failed. This one is "${order.status}".`,
+    });
+  }
+
+  const adminRole = u.admin_role;
+  const isAgent = adminRole === 'Delivery Agent';
+  // The assigned agent owns their own attempts; hub staff / senior admins may record
+  // one on anyone's behalf. Another agent must not close out a parcel that is not theirs.
+  if (isAgent && order.agent_id && order.agent_id !== u.id) {
+    return res.status(403).json({ error: 'This order is assigned to another Delivery Agent.' });
+  }
+  if (!isAgent && !isHubStaff(adminRole)) {
+    return res.status(403).json({ error: 'Only the assigned Delivery Agent or hub staff can report a failed delivery.' });
+  }
+
+  // Same stale-replay guard as a scan: a doorstep is where signal dies, so this is
+  // queueable offline and may replay late. If the order has moved on, refuse (409) so
+  // the queue drops it rather than recording a failure against a delivered order.
+  const { from_stage: fromStage, reason, note: rawNote } = req.body || {};
+  if (fromStage !== undefined && fromStage !== null) {
+    if (!Number.isInteger(fromStage)) {
+      return res.status(400).json({ error: 'from_stage must be an integer.' });
+    }
+    if (fromStage !== order.stage) {
+      return res.status(409).json({
+        error: `This order has already moved on — it is now "${order.status}". Nothing was changed.`,
+        currentStage: order.stage,
+        currentStatus: order.status,
+      });
+    }
+  }
+
+  if (!reason || !Object.prototype.hasOwnProperty.call(DELIVERY_FAILURE_REASONS, reason)) {
+    return res.status(400).json({
+      error: 'A valid reason is required.',
+      reasons: Object.keys(DELIVERY_FAILURE_REASONS),
+    });
+  }
+  const note = rawNote == null ? '' : String(rawNote).trim().slice(0, 500);
+
+  // Where the attempt happened, if the device shared it. Best-effort — never blocks.
+  const coords = parseScanCoords(req.body);
+  if (coords.error) return res.status(400).json({ error: coords.error });
+
+  const attempts = (order.delivery_attempts || 0) + 1;
+  const now = new Date().toISOString();
+
+  // Compare-and-swap on BOTH stage and status: if a genuine delivery landed between
+  // our read and this write, the row no longer matches and we report the conflict
+  // rather than stamping a failure onto a delivered order.
+  const { data: updated, error } = await supabase
+    .from('orders')
+    .update({
+      delivery_attempts: attempts,
+      last_failure_reason: reason,
+      last_failure_at: now,
+      updated_at: now,
+    })
+    .eq('id', order.id)
+    .eq('stage', order.stage)
+    .eq('status', 'Out for Delivery')
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    console.error(`Order ${order.id}: delivery-failed update failed:`, error.message);
+    return res.status(500).json({ error: 'Could not record the failed delivery.' });
+  }
+  if (!updated) return conflictResponse(res);
+
+  const reasonLabel = DELIVERY_FAILURE_REASONS[reason];
+  const { error: histErr } = await supabase.from('order_history').insert({
+    order_id: order.id,
+    label: 'Delivery attempt failed',
+    note: `Attempt ${attempts} failed — ${reasonLabel}${note ? `: ${note}` : ''} (by Agent ${u.fname}).`,
+  });
+  if (histErr) console.error(`Order ${order.id}: delivery-failed history entry failed:`, histErr.message);
+
+  // A failed delivery is a critical customer-facing event (plan Section K). Tell the
+  // buyer so they know the attempt happened and a retry is coming. Best-effort.
+  if (order.consumer_id) {
+    const label = order.code || 'your order';
+    notify(order.consumer_id, {
+      type: 'delivery_failed',
+      title: 'Delivery attempt failed',
+      body: `We tried to deliver ${label} but couldn’t complete it (${reasonLabel}). We’ll try again soon.`,
+      data: { order_id: order.id, code: order.code || null, reason },
+    });
+  }
+
+  res.json({
+    ok: true,
+    message: 'Failed delivery recorded.',
+    attempts,
+    reason,
+  });
+});
+
 // ── PATCH /orders/:id/route  (Delivery Agent or Admin) ───────────────────────
 router.patch('/:id/route', async (req, res) => {
   const u = req.user;

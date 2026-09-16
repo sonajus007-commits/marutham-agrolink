@@ -703,6 +703,11 @@
           "type": "jsonb",
           "notNull": false
         },
+        "delivery_attempts": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
         "delivery_code": {
           "type": "text",
           "notNull": false
@@ -759,6 +764,14 @@
           "type": "integer",
           "notNull": true,
           "default": "0"
+        },
+        "last_failure_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "last_failure_reason": {
+          "type": "text",
+          "notNull": false
         },
         "market_fee": {
           "type": "integer",

@@ -13,6 +13,7 @@ const toast = vi.fn();
 const getCurrentPosition = vi.fn();
 const getOrder = vi.fn();
 const deliverOffline = vi.fn();
+const reportDeliveryFailedOffline = vi.fn();
 const trackOrder = vi.fn();
 const onChanged = vi.fn();
 
@@ -27,6 +28,7 @@ vi.mock('@marutham/api-client', async (importActual) => {
     api: {
       getOrder: (...args: unknown[]) => getOrder(...args),
       deliverOffline: (...args: unknown[]) => deliverOffline(...args),
+      reportDeliveryFailedOffline: (...args: unknown[]) => reportDeliveryFailedOffline(...args),
       trackOrder: (...args: unknown[]) => trackOrder(...args),
     },
   };
@@ -61,6 +63,7 @@ beforeEach(() => {
   getCurrentPosition.mockResolvedValue({ lat: 10.5, lng: 78.8 });
   getOrder.mockResolvedValue(orderAt(4));
   deliverOffline.mockResolvedValue({ message: 'Order advanced to: Delivered.' });
+  reportDeliveryFailedOffline.mockResolvedValue({ ok: true, attempts: 1 });
   // The deliver sheet now polls /track for the agent's live route map; the map is
   // invisible without a Maps key (as in tests), but the hook still calls trackOrder.
   trackOrder.mockResolvedValue(null);
@@ -111,6 +114,42 @@ describe('DeliverSheet', () => {
 
     await waitFor(() => expect(toast).toHaveBeenCalledWith('Order is already delivered.', 'er'));
     expect(onChanged).not.toHaveBeenCalled();
+  });
+
+  it('records a failed attempt with the chosen reason and loaded stage', async () => {
+    const user = userEvent.setup();
+    render(<DeliverSheet open orderId="o1" onClose={vi.fn()} onChanged={onChanged} />);
+
+    // Open the couldn't-deliver branch, pick a reason, submit.
+    await user.click(await screen.findByRole('button', { name: /Couldn’t deliver/ }));
+    await user.selectOptions(
+      await screen.findByRole('combobox', { name: /Reason/ }),
+      'customer_absent',
+    );
+    await user.click(screen.getByRole('button', { name: /Record failed attempt/ }));
+
+    await waitFor(() => expect(reportDeliveryFailedOffline).toHaveBeenCalled());
+    expect(reportDeliveryFailedOffline).toHaveBeenCalledWith(
+      'o1',
+      4,
+      'customer_absent',
+      undefined,
+      {
+        lat: 10.5,
+        lng: 78.8,
+      },
+    );
+    // The delivery itself must NOT have been confirmed.
+    expect(deliverOffline).not.toHaveBeenCalled();
+    expect(onChanged).toHaveBeenCalled();
+  });
+
+  it('cannot submit a failed attempt without a reason', async () => {
+    const user = userEvent.setup();
+    render(<DeliverSheet open orderId="o1" onClose={vi.fn()} onChanged={onChanged} />);
+
+    await user.click(await screen.findByRole('button', { name: /Couldn’t deliver/ }));
+    expect(screen.getByRole('button', { name: /Record failed attempt/ })).toBeDisabled();
   });
 
   it('re-enables the button for the next order — the sheet is never unmounted', async () => {

@@ -491,6 +491,28 @@ export const resources = {
       'agent.deliver.failed': 'Failed to confirm',
       'agent.deliver.call': 'Call Customer',
       'agent.deliver.navigate': 'Navigate',
+      // Agent: failed-delivery flow (migration 058)
+      'agent.fail.open': 'Couldn’t deliver?',
+      'agent.fail.title': 'Couldn’t deliver?',
+      'agent.fail.help':
+        'Pick a reason. The customer is notified and the order stays out for a retry.',
+      'agent.fail.reasonLabel': 'Reason',
+      'agent.fail.pickReason': 'Select a reason',
+      'agent.fail.noteLabel': 'Note',
+      'agent.fail.notePlaceholder': 'Add a note (optional)',
+      'agent.fail.cta': 'Record failed attempt',
+      'agent.fail.busy': 'Recording…',
+      'agent.fail.back': 'Back to delivery',
+      'agent.fail.done': 'Failed attempt recorded. The customer has been notified.',
+      'agent.fail.failed': 'Could not record it',
+      'agent.fail.retryBanner_one': 'Re-attempt — {{count}} previous attempt failed.',
+      'agent.fail.retryBanner_other': 'Re-attempt — {{count}} previous attempts failed.',
+      'agent.fail.reason.unreachable': 'Customer unreachable',
+      'agent.fail.reason.absent': 'Customer not available',
+      'agent.fail.reason.address': 'Address wrong or not found',
+      'agent.fail.reason.refused': 'Customer refused the order',
+      'agent.fail.reason.rescheduled': 'Asked to deliver later',
+      'agent.fail.reason.other': 'Other',
       // Agent: offline / pending-sync indicator (field roles lean on the queue)
       'agent.offline.offline': 'You’re offline.',
       'agent.offline.willSync_one':
@@ -2696,6 +2718,30 @@ export const resources = {
       'agent.deliver.failed': 'உறுதிப்படுத்த முடியவில்லை',
       'agent.deliver.call': 'வாடிக்கையாளரை அழை',
       'agent.deliver.navigate': 'வழிகாட்டு',
+      // Agent: failed-delivery flow (migration 058)
+      'agent.fail.open': 'வழங்க முடியவில்லையா?',
+      'agent.fail.title': 'வழங்க முடியவில்லையா?',
+      'agent.fail.help':
+        'ஒரு காரணத்தைத் தேர்ந்தெடுக்கவும். வாடிக்கையாளருக்குத் தெரிவிக்கப்படும், மீண்டும் முயற்சிக்க ஆர்டர் வெளியிலேயே இருக்கும்.',
+      'agent.fail.reasonLabel': 'காரணம்',
+      'agent.fail.pickReason': 'ஒரு காரணத்தைத் தேர்ந்தெடு',
+      'agent.fail.noteLabel': 'குறிப்பு',
+      'agent.fail.notePlaceholder': 'குறிப்பு சேர் (விருப்பமானது)',
+      'agent.fail.cta': 'தோல்வி முயற்சியைப் பதிவு செய்',
+      'agent.fail.busy': 'பதிவு செய்கிறது…',
+      'agent.fail.back': 'டெலிவரிக்குத் திரும்பு',
+      'agent.fail.done':
+        'தோல்வி முயற்சி பதிவு செய்யப்பட்டது. வாடிக்கையாளருக்குத் தெரிவிக்கப்பட்டது.',
+      'agent.fail.failed': 'பதிவு செய்ய முடியவில்லை',
+      'agent.fail.retryBanner_one': 'மீண்டும் முயற்சி — {{count}} முந்தைய முயற்சி தோல்வியடைந்தது.',
+      'agent.fail.retryBanner_other':
+        'மீண்டும் முயற்சி — {{count}} முந்தைய முயற்சிகள் தோல்வியடைந்தன.',
+      'agent.fail.reason.unreachable': 'வாடிக்கையாளரைத் தொடர்பு கொள்ள முடியவில்லை',
+      'agent.fail.reason.absent': 'வாடிக்கையாளர் இல்லை',
+      'agent.fail.reason.address': 'முகவரி தவறு அல்லது கண்டுபிடிக்க முடியவில்லை',
+      'agent.fail.reason.refused': 'வாடிக்கையாளர் ஆர்டரை மறுத்தார்',
+      'agent.fail.reason.rescheduled': 'பின்னர் வழங்கச் சொன்னார்',
+      'agent.fail.reason.other': 'மற்றவை',
       // Agent: offline / pending-sync indicator (field roles lean on the queue)
       'agent.offline.offline': 'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள்.',
       'agent.offline.willSync_one':

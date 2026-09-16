@@ -941,3 +941,47 @@
     animation: none;
   }
 }
+
+/* ── Failed-delivery flow (migration 058) ────────────────────────────────────
+   A re-attempt banner at the top of the sheet, a reason picker, and a caution-
+   toned action distinct from the green Confirm. */
+.retry-banner {
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+  border: 1px solid var(--gold2);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.fail-card {
+  border-color: var(--gold2);
+}
+/* A caution action, not a destroy — amber, not red: it records an exception and
+   nothing is lost. Visually separated from the green Confirm so they never blur. */
+.confirm-btn--danger {
+  background: linear-gradient(
+    135deg,
+    var(--warning-fg),
+    color-mix(in srgb, var(--warning-fg) 78%, black)
+  );
+  box-shadow: none;
+}
+.fail-toggle {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 6px;
+  background: none;
+  border: none;
+  color: var(--gray);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+.fail-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
