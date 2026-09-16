@@ -1,0 +1,86 @@
+name: Android APK (debug)
+
+# Builds the debug APK in the cloud and uploads it as a downloadable artifact —
+# so it never has to be built on the (thermally limited) dev laptop. Run it by hand
+# from the Actions tab (choose the API base for your test network), and it also
+# builds on every push to main.
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: 'Backend the APK talks to (VITE_API_BASE_URL). Use your laptop LAN IP for on-device testing.'
+        required: true
+        default: 'http://192.168.29.115:3000/api'
+  push:
+    branches: [main]
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: assembleDebug
+    runs-on: ubuntu-latest
+
+    # The web bundle bakes the API base + Maps key at build time (see
+    # src/native/index.ts). A manual run picks the API base; a push-to-main build
+    # falls back to the repo variable VITE_API_BASE_URL, then the LAN default.
+    env:
+      VITE_API_BASE_URL: ${{ github.event.inputs.api_base_url || vars.VITE_API_BASE_URL || 'http://192.168.29.115:3000/api' }}
+      VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # pnpm version comes from the root package.json "packageManager" field.
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "dir=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.dir }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+
+      # Capacitor 7 requires JDK 21 — 17 fails deep in a plugin's compile task with
+      # an error that never names the JDK (see capacitor.config.ts).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # Provides the Android SDK + accepts licenses; AGP fetches any missing
+      # platform / build-tools on demand.
+      - uses: android-actions/setup-android@v3
+
+      # cap:sync = `CAPACITOR=1 vite build && cap sync` — builds the web bundle with
+      # base '/' (webview root) and copies dist/ into the native project. The env
+      # above is baked in here.
+      - name: Build web bundle + sync to Android
+        run: pnpm --filter @marutham/web cap:sync
+
+      - name: Build the debug APK
+        run: |
+          cd apps/web/android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: marutham-agrolink-debug-apk
+          path: apps/web/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
