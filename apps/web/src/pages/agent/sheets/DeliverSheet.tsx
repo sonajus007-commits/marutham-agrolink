@@ -258,6 +258,16 @@ function DeliveryAddress({ order }: { order: OrderDetail['order'] }) {
     (da && typeof da === 'object' ? (da as AddressObject).phone : undefined) ||
     order.consumer_phone;
 
+  // Turn-by-turn to the door. Prefer the geocoded drop (dest_lat/lng, migration 042)
+  // for a precise pin; fall back to the written address as a text query. Opens the
+  // phone's maps app (Google Maps universal URL) — never blocks the delivery flow.
+  const hasCoords = order.dest_lat != null && order.dest_lng != null;
+  const navUrl = hasCoords
+    ? `https://www.google.com/maps/dir/?api=1&destination=${order.dest_lat},${order.dest_lng}`
+    : daText
+      ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(daText)}`
+      : null;
+
   return (
     <div className="a-card">
       <h3>📍 {t('consumer.checkout.deliveryAddress', 'Delivery Address')}</h3>
@@ -266,11 +276,18 @@ function DeliveryAddress({ order }: { order: OrderDetail['order'] }) {
         {label ? ` · ${t(addressLabelKey(label), label)}` : ''}
       </div>
       <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--forest)' }}>{daText || '—'}</div>
-      {callPhone ? (
-        <a className="call-link" href={`tel:${callPhone}`}>
-          📞 {t('agent.deliver.call', 'Call Customer')}
-        </a>
-      ) : null}
+      <div className="contact-row">
+        {navUrl ? (
+          <a className="nav-link" href={navUrl} target="_blank" rel="noopener noreferrer">
+            🧭 {t('agent.deliver.navigate', 'Navigate')}
+          </a>
+        ) : null}
+        {callPhone ? (
+          <a className="call-link" href={`tel:${callPhone}`}>
+            📞 {t('agent.deliver.call', 'Call Customer')}
+          </a>
+        ) : null}
+      </div>
     </div>
   );
 }

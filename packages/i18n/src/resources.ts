@@ -490,6 +490,19 @@ export const resources = {
       'agent.deliver.done': 'Order delivered! 🎉',
       'agent.deliver.failed': 'Failed to confirm',
       'agent.deliver.call': 'Call Customer',
+      'agent.deliver.navigate': 'Navigate',
+      // Agent: offline / pending-sync indicator (field roles lean on the queue)
+      'agent.offline.offline': 'You’re offline.',
+      'agent.offline.willSync_one':
+        '{{count}} update will sync automatically when you’re back online.',
+      'agent.offline.willSync_other':
+        '{{count}} updates will sync automatically when you’re back online.',
+      'agent.offline.syncing_one': 'Back online — syncing {{count}} update…',
+      'agent.offline.syncing_other': 'Back online — syncing {{count}} updates…',
+      'agent.offline.offlineNoQueue':
+        'You’re offline. Your work is saved and will sync when you reconnect.',
+      'agent.offline.errorOffline':
+        'You’re offline. This list will refresh automatically when the connection returns.',
       // Agent: order view sheet
       'agent.view.qr': 'Order QR — scan to advance',
       'agent.view.item': 'Item',
@@ -2682,6 +2695,21 @@ export const resources = {
       'agent.deliver.done': 'ஆர்டர் வழங்கப்பட்டது! 🎉',
       'agent.deliver.failed': 'உறுதிப்படுத்த முடியவில்லை',
       'agent.deliver.call': 'வாடிக்கையாளரை அழை',
+      'agent.deliver.navigate': 'வழிகாட்டு',
+      // Agent: offline / pending-sync indicator (field roles lean on the queue)
+      'agent.offline.offline': 'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள்.',
+      'agent.offline.willSync_one':
+        'நீங்கள் மீண்டும் ஆன்லைனுக்கு வரும்போது {{count}} புதுப்பிப்பு தானாக ஒத்திசைக்கப்படும்.',
+      'agent.offline.willSync_other':
+        'நீங்கள் மீண்டும் ஆன்லைனுக்கு வரும்போது {{count}} புதுப்பிப்புகள் தானாக ஒத்திசைக்கப்படும்.',
+      'agent.offline.syncing_one':
+        'மீண்டும் ஆன்லைனில் — {{count}} புதுப்பிப்பு ஒத்திசைக்கப்படுகிறது…',
+      'agent.offline.syncing_other':
+        'மீண்டும் ஆன்லைனில் — {{count}} புதுப்பிப்புகள் ஒத்திசைக்கப்படுகின்றன…',
+      'agent.offline.offlineNoQueue':
+        'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள். உங்கள் வேலை சேமிக்கப்பட்டு, மீண்டும் இணையும்போது ஒத்திசைக்கப்படும்.',
+      'agent.offline.errorOffline':
+        'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள். இணைப்பு திரும்பியதும் இந்தப் பட்டியல் தானாகப் புதுப்பிக்கப்படும்.',
       // Agent: order view sheet
       'agent.view.qr': 'ஆர்டர் QR — முன்னேற ஸ்கேன் செய்',
       'agent.view.item': 'பொருள்',

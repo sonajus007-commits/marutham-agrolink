@@ -127,7 +127,14 @@ export function AgentTracking({
       {loading ? (
         <Spinner label={t('agent.loadingOrders')} />
       ) : error ? (
-        <EmptyState>{error}</EmptyState>
+        <EmptyState icon={typeof navigator !== 'undefined' && !navigator.onLine ? '📴' : undefined}>
+          {typeof navigator !== 'undefined' && !navigator.onLine
+            ? t(
+                'agent.offline.errorOffline',
+                'You’re offline. This list will refresh automatically when the connection returns.',
+              )
+            : error}
+        </EmptyState>
       ) : sections.length === 0 ? (
         <EmptyState icon="🎉">{t('agent.allClear')}</EmptyState>
       ) : (

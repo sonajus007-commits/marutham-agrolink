@@ -23,6 +23,7 @@ import { OrderViewSheet } from './sheets/OrderViewSheet';
 import { DeliverSheet } from './sheets/DeliverSheet';
 import { VerifySheet } from './sheets/VerifySheet';
 import { NotificationBell } from '../../components/NotificationBell';
+import { OfflineBar } from '../../components/OfflineBar';
 import { DutyToggle } from './DutyToggle';
 import './agent.css';
 
@@ -233,6 +234,9 @@ function AgentPageInner() {
         </nav>
 
         <div className="agent-main">
+          {/* Connectivity truth for field work — offline notice + pending-sync count.
+              Renders nothing when online with a drained queue. */}
+          <OfflineBar />
           <div className="agent-pane">
             {tab === 'overview' ? (
               <AgentOverview
