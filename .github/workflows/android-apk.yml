@@ -62,9 +62,13 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      # Provides the Android SDK + accepts licenses; AGP fetches any missing
-      # platform / build-tools on demand.
+      # Accepts the SDK licenses and provides platform-tools; AGP fetches the
+      # compileSdk platform + build-tools on demand. `packages` is overridden because
+      # the action's default list includes the obsolete `tools` package, which no
+      # longer exists in the repository and fails sdkmanager.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       # cap:sync = `CAPACITOR=1 vite build && cap sync` — builds the web bundle with
       # base '/' (webview root) and copies dist/ into the native project. The env
