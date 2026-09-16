@@ -154,7 +154,7 @@ async function mountRoute(routeModule, { supabase, user = null }) {
   const router = require(routePath);
 
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: '1mb' }));            // mirror server.js (data-URI images)
   app.use((req, res, next) => {                       // as server.js does
     const originalJson = res.json.bind(res);
     res.json = (data) => originalJson(convertMoney(convertTimestamps(data)));

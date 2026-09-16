@@ -43,7 +43,11 @@ const corsOrigins = (process.env.CORS_ORIGINS || '').split(',').map((s) => s.tri
 const allowedOrigins = corsOrigins.length ? corsOrigins : DEFAULT_CORS_ORIGINS;
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 
-app.use(express.json());
+// 1 MB, not the 100 KB default: this app carries downscaled data-URI images in JSON
+// bodies — listing photos (up to 3 × 150 KB, see utils/listings) and field proof
+// photos (migration 060). Per-field caps still bound each image; the rate limiter
+// bounds request volume. Anything larger is a 413 before it reaches a handler.
+app.use(express.json({ limit: '1mb' }));
 
 // Format all API responses:
 //   • Timestamps: UTC (DB) → IST UTC+5:30 (user-facing)

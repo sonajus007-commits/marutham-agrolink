@@ -10,6 +10,7 @@ import {
 } from '@marutham/api-client';
 import type { Order, OrderItem, ItemQuality } from '@marutham/lib';
 import { useToast } from '../../../components/Toast';
+import { PhotoCapture } from '../../../components/PhotoCapture';
 import { useAuth } from '../../../auth/AuthContext';
 import { getCurrentPosition } from '../../../native/geolocation';
 
@@ -54,6 +55,8 @@ export function VerifySheet({
   // Per-line verification (migration 059): the order's lines and the VCO's checks.
   const [items, setItems] = useState<OrderItem[]>([]);
   const [checks, setChecks] = useState<Record<string, LineCheck>>({});
+  // Optional collection proof photo (migration 060).
+  const [proofPhoto, setProofPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !orderId) return;
@@ -67,6 +70,7 @@ export function VerifySheet({
     setDeliveryHubId('');
     setItems([]);
     setChecks({});
+    setProofPhoto(null);
     setBusy(false); // the sheet stays mounted between orders — a finished verify
     // would otherwise leave the next order's button stuck on "Verifying…"
     // 'delivery' leg: the agent list is matched against the CONSUMER's delivery
@@ -158,6 +162,7 @@ export function VerifySheet({
         delivery_hub_id: route === 'hub' ? deliveryHubId || undefined : undefined,
         coords,
         items: itemChecks.length ? itemChecks : undefined,
+        proof_photo: proofPhoto || undefined,
       });
       /* Our own wording, not res.message: the server's is English prose composed
        * server-side ("Order advanced to: Picked Up."), so echoing it would put an
@@ -291,6 +296,20 @@ export function VerifySheet({
                   </div>
                 );
               })}
+            </div>
+          ) : null}
+
+          {items.length ? (
+            <div className="a-card">
+              <h3>📷 {t('agent.verify.proofTitle', 'Collection photo')}</h3>
+              <p style={{ margin: '2px 0 10px', fontSize: 12, color: 'var(--gray)' }}>
+                {t('agent.verify.proofHelp', 'Optional — a photo of the goods you received.')}
+              </p>
+              <PhotoCapture
+                value={proofPhoto}
+                onChange={setProofPhoto}
+                label={t('agent.verify.proofAdd', 'Add photo')}
+              />
             </div>
           ) : null}
 

@@ -331,6 +331,36 @@ async function applyItemVerification(order, rawItems, actor) {
   return summary;
 }
 
+// ── Field proof photo (migration 060) ─────────────────────────────────────────
+// The frontend downscales to a small JPEG data URI (~45-90 KB) before sending. Cap
+// what we accept so a raw multi-MB camera dump never lands in a row, and require the
+// data:image shape. A proof NEVER blocks the hand-off: an absent or rejected photo is
+// simply not stored (logged), and the scan proceeds — so this is best-effort and is
+// only ever called AFTER the status has already advanced.
+const PROOF_MAX_CHARS = 300_000; // ~220 KB decoded — comfortably above a 640px JPEG
+
+async function storeProof(order, kind, body, userId) {
+  const img = body && body.proof_photo;
+  if (img == null || img === '') return; // no photo attached — nothing to do
+  if (typeof img !== 'string' || !img.startsWith('data:image/') || img.length > PROOF_MAX_CHARS) {
+    console.error(`Order ${order.id}: proof photo (${kind}) rejected — bad shape or too large.`);
+    return;
+  }
+  const coords = parseScanCoords(body);
+  const row = {
+    order_id: order.id,
+    kind,
+    image: img,
+    created_by: userId || null,
+  };
+  if (!coords.error && coords.coords) {
+    row.lat = coords.coords.lat;
+    row.lng = coords.coords.lng;
+  }
+  const { error } = await supabase.from('order_proofs').insert(row);
+  if (error) console.error(`Order ${order.id}: proof photo (${kind}) insert failed:`, error.message);
+}
+
 // ── POST /orders/:id/pack  (farmer only) ──────────────────────────────────────
 router.post('/:id/pack', async (req, res) => {
   if (req.user.role !== 'farmer') {
@@ -557,6 +587,10 @@ router.post('/:id/scan', async (req, res) => {
     if (!result.error && !result.conflict && Array.isArray(req.body.items) && req.body.items.length) {
       await applyItemVerification(order, req.body.items, req.user);
     }
+    // Optional collection proof photo (migration 060). Best-effort, never blocks.
+    if (!result.error && !result.conflict) {
+      await storeProof(order, 'verify', req.body, req.user.id);
+    }
 
   // A verified order leaves the village. Where it goes next is the VCO's route
   // choice: DIRECT hands it to the assigned agent (→ Picked Up), HUB starts the
@@ -645,6 +679,8 @@ router.post('/:id/scan', async (req, res) => {
           : 'Delivered without OTP confirmation — no code was entered.',
       });
       if (otpErr) console.error(`Order ${order.id}: delivery-OTP note failed:`, otpErr.message);
+      // Optional proof-of-delivery photo (migration 060). Best-effort, never blocks.
+      await storeProof(order, 'delivery', req.body, req.user.id);
     }
 
   } else {
@@ -785,6 +821,35 @@ router.post('/:id/delivery-failed', async (req, res) => {
     attempts,
     reason,
   });
+});
+
+// ── GET /orders/:id/proofs  (owner / staff) ──────────────────────────────────
+// The field proof photos for an order (migration 060). Read on demand only — the
+// heavy data URIs never ride the queue list. A consumer sees their own order's
+// proofs; any staff member (agents included, who are role 'admin') sees them.
+router.get('/:id/proofs', async (req, res) => {
+  const u = req.user;
+  if (u.role === 'farmer') {
+    return res.status(403).json({ error: 'Not authorised to view delivery proofs.' });
+  }
+
+  const order = await fetchActiveOrder(req.params.id, res);
+  if (!order) return;
+
+  if (u.role === 'consumer' && order.consumer_id !== u.id) {
+    return res.status(403).json({ error: 'You can only view your own order.' });
+  }
+
+  const { data: proofs, error } = await supabase
+    .from('order_proofs')
+    .select('id, kind, image, lat, lng, created_at')
+    .eq('order_id', order.id)
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.error(`Order ${order.id}: proofs lookup failed:`, error.message);
+    return res.status(500).json({ error: 'Could not load the proofs.' });
+  }
+  res.json({ proofs: proofs || [] });
 });
 
 // ── PATCH /orders/:id/route  (Delivery Agent or Admin) ───────────────────────

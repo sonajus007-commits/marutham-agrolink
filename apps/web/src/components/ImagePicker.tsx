@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { cameraAvailable, capturePhoto } from '../native/camera';
+import { downscaleDataUrl, fileToDataUri } from '../lib/photo';
 
 /* Photo slots for a listing.
  *
@@ -11,42 +12,9 @@ import { cameraAvailable, capturePhoto } from '../native/camera';
  *
  * On a device (Capacitor) the farmer gets the NATIVE camera/gallery prompt via
  * @capacitor/camera; in a browser it is <input type="file">. Both paths end at the
- * same downscaleDataUrl(), so what lands in the column is identical either way. */
+ * shared downscaleDataUrl() (lib/photo), so what lands in the column is identical. */
 
 const MAX_SLOTS = 3;
-const MAX_WIDTH = 640;
-const QUALITY = 0.75;
-
-/** Downscale a data URL to MAX_WIDTH and re-encode as JPEG — the one place the
- *  stored size/format is decided, shared by the file and camera paths. */
-function downscaleDataUrl(src: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onerror = () => reject(new Error('That image could not be opened.'));
-    img.onload = () => {
-      const ratio = img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(img.width * ratio);
-      canvas.height = Math.round(img.height * ratio);
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return reject(new Error('Could not process that image.'));
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg', QUALITY));
-    };
-    img.src = src;
-  });
-}
-
-/** Read a picked File and downscale it. Rejects non-images. */
-function fileToDataUri(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (!file.type.startsWith('image/')) return reject(new Error('That file is not an image.'));
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Could not read that file.'));
-    reader.onload = () => resolve(downscaleDataUrl(String(reader.result)));
-    reader.readAsDataURL(file);
-  });
-}
 
 export function ImagePicker({
   images,

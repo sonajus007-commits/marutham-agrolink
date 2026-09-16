@@ -459,6 +459,9 @@ export const resources = {
       'agent.verify.quality.fair': 'Fair',
       'agent.verify.quality.poor': 'Poor',
       'agent.verify.quality.rejected': 'Reject',
+      'agent.verify.proofTitle': 'Collection photo',
+      'agent.verify.proofHelp': 'Optional — a photo of the goods you received.',
+      'agent.verify.proofAdd': 'Add photo',
       'agent.verify.route': 'Delivery route',
       'agent.verify.deliveryAgent': 'Delivery agent',
       'agent.verify.hubAgentNote':
@@ -524,6 +527,14 @@ export const resources = {
       'agent.fail.reason.refused': 'Customer refused the order',
       'agent.fail.reason.rescheduled': 'Asked to deliver later',
       'agent.fail.reason.other': 'Other',
+      // Agent: proof photo capture (migration 060)
+      'agent.photo.adding': 'Adding…',
+      'agent.photo.failed': 'Could not add that photo.',
+      'agent.photo.alt': 'Attached photo',
+      'agent.photo.remove': 'Remove photo',
+      'agent.deliver.proofTitle': 'Proof of delivery',
+      'agent.deliver.proofHelp': 'Optional — a photo of the handed-over parcel.',
+      'agent.deliver.proofAdd': 'Add photo',
       // Agent: offline / pending-sync indicator (field roles lean on the queue)
       'agent.offline.offline': 'You’re offline.',
       'agent.offline.willSync_one':
@@ -2693,6 +2704,9 @@ export const resources = {
       'agent.verify.quality.fair': 'சராசரி',
       'agent.verify.quality.poor': 'மோசம்',
       'agent.verify.quality.rejected': 'நிராகரி',
+      'agent.verify.proofTitle': 'சேகரிப்பு புகைப்படம்',
+      'agent.verify.proofHelp': 'விருப்பமானது — நீங்கள் பெற்ற பொருளின் புகைப்படம்.',
+      'agent.verify.proofAdd': 'புகைப்படம் சேர்',
       'agent.verify.village': 'நிறைவேற்றும் கிராமம்:',
       'agent.verify.route': 'வழங்கல் வழி',
       'agent.verify.deliveryAgent': 'விநியோக முகவர்',
@@ -2764,6 +2778,14 @@ export const resources = {
       'agent.fail.reason.refused': 'வாடிக்கையாளர் ஆர்டரை மறுத்தார்',
       'agent.fail.reason.rescheduled': 'பின்னர் வழங்கச் சொன்னார்',
       'agent.fail.reason.other': 'மற்றவை',
+      // Agent: proof photo capture (migration 060)
+      'agent.photo.adding': 'சேர்க்கிறது…',
+      'agent.photo.failed': 'அந்தப் புகைப்படத்தைச் சேர்க்க முடியவில்லை.',
+      'agent.photo.alt': 'இணைக்கப்பட்ட புகைப்படம்',
+      'agent.photo.remove': 'புகைப்படத்தை நீக்கு',
+      'agent.deliver.proofTitle': 'வழங்கல் சான்று',
+      'agent.deliver.proofHelp': 'விருப்பமானது — வழங்கிய பொருளின் புகைப்படம்.',
+      'agent.deliver.proofAdd': 'புகைப்படம் சேர்',
       // Agent: offline / pending-sync indicator (field roles lean on the queue)
       'agent.offline.offline': 'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள்.',
       'agent.offline.willSync_one':

@@ -644,6 +644,47 @@
         }
       }
     },
+    "order_proofs": {
+      "columns": {
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "image": {
+          "type": "text",
+          "notNull": true
+        },
+        "kind": {
+          "type": "text",
+          "notNull": true
+        },
+        "lat": {
+          "type": "double precision",
+          "notNull": false
+        },
+        "lng": {
+          "type": "double precision",
+          "notNull": false
+        },
+        "order_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "orders.id"
+        }
+      }
+    },
     "orders": {
       "columns": {
         "agent_id": {

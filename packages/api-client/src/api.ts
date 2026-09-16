@@ -134,6 +134,7 @@ function scanBody(o: {
   coords?: { lat: number; lng: number };
   deliveryCode?: string;
   items?: VerifyItem[];
+  proofPhoto?: string;
   fromStage?: number;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = {};
@@ -149,6 +150,8 @@ function scanBody(o: {
   if (o.deliveryCode) body.delivery_code = o.deliveryCode;
   // Per-line VCO verification (received qty + quality). Optional and additive.
   if (o.items && o.items.length) body.items = o.items;
+  // Optional field proof photo (downscaled JPEG data URI). Never blocks the scan.
+  if (o.proofPhoto) body.proof_photo = o.proofPhoto;
   if (o.fromStage !== undefined) body.from_stage = o.fromStage;
   return body;
 }
@@ -178,6 +181,7 @@ function queuedScan(
     coords?: { lat: number; lng: number };
     deliveryCode?: string;
     items?: VerifyItem[];
+    proofPhoto?: string;
   } = {},
 ): Promise<ScanResponse> {
   // The body is built HERE rather than by the caller, so a queued scan cannot be
@@ -207,6 +211,19 @@ export interface DeliveryFailedResponse {
   message?: string;
   attempts?: number;
   reason?: string;
+}
+
+/** One stored field proof photo (migration 060). `image` is a JPEG data URI. */
+export interface OrderProof {
+  id: string;
+  kind: 'delivery' | 'verify';
+  image: string;
+  lat?: number | null;
+  lng?: number | null;
+  created_at: string;
+}
+export interface OrderProofsResponse {
+  proofs: OrderProof[];
 }
 
 export const api = {
@@ -345,15 +362,18 @@ export const api = {
       coords?: { lat: number; lng: number };
       /** Per-line verification the VCO recorded (received qty + quality). Optional. */
       items?: VerifyItem[];
+      /** Optional collection proof photo (downscaled JPEG data URI). */
+      proof_photo?: string;
     },
   ): Promise<ScanResponse> {
-    const { coords, route, agent_id, delivery_hub_id, items } = data || {};
+    const { coords, route, agent_id, delivery_hub_id, items, proof_photo } = data || {};
     return queuedScan(id, fromStage, {
       route,
       agentId: agent_id,
       deliveryHubId: delivery_hub_id,
       coords,
       items,
+      proofPhoto: proof_photo,
     });
   },
   /* Name the last-mile Delivery Agent on an order sitting At Hub.
@@ -377,8 +397,13 @@ export const api = {
     fromStage: number,
     coords?: { lat: number; lng: number },
     deliveryCode?: string,
+    proofPhoto?: string,
   ): Promise<ScanResponse> {
-    return queuedScan(id, fromStage, { coords, deliveryCode });
+    return queuedScan(id, fromStage, { coords, deliveryCode, proofPhoto });
+  },
+  /** The field proof photos stored for an order (migration 060). On-demand only. */
+  getOrderProofs(id: string): Promise<OrderProofsResponse> {
+    return apiFetch<OrderProofsResponse>('GET', '/orders/' + id + '/proofs');
   },
   /** Report a delivery that could NOT be completed at the door. Does NOT advance the
    *  order — it records an attempt (count + reason + timeline) and notifies the buyer,

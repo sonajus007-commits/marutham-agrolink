@@ -981,3 +981,73 @@ test('VCO verify still advances the order when no items are sent', async () => {
   assert.equal(res.status, 200);
   assert.equal(db.callsTo('order_items', 'update').length, 0, 'no item writes without an items array');
 });
+
+// ── Field proof photos (migration 060) ────────────────────────────────────────
+const DATA_URI = 'data:image/jpeg;base64,' + 'A'.repeat(200);
+
+test('deliver stores an attached proof photo as an order_proofs row', async () => {
+  const db = dbFor(outForDelivery());
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', { lat: 10.5, lng: 78.8, proof_photo: DATA_URI });
+
+  assert.equal(res.status, 200);
+  const proofs = db.callsTo('order_proofs', 'insert');
+  assert.equal(proofs.length, 1);
+  assert.equal(proofs[0].payload.kind, 'delivery');
+  assert.equal(proofs[0].payload.image, DATA_URI);
+  assert.equal(proofs[0].payload.lat, 10.5);
+});
+
+test('deliver still succeeds and stores nothing when the proof is not an image', async () => {
+  const db = dbFor(outForDelivery());
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', { proof_photo: 'not-a-data-uri' });
+
+  assert.equal(res.status, 200, 'a bad photo must never block the delivery');
+  assert.equal(db.callsTo('order_proofs', 'insert').length, 0);
+});
+
+test('deliver rejects an oversized proof photo but still delivers', async () => {
+  const db = dbFor(outForDelivery());
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const huge = 'data:image/jpeg;base64,' + 'A'.repeat(300_001);
+  const res = await app.post('/o1/scan', { proof_photo: huge });
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('order_proofs', 'insert').length, 0, 'too large — not stored');
+});
+
+test('VCO verify stores an attached collection photo (kind: verify)', async () => {
+  const db = fakeSupabase({
+    'orders:select': { data: [packaged()] },
+    'orders:update': { data: { id: 'o1', status: 'VCO Verified' } },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { route: 'direct', proof_photo: DATA_URI });
+
+  assert.equal(res.status, 200);
+  const proofs = db.callsTo('order_proofs', 'insert');
+  assert.equal(proofs.length, 1);
+  assert.equal(proofs[0].payload.kind, 'verify');
+});
+
+test('GET proofs returns the order’s proofs for staff', async () => {
+  const db = fakeSupabase({
+    'orders:select': { data: [outForDelivery()] },
+    'order_proofs:select': { data: [{ id: 'p1', kind: 'delivery', image: DATA_URI, created_at: 't' }] },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.get('/o1/proofs');
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.proofs.length, 1);
+  assert.equal(res.body.proofs[0].kind, 'delivery');
+});
+
+test('GET proofs is forbidden to a consumer who does not own the order', async () => {
+  const db = fakeSupabase({ 'orders:select': { data: [outForDelivery({ consumer_id: 'c2' })] } });
+  app = await mountRoute('delivery', { supabase: db, user: CONSUMER });
+  const res = await app.get('/o1/proofs');
+
+  assert.equal(res.status, 403);
+});

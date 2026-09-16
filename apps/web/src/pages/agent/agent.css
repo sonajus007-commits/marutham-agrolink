@@ -1059,3 +1059,53 @@
   color: var(--red);
   border-color: var(--red);
 }
+
+/* ── Proof photo capture (migration 060) ─────────────────────────────────────*/
+.photo-capture__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: 1.5px dashed var(--tint-300);
+  background: var(--surface);
+  color: var(--forest);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+.photo-capture__add.is-busy {
+  opacity: 0.6;
+  cursor: wait;
+}
+.photo-capture__preview {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+.photo-capture__preview img {
+  max-height: 180px;
+  border-radius: 10px;
+  border: 1px solid var(--tint-300);
+  display: block;
+}
+.photo-capture__remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.photo-capture__err {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--red);
+}

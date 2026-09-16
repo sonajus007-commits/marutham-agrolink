@@ -18,6 +18,7 @@ import {
   type AddressObject,
 } from '@marutham/lib';
 import { useToast } from '../../../components/Toast';
+import { PhotoCapture } from '../../../components/PhotoCapture';
 import { LiveOrderMap } from '../../../components/LiveOrderMap';
 import { useOrderTrack } from '../../../lib/useOrderTrack';
 import { getCurrentPosition } from '../../../native/geolocation';
@@ -41,6 +42,8 @@ export function DeliverSheet({
   // The optional delivery OTP the customer reads out. Blank is fine — the delivery
   // still goes through (recorded unverified); only a wrong code is refused server-side.
   const [otp, setOtp] = useState('');
+  // Optional proof-of-delivery photo (migration 060). Never blocks the delivery.
+  const [proofPhoto, setProofPhoto] = useState<string | null>(null);
   // The "couldn't deliver" branch — a reason picker that records a failed attempt
   // without advancing the order. Closed by default; opening it reveals the reasons.
   const [failing, setFailing] = useState(false);
@@ -60,6 +63,7 @@ export function DeliverSheet({
     setData(null);
     setError(null);
     setOtp(''); // do not carry one order's code onto the next
+    setProofPhoto(null); // nor one order's photo onto the next
     setBusy(false); // the sheet stays mounted between orders — a finished confirm
     // would otherwise leave the next order's button stuck on "Confirming…"
     setFailing(false); // collapse the reason picker for the next order
@@ -104,7 +108,13 @@ export function DeliverSheet({
       // A doorstep is exactly where signal dies, so this one is queueable. The stage
       // we loaded rides along: if the order moved on meanwhile, the server refuses
       // the replay rather than advancing it from somewhere else.
-      await api.deliverOffline(orderId, stage, coords, otp.trim() || undefined);
+      await api.deliverOffline(
+        orderId,
+        stage,
+        coords,
+        otp.trim() || undefined,
+        proofPhoto || undefined,
+      );
       toast(t('agent.deliver.done', 'Order delivered! 🎉'), 'ok');
       onChanged();
     } catch (e) {
@@ -281,6 +291,18 @@ export function DeliverSheet({
                 padding: '10px 12px',
                 fontVariantNumeric: 'tabular-nums',
               }}
+            />
+          </div>
+
+          <div className="a-card">
+            <h3>📷 {t('agent.deliver.proofTitle', 'Proof of delivery')}</h3>
+            <p style={{ margin: '2px 0 10px', fontSize: 13, color: 'var(--muted)' }}>
+              {t('agent.deliver.proofHelp', 'Optional — a photo of the handed-over parcel.')}
+            </p>
+            <PhotoCapture
+              value={proofPhoto}
+              onChange={setProofPhoto}
+              label={t('agent.deliver.proofAdd', 'Add photo')}
             />
           </div>
 
