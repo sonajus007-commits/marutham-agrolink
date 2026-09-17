@@ -38,6 +38,7 @@ import { LiveOrderMap } from '../../components/LiveOrderMap';
 import { TRACK_POLL_MS, useOrderTrack } from '../../lib/useOrderTrack';
 import { CancelOrderModal } from './CancelOrderModal';
 import { LiveTracker } from './LiveTracker';
+import { ProofGallery } from './ProofGallery';
 import { ReturnRequestModal } from './ReturnRequestModal';
 import { useReorder } from './useReorder';
 
@@ -361,6 +362,10 @@ function OrderDetailBody({
           </>
         )}
       </div>
+
+      {/* Field proof photos (VCO collection + delivery hand-off), stored server-side
+          and readable by the order owner. Renders nothing until photos exist. */}
+      <ProofGallery orderId={o.id} />
 
       <div
         style={{
