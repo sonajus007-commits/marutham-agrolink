@@ -307,6 +307,30 @@ export function AdminHeadPage() {
         </div>
       </ChartContainer>
 
+      {/* ── Support desk — live open + escalated tickets ─────────────────── */}
+      <ChartContainer
+        title={t('admin.head.support.title', 'Support desk')}
+        subtitle={t('admin.head.support.sub', 'Customer & seller tickets awaiting the team')}
+        loading={loading && !data}
+        height="auto"
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <StatTile
+            label={t('admin.head.support.open', 'Open tickets')}
+            value={fmtNum(data?.support.open ?? 0)}
+          />
+          <StatTile
+            label={t('admin.head.support.inProgress', 'In progress')}
+            value={fmtNum(data?.support.in_progress ?? 0)}
+          />
+          <StatTile
+            label={t('admin.head.support.escalated', 'Escalated (aging)')}
+            value={fmtNum(data?.support.escalated ?? 0)}
+            accent={(data?.support.escalated ?? 0) > 0 ? semantic.light.danger : undefined}
+          />
+        </div>
+      </ChartContainer>
+
       {/* ── Action items ─────────────────────────────────────────────────── */}
       <ChartContainer title={t('admin.head.alerts.title')} loading={loading && !data} height="auto">
         {alerts.length === 0 ? (

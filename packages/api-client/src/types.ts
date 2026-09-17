@@ -972,7 +972,13 @@ export interface ExecutiveDashboardResponse {
     subscription_income: number;
     payouts_pending: number;
     payouts_paid: number;
+    /** Settled to sellers today (IST) — the daily-settlement figure. */
+    settlement_today: number;
+    /** Cash still to be collected: active orders not yet marked paid. */
+    receivables: number;
   };
+  /** Support desk snapshot (company-wide). `escalated` = open/in-progress past the SLA window. */
+  support: { open: number; in_progress: number; escalated: number };
   districts: ExecutiveDistrict[];
   trend: { mode: ExecutiveTrendMode; points: ExecutiveTrendPoint[] };
   alerts: ExecutiveAlert[];
@@ -1204,6 +1210,8 @@ export interface AdminHeadDashboardResponse {
     logins_today: number;
     failed_logins_today: number;
   };
+  /** Support desk snapshot. `escalated` = open/in-progress past the SLA window. */
+  support: { open: number; in_progress: number; escalated: number };
   alerts: ExecutiveAlert[];
   /** See ADMINHEAD_PLACEHOLDERS in backend/routes/dashboard.js. */
   placeholders: string[];

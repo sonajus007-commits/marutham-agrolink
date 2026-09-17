@@ -234,12 +234,17 @@ router.get('/', async (req, res) => {
 // Query params: ?trend=monthly|quarterly|yearly  (default monthly)
 // ═══════════════════════════════════════════════════════════════════════════════
 // Tiles with no data source yet — the UI greys these out as "Needs integration".
+// The tiles still without a data source. Trimmed in Phase 3 as real feeds landed:
+// `payables` (→ financial.payouts_pending), `daily_settlement` (→ financial.settlement_today),
+// `receivables` (→ financial.receivables, from unpaid orders), and `customer_complaints`
+// (→ support.open, from the support desk) are now LIVE, so they leave this list. What
+// remains genuinely needs an accounting/ledger the platform does not yet keep.
 const EXEC_PLACEHOLDERS = [
   'net_profit', 'ebitda', 'cash_flow', 'revenue_forecast',
-  'receivables', 'payables', 'gst', 'tds', 'bank_balance', 'daily_settlement',
+  'gst', 'tds', 'bank_balance',
   'salary_cost', 'warehouse_cost', 'hub_cost',
   'vehicle_utilization', 'fuel_cost',
-  'farmer_satisfaction', 'customer_complaints', 'hub_issues', 'stock_shortage',
+  'farmer_satisfaction', 'hub_issues', 'stock_shortage',
 ];
 
 // paise (int) → rupees (number, 2 dp). Named fields avoid the money middleware.
@@ -289,6 +294,31 @@ async function onDutyCounts(district) {
   };
 }
 
+// Support desk snapshot — open + escalated tickets from support_tickets (migration
+// 055). Company-wide: a ticket carries no district, so this is never geo-scoped.
+// "Escalated" = an open / in-progress ticket that has aged past the SLA window
+// (no explicit escalation flag exists, so age is the honest signal). Best-effort:
+// a failed read or a missing table returns zeros and never breaks a dashboard.
+// Powers the complaints/escalation tiles that used to be placeholders (Phase 3).
+const TICKET_SLA_HOURS = 48;
+async function supportSummary() {
+  const { data, error } = await supabase
+    .from('support_tickets')
+    .select('status, created_at');
+  if (error) {
+    console.error('supportSummary failed:', error.message);
+    return { open: 0, in_progress: 0, escalated: 0 };
+  }
+  const rows = data || [];
+  const cutoff = Date.now() - TICKET_SLA_HOURS * 3600000;
+  const openish = rows.filter((r) => r.status === 'open' || r.status === 'in_progress');
+  return {
+    open: rows.filter((r) => r.status === 'open').length,
+    in_progress: rows.filter((r) => r.status === 'in_progress').length,
+    escalated: openish.filter((r) => new Date(r.created_at).getTime() < cutoff).length,
+  };
+}
+
 // Resolve the optional ?state=/?district= drill-down to a Set of districts to
 // scope by (null = no geo filter). A district pins exactly one; a state expands
 // to its districts via `locations` (orders/users carry no state column). Shared
@@ -333,7 +363,7 @@ router.get('/executive', async (req, res) => {
   const [
     ordersR, itemsR, productsR, usersR, listingsR, payoutsR, returnsR,
   ] = await Promise.all([
-    supabase.from('orders').select('id, total, item_total, market_fee, delivery, status, cancelled, district, created_at, delivered_at, picked_up_at, eta_ts, consumer_id, refund_amt'),
+    supabase.from('orders').select('id, total, item_total, market_fee, delivery, status, cancelled, pay_status, district, created_at, delivered_at, picked_up_at, eta_ts, consumer_id, refund_amt'),
     supabase.from('order_items').select('order_id, product_id, qty, price, farmer_id, farmer_name, rated, rating_value'),
     supabase.from('products').select('id, category, product_group'),
     supabase.from('users').select('id, role, created_at, district, status, subscription_amount, subscription_expires_at').is('deleted_at', null),
@@ -473,6 +503,10 @@ router.get('/executive', async (req, res) => {
     subscription_income: rup(subActive.reduce((s, f) => s + Number(f.subscription_amount || 0), 0)),
     payouts_pending:     rup(payouts.filter(p => p.status === 'pending').reduce((s, p) => s + p.amount, 0)),
     payouts_paid:        rup(payouts.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0)),
+    // Settled to sellers TODAY (IST) — the daily-settlement figure, from payouts paid today.
+    settlement_today:    rup(payouts.filter(p => p.status === 'paid' && p.paid_at && isSameDay(istParts(p.paid_at))).reduce((s, p) => s + p.amount, 0)),
+    // Receivables — cash still to be collected: active orders not yet marked paid (COD in flight).
+    receivables:         rup(active.filter(o => o.pay_status !== 'paid').reduce((s, o) => s + o.total, 0)),
   };
 
   // ── Districts (map + ranking): green/amber/red vs peak revenue ──────────────
@@ -488,8 +522,14 @@ router.get('/executive', async (req, res) => {
   // ── Trend (period-bucketed active revenue + orders) ─────────────────────────
   const trend = buildTrend(active, trendMode);
 
+  // ── Support desk (open + escalated complaints) ──────────────────────────────
+  const support = await supportSummary();
+
   // ── Alerts (live-derived only) ──────────────────────────────────────────────
   const alerts = [];
+  if (support.escalated > 0) {
+    alerts.push({ type: 'complaints_escalated', severity: 'high', params: { count: support.escalated, hours: TICKET_SLA_HOURS }, message: `${plural(support.escalated, 'support ticket')} open past ${TICKET_SLA_HOURS}h — needs attention.` });
+  }
   const cancelRate = orders.length > 0 ? cancelledOrdersCount(orders) / orders.length : 0;
   if (cancelRate > 0.15) {
     alerts.push({ type: 'high_cancellation', severity: 'high', params: { pct: Math.round(cancelRate * 100) }, message: `High cancellation rate: ${Math.round(cancelRate * 100)}% of all orders.` });
@@ -535,6 +575,7 @@ router.get('/executive', async (req, res) => {
     categories,
     logistics,
     financial,
+    support,
     districts,
     trend: { mode: trendMode, points: trend },
     alerts,
@@ -921,7 +962,11 @@ router.get('/field', async (req, res) => {
 // Focus: employees, approvals across the org, staff-by-role, audit activity, master
 // data. Company-wide (no geo scope). Live aggregation in JS + count queries.
 // ═══════════════════════════════════════════════════════════════════════════════
-const ADMINHEAD_PLACEHOLDERS = ['support_tickets', 'escalations', 'warehouse_utilization', 'inventory_stock'];
+// `support_tickets` + `escalations` now come live from the support desk (see the
+// `support` block below). `warehouse_utilization` + `inventory_stock` are retired,
+// not deferred: the business is transit-only (no warehousing / stock on hand), so
+// they would never have a feed — advertising them as "coming" was misleading.
+const ADMINHEAD_PLACEHOLDERS = [];
 
 router.get('/adminhead', async (req, res) => {
   const u = req.user;
@@ -994,7 +1039,11 @@ router.get('/adminhead', async (req, res) => {
   const districts_active = new Set(staff.map(s => s.district).filter(Boolean)).size;
   const states_covered = new Set(staff.map(s => s.state).filter(Boolean)).size;
 
+  // Support desk — open + escalated tickets (company-wide, best-effort).
+  const support = await supportSummary();
+
   const alerts = [];
+  if (support.escalated > 0) alerts.push({ type: 'complaints_escalated', severity: 'high', params: { count: support.escalated, hours: TICKET_SLA_HOURS }, message: `${support.escalated} support ticket${support.escalated > 1 ? 's' : ''} open past ${TICKET_SLA_HOURS}h — needs attention.` });
   const totalPending = employees_pending + farmers_pending + listings_pending;
   if (employees_pending > 0) alerts.push({ type: 'employee_approval', severity: 'high', params: { count: employees_pending }, message: `${employees_pending} employee onboarding request${employees_pending > 1 ? 's' : ''} awaiting HR approval.` });
   if (farmers_pending > 0) alerts.push({ type: 'farmer_approval', severity: 'medium', params: { count: farmers_pending }, message: `${farmers_pending} farmer registration${farmers_pending > 1 ? 's' : ''} pending review.` });
@@ -1027,6 +1076,7 @@ router.get('/adminhead', async (req, res) => {
       logins_today:        loginsTodayC.count || 0,
       failed_logins_today: failedLoginsC.count || 0,
     },
+    support,
     alerts,
     placeholders: ADMINHEAD_PLACEHOLDERS,
   });

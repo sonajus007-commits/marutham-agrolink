@@ -542,8 +542,16 @@ export function ExecutivePage() {
               value={fmtMoney(data?.financial.subscription_income ?? 0)}
             />
             <StatTile
-              label={t('admin.exec.financial.payoutsPending')}
+              label={t('admin.exec.financial.payoutsPending', 'Payables (to sellers)')}
               value={fmtMoney(data?.financial.payouts_pending ?? 0)}
+            />
+            <StatTile
+              label={t('admin.exec.financial.settlementToday', 'Settled today')}
+              value={fmtMoney(data?.financial.settlement_today ?? 0)}
+            />
+            <StatTile
+              label={t('admin.exec.financial.receivables', 'Receivables')}
+              value={fmtMoney(data?.financial.receivables ?? 0)}
             />
             <StatTile
               label={t('admin.exec.financial.payoutsPaid')}
@@ -552,6 +560,25 @@ export function ExecutivePage() {
           </div>
         </ChartContainer>
       </div>
+
+      {/* ── Support desk — open + escalated complaints (live from the support desk) ── */}
+      <ChartContainer title={t('admin.exec.support.title', 'Customer support')} height="auto">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <StatTile
+            label={t('admin.exec.support.open', 'Open complaints')}
+            value={data?.support.open ?? 0}
+          />
+          <StatTile
+            label={t('admin.exec.support.inProgress', 'In progress')}
+            value={data?.support.in_progress ?? 0}
+          />
+          <StatTile
+            label={t('admin.exec.support.escalated', 'Escalated (aging)')}
+            value={data?.support.escalated ?? 0}
+            accent={(data?.support.escalated ?? 0) > 0 ? 'var(--danger)' : undefined}
+          />
+        </div>
+      </ChartContainer>
 
       {/* ── Alerts ───────────────────────────────────────────────────────── */}
       <ChartContainer title={t('admin.exec.alerts.title')} loading={loading && !data} height="auto">
