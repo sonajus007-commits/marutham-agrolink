@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
+  ConfirmDialog,
   INPUT_CLASS,
   Modal,
   OrderPipeline,
@@ -95,6 +96,7 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
   const [busy, setBusy] = useState(false);
   const [targetStatus, setTargetStatus] = useState('');
   const [settingStatus, setSettingStatus] = useState(false);
+  const [showApply, setShowApply] = useState(false);
 
   const charges = deriveOrderCharges(o);
   const address = resolveAddress(o.delivery_address);
@@ -115,6 +117,7 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
     try {
       const res = await api.setOrderStatus(o.id, targetStatus);
       toast(res.message || t('admin.orders.statusSet', 'Order status updated.'), 'ok');
+      setShowApply(false);
       onChanged();
     } catch (e) {
       toast(
@@ -181,7 +184,11 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
                 </option>
               ))}
             </select>
-            <Button variant="primary" onClick={setStatus} disabled={!targetStatus || settingStatus}>
+            <Button
+              variant="primary"
+              onClick={() => setShowApply(true)}
+              disabled={!targetStatus || settingStatus}
+            >
               {settingStatus ? '…' : t('admin.orders.apply', 'Apply')}
             </Button>
           </div>
@@ -290,6 +297,25 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
           placeholder={t('admin.orders.reasonPlaceholder')}
         />
       </Modal>
+
+      <ConfirmDialog
+        open={showApply}
+        title={t('admin.orders.setStatusConfirm', 'Override order stage?')}
+        subtitle={o.code}
+        onClose={() => setShowApply(false)}
+        onConfirm={setStatus}
+        confirmLabel={t('admin.orders.apply', 'Apply')}
+        cancelLabel={t('admin.orders.keep')}
+        tone="primary"
+        busy={settingStatus}
+      >
+        {t('admin.orders.setStatusConfirmBody', {
+          from: statusLabel,
+          to: targetStatus,
+          defaultValue:
+            'This forces the order from “{{from}}” to “{{to}}”, out of the normal flow. The change is logged to the timeline.',
+        })}
+      </ConfirmDialog>
     </div>
   );
 }

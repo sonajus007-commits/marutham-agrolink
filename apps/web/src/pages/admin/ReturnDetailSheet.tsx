@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Modal, Sheet } from '@marutham/ui';
+import { Button, ConfirmDialog, Modal, Sheet } from '@marutham/ui';
 import { api, type AdminReturn } from '@marutham/api-client';
 import { fmtDate, fmtMoney } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
@@ -35,6 +35,7 @@ export function ReturnDetailSheet({
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [showCollect, setShowCollect] = useState(false);
+  const [showReject, setShowReject] = useState(false);
 
   if (!ret)
     return (
@@ -58,6 +59,7 @@ export function ReturnDetailSheet({
     } finally {
       setBusy(false);
       setShowCollect(false);
+      setShowReject(false);
     }
   }
 
@@ -111,11 +113,7 @@ export function ReturnDetailSheet({
               >
                 {t('admin.ret.accept')}
               </Button>
-              <Button
-                variant="danger"
-                onClick={() => act(() => api.decideReturn(ret.id, 'rejected'))}
-                disabled={busy}
-              >
+              <Button variant="danger" onClick={() => setShowReject(true)} disabled={busy}>
                 {t('admin.ret.reject')}
               </Button>
             </div>
@@ -165,6 +163,23 @@ export function ReturnDetailSheet({
           {t('admin.ret.collectConfirmBody', { amount: refund, to: ret.refund_to || '—' })}
         </p>
       </Modal>
+
+      <ConfirmDialog
+        open={showReject}
+        title={t('admin.ret.rejectConfirm')}
+        subtitle={ret.code}
+        onClose={() => setShowReject(false)}
+        onConfirm={() => act(() => api.decideReturn(ret.id, 'rejected'))}
+        confirmLabel={t('admin.ret.reject')}
+        cancelLabel={t('admin.ret.cancel')}
+        busy={busy}
+      >
+        {t('admin.ret.rejectConfirmBody', {
+          amount: refund,
+          defaultValue:
+            'The customer’s return is denied and the {{amount}} refund will not be issued. They are notified. This cannot be undone here.',
+        })}
+      </ConfirmDialog>
     </Sheet>
   );
 }

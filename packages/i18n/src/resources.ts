@@ -1705,6 +1705,9 @@ export const resources = {
         'Override the order stage — forward or back. Logged to the timeline.',
       'admin.orders.chooseStatus': 'Choose status',
       'admin.orders.apply': 'Apply',
+      'admin.orders.setStatusConfirm': 'Override order stage?',
+      'admin.orders.setStatusConfirmBody':
+        'This forces the order from “{{from}}” to “{{to}}”, out of the normal flow. The change is logged to the timeline.',
       'admin.orders.statusSet': 'Order status updated.',
       'admin.orders.statusFailed': 'Could not set status',
       'admin.users.title': 'Users',
@@ -1913,6 +1916,11 @@ export const resources = {
       'admin.users.blockConfirm': 'Block this user?',
       'admin.users.blockReason': 'Reason (required)',
       'admin.users.blockReasonPlaceholder': 'Why is this user being blocked?',
+      'admin.users.suspendConfirm': 'Suspend this account?',
+      'admin.users.suspendWarning':
+        'The user keeps their record but cannot sign in until reactivated.',
+      'admin.users.suspendReason': 'Reason (optional)',
+      'admin.users.suspendReasonPlaceholder': 'Why is this account being suspended?',
       'admin.users.saved': 'Saved.',
       'admin.users.deliveryCap': 'Delivery Capability',
       'admin.users.canDeliver': 'Also serves as a nearby Delivery Agent',
@@ -2086,6 +2094,9 @@ export const resources = {
         'Accept to authorise the refund (paid out once goods are collected), or reject to close the request.',
       'admin.ret.accept': 'Accept',
       'admin.ret.reject': 'Reject',
+      'admin.ret.rejectConfirm': 'Reject this return?',
+      'admin.ret.rejectConfirmBody':
+        'The customer’s return is denied and the {{amount}} refund will not be issued. They are notified. This cannot be undone here.',
       'admin.ret.collectHint': 'Mark the goods collected to trigger the refund.',
       'admin.ret.collect': 'Mark Collected',
       'admin.ret.collectConfirm': 'Mark collected & refund?',
@@ -3986,6 +3997,9 @@ export const resources = {
         'ஆர்டர் நிலையை மாற்று — முன் அல்லது பின். காலவரிசையில் பதிவாகும்.',
       'admin.orders.chooseStatus': 'நிலையைத் தேர்வுசெய்',
       'admin.orders.apply': 'அமல்படுத்து',
+      'admin.orders.setStatusConfirm': 'ஆர்டர் நிலையை மாற்றவா?',
+      'admin.orders.setStatusConfirmBody':
+        'இது ஆர்டரை “{{from}}” இலிருந்து “{{to}}” க்கு, வழக்கமான ஓட்டத்திற்கு வெளியே கட்டாயமாக மாற்றும். மாற்றம் காலவரிசையில் பதிவாகும்.',
       'admin.orders.statusSet': 'ஆர்டர் நிலை புதுப்பிக்கப்பட்டது.',
       'admin.orders.statusFailed': 'நிலையை அமைக்க முடியவில்லை',
       'admin.users.title': 'பயனர்கள்',
@@ -4204,6 +4218,11 @@ export const resources = {
       'admin.users.blockConfirm': 'இந்தப் பயனரைத் தடுக்கவா?',
       'admin.users.blockReason': 'காரணம் (தேவை)',
       'admin.users.blockReasonPlaceholder': 'இந்தப் பயனர் ஏன் தடுக்கப்படுகிறார்?',
+      'admin.users.suspendConfirm': 'இந்தக் கணக்கை இடைநிறுத்தவா?',
+      'admin.users.suspendWarning':
+        'பயனரின் பதிவு இருக்கும், ஆனால் மீண்டும் செயல்படுத்தும் வரை உள்நுழைய முடியாது.',
+      'admin.users.suspendReason': 'காரணம் (விருப்பம்)',
+      'admin.users.suspendReasonPlaceholder': 'இந்தக் கணக்கு ஏன் இடைநிறுத்தப்படுகிறது?',
       'admin.users.saved': 'சேமிக்கப்பட்டது.',
       'admin.users.deliveryCap': 'விநியோகத் திறன்',
       'admin.users.canDeliver': 'அருகிலுள்ள விநியோக முகவராகவும் செயல்படுகிறார்',
@@ -4377,6 +4396,9 @@ export const resources = {
         'பணத்திரும்பத்தை அங்கீகரிக்க ஏற்கவும் (பொருட்கள் சேகரிக்கப்பட்டவுடன் வழங்கப்படும்), அல்லது கோரிக்கையை மூட நிராகரிக்கவும்.',
       'admin.ret.accept': 'ஏற்று',
       'admin.ret.reject': 'நிராகரி',
+      'admin.ret.rejectConfirm': 'இந்தத் திரும்பப்பெறலை நிராகரிக்கவா?',
+      'admin.ret.rejectConfirmBody':
+        'வாடிக்கையாளரின் திரும்பப்பெறல் நிராகரிக்கப்படும், {{amount}} பணத்திரும்பம் வழங்கப்படாது. அவர்களுக்கு அறிவிக்கப்படும். இதை இங்கே மாற்ற முடியாது.',
       'admin.ret.collectHint': 'பணத்திரும்பத்தைத் தூண்ட பொருட்கள் சேகரிக்கப்பட்டதாகக் குறிக்கவும்.',
       'admin.ret.collect': 'சேகரித்ததாகக் குறி',
       'admin.ret.collectConfirm': 'சேகரித்து பணம் திருப்பவா?',

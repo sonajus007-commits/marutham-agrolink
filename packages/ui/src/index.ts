@@ -20,6 +20,8 @@ export { Sheet } from './Sheet';
 export type { SheetProps } from './Sheet';
 export { Modal } from './Modal';
 export type { ModalProps } from './Modal';
+export { ConfirmDialog } from './ConfirmDialog';
+export type { ConfirmDialogProps, ConfirmReason } from './ConfirmDialog';
 export { OrderPipeline } from './OrderPipeline';
 export { OrderProgress } from './OrderProgress';
 export { OrderTimeline } from './OrderTimeline';

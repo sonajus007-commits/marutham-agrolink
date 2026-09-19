@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
+  ConfirmDialog,
   Field,
   Input,
   INPUT_CLASS,
@@ -128,6 +129,7 @@ function Body({
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [showBlock, setShowBlock] = useState(false);
+  const [showSuspend, setShowSuspend] = useState(false);
   const [reason, setReason] = useState('');
   const [formErr, setFormErr] = useState<string | null>(null);
 
@@ -213,6 +215,7 @@ function Body({
       await api.setUserStatus(user.id, next, why);
       toast(t('admin.users.statusChanged', { status: next }), 'ok');
       setShowBlock(false);
+      setShowSuspend(false);
       setReason('');
       onChanged();
     } catch (e) {
@@ -254,7 +257,7 @@ function Body({
             </Button>
           ) : null}
           {status === 'active' ? (
-            <Button variant="ghost" onClick={() => change('suspended')} disabled={busy}>
+            <Button variant="ghost" onClick={() => setShowSuspend(true)} disabled={busy}>
               {t('admin.users.suspend')}
             </Button>
           ) : null}
@@ -476,6 +479,23 @@ function Body({
           placeholder={t('admin.users.blockReasonPlaceholder')}
         />
       </Modal>
+
+      <ConfirmDialog
+        open={showSuspend}
+        title={t('admin.users.suspendConfirm')}
+        subtitle={user.login_id}
+        onClose={() => setShowSuspend(false)}
+        onConfirm={(why) => change('suspended', why)}
+        confirmLabel={t('admin.users.suspend')}
+        cancelLabel={t('admin.users.cancel')}
+        busy={busy}
+        reason={{
+          label: t('admin.users.suspendReason'),
+          placeholder: t('admin.users.suspendReasonPlaceholder'),
+        }}
+      >
+        {t('admin.users.suspendWarning')}
+      </ConfirmDialog>
     </div>
   );
 }
