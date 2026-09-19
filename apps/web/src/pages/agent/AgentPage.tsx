@@ -24,6 +24,7 @@ import { OrderViewSheet } from './sheets/OrderViewSheet';
 import { DeliverSheet } from './sheets/DeliverSheet';
 import { VerifySheet } from './sheets/VerifySheet';
 import { ScanSheet } from './ScanSheet';
+import { LogVisitSheet } from './sheets/LogVisitSheet';
 import { NotificationBell } from '../../components/NotificationBell';
 import { OfflineBar } from '../../components/OfflineBar';
 import { DutyToggle } from './DutyToggle';
@@ -86,6 +87,7 @@ function AgentPageInner() {
 
   const [tab, setTab] = useState<Tab>('overview');
   const [scanOpen, setScanOpen] = useState(false);
+  const [visitOpen, setVisitOpen] = useState(false);
   const [sheet, setSheet] = useState<SheetState>({ kind: null, orderId: null });
   const close = () => setSheet({ kind: null, orderId: null });
   const afterChange = () => {
@@ -264,6 +266,7 @@ function AgentPageInner() {
                 isVCO={isVCO}
                 field={field}
                 onNavigate={setTab}
+                onLogVisit={isVCO ? () => setVisitOpen(true) : undefined}
               />
             ) : tab === 'work' ? (
               <AgentTracking
@@ -324,6 +327,7 @@ function AgentPageInner() {
         />
       ) : null}
       <ScanSheet open={scanOpen} onClose={() => setScanOpen(false)} onScanned={onScanned} />
+      <LogVisitSheet open={visitOpen} onClose={() => setVisitOpen(false)} onLogged={field.reload} />
 
       {/* Order-action sheets */}
       <OrderViewSheet open={sheet.kind === 'view'} orderId={sheet.orderId} onClose={close} />

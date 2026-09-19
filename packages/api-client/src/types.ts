@@ -1047,6 +1047,8 @@ export interface OperationsDashboardResponse {
   quality: { pending_returns: number; rejected_returns: number; to_collect: number };
   payments: { pending_count: number; pending_amount: number; stale_count: number };
   farmers: { registered: number; active: number; pending_approval: number };
+  /** Field-visit activity in scope (migration 061 — the farmer-visit log). */
+  field: { visits_today: number; visits_this_month: number };
   /** Active delivery agents in scope — the route caps this at 20. */
   agents: OperationsAgent[];
   districts: OperationsDistrict[];
@@ -1114,6 +1116,44 @@ export interface OnDutyStaff {
   on_duty: number;
   vcos: number;
   agents: number;
+}
+
+/* ── Farmer field-visit log (migration 061) ──────────────────────────────────────
+ *
+ * A field staffer or manager records a visit to a farmer. Names + district are
+ * denormalised at log time so a list renders without joins and survives a rename. */
+/** The closed set of visit purposes — matches VISIT_PURPOSES in the backend route.
+ *  A value (for the picker's chips) with its type derived, so the two can't drift. */
+export const FARMER_VISIT_PURPOSES = [
+  'collection',
+  'onboarding',
+  'quality_check',
+  'grievance',
+  'payment',
+  'other',
+] as const;
+export type FarmerVisitPurpose = (typeof FARMER_VISIT_PURPOSES)[number];
+
+export interface FarmerVisit {
+  id: string;
+  farmer_id: string;
+  farmer_name: string | null;
+  visited_by: string | null;
+  visited_by_name: string | null;
+  purpose: FarmerVisitPurpose;
+  notes: string | null;
+  district: string | null;
+  visited_at: string;
+}
+
+/** A farmer as the visit picker needs them (GET /farmers, permission-scoped). */
+export interface FarmerLite {
+  id: string;
+  fname?: string | null;
+  lname?: string | null;
+  phone?: string | null;
+  village_town?: string | null;
+  district?: string | null;
 }
 
 /* ── Listing approvals (GET /listings/admin/pending, PATCH /listings/:id/status) ──

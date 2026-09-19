@@ -791,6 +791,29 @@
   box-shadow: none;
 }
 
+/* Secondary field action (VCO): log a farmer visit. An outline button so it reads as
+   a deliberate, occasional action, distinct from the primary confirm buttons. */
+.agent-visit-btn {
+  width: 100%;
+  margin-top: 12px;
+  background: var(--surface);
+  color: var(--forest);
+  border: 1.5px solid color-mix(in srgb, var(--forest) 40%, transparent);
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+.agent-visit-btn:hover {
+  background: color-mix(in srgb, var(--forest) 6%, var(--surface));
+}
+.agent-visit-btn:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 2px;
+}
+
 .a-input,
 .a-select {
   width: 100%;

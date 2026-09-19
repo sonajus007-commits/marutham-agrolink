@@ -75,6 +75,9 @@ import type {
   WishlistResponse,
   MyAttendanceResponse,
   AttendanceListResponse,
+  FarmerLite,
+  FarmerVisit,
+  FarmerVisitPurpose,
 } from './types';
 import type {
   Order,
@@ -994,6 +997,29 @@ export const api = {
       Object.entries(params).filter(([, v]) => v) as [string, string][],
     ).toString();
     return apiFetch<AttendanceListResponse>('GET', '/attendance' + (qs ? '?' + qs : ''));
+  },
+
+  // ── Farmer field-visit log (migration 061) ──
+  /** The farmers in the caller's area (farmer_management:view) — the visit picker. */
+  getFarmers(): Promise<{ farmers: FarmerLite[] }> {
+    return apiFetch<{ farmers: FarmerLite[] }>('GET', '/farmers');
+  },
+  /** Log a field visit to a farmer (farmer_management:create). */
+  logFarmerVisit(body: {
+    farmer_id: string;
+    purpose: FarmerVisitPurpose;
+    notes?: string;
+  }): Promise<{ visit: FarmerVisit }> {
+    return apiFetch<{ visit: FarmerVisit }>('POST', '/farmer-visits', body);
+  },
+  /** The area-scoped visit log (farmer_management:view). */
+  getFarmerVisits(
+    params: { farmer_id?: string; district?: string; limit?: number } = {},
+  ): Promise<{ visits: FarmerVisit[] }> {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null) as [string, string][],
+    ).toString();
+    return apiFetch<{ visits: FarmerVisit[] }>('GET', '/farmer-visits' + (qs ? '?' + qs : ''));
   },
 
   // ── Admin: broadcast announcement (A2) ──

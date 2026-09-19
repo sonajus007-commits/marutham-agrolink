@@ -607,8 +607,9 @@ const OPS_REGION_KEYS   = new Set(['regional_manager', 'state_head', 'zonal_mana
 
 // vco_attendance + agents_online are now real (on-duty staff, A5); hub_stock and
 // transfer_stock are inventory concepts that do not exist in a transit-only model.
-// farmer_visits remains a genuine future feature.
-const OPS_PLACEHOLDERS = ['farmer_visits'];
+// farmer_visits is now real too — the field-visit log (migration 061) feeds the
+// `field.visits_*` tiles below — so nothing operational is left as a placeholder.
+const OPS_PLACEHOLDERS = [];
 
 router.get('/operations', async (req, res) => {
   const u = req.user;
@@ -659,14 +660,15 @@ router.get('/operations', async (req, res) => {
   const inScopeDistrict = (d) => districtSet == null || districtSet.has(d);
 
   // ── Pull datasets ───────────────────────────────────────────────────────────
-  const [ordersR, usersR, listingsR, payoutsR, returnsR] = await Promise.all([
+  const [ordersR, usersR, listingsR, payoutsR, returnsR, visitsR] = await Promise.all([
     supabase.from('orders').select('id, total, status, cancelled, district, village, created_at, delivered_at, agent_id, agent_name'),
     supabase.from('users').select('id, role, admin_role, fname, lname, phone, agent_vehicle, district, status, approval_status').is('deleted_at', null),
     supabase.from('farmer_listings').select('farmer_id, listed, confirmed, updated_at'),
     supabase.from('payouts').select('farmer_id, amount, status, created_at'),
     supabase.from('returns').select('id, order_id, decision, collected'),
+    supabase.from('farmer_visits').select('district, visited_at'),
   ]);
-  const oErr = ordersR.error || usersR.error || listingsR.error || payoutsR.error || returnsR.error;
+  const oErr = ordersR.error || usersR.error || listingsR.error || payoutsR.error || returnsR.error || visitsR.error;
   if (oErr) return res.status(500).json({ error: 'Could not load operations dashboard.' });
 
   const allOrders = ordersR.data || [];
@@ -674,6 +676,7 @@ router.get('/operations', async (req, res) => {
   const listings  = listingsR.data || [];
   const payouts   = payoutsR.data  || [];
   const returns   = returnsR.data  || [];
+  const allVisits = visitsR.data   || [];
 
   const orders = allOrders.filter(o => inScopeDistrict(o.district));
   const active = orders.filter(o => !o.cancelled);
@@ -736,6 +739,17 @@ router.get('/operations', async (req, res) => {
     pending_approval: scopedFarmers.filter(f => f.approval_status === 'pending_review').length,
   };
 
+  // ── Field visits (migration 061) ────────────────────────────────────────────
+  // How much farmer-relationship work is happening on the ground, scoped to the
+  // same area as everything else on this dashboard. Was the `farmer_visits`
+  // placeholder; the log now feeds it.
+  const isThisMonth = ts => { if (!ts) return false; const p = istParts(ts); return p.y === nowIst.y && p.m === nowIst.m; };
+  const scopedVisits = allVisits.filter(v => inScopeDistrict(v.district));
+  const field = {
+    visits_today:      scopedVisits.filter(v => isToday(v.visited_at)).length,
+    visits_this_month: scopedVisits.filter(v => isThisMonth(v.visited_at)).length,
+  };
+
   // ── Per-district rollup (useful for region-scope view) ──────────────────────
   const distAgg = {};
   active.forEach(o => {
@@ -776,6 +790,7 @@ router.get('/operations', async (req, res) => {
     quality,
     payments,
     farmers,
+    field,
     agents: agents.slice(0, 20).map(a => ({ name: (a.fname || '') + (a.lname ? ' ' + a.lname : ''), phone: a.phone, vehicle: a.agent_vehicle, district: a.district })),
     districts,
     alerts,

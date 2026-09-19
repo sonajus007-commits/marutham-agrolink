@@ -377,6 +377,56 @@
         }
       }
     },
+    "farmer_visits": {
+      "columns": {
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "district": {
+          "type": "text",
+          "notNull": false
+        },
+        "farmer_id": {
+          "type": "uuid",
+          "notNull": true,
+          "references": "users.id"
+        },
+        "farmer_name": {
+          "type": "text",
+          "notNull": false
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "notes": {
+          "type": "text",
+          "notNull": false
+        },
+        "purpose": {
+          "type": "text",
+          "notNull": true
+        },
+        "visited_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "visited_by": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "visited_by_name": {
+          "type": "text",
+          "notNull": false
+        }
+      }
+    },
     "hubs": {
       "columns": {
         "country": {

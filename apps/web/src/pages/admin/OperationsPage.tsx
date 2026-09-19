@@ -410,6 +410,15 @@ export function OperationsPage() {
                 (data?.farmers.pending_approval ?? 0) > 0 ? semantic.light.warning : undefined
               }
             />
+            <StatTile
+              label={t('admin.ops.farmers.visitsThisMonth', 'Visits this month')}
+              value={fmtNum(data?.field?.visits_this_month ?? 0)}
+              accent={semantic.light.success}
+            />
+            <StatTile
+              label={t('admin.ops.farmers.visitsToday', 'Visits today')}
+              value={fmtNum(data?.field?.visits_today ?? 0)}
+            />
           </div>
         </ChartContainer>
 
