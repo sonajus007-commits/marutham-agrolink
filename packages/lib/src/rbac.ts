@@ -13,6 +13,7 @@ export interface PermUser {
     adminhead?: boolean;
     hub?: boolean;
     finance?: boolean;
+    category?: boolean;
   } | null;
   role_key?: string | null;
 }
@@ -37,7 +38,7 @@ export function scopeFor(user: PermUser | null | undefined, module: string): str
 /** Whether a composite dashboard is open to this user (server-computed flags). */
 export function canSeeDashboard(
   user: PermUser | null | undefined,
-  which: 'executive' | 'operations' | 'adminhead' | 'hub' | 'finance',
+  which: 'executive' | 'operations' | 'adminhead' | 'hub' | 'finance' | 'category',
 ): boolean {
   return !!user?.dashboards?.[which];
 }

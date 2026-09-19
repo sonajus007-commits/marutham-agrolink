@@ -1323,4 +1323,54 @@ router.get('/finance', async (req, res) => {
   });
 });
 
+// ── GET /dashboard/category ── the Category role home (catalogue + review queues) ──
+// The Category Manager owns the fixed product catalogue company-wide. This is their
+// at-a-glance home: how big the catalogue is and by group, plus the two queues they
+// act on — sellers' off-catalogue product requests and their listing approvals. Gated
+// on the `category` composite-dashboard flag (Category role + the exec tier). The
+// catalogue is global, so there is no geo scope. NB: no count field is named `total`
+// — that key is coerced to a rupee string by the money middleware.
+router.get('/category', async (req, res) => {
+  const u = req.user;
+  if (!u.dashboards || u.dashboards.category !== true) {
+    return res.status(403).json({ error: 'Category dashboard is restricted to the category and executive roles.' });
+  }
+
+  const [productsR, listingsR, requestsR] = await Promise.all([
+    supabase.from('products').select('product_group, available'),
+    supabase.from('farmer_listings').select('listing_status'),
+    supabase.from('product_requests').select('status'),
+  ]);
+  if (productsR.error || listingsR.error || requestsR.error) {
+    return res.status(500).json({ error: 'Could not load the category dashboard.' });
+  }
+
+  const products = productsR.data || [];
+  const listings = listingsR.data || [];
+  const requests = requestsR.data || [];
+
+  const groupAgg = {};
+  products.forEach(p => { const g = p.product_group || 'Uncategorised'; groupAgg[g] = (groupAgg[g] || 0) + 1; });
+  const by_group = Object.entries(groupAgg)
+    .map(([group, count]) => ({ group, count }))
+    .sort((a, b) => b.count - a.count);
+
+  res.json({
+    generated_at: new Date().toISOString(),
+    catalogue: {
+      count:     products.length,
+      available: products.filter(p => p.available !== false).length,
+      groups:    by_group.length,
+      by_group,
+    },
+    listings: {
+      active:  listings.filter(l => l.listing_status === 'active').length,
+      pending: listings.filter(l => l.listing_status === 'pending').length,
+    },
+    requests: {
+      pending: requests.filter(r => r.status === 'pending').length,
+    },
+  });
+});
+
 module.exports = router;

@@ -210,4 +210,55 @@ describe('GET /dashboard/hub', () => {
     const res = await app.get('/finance');
     assert.equal(res.status, 403);
   });
+
+  // ── GET /dashboard/category (Phase 4 — the Category role home) ─────────────────
+  test('category dashboard rolls up the catalogue and the review queues', async () => {
+    const supa = fakeSupabase({
+      'products:select': {
+        data: [
+          { product_group: 'Vegetables', available: true },
+          { product_group: 'Vegetables', available: true },
+          { product_group: 'Fruits', available: false },
+        ],
+      },
+      'farmer_listings:select': {
+        data: [
+          { listing_status: 'active' },
+          { listing_status: 'active' },
+          { listing_status: 'pending' },
+          { listing_status: 'rejected' },
+        ],
+      },
+      'product_requests:select': {
+        data: [{ status: 'pending' }, { status: 'approved' }],
+      },
+    });
+    app = await mountRoute('dashboard', {
+      supabase: supa,
+      user: { id: 'cat1', role: 'admin', role_key: 'category', admin_role: 'Category Manager', dashboards: { category: true } },
+    });
+
+    const res = await app.get('/category');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.catalogue.count, 3);
+    assert.equal(res.body.catalogue.available, 2); // the unavailable Fruits row is excluded
+    assert.equal(res.body.catalogue.groups, 2);
+    // by_group is ranked, biggest first
+    assert.equal(res.body.catalogue.by_group[0].group, 'Vegetables');
+    assert.equal(res.body.catalogue.by_group[0].count, 2);
+    assert.equal(res.body.listings.active, 2);
+    assert.equal(res.body.listings.pending, 1);
+    assert.equal(res.body.requests.pending, 1);
+    assert.equal(res.body.catalogue.total, undefined, 'no money-named `total` key');
+  });
+
+  test('category dashboard 403s a role without the category flag', async () => {
+    const supa = fakeSupabase({ 'products:select': { data: [] }, 'farmer_listings:select': { data: [] }, 'product_requests:select': { data: [] } });
+    app = await mountRoute('dashboard', {
+      supabase: supa,
+      user: { id: 'v1', role: 'admin', role_key: 'vco', admin_role: 'VCO', dashboards: {} },
+    });
+    const res = await app.get('/category');
+    assert.equal(res.status, 403);
+  });
 });

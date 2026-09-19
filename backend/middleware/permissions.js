@@ -150,6 +150,9 @@ function dashboardsFor(user, perms, roleKey) {
     // exec tier who already see it on the board dashboard. NOT the geo-scoped managers
     // who merely carry payments:view — this is a company-wide cut.
     finance: roleKey === 'finance' || executive,
+    // The (global, non-geo) product catalogue home (Phase 4): the Category Manager,
+    // plus the exec tier. The catalogue is company-wide, so no geo scope applies.
+    category: roleKey === 'category' || executive,
   };
 }
 

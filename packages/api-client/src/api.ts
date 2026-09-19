@@ -37,6 +37,7 @@ import type {
   ExecutiveTrendMode,
   OperationsDashboardResponse,
   FinanceDashboardResponse,
+  CategoryDashboardResponse,
   AdminHeadDashboardResponse,
   HubDashboardResponse,
   AccountStatus,
@@ -649,6 +650,11 @@ export const api = {
    *  not a P&L). 403s unless the caller has the `finance` dashboard flag. */
   getFinanceDashboard(): Promise<FinanceDashboardResponse> {
     return apiFetch<FinanceDashboardResponse>('GET', '/dashboard/finance');
+  },
+  /** The Category role home — catalogue size + review queues. 403s unless the caller
+   *  has the `category` dashboard flag. */
+  getCategoryDashboard(): Promise<CategoryDashboardResponse> {
+    return apiFetch<CategoryDashboardResponse>('GET', '/dashboard/category');
   },
   /** The Head Office control panel — employees, approvals, staff, audit activity.
    *  403s outside ADMINHEAD_ROLES (Head Office / Technical Admin / HR Admin / HR

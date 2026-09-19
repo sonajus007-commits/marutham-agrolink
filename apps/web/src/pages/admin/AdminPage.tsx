@@ -23,6 +23,7 @@ import { ExecutivePage } from './ExecutivePage';
 import { OperationsPage } from './OperationsPage';
 import { AdminHeadPage } from './AdminHeadPage';
 import { FinanceHomePage } from './FinanceHomePage';
+import { CategoryHomePage } from './CategoryHomePage';
 import { OrdersPage } from './OrdersPage';
 import { ReturnsPage } from './ReturnsPage';
 import { PayoutsPage } from './PayoutsPage';
@@ -204,6 +205,7 @@ export function AdminPage() {
               <Route path="operations" element={<OperationsPage />} />
               <Route path="adminhead" element={<AdminHeadPage />} />
               <Route path="finance" element={<FinanceHomePage />} />
+              <Route path="category" element={<CategoryHomePage />} />
               <Route path="orders" element={<OrdersPage />} />
               <Route path="returns" element={<ReturnsPage />} />
               <Route path="payouts" element={<PayoutsPage />} />

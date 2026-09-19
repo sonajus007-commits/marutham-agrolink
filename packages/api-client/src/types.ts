@@ -37,6 +37,8 @@ export interface DashboardAccess {
   hub: boolean;
   /** Company-wide money movement — the Finance role + the executive tier (Phase 4). */
   finance?: boolean;
+  /** Product-catalogue home — the Category role + the executive tier (Phase 4). */
+  category?: boolean;
 }
 
 export interface User {
@@ -1078,6 +1080,23 @@ export interface FinanceDashboardResponse {
   };
   gmv: { today: number; month: number };
   payouts_aging: { pending_count: number; stale_count: number };
+}
+
+/* ── Category role home (GET /dashboard/category, Phase 4) ─────────────────────────
+ *
+ * The Category Manager's at-a-glance catalogue overview + the two review queues they
+ * act on. Counts only — no money. `catalogue.count` is deliberately not `total` (a
+ * money-middleware field name). */
+export interface CategoryDashboardResponse {
+  generated_at: string;
+  catalogue: {
+    count: number;
+    available: number;
+    groups: number;
+    by_group: { group: string; count: number }[];
+  };
+  listings: { active: number; pending: number };
+  requests: { pending: number };
 }
 
 /* ── Per-hub in/out attribution (GET /dashboard/hub, Hub Management Phase 3) ──────
