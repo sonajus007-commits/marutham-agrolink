@@ -85,6 +85,7 @@ const wishlistRouter = require('./routes/wishlist');
 const reportsRouter = require('./routes/reports');
 const attendanceRouter = require('./routes/attendance');
 const farmerVisitsRouter = require('./routes/farmerVisits');
+const expensesRouter = require('./routes/expenses');
 const rolesRouter         = require('./routes/roles');
 const hubsRouter          = require('./routes/hubs');
 
@@ -127,6 +128,7 @@ api.use('/wishlist', wishlistRouter);
 api.use('/reports', reportsRouter);
 api.use('/attendance', attendanceRouter);
 api.use('/farmer-visits', farmerVisitsRouter);
+api.use('/expenses',      expensesRouter);
 api.use('/roles',         rolesRouter);
 api.use('/hubs',          hubsRouter);
 

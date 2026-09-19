@@ -561,6 +561,52 @@ export function ExecutivePage() {
         </ChartContainer>
       </div>
 
+      {/* ── Profit & loss (this month, from the expense ledger — mig 062) ──────
+          Null when the dashboard is geo-filtered (company-wide expenses vs district
+          revenue would mislead), so the section only shows on the company view. */}
+      {data?.pnl ? (
+        <ChartContainer
+          title={t('admin.exec.pnl.title', 'Profit & loss (this month)')}
+          height="auto"
+        >
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <StatTile
+              label={t('admin.exec.pnl.revenue', 'Revenue')}
+              value={fmtMoney(data.pnl.revenue)}
+              accent={semantic.light.success}
+            />
+            <StatTile
+              label={t('admin.exec.pnl.expenses', 'Expenses')}
+              value={fmtMoney(data.pnl.expenses_total)}
+            />
+            <StatTile
+              label={t('admin.exec.pnl.ebitda', 'EBITDA')}
+              value={fmtMoney(data.pnl.ebitda)}
+              accent={data.pnl.ebitda < 0 ? 'var(--danger)' : semantic.light.success}
+            />
+            <StatTile
+              label={t('admin.exec.pnl.netProfit', 'Net profit')}
+              value={fmtMoney(data.pnl.net_profit)}
+              accent={data.pnl.net_profit < 0 ? 'var(--danger)' : semantic.light.success}
+            />
+            <StatTile
+              label={t('admin.exec.pnl.gst', 'GST collected')}
+              value={fmtMoney(data.pnl.gst_collected)}
+            />
+            <StatTile
+              label={t('admin.exec.pnl.salary', 'Salary cost')}
+              value={fmtMoney(data.pnl.by_category.salary ?? 0)}
+            />
+          </div>
+          <p className="mt-2 text-2xs leading-normal text-fg-muted">
+            {t(
+              'admin.exec.pnl.note',
+              'EBITDA excludes tax/interest/depreciation; net profit is after them. GST is collected (output tax), not net liability. Recorded via the Finance expense ledger.',
+            )}
+          </p>
+        </ChartContainer>
+      ) : null}
+
       {/* ── Support desk — open + escalated complaints (live from the support desk) ── */}
       <ChartContainer title={t('admin.exec.support.title', 'Customer support')} height="auto">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

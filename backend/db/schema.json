@@ -287,6 +287,51 @@
         }
       }
     },
+    "expenses": {
+      "columns": {
+        "amount": {
+          "type": "bigint",
+          "notNull": true
+        },
+        "category": {
+          "type": "text",
+          "notNull": true
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "created_by_name": {
+          "type": "text",
+          "notNull": false
+        },
+        "id": {
+          "type": "uuid",
+          "notNull": true,
+          "default": "gen_random_uuid()",
+          "primaryKey": true
+        },
+        "incurred_on": {
+          "type": "date",
+          "notNull": true,
+          "default": "((now() AT TIME ZONE 'utc'::text))"
+        },
+        "note": {
+          "type": "text",
+          "notNull": false
+        },
+        "vendor": {
+          "type": "text",
+          "notNull": false
+        }
+      }
+    },
     "farmer_listings": {
       "columns": {
         "bulk_disc_pct": {

@@ -981,6 +981,9 @@ export interface ExecutiveDashboardResponse {
     /** Cash still to be collected: active orders not yet marked paid. */
     receivables: number;
   };
+  /** Monthly P&L from the expense ledger (migration 062). Null when the dashboard is
+   *  geo-filtered — company-wide expenses vs district revenue would be nonsense. */
+  pnl: MonthlyPnl | null;
   /** Support desk snapshot (company-wide). `escalated` = open/in-progress past the SLA window. */
   support: { open: number; in_progress: number; escalated: number };
   districts: ExecutiveDistrict[];
@@ -1078,8 +1081,71 @@ export interface FinanceDashboardResponse {
     settlement_today: number;
     receivables: number;
   };
+  /** Monthly P&L from the expense ledger (migration 062). Amounts in RUPEES. */
+  pnl: MonthlyPnl;
   gmv: { today: number; month: number };
   payouts_aging: { pending_count: number; stale_count: number };
+}
+
+/* ── Monthly P&L (expense ledger, migration 062) ──────────────────────────────────
+ *
+ * Revenue booked this month vs expenses recorded this month. EBITDA excludes the
+ * below-the-line categories (tax/interest/depreciation); net profit is after them.
+ * All amounts RUPEES. NOT a compliance figure — GST is collected (output tax), not net
+ * liability, and there is no cash-flow statement. */
+export interface MonthlyPnl {
+  period: 'month';
+  revenue: number;
+  commission: number;
+  delivery_income: number;
+  subscription: number;
+  gst_collected: number;
+  expenses_total: number;
+  operating_expenses: number;
+  ebitda: number;
+  net_profit: number;
+  by_category: Record<string, number>;
+}
+
+/** The closed set of expense categories — matches EXPENSE_CATEGORIES on the backend. */
+export const EXPENSE_CATEGORIES = [
+  'salary',
+  'hub',
+  'fuel',
+  'vehicle',
+  'packaging',
+  'marketing',
+  'tech',
+  'office',
+  'tax',
+  'interest',
+  'depreciation',
+  'other',
+] as const;
+export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+
+export interface Expense {
+  id: string;
+  category: ExpenseCategory;
+  /** RUPEES (money middleware converts the stored paise). */
+  amount: string | number;
+  incurred_on: string;
+  vendor: string | null;
+  note: string | null;
+  created_by_name: string | null;
+  created_at: string;
+}
+
+export interface ExpenseListResponse {
+  month: string;
+  expenses: Expense[];
+  /** Rupee totals under money-safe keys (`spent`, not `total`). */
+  summary: {
+    spent: number;
+    operating: number;
+    below_line: number;
+    by_category: Record<string, number>;
+  };
 }
 
 /* ── Category role home (GET /dashboard/category, Phase 4) ─────────────────────────

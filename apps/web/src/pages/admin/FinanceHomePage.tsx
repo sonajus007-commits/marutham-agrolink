@@ -5,6 +5,7 @@ import { Button, ChartContainer, StatTile } from '@marutham/ui';
 import { api, type FinanceDashboardResponse } from '@marutham/api-client';
 import { semantic, colors } from '@marutham/tokens';
 import { fmtMoney, fmtNum } from '@marutham/lib';
+import { ExpensesPanel } from './ExpensesPanel';
 
 /**
  * The Finance role home (GET /dashboard/finance, Phase 4).
@@ -146,10 +147,13 @@ export function FinanceHomePage() {
         </div>
       </ChartContainer>
 
+      {/* ── Profit & loss + the expense ledger (migration 062) ─────────────── */}
+      <ExpensesPanel pnl={data?.pnl ?? null} onChanged={load} />
+
       <p className="text-2xs leading-normal text-fg-muted">
         {t(
           'admin.finance.ledgerNote',
-          'These figures are actual platform money movement. A full P&L (net profit, EBITDA, cash flow, GST/TDS liability) needs a dedicated accounting ledger and is not shown here.',
+          'Operational figures, not a filed statement. A cash-flow statement and net GST/TDS liability need a dedicated accounting package; this is revenue and recorded expenses.',
         )}
       </p>
     </div>

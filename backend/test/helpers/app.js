@@ -188,6 +188,7 @@ async function mountRoute(routeModule, { supabase, user = null }) {
     get:   (p)       => request('GET', p),
     post:  (p, body) => request('POST', p, body),
     patch: (p, body) => request('PATCH', p, body),
+    delete: (p)      => request('DELETE', p),
     close: () => new Promise((resolve) => server.close(resolve)),
   };
 }

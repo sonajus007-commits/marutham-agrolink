@@ -38,6 +38,9 @@ import type {
   OperationsDashboardResponse,
   FinanceDashboardResponse,
   CategoryDashboardResponse,
+  Expense,
+  ExpenseCategory,
+  ExpenseListResponse,
   AdminHeadDashboardResponse,
   HubDashboardResponse,
   AccountStatus,
@@ -655,6 +658,26 @@ export const api = {
    *  has the `category` dashboard flag. */
   getCategoryDashboard(): Promise<CategoryDashboardResponse> {
     return apiFetch<CategoryDashboardResponse>('GET', '/dashboard/category');
+  },
+
+  // ── Operating-expense ledger (migration 062) ──
+  /** The month's expenses + summary (payments:view). ?month=YYYY-MM defaults to now. */
+  getExpenses(month?: string): Promise<ExpenseListResponse> {
+    return apiFetch<ExpenseListResponse>('GET', '/expenses' + (month ? `?month=${month}` : ''));
+  },
+  /** Record an expense (payments:create). `amount` is in RUPEES. */
+  logExpense(body: {
+    category: ExpenseCategory;
+    amount: number;
+    incurred_on?: string;
+    vendor?: string;
+    note?: string;
+  }): Promise<{ expense: Expense }> {
+    return apiFetch<{ expense: Expense }>('POST', '/expenses', body);
+  },
+  /** Delete a mistaken expense (payments:delete). */
+  deleteExpense(id: string): Promise<{ ok: boolean }> {
+    return apiFetch<{ ok: boolean }>('DELETE', `/expenses/${id}`);
   },
   /** The Head Office control panel — employees, approvals, staff, audit activity.
    *  403s outside ADMINHEAD_ROLES (Head Office / Technical Admin / HR Admin / HR

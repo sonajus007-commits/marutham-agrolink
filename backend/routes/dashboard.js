@@ -2,6 +2,8 @@ const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { can } = require('../middleware/permissions');
+const { expenseSummary } = require('../utils/expenses');
+const platformConfig = require('../config/platform');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -234,17 +236,16 @@ router.get('/', async (req, res) => {
 // Query params: ?trend=monthly|quarterly|yearly  (default monthly)
 // ═══════════════════════════════════════════════════════════════════════════════
 // Tiles with no data source yet — the UI greys these out as "Needs integration".
-// The tiles still without a data source. Trimmed in Phase 3 as real feeds landed:
-// `payables` (→ financial.payouts_pending), `daily_settlement` (→ financial.settlement_today),
-// `receivables` (→ financial.receivables, from unpaid orders), and `customer_complaints`
-// (→ support.open, from the support desk) are now LIVE, so they leave this list. What
-// remains genuinely needs an accounting/ledger the platform does not yet keep.
+// Trimmed hard as real feeds landed. NOW LIVE (left this list): payables/daily_settlement/
+// receivables/customer_complaints (Phase-3 Slice 1); and via the expense ledger (mig 062):
+// net_profit, ebitda, salary_cost, hub_cost, fuel_cost, plus gst (collected on platform
+// charges). RETIRED as never-applicable or out of scope (removed, not deferred):
+// warehouse_cost + stock_shortage (transit-only, no stock); cash_flow (profit ≠ cash —
+// needs a real cash-flow statement); bank_balance (needs an opening balance + bank feed,
+// not a P&L output); tds (needs vendor-level TDS tracking). What remains are genuine
+// FUTURE features with a clear path, not accounting gaps.
 const EXEC_PLACEHOLDERS = [
-  'net_profit', 'ebitda', 'cash_flow', 'revenue_forecast',
-  'gst', 'tds', 'bank_balance',
-  'salary_cost', 'warehouse_cost', 'hub_cost',
-  'vehicle_utilization', 'fuel_cost',
-  'farmer_satisfaction', 'hub_issues', 'stock_shortage',
+  'revenue_forecast', 'vehicle_utilization', 'farmer_satisfaction', 'hub_issues',
 ];
 
 // paise (int) → rupees (number, 2 dp). Named fields avoid the money middleware.
@@ -288,6 +289,45 @@ function financialCuts({ active, payouts, subActive, nowIst }) {
     settlement_today:    rup(payouts.filter(p => p.status === 'paid' && p.paid_at && sameDay(istParts(p.paid_at))).reduce((s, p) => s + p.amount, 0)),
     // Receivables — cash still to be collected: active orders not yet marked paid.
     receivables:         rup(active.filter(o => o.pay_status !== 'paid').reduce((s, o) => s + o.total, 0)),
+  };
+}
+
+// Monthly P&L from real data + the expense ledger (mig 062). Deliberately MONTHLY so
+// revenue and expenses cover the SAME period (all-time revenue vs one month of expenses
+// would be nonsense). Revenue = the platform's income booked this month: commission +
+// delivery on this month's orders + subscription payments received this month. GST
+// collected = output tax inside this month's platform SERVICE charges (handling +
+// delivery + multi-seller fee), charged inclusive at serviceGst% → tax = C×rate/(100+rate);
+// produce + the commission margin are GST-exempt. EBITDA excludes below-the-line expense
+// categories (tax/interest/depreciation); net profit is after all of them. Everything is
+// summed in PAISE and rup()'d once, so there is no float drift. NOT a compliance figure:
+// GST here is collected, not net liability; there is no cash-flow statement.
+function monthlyPnl({ monthActive, monthSubs, expenses }) {
+  const rate = Number(platformConfig.serviceGst || 0);
+  const gstFactor = rate > 0 ? rate / (100 + rate) : 0;
+  let commission = 0, delivery = 0, svc = 0;
+  for (const o of monthActive || []) {
+    commission += Number(o.market_fee || 0);
+    delivery   += Number(o.delivery || 0);
+    const residual = Number(o.total || 0) - Number(o.item_total || 0) - Number(o.handling || 0) - Number(o.delivery || 0);
+    svc += Number(o.handling || 0) + Number(o.delivery || 0) + (residual > 0.5 ? residual : 0);
+  }
+  const subscription = (monthSubs || []).reduce((s, p) => s + Number(p.total_amount || 0), 0);
+  const es = expenseSummary(expenses || []);
+  const revenue = commission + delivery + subscription; // paise
+  return {
+    period:             'month',
+    revenue:            rup(revenue),
+    commission:         rup(commission),
+    // NOT `delivery` — that is a money-middleware field name and would be re-coerced.
+    delivery_income:    rup(delivery),
+    subscription:       rup(subscription),
+    gst_collected:      rup(Math.round(svc * gstFactor)),
+    expenses_total:     rup(es.total),
+    operating_expenses: rup(es.operating),
+    ebitda:             rup(revenue - es.operating),
+    net_profit:         rup(revenue - es.total),
+    by_category:        Object.fromEntries(Object.entries(es.by_category).map(([k, v]) => [k, rup(v)])),
   };
 }
 
@@ -385,7 +425,7 @@ router.get('/executive', async (req, res) => {
   const [
     ordersR, itemsR, productsR, usersR, listingsR, payoutsR, returnsR,
   ] = await Promise.all([
-    supabase.from('orders').select('id, total, item_total, market_fee, delivery, status, cancelled, pay_status, district, created_at, delivered_at, picked_up_at, eta_ts, consumer_id, refund_amt'),
+    supabase.from('orders').select('id, total, item_total, market_fee, handling, delivery, status, cancelled, pay_status, district, created_at, delivered_at, picked_up_at, eta_ts, consumer_id, refund_amt'),
     supabase.from('order_items').select('order_id, product_id, qty, price, farmer_id, farmer_name, rated, rating_value'),
     supabase.from('products').select('id, category, product_group'),
     supabase.from('users').select('id, role, created_at, district, status, subscription_amount, subscription_expires_at').is('deleted_at', null),
@@ -521,6 +561,22 @@ router.get('/executive', async (req, res) => {
   const subActive = farmers.filter(f => f.subscription_expires_at && new Date(f.subscription_expires_at) > new Date(nowIst.date.getTime() - IST_MS));
   const financial = financialCuts({ active, payouts, subActive, nowIst });
 
+  // Monthly P&L (mig 062) — ONLY on the unscoped company view. A district drill-down
+  // shows district revenue, but expenses are company-wide, so a per-district profit
+  // would be nonsense; the tiles stay "needs company view" when filtered.
+  let pnl = null;
+  if (noGeo) {
+    const monthStart = `${nowIst.y}-${String(nowIst.m + 1).padStart(2, '0')}-01`;
+    const [expR, subR] = await Promise.all([
+      supabase.from('expenses').select('category, amount').gte('incurred_on', monthStart),
+      supabase.from('subscription_payments').select('total_amount, paid_at').gte('paid_at', monthStart),
+    ]);
+    if (!expR.error && !subR.error) {
+      const monthActive = active.filter(o => isThisMonth(istParts(o.created_at)));
+      pnl = monthlyPnl({ monthActive, monthSubs: subR.data || [], expenses: expR.data || [] });
+    }
+  }
+
   // ── Districts (map + ranking): green/amber/red vs peak revenue ──────────────
   const maxDistRev = Math.max(1, ...Object.values(districtAgg).map(d => d.revenue));
   const districts = Object.entries(districtAgg)
@@ -587,6 +643,8 @@ router.get('/executive', async (req, res) => {
     categories,
     logistics,
     financial,
+    // Monthly P&L from the expense ledger (mig 062) — null when geo-filtered.
+    pnl,
     support,
     districts,
     trend: { mode: trendMode, points: trend },
@@ -1284,12 +1342,16 @@ router.get('/finance', async (req, res) => {
     return res.status(403).json({ error: 'Finance dashboard is restricted to the finance and executive roles.' });
   }
 
-  const [ordersR, payoutsR, usersR] = await Promise.all([
-    supabase.from('orders').select('total, market_fee, delivery, cancelled, pay_status, status, created_at'),
+  const nowIst  = istParts(Date.now());
+  const monthStart = `${nowIst.y}-${String(nowIst.m + 1).padStart(2, '0')}-01`;
+  const [ordersR, payoutsR, usersR, expR, subR] = await Promise.all([
+    supabase.from('orders').select('total, item_total, market_fee, handling, delivery, cancelled, pay_status, status, created_at'),
     supabase.from('payouts').select('amount, status, created_at, paid_at'),
     supabase.from('users').select('role, subscription_amount, subscription_expires_at').is('deleted_at', null),
+    supabase.from('expenses').select('category, amount').gte('incurred_on', monthStart),
+    supabase.from('subscription_payments').select('total_amount, paid_at').gte('paid_at', monthStart),
   ]);
-  if (ordersR.error || payoutsR.error || usersR.error) {
+  if (ordersR.error || payoutsR.error || usersR.error || expR.error || subR.error) {
     return res.status(500).json({ error: 'Could not load the finance dashboard.' });
   }
 
@@ -1297,19 +1359,22 @@ router.get('/finance', async (req, res) => {
   const payouts = payoutsR.data || [];
   const farmers = (usersR.data || []).filter(x => x.role === 'farmer');
   const active  = orders.filter(o => !o.cancelled);
-  const nowIst  = istParts(Date.now());
   const subActive = farmers.filter(f => f.subscription_expires_at && new Date(f.subscription_expires_at) > new Date(nowIst.date.getTime() - IST_MS));
 
   const financial = financialCuts({ active, payouts, subActive, nowIst });
 
   const isToday     = ts => { if (!ts) return false; const p = istParts(ts); return p.y === nowIst.y && p.m === nowIst.m && p.day === nowIst.day; };
   const isThisMonth = ts => { if (!ts) return false; const p = istParts(ts); return p.y === nowIst.y && p.m === nowIst.m; };
+  const monthActive = active.filter(o => isThisMonth(o.created_at));
+  const pnl = monthlyPnl({ monthActive, monthSubs: subR.data || [], expenses: expR.data || [] });
   const weekAgo = Date.now() - 7 * 86400000;
   const pending = payouts.filter(p => p.status === 'pending');
 
   res.json({
     generated_at: new Date().toISOString(),
     financial,
+    // Monthly P&L from the expense ledger (mig 062).
+    pnl,
     // Gross merchandise value flowing through the platform (order totals).
     gmv: {
       today: rup(active.filter(o => isToday(o.created_at)).reduce((s, o) => s + o.total, 0)),
