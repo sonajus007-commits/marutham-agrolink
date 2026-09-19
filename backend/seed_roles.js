@@ -21,9 +21,16 @@ const ROLE_PREFIXES = {
   'Regional Manager': 'RM',
   'State Head':       'SH',
   'Head Office':      'HO',
+  'Finance Manager':  'FN',
+  'Support Agent':    'SP',
+  'Category Manager': 'CT',
 };
 
-const STATE_LEVEL_ROLES = new Set(['Regional Manager', 'State Head', 'Head Office']);
+const STATE_LEVEL_ROLES = new Set([
+  'Regional Manager', 'State Head', 'Head Office',
+  // Head-office functional specialists are company-wide, not district-scoped.
+  'Finance Manager', 'Support Agent', 'Category Manager',
+]);
 
 function toAlphaCounter(n) {
   const letter = String.fromCharCode(64 + Math.ceil(n / 99));
@@ -76,6 +83,11 @@ const USERS = [
   { role: 'admin',     adminRole: 'Regional Manager', fname: 'Deepa',    lname: 'N',  phone: '9811100007' },
   { role: 'admin',     adminRole: 'State Head',       fname: 'Senthil',  lname: 'A',  phone: '9811100008' },
   { role: 'admin',     adminRole: 'Head Office',      fname: 'Lakshmi',  lname: 'T',  phone: '9811100009' },
+  // Head-office functional specialists (Phase 4). role_id is backfilled by
+  // seed_rbac.js from admin_role → finance / support / category.
+  { role: 'admin',     adminRole: 'Finance Manager',  fname: 'Bhavani',  lname: 'R',  phone: '9811100011' },
+  { role: 'admin',     adminRole: 'Support Agent',    fname: 'Karthik',  lname: 'S',  phone: '9811100012' },
+  { role: 'admin',     adminRole: 'Category Manager', fname: 'Divya',    lname: 'L',  phone: '9811100013' },
 ];
 
 async function seed() {

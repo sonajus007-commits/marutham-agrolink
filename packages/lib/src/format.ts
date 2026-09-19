@@ -241,6 +241,9 @@ const ADMIN_ROLE_KEYS: Record<string, string> = {
   'Hub Incharge': 'adminRole.hubIncharge',
   'Delivery Agent': 'adminRole.deliveryAgent',
   VCO: 'adminRole.vco',
+  'Finance Manager': 'adminRole.finance',
+  'Support Agent': 'adminRole.support',
+  'Category Manager': 'adminRole.category',
 };
 
 /** The i18n key for a user role, or the role itself when it has none. */

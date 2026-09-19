@@ -70,6 +70,11 @@ const HOME_BY_ROLE_KEY: Record<string, string> = {
   hub_incharge: '/admin/hub',
   technical_head: '/admin/adminhead',
   hr: '/admin/adminhead',
+  // Functional specialists land on the section they own (Phase 4). Each has the
+  // permission the route requires, so the landing never bounces to a locked page.
+  finance: '/admin/payouts',
+  support: '/admin/support',
+  category: '/admin/products',
   admin: '/admin',
 };
 

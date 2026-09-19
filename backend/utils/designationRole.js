@@ -24,6 +24,15 @@ const DESIGNATION_TO_ROLE = {
   'District Manager':        'District Manager',
   'Regional Manager':        'Regional Manager',
   'State Head':              'State Head',
+  // Head-office functional specialists (Phase 4). The admin_role strings here are
+  // keys in config/rbac.js ADMIN_ROLE_TO_ROLE, which resolves them to the finance /
+  // support / category role_key — so an employee given one of these designations
+  // gets the matching least-privilege login role, and the edit flow keeps it in sync.
+  'Finance Manager':         'Finance Manager',
+  'Finance Executive':       'Finance Executive',
+  'Support Executive':       'Support Executive',
+  'Support Agent':           'Support Agent',
+  'Category Manager':        'Category Manager',
 };
 
 // Resolve a designation to a login role ONLY when it maps to a distinct one; returns

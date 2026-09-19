@@ -338,6 +338,9 @@ export const resources = {
       'adminRole.hubIncharge': 'Hub Incharge',
       'adminRole.deliveryAgent': 'Delivery Agent',
       'adminRole.vco': 'VCO',
+      'adminRole.finance': 'Finance Manager',
+      'adminRole.support': 'Support Agent',
+      'adminRole.category': 'Category Manager',
 
       // ── Dashboard alerts. `type` is the code; the server's English `message` is the
       //    default, so a type with no key here still says something true. ──
@@ -2609,6 +2612,9 @@ export const resources = {
       'adminRole.hubIncharge': 'மைய பொறுப்பாளர்',
       'adminRole.deliveryAgent': 'வழங்கல் முகவர்',
       'adminRole.vco': 'VCO',
+      'adminRole.finance': 'நிதி மேலாளர்',
+      'adminRole.support': 'ஆதரவு முகவர்',
+      'adminRole.category': 'வகை மேலாளர்',
 
       // ── Dashboard alerts. `type` is the code; the server's English `message` is the
       //    default, so a type with no key here still says something true. ──

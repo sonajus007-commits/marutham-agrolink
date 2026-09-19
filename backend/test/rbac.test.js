@@ -14,7 +14,7 @@ const scope = (role, mod) => cell(role, mod).scope;
 test('matrix is complete: every role × module resolves', () => {
   const rows = rbac.resolveMatrix();
   assert.equal(rows.length, rbac.ROLE_KEYS.length * rbac.MODULE_KEYS.length);
-  assert.equal(rbac.ROLE_KEYS.length, 12);
+  assert.equal(rbac.ROLE_KEYS.length, 15);
   assert.equal(rbac.MODULE_KEYS.length, 32);
 });
 
@@ -94,12 +94,39 @@ test('State Head = Zonal Manager plus Settlement approval', () => {
   assert.ok(!cell('zonal_manager', 'settlement_sellers').actions.includes('approve'));
 });
 
-test('only the tiered managers + admin can approve product listings', () => {
+test('the tiered managers + admin + the Category Manager can approve product listings', () => {
+  // Category Manager owns the catalogue (product_approval full), so it is a product
+  // approver alongside the operational tiers. No one else outside this set is.
   const approvers = rbac.ROLE_KEYS.filter((r) => cell(r, 'product_approval').actions.includes('approve'));
   assert.deepEqual(
     approvers.sort(),
-    ['admin', 'district_manager', 'hub_manager', 'hub_incharge', 'regional_manager', 'state_head', 'zonal_manager'].sort()
+    ['admin', 'category', 'district_manager', 'hub_manager', 'hub_incharge', 'regional_manager', 'state_head', 'zonal_manager'].sort()
   );
+});
+
+test('functional specialists are least-privilege: each owns its domain, nothing else', () => {
+  // Finance runs the money modules end-to-end but never touches people, catalogue
+  // or role administration.
+  for (const m of ['payments', 'settlement_sellers', 'financial_reports', 'profit_loss']) {
+    assert.ok(cell('finance', m).actions.includes('edit'), `finance should operate ${m}`);
+  }
+  for (const m of ['user_management', 'role_permission_management', 'product_approval', 'employee_management', 'system_configuration']) {
+    assert.equal(actions('finance', m), '', `finance must not touch ${m}`);
+  }
+
+  // Support owns the customer desk (close complaints) and can respond to customers,
+  // but has no money, catalogue or people reach.
+  assert.ok(cell('support', 'customer_complaints').actions.includes('approve'), 'support should close complaints');
+  assert.equal(actions('support', 'consumer_management'), 'edit,view');
+  for (const m of ['payments', 'settlement_sellers', 'product_approval', 'user_management', 'role_permission_management']) {
+    assert.equal(actions('support', m), '', `support must not touch ${m}`);
+  }
+
+  // Category owns the catalogue (full) but no money or role administration.
+  assert.ok(cell('category', 'product_approval').actions.includes('delete'), 'category should fully manage the catalogue');
+  for (const m of ['payments', 'settlement_sellers', 'user_management', 'role_permission_management', 'system_configuration']) {
+    assert.equal(actions('category', m), '', `category must not touch ${m}`);
+  }
 });
 
 test('legacy admin_role → role map covers every seeded designation', () => {
