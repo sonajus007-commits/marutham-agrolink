@@ -36,6 +36,7 @@ import type {
   ExecutiveDashboardResponse,
   ExecutiveTrendMode,
   OperationsDashboardResponse,
+  FinanceDashboardResponse,
   AdminHeadDashboardResponse,
   HubDashboardResponse,
   AccountStatus,
@@ -643,6 +644,11 @@ export const api = {
     if (params?.district) qs.set('district', params.district);
     const q = qs.toString();
     return apiFetch<OperationsDashboardResponse>('GET', `/dashboard/operations${q ? `?${q}` : ''}`);
+  },
+  /** The Finance role home — company-wide platform money movement (real figures,
+   *  not a P&L). 403s unless the caller has the `finance` dashboard flag. */
+  getFinanceDashboard(): Promise<FinanceDashboardResponse> {
+    return apiFetch<FinanceDashboardResponse>('GET', '/dashboard/finance');
   },
   /** The Head Office control panel — employees, approvals, staff, audit activity.
    *  403s outside ADMINHEAD_ROLES (Head Office / Technical Admin / HR Admin / HR

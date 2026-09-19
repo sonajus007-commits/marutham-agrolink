@@ -134,10 +134,11 @@ const HUB_DASH_ROLE_KEYS = new Set(['admin', 'district_manager', 'hub_manager'])
 /** Which composite dashboards a user may open, from role + trust flags + perms. */
 function dashboardsFor(user, perms, roleKey) {
   const has = (m, a) => (perms[m]?.actions || []).includes(a);
+  // Board + Admin: company-wide financials. company_analytics 'export' isolates
+  // exactly those two (everyone else has view-only). Board via trust flag too.
+  const executive = has('company_analytics', 'export') || user.is_board_director === true;
   return {
-    // Board + Admin: company-wide financials. company_analytics 'export' isolates
-    // exactly those two (everyone else has view-only). Board via trust flag too.
-    executive: has('company_analytics', 'export') || user.is_board_director === true,
+    executive,
     // The operational tier (district → state) plus Admin. Geo-scoped in-handler.
     operations: OPS_ROLE_KEYS.has(roleKey),
     // Head Office control panel: Admin, Technical Head, HR (or an HR-Admin trust).
@@ -145,6 +146,10 @@ function dashboardsFor(user, perms, roleKey) {
     // Per-hub in/out attribution (Phase 3): Hub Manager (own hub), District
     // Manager (district roll-up), Admin (preview). Scoped in-handler.
     hub: HUB_DASH_ROLE_KEYS.has(roleKey),
+    // Company-wide money movement (Phase 4): the Finance specialist's home, plus the
+    // exec tier who already see it on the board dashboard. NOT the geo-scoped managers
+    // who merely carry payments:view — this is a company-wide cut.
+    finance: roleKey === 'finance' || executive,
   };
 }
 

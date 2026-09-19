@@ -269,6 +269,28 @@ function istParts(d) {
 }
 const istToday = () => new Date(Date.now() + IST_MS).toISOString().slice(0, 10);
 
+// Real platform money movement, shared by the Executive dashboard and the Finance
+// role home so the two can never drift. Every figure is derived from ACTUAL orders,
+// payouts and subscriptions — this is deliberately NOT a P&L: net profit / EBITDA /
+// cash flow need an expense ledger the platform does not keep, so they stay unbuilt
+// rather than fabricated. `active` = non-cancelled orders in scope; `subActive` =
+// farmers with a live subscription; `payouts` = payout rows in scope. Money fields
+// arrive in paise (read raw, past the middleware) → rup() to rupees.
+function financialCuts({ active, payouts, subActive, nowIst }) {
+  const sameDay = (p) => p.y === nowIst.y && p.m === nowIst.m && p.day === nowIst.day;
+  return {
+    platform_commission: rup(active.reduce((s, o) => s + o.market_fee, 0)),
+    delivery_income:     rup(active.reduce((s, o) => s + o.delivery, 0)),
+    subscription_income: rup(subActive.reduce((s, f) => s + Number(f.subscription_amount || 0), 0)),
+    payouts_pending:     rup(payouts.filter(p => p.status === 'pending').reduce((s, p) => s + p.amount, 0)),
+    payouts_paid:        rup(payouts.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0)),
+    // Settled to sellers TODAY (IST) — the daily-settlement figure.
+    settlement_today:    rup(payouts.filter(p => p.status === 'paid' && p.paid_at && sameDay(istParts(p.paid_at))).reduce((s, p) => s + p.amount, 0)),
+    // Receivables — cash still to be collected: active orders not yet marked paid.
+    receivables:         rup(active.filter(o => o.pay_status !== 'paid').reduce((s, o) => s + o.total, 0)),
+  };
+}
+
 // Field staff on duty right now (checked in today, not checked out) — from
 // staff_attendance (migration 057). Optionally scoped to one district. Best-effort:
 // a failed read returns zeros, never breaks the dashboard. Powers the on-shift /
@@ -497,17 +519,7 @@ router.get('/executive', async (req, res) => {
 
   // ── Financial (live cuts) ───────────────────────────────────────────────────
   const subActive = farmers.filter(f => f.subscription_expires_at && new Date(f.subscription_expires_at) > new Date(nowIst.date.getTime() - IST_MS));
-  const financial = {
-    platform_commission: rup(active.reduce((s, o) => s + o.market_fee, 0)),
-    delivery_income:     rup(active.reduce((s, o) => s + o.delivery, 0)),
-    subscription_income: rup(subActive.reduce((s, f) => s + Number(f.subscription_amount || 0), 0)),
-    payouts_pending:     rup(payouts.filter(p => p.status === 'pending').reduce((s, p) => s + p.amount, 0)),
-    payouts_paid:        rup(payouts.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0)),
-    // Settled to sellers TODAY (IST) — the daily-settlement figure, from payouts paid today.
-    settlement_today:    rup(payouts.filter(p => p.status === 'paid' && p.paid_at && isSameDay(istParts(p.paid_at))).reduce((s, p) => s + p.amount, 0)),
-    // Receivables — cash still to be collected: active orders not yet marked paid (COD in flight).
-    receivables:         rup(active.filter(o => o.pay_status !== 'paid').reduce((s, o) => s + o.total, 0)),
-  };
+  const financial = financialCuts({ active, payouts, subActive, nowIst });
 
   // ── Districts (map + ranking): green/amber/red vs peak revenue ──────────────
   const maxDistRev = Math.max(1, ...Object.values(districtAgg).map(d => d.revenue));
@@ -1257,6 +1269,57 @@ router.get('/hub', async (req, res) => {
     staff,
     alerts,
     placeholders: HUB_PLACEHOLDERS,
+  });
+});
+
+// ── GET /dashboard/finance ── the Finance role home (company-wide money movement) ──
+// The Finance specialist owns payments + settlements company-wide, but has no board
+// dashboard; this is their at-a-glance home. It reuses financialCuts() so its figures
+// are byte-for-byte the Executive dashboard's — the real platform money movement, not
+// a P&L. Gated on the `finance` composite-dashboard flag (Finance role + the exec
+// tier), which is what keeps a geo-scoped manager who merely has payments:view out.
+router.get('/finance', async (req, res) => {
+  const u = req.user;
+  if (!u.dashboards || u.dashboards.finance !== true) {
+    return res.status(403).json({ error: 'Finance dashboard is restricted to the finance and executive roles.' });
+  }
+
+  const [ordersR, payoutsR, usersR] = await Promise.all([
+    supabase.from('orders').select('total, market_fee, delivery, cancelled, pay_status, status, created_at'),
+    supabase.from('payouts').select('amount, status, created_at, paid_at'),
+    supabase.from('users').select('role, subscription_amount, subscription_expires_at').is('deleted_at', null),
+  ]);
+  if (ordersR.error || payoutsR.error || usersR.error) {
+    return res.status(500).json({ error: 'Could not load the finance dashboard.' });
+  }
+
+  const orders  = ordersR.data  || [];
+  const payouts = payoutsR.data || [];
+  const farmers = (usersR.data || []).filter(x => x.role === 'farmer');
+  const active  = orders.filter(o => !o.cancelled);
+  const nowIst  = istParts(Date.now());
+  const subActive = farmers.filter(f => f.subscription_expires_at && new Date(f.subscription_expires_at) > new Date(nowIst.date.getTime() - IST_MS));
+
+  const financial = financialCuts({ active, payouts, subActive, nowIst });
+
+  const isToday     = ts => { if (!ts) return false; const p = istParts(ts); return p.y === nowIst.y && p.m === nowIst.m && p.day === nowIst.day; };
+  const isThisMonth = ts => { if (!ts) return false; const p = istParts(ts); return p.y === nowIst.y && p.m === nowIst.m; };
+  const weekAgo = Date.now() - 7 * 86400000;
+  const pending = payouts.filter(p => p.status === 'pending');
+
+  res.json({
+    generated_at: new Date().toISOString(),
+    financial,
+    // Gross merchandise value flowing through the platform (order totals).
+    gmv: {
+      today: rup(active.filter(o => isToday(o.created_at)).reduce((s, o) => s + o.total, 0)),
+      month: rup(active.filter(o => isThisMonth(o.created_at)).reduce((s, o) => s + o.total, 0)),
+    },
+    // Settlement queue health — what the finance role acts on next.
+    payouts_aging: {
+      pending_count: pending.length,
+      stale_count:   pending.filter(p => new Date(p.created_at) < weekAgo).length,
+    },
   });
 });
 

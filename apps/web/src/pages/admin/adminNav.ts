@@ -40,7 +40,7 @@ export const APP_BASE = import.meta.env.BASE_URL.replace(/\/+$/, '');
 /** A capability requirement for a nav item / route. */
 export type NavRequirement =
   | { module: string; action?: string } // default action: 'view'
-  | { dashboard: 'executive' | 'operations' | 'adminhead' | 'hub' };
+  | { dashboard: 'executive' | 'operations' | 'adminhead' | 'hub' | 'finance' };
 
 /** Does the user satisfy a requirement? */
 export function meetsRequirement(user: User | null | undefined, req?: NavRequirement): boolean {
@@ -72,7 +72,9 @@ const HOME_BY_ROLE_KEY: Record<string, string> = {
   hr: '/admin/adminhead',
   // Functional specialists land on the section they own (Phase 4). Each has the
   // permission the route requires, so the landing never bounces to a locked page.
-  finance: '/admin/payouts',
+  // Finance gets a purpose-built money-movement home; support/category land on their
+  // section pages (the ticket desk / the catalogue), which already serve as homes.
+  finance: '/admin/finance',
   support: '/admin/support',
   category: '/admin/products',
   admin: '/admin',
@@ -125,6 +127,13 @@ export const ADMIN_NAV: AdminNavSection[] = [
         Icon: BuildingIcon,
         to: '/admin/adminhead',
         requires: { dashboard: 'adminhead' },
+      },
+      {
+        id: 'finance',
+        labelKey: 'admin.nav.finance',
+        Icon: WalletIcon,
+        to: '/admin/finance',
+        requires: { dashboard: 'finance' },
       },
       {
         id: 'orders',
@@ -294,6 +303,7 @@ const BOTTOM_NAV_ORDER = [
   'executive',
   'operations',
   'adminhead',
+  'finance',
   'hub-dashboard',
   'hub',
   'orders',

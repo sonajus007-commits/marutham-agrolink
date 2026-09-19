@@ -158,4 +158,56 @@ describe('GET /dashboard/hub', () => {
     const res = await app.get('/hub');
     assert.equal(res.status, 403);
   });
+
+  // ── GET /dashboard/finance (Phase 4 — the Finance role home) ──────────────────
+  test('finance dashboard returns the real money cuts in RUPEES', async () => {
+    const today = new Date().toISOString();
+    const tenDaysAgo = new Date(Date.now() - 10 * 86400000).toISOString();
+    const supa = fakeSupabase({
+      'orders:select': {
+        data: [
+          // paid order: counts toward GMV + commission + delivery, NOT receivables
+          { total: 10000, market_fee: 2000, delivery: 3000, cancelled: false, pay_status: 'paid', status: 'Delivered', created_at: today },
+          // COD in flight: counts toward receivables
+          { total: 5000, market_fee: 1000, delivery: 0, cancelled: false, pay_status: 'cod', status: 'Out for Delivery', created_at: today },
+          // cancelled: excluded everywhere
+          { total: 9999, market_fee: 9999, delivery: 9999, cancelled: true, pay_status: 'paid', status: 'Cancelled', created_at: today },
+        ],
+      },
+      'payouts:select': {
+        data: [
+          { amount: 4000, status: 'paid', paid_at: today, created_at: today },
+          { amount: 6000, status: 'pending', paid_at: null, created_at: tenDaysAgo }, // stale (>7d)
+        ],
+      },
+      'users:select': { data: [] },
+    });
+    app = await mountRoute('dashboard', {
+      supabase: supa,
+      user: { id: 'fin1', role: 'admin', role_key: 'finance', admin_role: 'Finance Manager', dashboards: { finance: true } },
+    });
+
+    const res = await app.get('/finance');
+    assert.equal(res.status, 200);
+    // paise → rupees, cancelled excluded
+    assert.equal(res.body.financial.platform_commission, 30); // (2000+1000)/100
+    assert.equal(res.body.financial.delivery_income, 30); // (3000+0)/100
+    assert.equal(res.body.financial.settlement_today, 40); // the paid-today payout
+    assert.equal(res.body.financial.payouts_pending, 60);
+    assert.equal(res.body.financial.receivables, 50); // only the unpaid COD order
+    assert.equal(res.body.gmv.month, 150); // (10000+5000)/100, cancelled excluded
+    assert.equal(res.body.payouts_aging.pending_count, 1);
+    assert.equal(res.body.payouts_aging.stale_count, 1);
+  });
+
+  test('finance dashboard 403s a role without the finance flag', async () => {
+    const supa = fakeSupabase({ 'orders:select': { data: [] }, 'payouts:select': { data: [] }, 'users:select': { data: [] } });
+    app = await mountRoute('dashboard', {
+      supabase: supa,
+      // A district manager has payments:view but is geo-scoped — no company-wide finance.
+      user: { id: 'dm1', role: 'admin', role_key: 'district_manager', admin_role: 'District Manager', dashboards: {} },
+    });
+    const res = await app.get('/finance');
+    assert.equal(res.status, 403);
+  });
 });

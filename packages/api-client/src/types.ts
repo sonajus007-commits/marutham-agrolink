@@ -35,6 +35,8 @@ export interface DashboardAccess {
   adminhead: boolean;
   /** Per-hub in/out attribution — Hub Manager (own hub) + District Manager (roll-up). */
   hub: boolean;
+  /** Company-wide money movement — the Finance role + the executive tier (Phase 4). */
+  finance?: boolean;
 }
 
 export interface User {
@@ -1055,6 +1057,27 @@ export interface OperationsDashboardResponse {
   alerts: ExecutiveAlert[];
   /** See OPS_PLACEHOLDERS in backend/routes/dashboard.js. */
   placeholders: string[];
+}
+
+/* ── Finance role home (GET /dashboard/finance, Phase 4) ──────────────────────────
+ *
+ * Company-wide platform money movement — the same real figures the Executive
+ * dashboard shows (shared financialCuts on the server), for the Finance specialist.
+ * Deliberately NOT a P&L: no net profit / EBITDA / cash flow, which need an expense
+ * ledger the platform does not keep. All amounts are RUPEES (already rup()'d). */
+export interface FinanceDashboardResponse {
+  generated_at: string;
+  financial: {
+    platform_commission: number;
+    delivery_income: number;
+    subscription_income: number;
+    payouts_pending: number;
+    payouts_paid: number;
+    settlement_today: number;
+    receivables: number;
+  };
+  gmv: { today: number; month: number };
+  payouts_aging: { pending_count: number; stale_count: number };
 }
 
 /* ── Per-hub in/out attribution (GET /dashboard/hub, Hub Management Phase 3) ──────

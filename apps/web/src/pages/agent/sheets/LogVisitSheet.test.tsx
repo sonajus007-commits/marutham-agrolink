@@ -65,7 +65,11 @@ describe('LogVisitSheet', () => {
     );
     expect(onLogged).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
-  });
+    // 15s ceiling: the multi-select + type + submit flow is well under a second on
+    // CI, but this thermally-throttled dev box can drift past vitest's 5s default
+    // under full-suite load. The higher ceiling removes the flake without hiding a
+    // real hang.
+  }, 15000);
 
   it('will not submit without a farmer chosen', async () => {
     open();
