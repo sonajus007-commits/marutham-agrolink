@@ -782,6 +782,14 @@
     },
     "orders": {
       "columns": {
+        "accept_deadline": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "accepted_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
         "agent_id": {
           "type": "uuid",
           "notNull": false,
@@ -913,6 +921,10 @@
           "notNull": true,
           "default": "0"
         },
+        "last_accept_reminder_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
         "last_failure_at": {
           "type": "timestamp with time zone",
           "notNull": false
@@ -947,6 +959,10 @@
           "type": "uuid",
           "notNull": false,
           "references": "hubs.id"
+        },
+        "received_at": {
+          "type": "timestamp with time zone",
+          "notNull": false
         },
         "refund_amt": {
           "type": "integer",
@@ -1968,6 +1984,16 @@
           "type": "boolean",
           "notNull": true,
           "default": "false"
+        },
+        "orders_cancelled": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
+        "orders_fulfilled": {
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
         },
         "password_changed_at": {
           "type": "timestamp with time zone",

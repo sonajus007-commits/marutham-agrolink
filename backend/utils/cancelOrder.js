@@ -66,19 +66,21 @@ async function restockParcel(orderId) {
 // paid order is refunded in full. Returns { amount_paise, to } or null.
 async function settleRefund(parcel) {
   if (parcel.parent_order_id) {
-    const { data: before } = await supabase
+    const { data: before, error: beforeErr } = await supabase
       .from('orders')
       .select('total, pay_status, pay_method, refund_amt')
       .eq('id', parcel.parent_order_id)
       .maybeSingle();
+    if (beforeErr) console.error('cancelOrders: parent re-price read failed:', beforeErr.message);
 
     await rollupToParent(parcel.parent_order_id);
 
-    const { data: after } = await supabase
+    const { data: after, error: afterErr } = await supabase
       .from('orders')
       .select('total')
       .eq('id', parcel.parent_order_id)
       .maybeSingle();
+    if (afterErr) console.error('cancelOrders: parent re-price read failed:', afterErr.message);
 
     if (before && after && before.pay_status === 'paid') {
       const drop = Math.max(0, before.total - after.total);

@@ -607,6 +607,7 @@ function scheduleAcceptReminders() {
         // seller from its lines. Skip only if the seller cannot be found at all.
         let sellerId = o.seller_id;
         if (!sellerId) {
+          // reads-ok: best-effort seller lookup; a miss just skips this reminder (retried next tick).
           const { data: line } = await supabase
             .from('order_items')
             .select('farmer_id')
@@ -624,6 +625,7 @@ function scheduleAcceptReminders() {
           body: `Order ${o.code} is waiting to be accepted. Accept within ~${mins} min or it will be auto-cancelled.`,
           data: { order_id: o.id, code: o.code },
         });
+        // reads-ok: best-effort throttle stamp; if it fails the worst case is one extra reminder.
         await supabase.from('orders').update({ last_accept_reminder_at: nowIso }).eq('id', o.id);
         sent += 1;
       }
