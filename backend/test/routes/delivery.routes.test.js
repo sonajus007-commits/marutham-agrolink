@@ -560,6 +560,35 @@ test('accepting after the deadline is refused with 409', async () => {
   assert.equal(db.callsTo('orders', 'update').length, 0);
 });
 
+test('accepting notifies the village VCO and the seller\'s Hub Incharge', async () => {
+  const updated = {
+    id: 'o1', code: 'ORD1', status: 'Order Accepted', stage: 2,
+    village: 'Alangudi', district: 'Pudukkottai', pickup_hub_id: 'hub-1', seller_name: 'Ravi',
+  };
+  const db = fakeSupabase({
+    'orders:select': { data: [received({ village: 'Alangudi', district: 'Pudukkottai', pickup_hub_id: 'hub-1' })] },
+    'order_items:select': { data: [{ id: 'i1' }] },
+    'orders:update': { data: updated },
+    'order_history:insert': { data: [] },
+    'users:select': { data: [
+      { id: 'vco1', role: 'admin', admin_role: 'VCO', status: 'active', service_villages: ['Alangudi'] },
+      { id: 'hub-inch1', role: 'admin', admin_role: 'Hub Incharge', status: 'active', hub_id: 'hub-1' },
+    ] },
+    'notifications:insert': { data: [] },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: FARMER });
+
+  const res = await app.post('/o1/accept', {});
+
+  assert.equal(res.status, 200);
+  const notified = db
+    .callsTo('notifications', 'insert')
+    .flatMap((c) => (Array.isArray(c.payload) ? c.payload : [c.payload]))
+    .map((r) => r.user_id);
+  assert.ok(notified.includes('vco1'), 'the village VCO must be notified');
+  assert.ok(notified.includes('hub-inch1'), 'the Hub Incharge must be notified');
+});
+
 // ── POST /:id/status — senior-admin manual override to ANY status ───────────────
 // Unlike a scan or /advance (one step forward), this SETS the order to any status
 // on its route — forward, backward, or a jump. Restricted to senior admins,

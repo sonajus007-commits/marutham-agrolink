@@ -97,7 +97,8 @@ async function mountRoute(routeModule, { supabase, user = null }) {
                    // Same reason: these close over the client at module load. Purge them
                    // or a later test's cancel/reliability write lands on an earlier fake.
                    path.join(__dirname, '..', '..', 'utils', 'cancelOrder.js'),
-                   path.join(__dirname, '..', '..', 'utils', 'reliability.js')]) {
+                   path.join(__dirname, '..', '..', 'utils', 'reliability.js'),
+                   path.join(__dirname, '..', '..', 'utils', 'collectionNotify.js')]) {
     delete require.cache[p];
   }
 

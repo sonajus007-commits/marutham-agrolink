@@ -10,6 +10,7 @@ const { suggestDeliveryHubs } = require('../utils/hubSuggest');
 const { agentServesOrder, coverageBlockMessage } = require('../utils/agentCoverage');
 const { notify } = require('../utils/notifications');
 const { bumpFulfilled } = require('../utils/reliability');
+const { notifyCollectionParties } = require('../utils/collectionNotify');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -408,6 +409,9 @@ router.post('/:id/accept', async (req, res) => {
   if (conflict) return conflictResponse(res);
   if (error) return res.status(500).json({ error });
 
+  // Tell the village VCO and the seller's Hub Incharge a collection is coming.
+  await notifyCollectionParties(updated, 'accepted');
+
   res.json({ ok: true, message: 'Order accepted.', newStatus: updated.status, order: updated });
 });
 
@@ -455,6 +459,9 @@ router.post('/:id/pack', async (req, res) => {
   // Reliability credit: the seller accepted and packed their part, so it counts as
   // fulfilled (the balance to their cancellations). Best-effort — never fail the pack.
   await bumpFulfilled(req.user.id);
+
+  // The parcel is ready — tell the village VCO to collect and the Hub Incharge it is inbound.
+  await notifyCollectionParties(updated, 'packed');
 
   res.json({ ok: true, message: 'Order marked as Packed.', newStatus: updated.status, order: updated });
 });
