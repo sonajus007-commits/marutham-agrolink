@@ -19,6 +19,7 @@ import {
   listingPriceRs,
   listingState,
   fmtMoney,
+  SELLER_ACTION_STATUSES,
   type FarmerListing,
   type Order,
   type Payout,
@@ -96,7 +97,10 @@ export function FarmerHomeTab({
   const earnings = useMemo(() => farmerEarnings(orders, payouts), [orders, payouts]);
 
   const packOrders = useMemo(
-    () => orders.filter((o) => !isOrderCancelled(o) && String(o.status ?? '') === 'Order Placed'),
+    () =>
+      orders.filter(
+        (o) => !isOrderCancelled(o) && SELLER_ACTION_STATUSES.includes(String(o.status ?? '')),
+      ),
     [orders],
   );
   // Delivered orders with no payout record yet — the "awaiting" money bucket.

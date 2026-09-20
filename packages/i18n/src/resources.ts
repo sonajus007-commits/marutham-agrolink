@@ -752,6 +752,8 @@ export const resources = {
       'common.optional': 'optional',
       // Order status. The VALUE stays English (statusColor/buildPipeline key off it); these are only how it is spoken.
       'status.orderPlaced': 'Order Placed',
+      'status.orderReceived': 'Order Received',
+      'status.orderAccepted': 'Order Accepted',
       'status.packaged': 'Packed',
       'status.vcoVerified': 'VCO Verified',
       'status.pickedUp': 'Picked Up',
@@ -3160,6 +3162,8 @@ export const resources = {
       'common.optional': 'விருப்பம்',
       // Order status. The VALUE stays English (statusColor/buildPipeline key off it); these are only how it is spoken.
       'status.orderPlaced': 'ஆர்டர் செய்யப்பட்டது',
+      'status.orderReceived': 'ஆர்டர் பெறப்பட்டது',
+      'status.orderAccepted': 'ஆர்டர் ஏற்கப்பட்டது',
       'status.packaged': 'பொதி செய்யப்பட்டது',
       'status.vcoVerified': 'VCO சரிபார்த்தது',
       'status.pickedUp': 'எடுக்கப்பட்டது',

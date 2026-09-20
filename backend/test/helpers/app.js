@@ -93,7 +93,11 @@ async function mountRoute(routeModule, { supabase, user = null }) {
                    path.join(__dirname, '..', '..', 'utils', 'employeeValidation.js'),
                    // The in-app notifier closes over the client at module load; without
                    // purging it, a later test's notify() writes to an earlier test's fake.
-                   path.join(__dirname, '..', '..', 'utils', 'notifications.js')]) {
+                   path.join(__dirname, '..', '..', 'utils', 'notifications.js'),
+                   // Same reason: these close over the client at module load. Purge them
+                   // or a later test's cancel/reliability write lands on an earlier fake.
+                   path.join(__dirname, '..', '..', 'utils', 'cancelOrder.js'),
+                   path.join(__dirname, '..', '..', 'utils', 'reliability.js')]) {
     delete require.cache[p];
   }
 

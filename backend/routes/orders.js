@@ -22,6 +22,8 @@ const {
 } = require('../utils/orderSplit');
 const { rollupToParent } = require('../utils/orderRollup');
 const { resolveTalukHubId } = require('../utils/hubResolver');
+const { computeAcceptDeadline } = require('../utils/acceptWindow');
+const { cancelOrders } = require('../utils/cancelOrder');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -58,8 +60,11 @@ const createOrderSchema = z
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-// Stages at which an order can still be cancelled
-const CANCELLABLE_STAGES = [0, 1]; // Order Placed, Packaged — not once picked up
+// Stages at which an order can still be cancelled — Order Placed(0), Order Received(1),
+// Order Accepted(2), Packed(3). These four indices mean the same status on every route
+// (they precede the route split at VCO Verified=4), so the index test is route-safe.
+// Not once VCO-verified / on the road.
+const CANCELLABLE_STAGES = [0, 1, 2, 3];
 
 // ── POST /orders  (consumer only) ────────────────────────────────────────────
 // Body: { items: [{product_id, farmer_id, qty}], pay_method, address? }
@@ -92,7 +97,7 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
     // every fault was reported to the customer as a missing product.
     const { data: listing, error: listingErr } = await supabase
       .from('farmer_listings')
-      .select('farmer_price, qty_available, listed, confirmed, bulk_qty, bulk_disc_pct')
+      .select('farmer_price, qty_available, listed, confirmed, bulk_qty, bulk_disc_pct, cutoff_ts')
       .eq('farmer_id', farmer_id)
       .eq('product_id', product_id)
       .maybeSingle();
@@ -132,7 +137,7 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
     // Fetch seller info (name + village for fulfilment + seller_type for fee)
     const { data: farmer, error: farmerErr } = await supabase
       .from('users')
-      .select('id, fname, lname, village_town, district, state, taluk, seller_type')
+      .select('id, fname, lname, village_town, district, state, taluk, seller_type, shop_close_hour')
       .eq('id', farmer_id)
       .maybeSingle();
 
@@ -211,6 +216,11 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
       // Seller taluk/state — resolves the pickup hub this parcel enters through.
       _sellerState: farmer.state,
       _sellerTaluk: farmer.taluk,
+      // Acceptance-window inputs (see utils/acceptWindow): the seller's kind + their
+      // ordering cutoff (farmer = this listing's cutoff_ts; retailer = shop close).
+      _sellerType: farmer.seller_type,
+      _shopCloseHour: farmer.shop_close_hour,
+      _listingCutoff: listing.cutoff_ts,
     });
   }
 
@@ -298,6 +308,33 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
     );
   }
 
+  // ── 3c. Acceptance deadline per seller ────────────────────────────────────
+  // The seller has 2h after their ordering cutoff to accept, or the order is
+  // auto-cancelled+refunded (utils/acceptWindow + the sweep in server.js). Computed
+  // once here from each seller's cutoff and frozen onto their parcel. A split parent
+  // is a container — no seller accepts it — so it carries no deadline.
+  const placedAt = new Date();
+  const acceptDeadlineBySeller = new Map();
+  for (const it of resolvedItems) {
+    if (acceptDeadlineBySeller.has(it.farmer_id)) continue;
+    const sellerCutoffs = resolvedItems
+      .filter((r) => r.farmer_id === it.farmer_id)
+      .map((r) => r._listingCutoff);
+    acceptDeadlineBySeller.set(
+      it.farmer_id,
+      computeAcceptDeadline({
+        sellerType: it._sellerType,
+        shopCloseHour: it._shopCloseHour,
+        listingCutoffs: sellerCutoffs,
+        now: placedAt,
+      }),
+    );
+  }
+  const deadlineIso = (sellerId) => {
+    const d = acceptDeadlineBySeller.get(sellerId);
+    return d ? d.toISOString() : null;
+  };
+
   // ── 4. Insert order — one row, or a parent + one child per seller ─────────
   // A cart from a single seller stays exactly one row, as it always has. A cart
   // spanning sellers becomes a parent (what the customer pays for and tracks) plus
@@ -326,8 +363,15 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
       item_total, handling, market_fee, delivery, total, saved,
       pay_method,
       pay_status:    payStatus,
-      stage:         0,
-      status:        'Order Placed',
+      // The seller has the order the instant it is placed, so it opens at
+      // 'Order Received' (stage 1); the placement itself is recorded in history. A
+      // split parent mirrors its children (all start Received) but is a container —
+      // no seller accepts it, so it carries received_at/accept_deadline only when
+      // unsplit (then this single row IS the seller's parcel).
+      stage:         1,
+      status:        'Order Received',
+      received_at:   isSplit ? null : placedAt.toISOString(),
+      accept_deadline: isSplit ? null : deadlineIso(resolvedItems[0].farmer_id),
       // The container's own route, so its `stage` indexes into a map that can hold
       // any rollup status. Every pipeline mutation refuses a row routed this way.
       route:         isSplit ? SPLIT_ROUTE : '',
@@ -391,8 +435,10 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
         total:         totals.item_total + (first ? handling + delivery + multiFarmerFee : 0),
         pay_method,
         pay_status:    payStatus,
-        stage:         0,
-        status:        'Order Placed',
+        stage:         1,
+        status:        'Order Received',
+        received_at:   placedAt.toISOString(),
+        accept_deadline: deadlineIso(group.seller_id),
         route:         '',
         // Each child parcel enters through its own seller's hub; all leave through
         // the one consumer delivery hub.
@@ -422,7 +468,7 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
   // farmer payouts group order_items by order_id, so a line copied onto the parent
   // as well would pay its seller twice.
   const childIdBySeller = new Map(children.map(c => [c.seller_id, c.id]));
-  const itemRows = resolvedItems.map(({ _lineTotal, _lineFarmerTotal, _handling, _exotic, _saved, _sellerVillage, _sellerDistrict, _sellerState, _sellerTaluk, ...rest }) => ({
+  const itemRows = resolvedItems.map(({ _lineTotal, _lineFarmerTotal, _handling, _exotic, _saved, _sellerVillage, _sellerDistrict, _sellerState, _sellerTaluk, _sellerType, _shopCloseHour, _listingCutoff, ...rest }) => ({
     ...rest,
     order_id: isSplit ? childIdBySeller.get(rest.farmer_id) : order.id,
   }));
@@ -440,6 +486,9 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
   // timeline is missing an entry, the order is fine.
   // Each child gets its own opening entry: a parcel's timeline has to start
   // somewhere, and the VCO/agent screens read the child's history, not the parent's.
+  // Placement is recorded first, then the opening 'Order Received' state each parcel
+  // is actually created at — so the timeline reads Order Placed → Order Received even
+  // though the row never lived at 'Order Placed'.
   const historyRows = [
     {
       order_id: order.id,
@@ -453,6 +502,18 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
       label:    'Order Placed',
       note:     `Order ${code} placed by ${consumerName} — ${c.seller_name}'s items (${c.code}).`,
     })),
+    // 'Order Received' opening entry for each parcel (the unsplit order, or each child).
+    ...(isSplit
+      ? children.map(c => ({
+          order_id: c.id,
+          label:    'Order Received',
+          note:     `${c.seller_name} received the order — accept by the deadline to avoid auto-cancellation.`,
+        }))
+      : [{
+          order_id: order.id,
+          label:    'Order Received',
+          note:     'Seller received the order — accept by the deadline to avoid auto-cancellation.',
+        }]),
   ];
 
   const { error: historyErr } = await supabase.from('order_history').insert(historyRows);
@@ -1642,6 +1703,73 @@ router.post('/:id/cancel', async (req, res) => {
       : 'Order cancelled.',
     order: updated || { ...order, ...cancelUpdates },
     ...(refund_amt ? { refund: { amount_paise: refund_amt, to: refund_to } } : {}),
+  });
+});
+
+// ── POST /orders/:id/decline  (seller declines an order they cannot fulfil) ───
+// The seller's own cancellation, before they hand the parcel to the VCO — while it
+// is Order Received or Order Accepted. It refunds the customer (via the shared
+// cancelOrders helper) and counts against the seller's reliability, exactly like a
+// missed-acceptance auto-cancel. A parcel already Packed / verified is on its way to
+// collection and cannot be declined here.
+router.post('/:id/decline', async (req, res) => {
+  if (req.user.role !== 'farmer') {
+    return res.status(403).json({ error: 'Only the seller can decline an order.' });
+  }
+
+  const { data: order, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('id', req.params.id)
+    .maybeSingle();
+  if (error) {
+    console.error('Decline order: read failed:', error.message);
+    return res.status(500).json({ error: 'Could not load the order.' });
+  }
+  if (!order) return res.status(404).json({ error: 'Order not found.' });
+  if (order.route === SPLIT_ROUTE) {
+    return res.status(400).json({ error: 'Decline the individual parcel, not the whole split order.' });
+  }
+
+  // The parcel must be this seller's. A child carries seller_id; an unsplit order is
+  // this seller's only if their items are the ones in it.
+  let ownsIt = order.seller_id === req.user.id;
+  if (!ownsIt && !order.seller_id) {
+    const { data: mine, error: itemErr } = await supabase
+      .from('order_items')
+      .select('id')
+      .eq('order_id', order.id)
+      .eq('farmer_id', req.user.id);
+    if (itemErr) {
+      console.error('Decline order: item check failed:', itemErr.message);
+      return res.status(500).json({ error: 'Could not verify your items in this order.' });
+    }
+    ownsIt = !!(mine && mine.length);
+  }
+  if (!ownsIt) return res.status(403).json({ error: 'You can only decline your own orders.' });
+
+  if (order.cancelled) return res.status(400).json({ error: 'Order is already cancelled.' });
+  if (!['Order Received', 'Order Accepted'].includes(order.status)) {
+    return res.status(409).json({ error: `Cannot decline. Order is currently: "${order.status}".` });
+  }
+
+  const reason = (req.body && req.body.reason)
+    ? `Declined by seller: ${req.body.reason}`
+    : 'Declined by seller.';
+  const { refunds } = await cancelOrders([order], { reason, sellerFault: true });
+
+  if (order.consumer_id) {
+    await notify(order.consumer_id, {
+      type: 'order_cancelled',
+      title: 'A seller could not fulfil your order',
+      body: `${order.seller_name || 'A seller'} declined part of your order. Any prepayment is being refunded.`,
+      data: { order_id: order.id, code: order.code },
+    });
+  }
+
+  res.json({
+    message: 'Order declined.',
+    ...(refunds.length ? { refund: { amount_paise: refunds[0].amount_paise, to: refunds[0].to } } : {}),
   });
 });
 

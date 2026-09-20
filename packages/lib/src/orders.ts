@@ -53,6 +53,12 @@ export interface Order {
   stage?: number;
   cancelled?: boolean;
   code?: string;
+  /**
+   * When the seller must have ACCEPTED by (cutoff + 2h), set at placement. Past it,
+   * an un-accepted order is auto-cancelled + refunded (migration 063). Null on rows
+   * with no deadline (e.g. a split parent container).
+   */
+  accept_deadline?: string | null;
   consumer_name?: string;
   consumer_phone?: string;
   delivery_address?: string | AddressObject | null;
@@ -164,7 +170,7 @@ const IN_PROGRESS_STATUSES = ['Order Placed', 'In Transit'];
 export function groupOrders(orders: Order[]): OrderQueues {
   const active = (s: string) => (o: Order) => o.status === s && !o.cancelled;
   return {
-    toVerify: orders.filter(active('Packaged')),
+    toVerify: orders.filter(active('Packed')),
     toPickUp: orders.filter(active('VCO Verified')),
     toCollect: orders.filter(active('At Hub')),
     inTransit: orders.filter(active('Picked Up')),
@@ -213,8 +219,18 @@ export function deriveAgentStats(q: OrderQueues, isVCO: boolean, canDeliver = fa
  * Keep in step with backend/routes/orders.js CANCELLABLE_STAGES and
  * backend/routes/returns.js RETURN_WINDOW_HOURS. */
 
-/** Statuses at which a consumer may still cancel (backend stages 0 and 1). */
-export const CANCELLABLE_STATUSES: readonly string[] = ['Order Placed', 'Packaged'];
+/** Statuses at which a consumer may still cancel (backend stages 0–3: before the
+ *  VCO verifies and it is on the road). */
+export const CANCELLABLE_STATUSES: readonly string[] = [
+  'Order Placed',
+  'Order Received',
+  'Order Accepted',
+  'Packed',
+];
+
+/** Statuses where the order is waiting on the SELLER to act — accept it, then pack
+ *  it — before it is handed to the VCO. Drives the farmer's "to do" counts. */
+export const SELLER_ACTION_STATUSES: readonly string[] = ['Order Received', 'Order Accepted'];
 
 /** Hours after delivery during which a return may be requested. */
 export const RETURN_WINDOW_HOURS = 24;

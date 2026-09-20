@@ -35,7 +35,9 @@ describe('buildPipeline', () => {
   it('the hub sequence matches the backend stage map exactly', () => {
     expect(buildPipeline('hub', 'At Hub').map((n) => n.label)).toEqual([
       'Order Placed',
-      'Packaged',
+      'Order Received',
+      'Order Accepted',
+      'Packed',
       'VCO Verified',
       'In Transit',
       'At Hub',
@@ -60,7 +62,7 @@ describe('buildPipeline', () => {
   });
 
   it('treats a null route as direct', () => {
-    expect(buildPipeline(null, 'Packaged').filter((n) => n.skipped)).toHaveLength(2);
+    expect(buildPipeline(null, 'Packed').filter((n) => n.skipped)).toHaveLength(2);
   });
 
   it('leaves every stage pending for an unknown status, e.g. Cancelled', () => {

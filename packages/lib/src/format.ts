@@ -138,12 +138,14 @@ export function statusColor(status: string): string {
  * value and the pipeline breaks silently — indexOf returns -1 and every stage
  * renders `pending`. The string is the data; this is only how it is spoken.
  *
- * The same nine strings serve as both `status` and pipeline stage label, so one
- * map covers the pills, the progress bar and the timeline.
+ * The same strings serve as both `status` and pipeline stage label, so one map
+ * covers the pills, the progress bar and the timeline.
  */
 const STATUS_KEYS: Record<string, string> = {
   'Order Placed': 'status.orderPlaced',
-  Packaged: 'status.packaged',
+  'Order Received': 'status.orderReceived',
+  'Order Accepted': 'status.orderAccepted',
+  Packed: 'status.packaged',
   'VCO Verified': 'status.vcoVerified',
   'Picked Up': 'status.pickedUp',
   'In Transit': 'status.inTransit',
@@ -325,9 +327,11 @@ export function statusTone(status: string): OrderStatusTone {
       return 'success';
     case 'Cancelled':
       return 'danger';
-    // Placed but not yet moving — the customer is waiting on us.
+    // Placed but not yet moving — the customer is waiting on us / the seller.
     case 'Order Placed':
-    case 'Packaged':
+    case 'Order Received':
+    case 'Order Accepted':
+    case 'Packed':
       return 'warning';
     // In flight. Nothing is wrong and nothing is finished.
     case 'VCO Verified':

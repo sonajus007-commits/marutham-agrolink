@@ -367,6 +367,8 @@ app.listen(PORT, () => {
   schedulePriceSync();
   scheduleListingReset();
   scheduleInactivityLock();
+  scheduleAcceptDeadlineSweep();
+  scheduleAcceptReminders();
 });
 
 // ── Daily inactivity lock — no login for 90+ days → login_locked_at ────────────
@@ -518,4 +520,120 @@ function schedulePriceSync() {
 
   const h = Math.round(msUntil6amIST() / 3600000);
   console.log(`[PRICE SYNC] Scheduled — first run in ~${h}h (6 AM IST daily)`);
+}
+
+// ── Acceptance-deadline sweep — auto-cancel + refund orders the seller never accepted
+// A seller has 2h after their cutoff to accept (orders.accept_deadline, set at
+// placement — see utils/acceptWindow). Past that, an order still sitting at
+// Order Placed / Order Received is auto-cancelled and refunded (utils/cancelOrder,
+// sellerFault → the seller's reliability drops), and the customer is told. Runs every
+// 15 min: fine-grained enough that a 2h window closes promptly, cheap enough to idle.
+function scheduleAcceptDeadlineSweep() {
+  const INTERVAL = 15 * 60 * 1000;
+  const { cancelOrders } = require('./utils/cancelOrder');
+  const { notify: notifyInApp } = require('./utils/notifications');
+
+  async function runSweep() {
+    try {
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .in('status', ['Order Placed', 'Order Received'])
+        .eq('cancelled', false)
+        .not('accept_deadline', 'is', null)
+        .lt('accept_deadline', now);
+
+      if (error) { console.error('[ACCEPT SWEEP] Query error:', error.message); return; }
+      if (!data || data.length === 0) return;
+
+      const { cancelled } = await cancelOrders(data, {
+        reason: 'Auto-cancelled — the seller did not accept within the 2-hour window.',
+        sellerFault: true,
+      });
+
+      for (const o of data) {
+        if (o.consumer_id) {
+          await notifyInApp(o.consumer_id, {
+            type: 'order_cancelled',
+            title: 'Order auto-cancelled',
+            body: `${o.seller_name || 'A seller'} did not accept in time. Any prepayment is being refunded.`,
+            data: { order_id: o.id, code: o.code },
+          });
+        }
+      }
+      if (cancelled.length) console.log(`[ACCEPT SWEEP] Auto-cancelled ${cancelled.length} un-accepted order(s).`);
+    } catch (err) {
+      console.error('[ACCEPT SWEEP] Error:', err.message);
+    }
+  }
+
+  runSweep();
+  setInterval(runSweep, INTERVAL);
+  console.log('[ACCEPT SWEEP] Scheduler started (every 15 min)');
+}
+
+// ── Acceptance reminders — nudge the seller every 30 min during the window ────
+// So an order is not lost to a human slip. For each order still Order Received and
+// inside its window, send an in-app reminder at most once per 30 min
+// (orders.last_accept_reminder_at throttles it). Checked every 15 min; the throttle,
+// not the check interval, sets the ~30-min cadence.
+function scheduleAcceptReminders() {
+  const INTERVAL = 15 * 60 * 1000;
+  const REMINDER_GAP_MS = 30 * 60 * 1000;
+  const { notify: notifyInApp } = require('./utils/notifications');
+
+  async function runReminders() {
+    try {
+      const now = Date.now();
+      const nowIso = new Date(now).toISOString();
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, code, seller_id, accept_deadline, last_accept_reminder_at')
+        .eq('status', 'Order Received')
+        .eq('cancelled', false)
+        .not('accept_deadline', 'is', null)
+        .gt('accept_deadline', nowIso);
+
+      if (error) { console.error('[ACCEPT REMINDER] Query error:', error.message); return; }
+      if (!data || data.length === 0) return;
+
+      let sent = 0;
+      for (const o of data) {
+        const last = o.last_accept_reminder_at ? new Date(o.last_accept_reminder_at).getTime() : 0;
+        if (now - last < REMINDER_GAP_MS) continue;
+
+        // A child carries seller_id; an unsplit order does not, so resolve its single
+        // seller from its lines. Skip only if the seller cannot be found at all.
+        let sellerId = o.seller_id;
+        if (!sellerId) {
+          const { data: line } = await supabase
+            .from('order_items')
+            .select('farmer_id')
+            .eq('order_id', o.id)
+            .limit(1)
+            .maybeSingle();
+          sellerId = line && line.farmer_id;
+        }
+        if (!sellerId) continue;
+
+        const mins = Math.max(1, Math.round((new Date(o.accept_deadline).getTime() - now) / 60000));
+        await notifyInApp(sellerId, {
+          type: 'order_accept_reminder',
+          title: 'Please accept your order',
+          body: `Order ${o.code} is waiting to be accepted. Accept within ~${mins} min or it will be auto-cancelled.`,
+          data: { order_id: o.id, code: o.code },
+        });
+        await supabase.from('orders').update({ last_accept_reminder_at: nowIso }).eq('id', o.id);
+        sent += 1;
+      }
+      if (sent) console.log(`[ACCEPT REMINDER] Sent ${sent} acceptance reminder(s).`);
+    } catch (err) {
+      console.error('[ACCEPT REMINDER] Error:', err.message);
+    }
+  }
+
+  runReminders();
+  setInterval(runReminders, INTERVAL);
+  console.log('[ACCEPT REMINDER] Scheduler started (every 15 min, 30-min cadence)');
 }

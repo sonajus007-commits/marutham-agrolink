@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, OrderPipeline, OrderTimeline, Sheet, Spinner } from '@marutham/ui';
+import { Button, ConfirmDialog, OrderPipeline, OrderTimeline, Sheet, Spinner } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import { useToast } from '../../components/Toast';
 import {
@@ -46,10 +46,11 @@ export function FarmerOrderSheet({
   const [items, setItems] = useState<OrderItem[] | null>(null);
   const [history, setHistory] = useState<OrderHistoryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
-  // Optimistic status after a successful pack: the prop `order` is the list row,
-  // which we do not mutate. Null until the seller packs it in this session.
-  const [packedStatus, setPackedStatus] = useState<string | null>(null);
-  const [packing, setPacking] = useState(false);
+  // Optimistic status after a successful accept/pack/decline: the prop `order` is the
+  // list row, which we do not mutate. Null until the seller acts in this session.
+  const [localStatus, setLocalStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [confirmDecline, setConfirmDecline] = useState(false);
 
   useEffect(() => {
     if (!open || !order) return;
@@ -57,7 +58,7 @@ export function FarmerOrderSheet({
     setItems(null);
     setHistory([]);
     setError(null);
-    setPackedStatus(null);
+    setLocalStatus(null);
     api
       .getOrder(order.id)
       .then((detail) => {
@@ -84,33 +85,77 @@ export function FarmerOrderSheet({
   }, [open, order, user?.id]);
 
   // The English value drives statusColor; only the spoken form is translated.
-  // packedStatus wins when set, so the pipeline + badge reflect the pack we just did.
-  const rawStatus = packedStatus ?? (order ? String(order.status ?? '') : '');
+  // localStatus wins when set, so the pipeline + badge reflect the action we just did.
+  const rawStatus = localStatus ?? (order ? String(order.status ?? '') : '');
   const status = order ? (isOrderCancelled(order) ? 'Cancelled' : rawStatus) : '';
 
-  // Packing is the ONE status action a seller owns: Order Placed → Packaged, and
-  // only for an order that actually carries their produce. The server re-checks all
-  // three (farmer role, stage 0, has-items), so this gate is UX, not the guard.
-  const canPack =
-    !!order && !isOrderCancelled(order) && rawStatus === 'Order Placed' && (items?.length ?? 0) > 0;
+  // The seller's status actions, each only for an order that carries their produce.
+  // The server re-checks role, status, has-items and the deadline, so these are UX.
+  const hasItems = (items?.length ?? 0) > 0;
+  const activeForMe = !!order && !isOrderCancelled(order) && hasItems;
+  const canAccept = activeForMe && rawStatus === 'Order Received';
+  const canPack = activeForMe && rawStatus === 'Order Accepted';
 
-  async function pack() {
+  // Minutes left in the acceptance window, for the countdown shown while un-accepted.
+  const deadlineMs = order?.accept_deadline ? new Date(order.accept_deadline).getTime() : null;
+  const minsLeft = deadlineMs ? Math.round((deadlineMs - Date.now()) / 60000) : null;
+
+  async function accept() {
     if (!order) return;
-    setPacking(true);
+    setBusy(true);
     try {
-      const res = await api.markPackaged(order.id);
-      setPackedStatus('Packaged');
-      toast(res.message || t('farmer.orders.packed', 'Order marked as Packaged.'), 'ok');
+      const res = await api.acceptOrder(order.id);
+      setLocalStatus('Order Accepted');
+      toast(res.message || t('farmer.orders.accepted', 'Order accepted.'), 'ok');
       onChanged?.();
     } catch (e) {
       toast(
         e instanceof Error
           ? e.message
-          : t('farmer.orders.packFailed', 'Could not mark as packaged'),
+          : t('farmer.orders.acceptFailed', 'Could not accept the order'),
         'er',
       );
     } finally {
-      setPacking(false);
+      setBusy(false);
+    }
+  }
+
+  async function pack() {
+    if (!order) return;
+    setBusy(true);
+    try {
+      const res = await api.markPackaged(order.id);
+      setLocalStatus('Packed');
+      toast(res.message || t('farmer.orders.packed', 'Order marked as Packed.'), 'ok');
+      onChanged?.();
+    } catch (e) {
+      toast(
+        e instanceof Error ? e.message : t('farmer.orders.packFailed', 'Could not mark as packed'),
+        'er',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function decline(reason?: string) {
+    if (!order) return;
+    setConfirmDecline(false);
+    setBusy(true);
+    try {
+      const res = await api.declineOrder(order.id, reason);
+      setLocalStatus('Cancelled');
+      toast(res.message || t('farmer.orders.declined', 'Order declined.'), 'ok');
+      onChanged?.();
+    } catch (e) {
+      toast(
+        e instanceof Error
+          ? e.message
+          : t('farmer.orders.declineFailed', 'Could not decline the order'),
+        'er',
+      );
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -141,13 +186,69 @@ export function FarmerOrderSheet({
             {t(statusKey(status), status)}
           </span>
 
-          {canPack ? (
-            <Button variant="primary" onClick={pack} disabled={packing}>
-              {packing
-                ? t('farmer.orders.packing', 'Marking…')
-                : `📦 ${t('farmer.orders.markPackaged', 'Pack ordered Item')}`}
-            </Button>
+          {canAccept && minsLeft !== null ? (
+            <p className="self-start text-xs text-muted">
+              {minsLeft > 0
+                ? t(
+                    'farmer.orders.acceptWindow',
+                    'Accept within ~{{mins}} min or this order is auto-cancelled.',
+                    {
+                      mins: minsLeft,
+                    },
+                  )
+                : t(
+                    'farmer.orders.acceptWindowClosing',
+                    'The acceptance window is closing — accept now.',
+                  )}
+            </p>
           ) : null}
+
+          {canAccept ? (
+            <div className="flex gap-2">
+              <Button variant="primary" onClick={accept} disabled={busy}>
+                {busy
+                  ? t('farmer.orders.working', 'Working…')
+                  : `✅ ${t('farmer.orders.accept', 'Accept order')}`}
+              </Button>
+              <Button variant="ghost" onClick={() => setConfirmDecline(true)} disabled={busy}>
+                {t('farmer.orders.decline', 'Decline')}
+              </Button>
+            </div>
+          ) : null}
+
+          {canPack ? (
+            <div className="flex gap-2">
+              <Button variant="primary" onClick={pack} disabled={busy}>
+                {busy
+                  ? t('farmer.orders.working', 'Working…')
+                  : `📦 ${t('farmer.orders.markPackaged', 'Mark Packed')}`}
+              </Button>
+              <Button variant="ghost" onClick={() => setConfirmDecline(true)} disabled={busy}>
+                {t('farmer.orders.decline', 'Decline')}
+              </Button>
+            </div>
+          ) : null}
+
+          <ConfirmDialog
+            open={confirmDecline}
+            title={t('farmer.orders.declineTitle', 'Decline this order?')}
+            subtitle={order.code}
+            confirmLabel={t('farmer.orders.decline', 'Decline')}
+            cancelLabel={t('common.cancel', 'Cancel')}
+            tone="danger"
+            busy={busy}
+            reason={{
+              label: t('farmer.orders.declineReason', 'Reason (optional)'),
+              placeholder: t('farmer.orders.declineReasonHint', 'e.g. crop damaged, sold out'),
+            }}
+            onConfirm={(reason) => decline(reason)}
+            onClose={() => setConfirmDecline(false)}
+          >
+            {t(
+              'farmer.orders.declineBody',
+              'The customer is refunded and notified, and declining lowers your reliability. This cannot be undone.',
+            )}
+          </ConfirmDialog>
 
           <section className="rounded-base border border-border-subtle bg-surface p-4">
             <h3 className="mb-2 text-sm font-bold text-primary">📋 {t('farmer.orders.info')}</h3>

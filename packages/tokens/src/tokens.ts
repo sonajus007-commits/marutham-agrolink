@@ -82,7 +82,9 @@ export const neutral = {
  * status strings the API returns. */
 export const statusPalette = {
   'Order Placed': colors.sun,
-  Packaged: colors.gold2,
+  'Order Received': colors.gold,
+  'Order Accepted': '#d4a015',
+  Packed: colors.gold2,
   'VCO Verified': '#52b788',
   'Picked Up': colors.forestSoft,
   'Out for Delivery': colors.green,

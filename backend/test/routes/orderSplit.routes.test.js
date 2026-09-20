@@ -229,11 +229,17 @@ describe('POST /orders — splitting a multi-vendor cart', () => {
     await app.post('/', TWO_SELLER_CART);
     const history = supa.callsTo('order_history', 'insert')[0].payload;
 
-    // The parent plus both parcels — a VCO reads the child's timeline, not the parent's.
-    assert.equal(history.length, 3);
+    // Order Placed for the parent + both parcels (3), then Order Received for each
+    // parcel (2) — the state each child is actually created at. A VCO reads the
+    // child's timeline, not the parent's.
+    assert.equal(history.length, 5);
     assert.deepEqual(
-      history.map(h => h.order_id).sort(),
+      history.filter(h => h.label === 'Order Placed').map(h => h.order_id).sort(),
       ['child-1', 'child-2', 'parent-1'],
+    );
+    assert.deepEqual(
+      history.filter(h => h.label === 'Order Received').map(h => h.order_id).sort(),
+      ['child-1', 'child-2'],
     );
   });
 });
@@ -406,7 +412,7 @@ describe('POST /orders/:id/cancel — cancelling one seller\'s part', () => {
 
   test('a part already picked up cannot be cancelled', async () => {
     const supa = fakeSupabase({
-      'orders:select': { data: [{ ...CHILD, stage: 3, status: 'Picked Up' }] },
+      'orders:select': { data: [{ ...CHILD, stage: 5, status: 'Picked Up' }] },
     });
     app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
 

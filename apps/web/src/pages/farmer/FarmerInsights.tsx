@@ -9,6 +9,7 @@ import {
   isOrderCancelled,
   fmtMoney,
   fmtMoneyInt,
+  SELLER_ACTION_STATUSES,
   type FarmerEarnings,
   type Order,
 } from '@marutham/lib';
@@ -107,17 +108,17 @@ export default function FarmerInsights({
     [monthly, monthLabels, t],
   );
 
-  // Live status mix. "To pack" is Order Placed; "in progress" is everything else
-  // still in flight; delivered + cancelled close it out.
+  // Live status mix. "To do" is the seller's own queue (accept, then pack);
+  // "in progress" is everything else still in flight; delivered + cancelled close it out.
   const statusData = useMemo(() => {
     const placed = orders.filter(
-      (o) => !isOrderCancelled(o) && String(o.status ?? '') === 'Order Placed',
+      (o) => !isOrderCancelled(o) && SELLER_ACTION_STATUSES.includes(String(o.status ?? '')),
     ).length;
     const inProgress = orders.filter(
       (o) =>
         !isOrderCancelled(o) &&
         o.status !== 'Delivered' &&
-        String(o.status ?? '') !== 'Order Placed',
+        !SELLER_ACTION_STATUSES.includes(String(o.status ?? '')),
     ).length;
     const delivered = orders.filter((o) => o.status === 'Delivered' && !isOrderCancelled(o)).length;
     const cancelled = orders.filter(isOrderCancelled).length;

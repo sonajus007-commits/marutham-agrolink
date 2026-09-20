@@ -230,7 +230,7 @@ describe('groupOrders — the agent queues', () => {
 
   it('routes each remaining status to exactly one actionable queue', () => {
     const q = groupOrders([
-      order({ id: 'a', status: 'Packaged' }),
+      order({ id: 'a', status: 'Packed' }),
       order({ id: 'b', status: 'VCO Verified' }),
       order({ id: 'c', status: 'Picked Up' }),
       order({ id: 'd', status: 'Out for Delivery' }),

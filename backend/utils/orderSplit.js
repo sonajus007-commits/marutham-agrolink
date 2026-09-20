@@ -19,7 +19,9 @@
 // two children by stage would silently mis-order them. Never rank children by stage.
 const ROLLUP_ORDER = [
   'Order Placed',
-  'Packaged',
+  'Order Received',
+  'Order Accepted',
+  'Packed',
   'VCO Verified',
   'In Transit',
   'At Hub',

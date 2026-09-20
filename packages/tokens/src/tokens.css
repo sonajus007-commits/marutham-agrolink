@@ -56,7 +56,9 @@
 
   /* ── Order status ── */
   --status-order-placed: #f4a261;
-  --status-packaged: #e9c46a;
+  --status-order-received: #FFC107;
+  --status-order-accepted: #d4a015;
+  --status-packed: #e9c46a;
   --status-vco-verified: #52b788;
   --status-picked-up: #43A047;
   --status-out-for-delivery: #1a7a4a;

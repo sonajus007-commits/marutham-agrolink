@@ -4,6 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { can } = require('../middleware/permissions');
 const { validateBody, z } = require('../middleware/validate');
 const { getFeeForSeller } = require('../utils/fees');
+const { reliabilityScore } = require('../utils/reliability');
 const { validateImages } = require('../utils/listings');
 const { priceBandCheck, priceBandMessage } = require('../utils/priceGuard');
 const notify = require('../utils/notify');
@@ -121,7 +122,7 @@ router.get('/', async (req, res) => {
       .select(`
         id, farmer_price, qty_available, listed, confirmed,
         time_available, cutoff_ts, bulk_qty, bulk_disc_pct, qty_type, qty_value,
-        farmer:users ( id, fname, lname, village_town, district, seller_type, status ),
+        farmer:users ( id, fname, lname, village_town, district, seller_type, status, orders_fulfilled, orders_cancelled ),
         product:products ( id, code, name, unit, platform_fee_pct )
       `)
       .eq('product_id', product)
@@ -134,15 +135,20 @@ router.get('/', async (req, res) => {
       return res.status(500).json({ error: 'Could not fetch listings.' });
     }
 
-    // Only include listings from active (non-blocked) farmers
+    // Only include listings from active (non-blocked) farmers. Attach the seller's
+    // reliability (derived from their fulfilled/cancelled counters) and rank the most
+    // reliable seller's offer first — cancellations demote a seller here.
     const enriched = (data || [])
       .filter(l => l.farmer?.status === 'active')
       .map(l => {
         const feePct        = getFeeForSeller(l.farmer?.seller_type);
         const consumerPrice = Math.round(l.farmer_price * (1 + feePct / 100));
-        const { status: _s, ...farmerPublic } = l.farmer; // strip status from response
-        return { ...l, farmer: farmerPublic, fee_pct: feePct, consumer_price: consumerPrice };
-      });
+        const reliability   = reliabilityScore(l.farmer?.orders_fulfilled, l.farmer?.orders_cancelled);
+        // Strip status + the raw counters from the response; expose only the score.
+        const { status: _s, orders_fulfilled: _f, orders_cancelled: _c, ...farmerPublic } = l.farmer;
+        return { ...l, farmer: farmerPublic, fee_pct: feePct, consumer_price: consumerPrice, seller_reliability: reliability };
+      })
+      .sort((a, b) => b.seller_reliability - a.seller_reliability);
 
     return res.json({ listings: enriched });
   }
@@ -176,7 +182,7 @@ router.get('/', async (req, res) => {
       .select(`
         id, product_id, farmer_price, qty_available,
         time_available, cutoff_ts, bulk_qty, bulk_disc_pct, qty_type, qty_value, images,
-        farmer:users ( id, fname, lname, village_town, district, seller_type )
+        farmer:users ( id, fname, lname, village_town, district, seller_type, orders_fulfilled, orders_cancelled )
       `)
       .eq('listed', true)
       .eq('listing_status', 'active')
@@ -188,14 +194,24 @@ router.get('/', async (req, res) => {
       return res.status(500).json({ error: 'Could not fetch listings.' });
     }
 
-    // Enrich with seller-type-aware consumer price (mirrors ?product= query)
-    const enriched = (data || []).map(l => {
-      const feePct       = getFeeForSeller(l.farmer?.seller_type);
-      const consumerPrice = Math.round(l.farmer_price * (1 + feePct / 100));
-      return { ...l, fee_pct: feePct, consumer_price: consumerPrice };
-    });
+    // Enrich with seller-type-aware consumer price + seller reliability, then rank the
+    // most reliable offers first. The consumer initial (best-selling) view draws from
+    // this feed, so a seller who cancels sinks in their products' prominence.
+    const enriched = (data || [])
+      .map(l => {
+        const feePct        = getFeeForSeller(l.farmer?.seller_type);
+        const consumerPrice = Math.round(l.farmer_price * (1 + feePct / 100));
+        const reliability   = reliabilityScore(l.farmer?.orders_fulfilled, l.farmer?.orders_cancelled);
+        if (l.farmer) {
+          delete l.farmer.orders_fulfilled;
+          delete l.farmer.orders_cancelled;
+        }
+        return { ...l, fee_pct: feePct, consumer_price: consumerPrice, seller_reliability: reliability };
+      })
+      .sort((a, b) => b.seller_reliability - a.seller_reliability);
 
-    // Group by product_id so the consumer can look up offers per product quickly
+    // Group by product_id so the consumer can look up offers per product quickly. The
+    // group inherits the sorted order, so each product's most reliable seller leads.
     const byProduct = {};
     enriched.forEach(l => {
       if (!l.farmer) return;

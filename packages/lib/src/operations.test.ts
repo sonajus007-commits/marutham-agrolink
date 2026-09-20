@@ -12,14 +12,14 @@ describe('deliveryStages', () => {
     // is realistic — and meaningless.
     const breakdown = {
       Delivered: 9,
-      Packaged: 4,
+      Packed: 4,
       'Out for Delivery': 2,
       'Order Placed': 7,
       'VCO Verified': 1,
     };
     expect(deliveryStages(breakdown).map((s) => s.status)).toEqual([
       'Order Placed',
-      'Packaged',
+      'Packed',
       'VCO Verified',
       'Out for Delivery',
       'Delivered',
@@ -27,14 +27,14 @@ describe('deliveryStages', () => {
   });
 
   it('keeps a status the pipeline has never heard of — those orders are real', () => {
-    const stages = deliveryStages({ Delivered: 1, Quarantined: 3, Packaged: 2 });
-    expect(stages.map((s) => s.status)).toEqual(['Packaged', 'Delivered', 'Quarantined']);
+    const stages = deliveryStages({ Delivered: 1, Quarantined: 3, Packed: 2 });
+    expect(stages.map((s) => s.status)).toEqual(['Packed', 'Delivered', 'Quarantined']);
     expect(stages.find((s) => s.status === 'Quarantined')?.count).toBe(3);
   });
 
   it('sorts multiple unknown statuses alphabetically rather than at random', () => {
-    const stages = deliveryStages({ Zebra: 1, Aardvark: 1, Packaged: 1 });
-    expect(stages.map((s) => s.status)).toEqual(['Packaged', 'Aardvark', 'Zebra']);
+    const stages = deliveryStages({ Zebra: 1, Aardvark: 1, Packed: 1 });
+    expect(stages.map((s) => s.status)).toEqual(['Packed', 'Aardvark', 'Zebra']);
   });
 
   it('survives an empty or missing breakdown', () => {
@@ -45,7 +45,7 @@ describe('deliveryStages', () => {
 
 describe('totalInPipeline', () => {
   it('counts everything that is not yet Delivered', () => {
-    const stages = deliveryStages({ 'Order Placed': 7, Packaged: 4, Delivered: 9 });
+    const stages = deliveryStages({ 'Order Placed': 7, Packed: 4, Delivered: 9 });
     expect(totalInPipeline(stages)).toBe(11);
   });
 

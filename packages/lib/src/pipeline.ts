@@ -7,7 +7,9 @@
  * (skip) → Picked Up → Out for Delivery. Keep it in step with the backend map. */
 export const PIPELINE_STAGES = [
   'Order Placed',
-  'Packaged',
+  'Order Received',
+  'Order Accepted',
+  'Packed',
   'VCO Verified',
   'In Transit',
   'At Hub',

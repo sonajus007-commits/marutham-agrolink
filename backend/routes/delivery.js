@@ -9,6 +9,7 @@ const { geocodeAddress, geocodingEnabled } = require('../utils/geocode');
 const { suggestDeliveryHubs } = require('../utils/hubSuggest');
 const { agentServesOrder, coverageBlockMessage } = require('../utils/agentCoverage');
 const { notify } = require('../utils/notifications');
+const { bumpFulfilled } = require('../utils/reliability');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -26,11 +27,13 @@ const GEOFENCE_RADIUS_M = 500;
 const STAGE_MAP = {
   direct: [
     'Order Placed',     // 0
-    'Packaged',         // 1
-    'VCO Verified',     // 2
-    'Picked Up',        // 3
-    'Out for Delivery', // 4
-    'Delivered',        // 5
+    'Order Received',   // 1  seller has the order (auto at placement)
+    'Order Accepted',   // 2  seller confirmed they can fulfil (within the accept window)
+    'Packed',           // 3
+    'VCO Verified',     // 4
+    'Picked Up',        // 5
+    'Out for Delivery', // 6
+    'Delivered',        // 7
   ],
   // The hub lane collects the parcel to the hub FIRST and only names a last-mile
   // agent once it has arrived, so 'Picked Up' sits AFTER 'At Hub' here — it is the
@@ -38,13 +41,15 @@ const STAGE_MAP = {
   // That is why stage integers are not comparable across routes (see PATCH /route).
   hub: [
     'Order Placed',     // 0
-    'Packaged',         // 1
-    'VCO Verified',     // 2
-    'In Transit',       // 3
-    'At Hub',           // 4
-    'Picked Up',        // 5
-    'Out for Delivery', // 6
-    'Delivered',        // 7
+    'Order Received',   // 1
+    'Order Accepted',   // 2
+    'Packed',           // 3
+    'VCO Verified',     // 4
+    'In Transit',       // 5
+    'At Hub',           // 6
+    'Picked Up',        // 7
+    'Out for Delivery', // 8
+    'Delivered',        // 9
   ],
   /* The container of a multi-vendor order. It is not a parcel and nothing advances
    * it — its stage is a ROLLUP of its children (the least advanced one), which may
@@ -59,13 +64,15 @@ const STAGE_MAP = {
    * for ever. */
   split: [
     'Order Placed',     // 0
-    'Packaged',         // 1
-    'VCO Verified',     // 2
-    'In Transit',       // 3
-    'At Hub',           // 4
-    'Picked Up',        // 5
-    'Out for Delivery', // 6
-    'Delivered',        // 7
+    'Order Received',   // 1
+    'Order Accepted',   // 2
+    'Packed',           // 3
+    'VCO Verified',     // 4
+    'In Transit',       // 5
+    'At Hub',           // 6
+    'Picked Up',        // 7
+    'Out for Delivery', // 8
+    'Delivered',        // 9
   ],
 };
 
@@ -361,17 +368,63 @@ async function storeProof(order, kind, body, userId) {
   if (error) console.error(`Order ${order.id}: proof photo (${kind}) insert failed:`, error.message);
 }
 
-// ── POST /orders/:id/pack  (farmer only) ──────────────────────────────────────
-router.post('/:id/pack', async (req, res) => {
+// ── POST /orders/:id/accept  (farmer only) ────────────────────────────────────
+// The seller confirms they can fulfil the order (Order Received → Order Accepted).
+// Must happen before the acceptance deadline — after it, the nightly sweep will have
+// auto-cancelled the order, and a late accept here is refused so the two never race.
+router.post('/:id/accept', async (req, res) => {
   if (req.user.role !== 'farmer') {
-    return res.status(403).json({ error: 'Only farmers can mark orders as packaged.' });
+    return res.status(403).json({ error: 'Only the seller can accept an order.' });
   }
 
   const order = await fetchActiveOrder(req.params.id, res);
   if (!order) return;
 
-  if (order.stage !== 0) {
-    return res.status(400).json({ error: `Cannot pack. Order is currently: "${order.status}".` });
+  if (order.status !== 'Order Received') {
+    return res.status(409).json({ error: `Cannot accept. Order is currently: "${order.status}".` });
+  }
+  if (order.accept_deadline && new Date(order.accept_deadline) < new Date()) {
+    return res.status(409).json({ error: 'The acceptance window for this order has closed.' });
+  }
+
+  const { data: items, error: itemsErr } = await supabase
+    .from('order_items')
+    .select('id')
+    .eq('order_id', order.id)
+    .eq('farmer_id', req.user.id);
+  if (itemsErr) {
+    console.error('Accept item check failed:', itemsErr.message);
+    return res.status(500).json({ error: 'Could not verify your items in this order. Please try again.' });
+  }
+  if (!items || items.length === 0) {
+    return res.status(403).json({ error: 'You have no items in this order.' });
+  }
+
+  const { updated, error, conflict } = await advanceStage(
+    order,
+    `Farmer ${req.user.fname}`,
+    { accepted_at: new Date().toISOString() },
+  );
+  if (conflict) return conflictResponse(res);
+  if (error) return res.status(500).json({ error });
+
+  res.json({ ok: true, message: 'Order accepted.', newStatus: updated.status, order: updated });
+});
+
+// ── POST /orders/:id/pack  (farmer only) ──────────────────────────────────────
+router.post('/:id/pack', async (req, res) => {
+  if (req.user.role !== 'farmer') {
+    return res.status(403).json({ error: 'Only farmers can mark orders as packed.' });
+  }
+
+  const order = await fetchActiveOrder(req.params.id, res);
+  if (!order) return;
+
+  // Packing follows acceptance: the seller must have accepted the order first, so
+  // an un-accepted order (still within or past its acceptance window) cannot skip
+  // straight to Packed. Keyed off status, never the stage number.
+  if (order.status !== 'Order Accepted') {
+    return res.status(409).json({ error: `Cannot pack. Order is currently: "${order.status}". Accept it first.` });
   }
 
   // Confirm this farmer has items in the order
@@ -399,7 +452,11 @@ router.post('/:id/pack', async (req, res) => {
   if (conflict) return conflictResponse(res);
   if (error) return res.status(500).json({ error });
 
-  res.json({ ok: true, message: 'Order marked as Packaged.', newStatus: updated.status, order: updated });
+  // Reliability credit: the seller accepted and packed their part, so it counts as
+  // fulfilled (the balance to their cancellations). Best-effort — never fail the pack.
+  await bumpFulfilled(req.user.id);
+
+  res.json({ ok: true, message: 'Order marked as Packed.', newStatus: updated.status, order: updated });
 });
 
 // ── POST /orders/:id/confirm-received  (Consumer — confirm receipt → Delivered) ─
@@ -489,7 +546,7 @@ router.post('/:id/scan', async (req, res) => {
   // also name the delivery agent — auto-matched against the consumer's delivery
   // village. A hub order gets its agent later, from the Hub Incharge, because until
   // the parcel reaches the hub nobody knows who will run the last mile.
-  if (status === 'Packaged') {
+  if (status === 'Packed') {
     if (adminRole !== 'VCO' && !isSeniorAdmin(adminRole)) {
       // Delivery Agents should not do VCO verify
       return res.status(403).json({ error: 'Only VCO or senior admins can verify packaged orders.' });
@@ -685,7 +742,7 @@ router.post('/:id/scan', async (req, res) => {
 
   } else {
     return res.status(400).json({
-      error: `Cannot scan. Order is at stage "${order.status}". It must be Packaged or later.`,
+      error: `Cannot scan. Order is at stage "${order.status}". It must be Packed or later.`,
     });
   }
 

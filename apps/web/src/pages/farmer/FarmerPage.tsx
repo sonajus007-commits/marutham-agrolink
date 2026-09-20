@@ -10,7 +10,12 @@ import {
   LogOutIcon,
 } from '../../components/icons';
 import { api } from '@marutham/api-client';
-import { isOrderCancelled, needsSubscriptionPayment, type Order } from '@marutham/lib';
+import {
+  isOrderCancelled,
+  needsSubscriptionPayment,
+  SELLER_ACTION_STATUSES,
+  type Order,
+} from '@marutham/lib';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
 import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider } from '../../components/Toast';
@@ -66,9 +71,9 @@ function FarmerInner() {
     void loadOrders();
   }, [loadOrders]);
 
-  /* Orders sitting at "Order Placed" are the ones the seller still has to pack. */
+  /* Orders still awaiting the seller — accept, then pack — before the VCO collects. */
   const packCount = orders.filter(
-    (o) => !isOrderCancelled(o) && String(o.status ?? '') === 'Order Placed',
+    (o) => !isOrderCancelled(o) && SELLER_ACTION_STATUSES.includes(String(o.status ?? '')),
   ).length;
 
   /* Re-read the account from the server on mount: an admin may have suspended

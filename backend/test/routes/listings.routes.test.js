@@ -119,6 +119,29 @@ describe('GET /listings', () => {
     assert.equal(res.status, 500);
     assert.notEqual(res.status, 200);
   });
+
+  test('ranks a reliable seller above a cancel-prone one, and exposes only the score', async () => {
+    const supa = fakeSupabase({
+      'users:select': { data: [{ id: 'f1' }, { id: 'f2' }] },
+      'farmer_listings:select': { data: [
+        { id: 'l2', product_id: 'p1', farmer_price: 5000, qty_available: 10,
+          farmer: { id: 'f2', fname: 'Cancel', seller_type: 'Farmer', orders_fulfilled: 1, orders_cancelled: 9 } },
+        { id: 'l1', product_id: 'p1', farmer_price: 5000, qty_available: 10,
+          farmer: { id: 'f1', fname: 'Reliable', seller_type: 'Farmer', orders_fulfilled: 10, orders_cancelled: 0 } },
+      ] },
+    });
+    app = await mountRoute('listings', { supabase: supa, user: FARMER });
+
+    const res = await app.get('/?district=Pudukkottai');
+
+    assert.equal(res.status, 200);
+    const offers = res.body.by_product.p1;
+    assert.equal(offers[0].farmer.id, 'f1', 'the reliable seller must lead');
+    assert.ok(offers[0].seller_reliability > offers[1].seller_reliability);
+    // The raw counters must not leak — only the derived score is public.
+    assert.ok(!('orders_cancelled' in offers[0].farmer));
+    assert.ok(!('orders_fulfilled' in offers[0].farmer));
+  });
 });
 
 // Body validation (Zod) on POST /listings. Price and stock are the numeric bug class

@@ -79,17 +79,17 @@ describe('rollupStatus', () => {
   const child = (status, over = {}) => ({ status, cancelled: false, ...over });
 
   test('the order is only as far along as its LEAST advanced parcel', () => {
-    const { status } = rollupStatus([child('Out for Delivery'), child('Packaged')]);
-    assert.equal(status, 'Packaged');
+    const { status } = rollupStatus([child('Out for Delivery'), child('Packed')]);
+    assert.equal(status, 'Packed');
   });
 
   test('ranks across DIFFERENT routes by status, never by stage', () => {
-    // 'In Transit' is stage 3 on the hub map; 'Picked Up' is stage 3 on direct.
+    // 'In Transit' is stage 5 on the hub map; 'Picked Up' is stage 5 on direct.
     // Comparing the integers would call these equal. On the real ladder In Transit
     // comes first, so it is what holds the order back.
     const { status } = rollupStatus([
-      child('Picked Up', { stage: 3, route: 'direct' }),
-      child('In Transit', { stage: 3, route: 'hub' }),
+      child('Picked Up', { stage: 5, route: 'direct' }),
+      child('In Transit', { stage: 5, route: 'hub' }),
     ]);
     assert.equal(status, 'In Transit');
   });

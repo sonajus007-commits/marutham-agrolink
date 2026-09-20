@@ -503,3 +503,72 @@ describe('GET /orders/frequent-items', () => {
     assert.equal(res.status, 500);
   });
 });
+
+describe('POST /orders/:id/decline — seller declines an order', () => {
+  let app, mute;
+  const FARMER = { id: FARMER_ID, role: 'farmer', fname: 'Ravi' };
+  beforeEach(() => { mute = muteConsoleError(); });
+  afterEach(async () => { mute.restore(); if (app) await app.close(); });
+
+  // An unsplit, prepaid order the farmer received but has not yet accepted.
+  function declinable(overrides = {}) {
+    const supa = fakeSupabase({
+      'orders:select': { data: [{
+        id: 'o1', code: 'ORD1', consumer_id: CONSUMER.id, status: 'Order Received',
+        cancelled: false, pay_method: 'UPI', pay_status: 'paid', total: 5000,
+      }] },
+      'orders:update': { data: [{ id: 'o1', status: 'Cancelled' }] },
+      'order_history:insert': { data: [] },
+      'order_items:select': { data: [{ farmer_id: FARMER_ID, product_id: PRODUCT_ID, qty: 2 }] },
+      'farmer_listings:select': { data: [{ qty_available: 3, listed: true }] },
+      'farmer_listings:update': { data: [] },
+      'users:select': { data: [{ id: FARMER_ID, orders_cancelled: 1 }] },
+      'users:update': { data: [] },
+      'notifications:insert': { data: [] },
+    });
+    for (const [k, v] of Object.entries(overrides)) supa.on(...k.split('|'), v);
+    return supa;
+  }
+
+  test('cancels the order, restocks, and bumps the seller reliability counter', async () => {
+    const supa = declinable();
+    app = await mountRoute('orders', { supabase: supa, user: FARMER });
+
+    const res = await app.post('/o1/decline', { reason: 'crop damaged' });
+
+    assert.equal(res.status, 200);
+    const cancelWrite = supa.callsTo('orders', 'update').find((c) => c.payload.cancelled === true);
+    assert.ok(cancelWrite, 'the order must be cancelled');
+    assert.equal(cancelWrite.payload.status, 'Cancelled');
+    // Reliability: orders_cancelled bumped 1 → 2.
+    const relWrite = supa.callsTo('users', 'update')[0];
+    assert.ok(relWrite, 'the seller reliability counter must be updated');
+    assert.equal(relWrite.payload.orders_cancelled, 2);
+    // Restocked the declined line.
+    const stock = supa.callsTo('farmer_listings', 'update')[0];
+    assert.equal(stock.payload.qty_available, 5, '3 + 2 returned');
+  });
+
+  test('a non-farmer cannot decline, and nothing is cancelled', async () => {
+    const supa = declinable();
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+
+    const res = await app.post('/o1/decline', {});
+
+    assert.equal(res.status, 403);
+    assert.equal(supa.callsTo('orders', 'update').length, 0);
+  });
+
+  test('declining is refused once the order is past acceptance/packing', async () => {
+    const supa = declinable({ 'orders|select': { data: [{
+      id: 'o1', code: 'ORD1', consumer_id: CONSUMER.id, status: 'VCO Verified',
+      cancelled: false, pay_method: 'UPI', pay_status: 'paid', total: 5000,
+    }] } });
+    app = await mountRoute('orders', { supabase: supa, user: FARMER });
+
+    const res = await app.post('/o1/decline', {});
+
+    assert.equal(res.status, 409);
+    assert.equal(supa.callsTo('orders', 'update').length, 0);
+  });
+});

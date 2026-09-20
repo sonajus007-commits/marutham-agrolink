@@ -839,7 +839,7 @@ router.get('/operations', async (req, res) => {
   // Orders sitting ready with no agent are the "who is responsible?" queue — a
   // real ownership gap, not a low-priority nag. Escalate severity with the backlog
   // so a region with no covering agent surfaces instead of hiding at the bottom.
-  const unassigned = active.filter(o => !o.agent_id && ['Packaged', 'VCO Verified', 'Picked Up'].includes(o.status)).length;
+  const unassigned = active.filter(o => !o.agent_id && ['Packed', 'VCO Verified', 'Picked Up'].includes(o.status)).length;
   if (unassigned > 0) {
     const severity = unassigned >= 5 ? 'high' : unassigned >= 2 ? 'medium' : 'low';
     alerts.push({ type: 'assign', severity, params: { count: unassigned }, message: `${unassigned} order${unassigned > 1 ? 's' : ''} ready but no delivery agent assigned — check regional agent coverage.` });

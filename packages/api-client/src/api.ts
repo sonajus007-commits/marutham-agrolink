@@ -450,10 +450,24 @@ export const api = {
   setRoute(id: string, route: string): Promise<{ message?: string }> {
     return apiFetch('PATCH', '/orders/' + id + '/route', { route });
   },
-  /** Farmer marks their own order Packaged (Order Placed → Packaged). The server
-   *  enforces farmer-role + stage 0 + "you have items in this order" (POST
+  /** Seller accepts an order they can fulfil (Order Received → Order Accepted). The
+   *  server enforces farmer-role, the current status, and the acceptance deadline
+   *  (POST /orders/:id/accept) — a late accept is refused (409). */
+  acceptOrder(id: string): Promise<ScanResponse> {
+    return apiFetch<ScanResponse>('POST', '/orders/' + id + '/accept');
+  },
+  /** Seller declines an order they cannot fulfil (Order Received/Accepted → Cancelled),
+   *  refunding the customer and counting against reliability (POST /orders/:id/decline). */
+  declineOrder(
+    id: string,
+    reason?: string,
+  ): Promise<{ message?: string; refund?: { amount_paise: number; to: string } }> {
+    return apiFetch('POST', '/orders/' + id + '/decline', reason ? { reason } : undefined);
+  },
+  /** Farmer marks their own order Packed (Order Accepted → Packed). The server
+   *  enforces farmer-role + the current status + "you have items in this order" (POST
    *  /orders/:id/pack). Online-only: unlike the field scans, packing happens at
-   *  the farm where the seller has signal, and there is no stage to assert. */
+   *  the farm where the seller has signal. */
   markPackaged(id: string): Promise<ScanResponse> {
     return apiFetch<ScanResponse>('POST', '/orders/' + id + '/pack');
   },

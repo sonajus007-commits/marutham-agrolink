@@ -36,3 +36,6 @@ Thumbs.db
 
 # Claude Code — local, per-machine settings and worktrees
 .claude/
+
+# Downloaded APK artifacts (build output, not source)
+dist-apk/
