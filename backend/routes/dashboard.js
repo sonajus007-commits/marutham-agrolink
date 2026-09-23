@@ -239,11 +239,12 @@ router.get('/', async (req, res) => {
 // Trimmed hard as real feeds landed. NOW LIVE (left this list): payables/daily_settlement/
 // receivables/customer_complaints (Phase-3 Slice 1); and via the expense ledger (mig 062):
 // net_profit, ebitda, salary_cost, hub_cost, fuel_cost, plus gst (collected on platform
-// charges). RETIRED as never-applicable or out of scope (removed, not deferred):
-// warehouse_cost + stock_shortage (transit-only, no stock); cash_flow (profit ≠ cash —
-// needs a real cash-flow statement); bank_balance (needs an opening balance + bank feed,
-// not a P&L output); tds (needs vendor-level TDS tracking). What remains are genuine
-// FUTURE features with a clear path, not accounting gaps.
+// charges). NOW LIVE via mig 064: tds_deducted (§194-O withheld on settlements) and
+// gst_net_payable (output GST − input tax credit from the expense ledger). RETIRED as
+// never-applicable or out of scope (removed, not deferred): warehouse_cost +
+// stock_shortage (transit-only, no stock); cash_flow (profit ≠ cash — needs a real
+// cash-flow statement); bank_balance (needs an opening balance + bank feed, not a P&L
+// output). What remains are genuine FUTURE features with a clear path, not accounting gaps.
 const EXEC_PLACEHOLDERS = [
   'revenue_forecast', 'vehicle_utilization', 'farmer_satisfaction', 'hub_issues',
 ];
@@ -300,9 +301,12 @@ function financialCuts({ active, payouts, subActive, nowIst }) {
 // delivery + multi-seller fee), charged inclusive at serviceGst% → tax = C×rate/(100+rate);
 // produce + the commission margin are GST-exempt. EBITDA excludes below-the-line expense
 // categories (tax/interest/depreciation); net profit is after all of them. Everything is
-// summed in PAISE and rup()'d once, so there is no float drift. NOT a compliance figure:
-// GST here is collected, not net liability; there is no cash-flow statement.
-function monthlyPnl({ monthActive, monthSubs, expenses }) {
+// summed in PAISE and rup()'d once, so there is no float drift. GST is now NETTED:
+// gst_net_payable = output GST collected − input tax credit (GST the platform paid on
+// its expenses, mig 064); an excess of credit surfaces as gst_credit_carryforward.
+// tds_deducted (§194-O, withheld on this month's settlements) is a remittance liability,
+// NOT an expense — it never touches EBITDA / net profit. Still NOT a filed return.
+function monthlyPnl({ monthActive, monthSubs, expenses, tdsDeductedPaise = 0 }) {
   const rate = Number(platformConfig.serviceGst || 0);
   const gstFactor = rate > 0 ? rate / (100 + rate) : 0;
   let commission = 0, delivery = 0, svc = 0;
@@ -315,6 +319,9 @@ function monthlyPnl({ monthActive, monthSubs, expenses }) {
   const subscription = (monthSubs || []).reduce((s, p) => s + Number(p.total_amount || 0), 0);
   const es = expenseSummary(expenses || []);
   const revenue = commission + delivery + subscription; // paise
+  const gstCollected = Math.round(svc * gstFactor);     // output tax, paise
+  const itc = es.input_tax_credit;                       // input tax credit, paise
+  const gstNet = gstCollected - itc;                     // >0 payable, <0 credit carried forward
   return {
     period:             'month',
     revenue:            rup(revenue),
@@ -322,7 +329,11 @@ function monthlyPnl({ monthActive, monthSubs, expenses }) {
     // NOT `delivery` — that is a money-middleware field name and would be re-coerced.
     delivery_income:    rup(delivery),
     subscription:       rup(subscription),
-    gst_collected:      rup(Math.round(svc * gstFactor)),
+    gst_collected:      rup(gstCollected),
+    input_tax_credit:   rup(itc),
+    gst_net_payable:    rup(Math.max(0, gstNet)),
+    gst_credit_carryforward: rup(Math.max(0, -gstNet)),
+    tds_deducted:       rup(tdsDeductedPaise),
     expenses_total:     rup(es.total),
     operating_expenses: rup(es.operating),
     ebitda:             rup(revenue - es.operating),
@@ -567,13 +578,15 @@ router.get('/executive', async (req, res) => {
   let pnl = null;
   if (noGeo) {
     const monthStart = `${nowIst.y}-${String(nowIst.m + 1).padStart(2, '0')}-01`;
-    const [expR, subR] = await Promise.all([
-      supabase.from('expenses').select('category, amount').gte('incurred_on', monthStart),
+    const [expR, subR, payR] = await Promise.all([
+      supabase.from('expenses').select('category, amount, gst_amount').gte('incurred_on', monthStart),
       supabase.from('subscription_payments').select('total_amount, paid_at').gte('paid_at', monthStart),
+      supabase.from('payouts').select('tds_amount, created_at').gte('created_at', monthStart),
     ]);
-    if (!expR.error && !subR.error) {
+    if (!expR.error && !subR.error && !payR.error) {
       const monthActive = active.filter(o => isThisMonth(istParts(o.created_at)));
-      pnl = monthlyPnl({ monthActive, monthSubs: subR.data || [], expenses: expR.data || [] });
+      const tdsDeducted = (payR.data || []).reduce((s, p) => s + Number(p.tds_amount || 0), 0);
+      pnl = monthlyPnl({ monthActive, monthSubs: subR.data || [], expenses: expR.data || [], tdsDeductedPaise: tdsDeducted });
     }
   }
 
@@ -1346,9 +1359,9 @@ router.get('/finance', async (req, res) => {
   const monthStart = `${nowIst.y}-${String(nowIst.m + 1).padStart(2, '0')}-01`;
   const [ordersR, payoutsR, usersR, expR, subR] = await Promise.all([
     supabase.from('orders').select('total, item_total, market_fee, handling, delivery, cancelled, pay_status, status, created_at'),
-    supabase.from('payouts').select('amount, status, created_at, paid_at'),
+    supabase.from('payouts').select('amount, tds_amount, status, created_at, paid_at'),
     supabase.from('users').select('role, subscription_amount, subscription_expires_at').is('deleted_at', null),
-    supabase.from('expenses').select('category, amount').gte('incurred_on', monthStart),
+    supabase.from('expenses').select('category, amount, gst_amount').gte('incurred_on', monthStart),
     supabase.from('subscription_payments').select('total_amount, paid_at').gte('paid_at', monthStart),
   ]);
   if (ordersR.error || payoutsR.error || usersR.error || expR.error || subR.error) {
@@ -1366,7 +1379,8 @@ router.get('/finance', async (req, res) => {
   const isToday     = ts => { if (!ts) return false; const p = istParts(ts); return p.y === nowIst.y && p.m === nowIst.m && p.day === nowIst.day; };
   const isThisMonth = ts => { if (!ts) return false; const p = istParts(ts); return p.y === nowIst.y && p.m === nowIst.m; };
   const monthActive = active.filter(o => isThisMonth(o.created_at));
-  const pnl = monthlyPnl({ monthActive, monthSubs: subR.data || [], expenses: expR.data || [] });
+  const tdsDeducted = payouts.filter(p => isThisMonth(p.created_at)).reduce((s, p) => s + Number(p.tds_amount || 0), 0);
+  const pnl = monthlyPnl({ monthActive, monthSubs: subR.data || [], expenses: expR.data || [], tdsDeductedPaise: tdsDeducted });
   const weekAgo = Date.now() - 7 * 86400000;
   const pending = payouts.filter(p => p.status === 'pending');
 

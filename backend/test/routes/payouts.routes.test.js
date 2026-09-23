@@ -49,6 +49,44 @@ describe('POST /payouts/run', () => {
     assert.deepEqual(settled, ['order-2'], 'order-1 was already paid and must be skipped');
   });
 
+  test('deducts §194-O TDS on the settled rows (Retailer → 0.1%, no PAN → 5%)', async () => {
+    // order-2 / farmer-2 is the only unsettled row (gross 3000 paise = ₹30).
+    const retailer = settlement({
+      'users|select': { data: [{ id: 'farmer-2', seller_type: 'Retailer', pan: 'AAAAA1111A' }] },
+    });
+    app = await mountRoute('payouts', { supabase: retailer, user: HEAD_OFFICE });
+    let res = await app.post('/run', {});
+    assert.equal(res.status, 201);
+    let rows = retailer.callsTo('payouts', 'insert')[0].payload;
+    rows = Array.isArray(rows) ? rows : [rows];
+    let row = rows.find((r) => r.farmer_id === 'farmer-2');
+    assert.equal(row.amount, 3000, 'amount stays the GROSS base');
+    assert.equal(row.tds_rate, 0.1, 'a Retailer has no threshold → 0.1%');
+    assert.equal(row.tds_amount, 3, '0.1% of 3000 paise = 3 paise');
+    await app.close();
+
+    // Same seller, no PAN on file → §206AA 5%.
+    const noPan = settlement({
+      'users|select': { data: [{ id: 'farmer-2', seller_type: 'Retailer', pan: null }] },
+    });
+    app = await mountRoute('payouts', { supabase: noPan, user: HEAD_OFFICE });
+    res = await app.post('/run', {});
+    rows = noPan.callsTo('payouts', 'insert')[0].payload;
+    rows = Array.isArray(rows) ? rows : [rows];
+    row = rows.find((r) => r.farmer_id === 'farmer-2');
+    assert.equal(row.tds_rate, 5);
+    assert.equal(row.tds_amount, 150, '5% of 3000 paise = 150 paise');
+  });
+
+  test('refuses to settle if the seller TDS-details read fails', async () => {
+    const supa = settlement({ 'users|select': { error: { message: 'timeout' } } });
+    app = await mountRoute('payouts', { supabase: supa, user: HEAD_OFFICE });
+    const res = await app.post('/run', {});
+    // Money leaving the business: if we cannot establish the TDS inputs, we do not pay.
+    assert.equal(res.status, 500);
+    assert.equal(supa.callsTo('payouts', 'insert').length, 0);
+  });
+
   // ── THE ONE. ───────────────────────────────────────────────────────────────
   // Before 466bbad: `const { data: existingPayouts } = await …` — error discarded.
   // A failed read made `alreadyPaidOrderIds` an EMPTY set, so BOTH orders looked

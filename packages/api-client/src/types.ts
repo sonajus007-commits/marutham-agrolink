@@ -1100,6 +1100,14 @@ export interface MonthlyPnl {
   delivery_income: number;
   subscription: number;
   gst_collected: number;
+  /** Input tax credit — GST the platform paid on its expenses (mig 064). */
+  input_tax_credit: number;
+  /** Net GST payable = max(0, output GST collected − input tax credit). */
+  gst_net_payable: number;
+  /** Excess input credit carried forward when ITC exceeds output GST. */
+  gst_credit_carryforward: number;
+  /** §194-O TDS withheld on this month's seller settlements (a remittance liability). */
+  tds_deducted: number;
   expenses_total: number;
   operating_expenses: number;
   ebitda: number;
@@ -1129,6 +1137,8 @@ export interface Expense {
   category: ExpenseCategory;
   /** RUPEES (money middleware converts the stored paise). */
   amount: string | number;
+  /** Recoverable input GST within this expense, RUPEES (money middleware converts paise). */
+  gst_amount: string | number;
   incurred_on: string;
   vendor: string | null;
   note: string | null;
@@ -1144,6 +1154,7 @@ export interface ExpenseListResponse {
     spent: number;
     operating: number;
     below_line: number;
+    input_tax_credit: number;
     by_category: Record<string, number>;
   };
 }

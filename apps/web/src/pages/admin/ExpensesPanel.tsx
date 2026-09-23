@@ -50,6 +50,7 @@ export function ExpensesPanel({
   // Form state.
   const [category, setCategory] = useState<ExpenseCategory>('salary');
   const [amount, setAmount] = useState('');
+  const [gstAmount, setGstAmount] = useState('');
   const [vendor, setVendor] = useState('');
   const [note, setNote] = useState('');
 
@@ -71,6 +72,7 @@ export function ExpensesPanel({
   function openAdd() {
     setCategory('salary');
     setAmount('');
+    setGstAmount('');
     setVendor('');
     setNote('');
     setAdding(true);
@@ -82,11 +84,17 @@ export function ExpensesPanel({
       toast(t('admin.finance.exp.badAmount', 'Enter an amount greater than zero.'), 'er');
       return;
     }
+    const gstRupees = gstAmount.trim() === '' ? 0 : Number(gstAmount);
+    if (!Number.isFinite(gstRupees) || gstRupees < 0 || gstRupees > rupees) {
+      toast(t('admin.finance.exp.badGst', 'Input GST must be between 0 and the amount.'), 'er');
+      return;
+    }
     setBusy(true);
     try {
       await api.logExpense({
         category,
         amount: rupees,
+        gst_amount: gstRupees || undefined,
         vendor: vendor.trim() || undefined,
         note: note.trim() || undefined,
       });
@@ -158,11 +166,23 @@ export function ExpensesPanel({
             label={t('admin.finance.pnl.gst', 'GST collected')}
             value={fmtMoney(pnl?.gst_collected ?? 0)}
           />
+          <StatTile
+            label={t('admin.finance.pnl.itc', 'Input tax credit')}
+            value={fmtMoney(pnl?.input_tax_credit ?? 0)}
+          />
+          <StatTile
+            label={t('admin.finance.pnl.gstNet', 'Net GST payable')}
+            value={fmtMoney(pnl?.gst_net_payable ?? 0)}
+          />
+          <StatTile
+            label={t('admin.finance.pnl.tds', 'TDS deducted')}
+            value={fmtMoney(pnl?.tds_deducted ?? 0)}
+          />
         </div>
         <p className="mt-2 text-2xs leading-normal text-fg-muted">
           {t(
             'admin.finance.pnl.note',
-            'EBITDA excludes tax/interest/depreciation; net profit is after them. GST shown is collected (output tax), not net liability.',
+            'EBITDA excludes tax/interest/depreciation; net profit is after them. Net GST payable = output GST collected − input tax credit. TDS deducted (§194-O) is withheld on seller settlements and remitted separately.',
           )}
         </p>
       </ChartContainer>
@@ -262,6 +282,32 @@ export function ExpensesPanel({
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
             />
+          </div>
+          <div>
+            <label
+              htmlFor="exp-gst"
+              className="mb-1 block text-2xs font-bold uppercase tracking-wide text-fg-muted"
+            >
+              {t('admin.finance.exp.gst', 'Input GST in this amount (₹, optional)')}
+            </label>
+            <input
+              id="exp-gst"
+              aria-label={t('admin.finance.exp.gst', 'Input GST in this amount (₹, optional)')}
+              className={INPUT_CLASS}
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={gstAmount}
+              onChange={(e) => setGstAmount(e.target.value)}
+              placeholder="0.00"
+            />
+            <p className="mt-1 text-2xs leading-normal text-fg-muted">
+              {t(
+                'admin.finance.exp.gstHelp',
+                'The recoverable GST from the invoice — nets the platform’s GST liability.',
+              )}
+            </p>
           </div>
           <div>
             <label

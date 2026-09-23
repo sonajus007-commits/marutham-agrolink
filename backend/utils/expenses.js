@@ -15,18 +15,23 @@ const BELOW_THE_LINE = new Set(['tax', 'interest', 'depreciation']);
  *   operating   — total minus below-the-line (→ EBITDA = revenue − operating)
  *   below_line  — tax + interest + depreciation
  *   by_category — { salary, hub, fuel, … } in paise
+ *   input_tax_credit — Σ recoverable input GST inside these expenses (paise). Used ONLY
+ *                      to net the GST liability — NOT subtracted from `total`, so the P&L
+ *                      cost (and therefore EBITDA / net profit) is unchanged.
  */
 function expenseSummary(rows) {
   const by_category = {};
   let total = 0;
   let below_line = 0;
+  let input_tax_credit = 0;
   for (const r of rows || []) {
     const amt = Number(r.amount || 0);
     total += amt;
     by_category[r.category] = (by_category[r.category] || 0) + amt;
     if (BELOW_THE_LINE.has(r.category)) below_line += amt;
+    input_tax_credit += Number(r.gst_amount || 0);
   }
-  return { total, operating: total - below_line, below_line, by_category };
+  return { total, operating: total - below_line, below_line, by_category, input_tax_credit };
 }
 
 module.exports = { EXPENSE_CATEGORIES, BELOW_THE_LINE, expenseSummary };

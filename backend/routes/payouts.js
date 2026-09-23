@@ -3,6 +3,8 @@ const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { can } = require('../middleware/permissions');
 const { groupPayouts } = require('../utils/payouts');
+const { computeTds } = require('../utils/tds');
+const platform = require('../config/platform');
 const { notify } = require('../utils/notifications');
 
 const router = express.Router();
@@ -13,7 +15,7 @@ router.get('/', async (req, res) => {
   let query = supabase
     .from('payouts')
     .select(`
-      id, amount, status, method, reference, created_at, paid_at,
+      id, amount, tds_rate, tds_amount, status, method, reference, created_at, paid_at,
       farmer:users ( id, fname, lname, phone, district, bank_name, bank_account, ifsc ),
       order:orders ( id, code )
     `)
@@ -127,13 +129,72 @@ router.post('/run', async (req, res) => {
 
   // Aggregate payout amount per farmer per order. Shared with the per-order
   // figure on GET /orders so the two cannot disagree.
-  const payoutRows = groupPayouts(items).map(p => ({
-    farmer_id: p.farmer_id,
-    order_id:  p.order_id,
-    amount:    p.amount,
-    status:    'pending',
-    method:    'bank_transfer',
-  }));
+  const grouped = groupPayouts(items);
+  const farmerIds = [...new Set(grouped.map(p => p.farmer_id))];
+
+  // ── §194-O TDS ──────────────────────────────────────────────────────────────
+  // We deduct TDS on the gross amount facilitated to each seller. The rate depends
+  // on the seller's PAN + type and their FY-to-date gross, so we need both before we
+  // can build the rows. This is money leaving the business: if we cannot establish
+  // the inputs, we do NOT pay — same rule as the double-pay guard above.
+  const { data: sellers, error: sellersErr } = await supabase
+    .from('users')
+    .select('id, seller_type, pan')
+    .in('id', farmerIds);
+  if (sellersErr) {
+    console.error('SETTLEMENT ABORTED — could not read seller TDS details:', sellersErr.message);
+    return res.status(500).json({ error: 'Could not read seller details for TDS. No payouts were created.' });
+  }
+  const sellerById = new Map((sellers || []).map(s => [s.id, s]));
+
+  // Start of the current Indian financial year (default April) → the §194-O ₹5L
+  // individual threshold is cumulative across the FY.
+  const fyStartIso = (() => {
+    const now = new Date();
+    const startMonth = (platform.tds?.fyStartMonth || 4) - 1; // 0-indexed
+    const y = now.getUTCMonth() >= startMonth ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
+    return new Date(Date.UTC(y, startMonth, 1)).toISOString();
+  })();
+
+  const { data: fyPayouts, error: fyErr } = await supabase
+    .from('payouts')
+    .select('farmer_id, amount')
+    .in('farmer_id', farmerIds)
+    .gte('created_at', fyStartIso);
+  if (fyErr) {
+    console.error('SETTLEMENT ABORTED — could not read FY payout history for TDS:', fyErr.message);
+    return res.status(500).json({ error: 'Could not read settlement history for TDS. No payouts were created.' });
+  }
+  const fyGrossBefore = new Map();
+  for (const p of fyPayouts || []) {
+    fyGrossBefore.set(p.farmer_id, (fyGrossBefore.get(p.farmer_id) || 0) + Number(p.amount || 0));
+  }
+  // This batch's gross per farmer — added to the FY-to-date figure so a seller who
+  // crosses the threshold in this batch is deducted at the post-batch cumulative level.
+  const batchGross = new Map();
+  for (const p of grouped) batchGross.set(p.farmer_id, (batchGross.get(p.farmer_id) || 0) + p.amount);
+
+  const tdsCfg = platform.tds || {};
+  const payoutRows = grouped.map(p => {
+    const s = sellerById.get(p.farmer_id) || {};
+    const fyGross = (fyGrossBefore.get(p.farmer_id) || 0) + (batchGross.get(p.farmer_id) || 0);
+    const { rate, tds_paise } = computeTds({
+      grossPaise: p.amount,
+      sellerType: s.seller_type,
+      hasPan: !!(s.pan && String(s.pan).trim()),
+      fyGrossPaise: fyGross,
+      config: tdsCfg,
+    });
+    return {
+      farmer_id:  p.farmer_id,
+      order_id:   p.order_id,
+      amount:     p.amount, // GROSS base; cash to seller = amount − tds_amount
+      tds_rate:   rate,
+      tds_amount: tds_paise,
+      status:     'pending',
+      method:     'bank_transfer',
+    };
+  });
 
   const { data: created, error } = await supabase
     .from('payouts')
@@ -146,17 +207,24 @@ router.post('/run', async (req, res) => {
   }
 
   // Notify each settled seller (in-app, best-effort) — one notice per farmer even
-  // when a farmer has several payouts in the batch.
+  // when a farmer has several payouts in the batch. The body quotes the NET amount
+  // (gross − TDS) so a seller sees what will actually reach their account.
   const byFarmer = new Map();
   for (const p of created) {
-    byFarmer.set(p.farmer_id, (byFarmer.get(p.farmer_id) || 0) + 1);
+    const agg = byFarmer.get(p.farmer_id) || { count: 0, net: 0, tds: 0 };
+    agg.count += 1;
+    agg.net += Number(p.amount || 0) - Number(p.tds_amount || 0);
+    agg.tds += Number(p.tds_amount || 0);
+    byFarmer.set(p.farmer_id, agg);
   }
-  for (const [farmerId, n] of byFarmer) {
+  for (const [farmerId, agg] of byFarmer) {
+    const netRupees = (agg.net / 100).toFixed(2);
+    const tdsNote = agg.tds > 0 ? ` (after ₹${(agg.tds / 100).toFixed(2)} TDS)` : '';
     notify(farmerId, {
       type: 'payout',
       title: 'Payout queued',
-      body: `${n} payout${n > 1 ? 's have' : ' has'} been queued for settlement.`,
-      data: { count: n },
+      body: `${agg.count} payout${agg.count > 1 ? 's have' : ' has'} been queued for settlement — ₹${netRupees}${tdsNote}.`,
+      data: { count: agg.count, net: agg.net, tds: agg.tds },
     });
   }
 

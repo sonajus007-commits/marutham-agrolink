@@ -200,6 +200,40 @@ describe('GET /dashboard/hub', () => {
     assert.equal(res.body.payouts_aging.stale_count, 1);
   });
 
+  test('finance P&L nets GST (output − ITC) and sums §194-O TDS deducted', async () => {
+    const today = new Date().toISOString();
+    const supa = fakeSupabase({
+      'orders:select': {
+        data: [
+          // svc charge = total − item_total − handling − delivery = 21800 − 10000 = 11800 paise;
+          // GST collected = 11800 × 18/118 = 1800 paise = ₹18.00.
+          { total: 21800, item_total: 10000, market_fee: 1000, handling: 0, delivery: 0, cancelled: false, pay_status: 'paid', status: 'Delivered', created_at: today },
+        ],
+      },
+      'payouts:select': {
+        data: [
+          { amount: 1000000, tds_amount: 500, status: 'pending', paid_at: null, created_at: today }, // ₹5 TDS
+        ],
+      },
+      'users:select': { data: [] },
+      // Recoverable input GST = ₹10 (1000 paise) → net GST payable = ₹18 − ₹10 = ₹8.
+      'expenses:select': { data: [{ category: 'tech', amount: 50000, gst_amount: 1000 }] },
+      'subscription_payments:select': { data: [] },
+    });
+    app = await mountRoute('dashboard', {
+      supabase: supa,
+      user: { id: 'fin1', role: 'admin', role_key: 'finance', admin_role: 'Finance Manager', dashboards: { finance: true } },
+    });
+
+    const res = await app.get('/finance');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.pnl.gst_collected, 18);
+    assert.equal(res.body.pnl.input_tax_credit, 10);
+    assert.equal(res.body.pnl.gst_net_payable, 8);
+    assert.equal(res.body.pnl.gst_credit_carryforward, 0);
+    assert.equal(res.body.pnl.tds_deducted, 5);
+  });
+
   test('finance dashboard 403s a role without the finance flag', async () => {
     const supa = fakeSupabase({ 'orders:select': { data: [] }, 'payouts:select': { data: [] }, 'users:select': { data: [] } });
     app = await mountRoute('dashboard', {

@@ -34,6 +34,10 @@ const PNL: MonthlyPnl = {
   delivery_income: 2000,
   subscription: 93000,
   gst_collected: 300,
+  input_tax_credit: 100,
+  gst_net_payable: 200,
+  gst_credit_carryforward: 0,
+  tds_deducted: 50,
   expenses_total: 40000,
   operating_expenses: 40000,
   ebitda: 60000,
@@ -50,6 +54,7 @@ beforeEach(() => {
         id: 'e1',
         category: 'salary',
         amount: '40000',
+        gst_amount: '0',
         incurred_on: '2026-09-01',
         vendor: null,
         note: 'Payroll',
@@ -57,7 +62,13 @@ beforeEach(() => {
         created_at: 't',
       },
     ],
-    summary: { spent: 40000, operating: 40000, below_line: 0, by_category: { salary: 40000 } },
+    summary: {
+      spent: 40000,
+      operating: 40000,
+      below_line: 0,
+      input_tax_credit: 0,
+      by_category: { salary: 40000 },
+    },
   });
   logExpense.mockResolvedValue({ expense: { id: 'e2' } });
   deleteExpense.mockResolvedValue({ ok: true });
@@ -77,23 +88,44 @@ describe('ExpensesPanel', () => {
     await screen.findByText('Payroll');
   });
 
-  it('records a new expense in rupees, then refreshes', async () => {
+  it('shows the net-GST and TDS tiles from the pnl prop', async () => {
+    open();
+    expect(screen.getByText('Net GST payable')).toBeInTheDocument();
+    expect(screen.getByText('Input tax credit')).toBeInTheDocument();
+    expect(screen.getByText('TDS deducted')).toBeInTheDocument();
+  });
+
+  it('records a new expense with its input GST, then refreshes', async () => {
     const user = open();
     await screen.findByText('Payroll');
 
     await user.click(screen.getByRole('button', { name: /Add expense/i }));
     await user.selectOptions(screen.getByLabelText('Category'), 'fuel');
     await user.type(screen.getByLabelText('Amount (₹)'), '1500');
+    await user.type(screen.getByLabelText(/Input GST/i), '135');
     await user.click(screen.getByRole('button', { name: /^Save$/ }));
 
     await waitFor(
       () =>
         expect(logExpense).toHaveBeenCalledWith(
-          expect.objectContaining({ category: 'fuel', amount: 1500 }),
+          expect.objectContaining({ category: 'fuel', amount: 1500, gst_amount: 135 }),
         ),
       { timeout: 3000 },
     );
     expect(onChanged).toHaveBeenCalled();
+  }, 15000);
+
+  it('refuses input GST greater than the amount without calling the API', async () => {
+    const user = open();
+    await screen.findByText('Payroll');
+
+    await user.click(screen.getByRole('button', { name: /Add expense/i }));
+    await user.type(screen.getByLabelText('Amount (₹)'), '100');
+    await user.type(screen.getByLabelText(/Input GST/i), '200');
+    await user.click(screen.getByRole('button', { name: /^Save$/ }));
+
+    expect(logExpense).not.toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith(expect.any(String), 'er');
   }, 15000);
 
   it('refuses a non-positive amount without calling the API', async () => {

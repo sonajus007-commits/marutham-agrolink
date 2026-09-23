@@ -311,6 +311,11 @@
           "type": "text",
           "notNull": false
         },
+        "gst_amount": {
+          "type": "bigint",
+          "notNull": true,
+          "default": "0"
+        },
         "id": {
           "type": "uuid",
           "notNull": true,
@@ -1076,6 +1081,15 @@
           "type": "text",
           "notNull": true,
           "default": "pending"
+        },
+        "tds_amount": {
+          "type": "bigint",
+          "notNull": true,
+          "default": "0"
+        },
+        "tds_rate": {
+          "type": "numeric",
+          "notNull": false
         }
       }
     },
@@ -1994,6 +2008,10 @@
           "type": "integer",
           "notNull": true,
           "default": "0"
+        },
+        "pan": {
+          "type": "text",
+          "notNull": false
         },
         "password_changed_at": {
           "type": "timestamp with time zone",

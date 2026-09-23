@@ -683,6 +683,8 @@ export const api = {
   logExpense(body: {
     category: ExpenseCategory;
     amount: number;
+    /** Recoverable input GST inside `amount` (rupees) — nets the GST liability. */
+    gst_amount?: number;
     incurred_on?: string;
     vendor?: string;
     note?: string;

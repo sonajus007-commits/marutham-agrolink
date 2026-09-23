@@ -13,6 +13,9 @@ const createSchema = z.object({
   // Rupees as the user types them; stored as paise. Positive, bounded so a fat-finger
   // paste can't book a crore.
   amount: z.coerce.number().positive().max(1e9),
+  // Recoverable input GST inside this expense (rupees), from the invoice. Optional —
+  // salaries and most below-the-line costs carry none. Nets the GST liability only.
+  gst_amount: z.coerce.number().min(0).max(1e9).optional(),
   // YYYY-MM-DD; defaults to today when omitted.
   incurred_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   vendor: z.string().trim().max(200).optional(),
@@ -26,10 +29,11 @@ router.post('/', validateBody(createSchema), async (req, res) => {
   if (!can(req.user, 'payments', 'create')) {
     return res.status(403).json({ error: 'Recording expenses needs a payments-create permission.' });
   }
-  const { category, amount, incurred_on, vendor, note } = req.body;
+  const { category, amount, gst_amount, incurred_on, vendor, note } = req.body;
   const row = {
     category,
     amount: Math.round(amount * 100), // rupees → paise
+    gst_amount: Math.round((gst_amount || 0) * 100), // recoverable input GST, paise
     incurred_on: incurred_on || undefined, // let the column default to today
     vendor: vendor || null,
     note: note || null,
@@ -60,7 +64,7 @@ router.get('/', async (req, res) => {
 
   let q = supabase
     .from('expenses')
-    .select('id, category, amount, incurred_on, vendor, note, created_by_name, created_at')
+    .select('id, category, amount, gst_amount, incurred_on, vendor, note, created_by_name, created_at')
     .gte('incurred_on', from)
     .lt('incurred_on', to)
     .order('incurred_on', { ascending: false });
@@ -78,9 +82,10 @@ router.get('/', async (req, res) => {
   const sm = expenseSummary(data || []);
   const toR = (paise) => Math.round(Number(paise || 0)) / 100;
   const summary = {
-    spent:      toR(sm.total),
-    operating:  toR(sm.operating),
-    below_line: toR(sm.below_line),
+    spent:             toR(sm.total),
+    operating:         toR(sm.operating),
+    below_line:        toR(sm.below_line),
+    input_tax_credit:  toR(sm.input_tax_credit),
     by_category: Object.fromEntries(Object.entries(sm.by_category).map(([k, v]) => [k, toR(v)])),
   };
   res.json({ month, expenses: data || [], summary });

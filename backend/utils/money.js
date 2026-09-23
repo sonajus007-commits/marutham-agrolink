@@ -29,6 +29,8 @@ const MONEY_FIELDS = new Set([
   'market_price',
   // payouts + returns
   'amount',
+  // payouts (§194-O TDS withheld) + expenses (recoverable input GST)
+  'tds_amount', 'gst_amount',
   // consumers/farmers directory rollups (accumulated from order totals in paise)
   'total_spend', 'total_revenue',
   // users + subscription_payments + GET /subscription/plans

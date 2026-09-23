@@ -594,6 +594,14 @@ export function ExecutivePage() {
               value={fmtMoney(data.pnl.gst_collected)}
             />
             <StatTile
+              label={t('admin.exec.pnl.gstNet', 'Net GST payable')}
+              value={fmtMoney(data.pnl.gst_net_payable)}
+            />
+            <StatTile
+              label={t('admin.exec.pnl.tds', 'TDS deducted')}
+              value={fmtMoney(data.pnl.tds_deducted)}
+            />
+            <StatTile
               label={t('admin.exec.pnl.salary', 'Salary cost')}
               value={fmtMoney(data.pnl.by_category.salary ?? 0)}
             />
@@ -601,7 +609,7 @@ export function ExecutivePage() {
           <p className="mt-2 text-2xs leading-normal text-fg-muted">
             {t(
               'admin.exec.pnl.note',
-              'EBITDA excludes tax/interest/depreciation; net profit is after them. GST is collected (output tax), not net liability. Recorded via the Finance expense ledger.',
+              'EBITDA excludes tax/interest/depreciation; net profit is after them. Net GST payable = output GST collected − input tax credit. TDS deducted (§194-O) is withheld on seller settlements and remitted separately. Recorded via the Finance expense ledger.',
             )}
           </p>
         </ChartContainer>
