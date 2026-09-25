@@ -15,11 +15,12 @@ const pt = (lat?: number | null, lng?: number | null) =>
  * parcel within a split order (each part is its own trackable order with its own
  * agent, so it gets its own map). Fed from a polled GET /orders/:id/track response.
  *
- * Renders only when Google Maps is configured AND the parcel has a destination plus
- * at least one journey point to draw (the live agent, the dispatch hub, or where it
- * was delivered); otherwise nothing, and the caller's pipeline stepper carries the
- * tracking on its own. Keeps the SDK-heavy OrderMap lazy so its chunk loads only when
- * a map is shown.
+ * Renders only when Google Maps is configured, the parcel is Out for Delivery (the
+ * agent has picked it up and set it en route — kept through Delivered so the finished
+ * route stays visible), AND it has a destination plus at least one journey point to
+ * draw (the live agent, the dispatch hub, or where it was delivered); otherwise
+ * nothing, and the caller's pipeline stepper carries the tracking on its own. Keeps
+ * the SDK-heavy OrderMap lazy so its chunk loads only when a map is shown.
  */
 export function LiveOrderMap({ track }: { track: TrackResponse | null }) {
   const to = track?.order;
@@ -33,7 +34,11 @@ export function LiveOrderMap({ track }: { track: TrackResponse | null }) {
   // the origin marker is labelled for what it actually is.
   const originKind = to?.route === 'hub' ? 'hub' : 'farm';
 
-  if (!isMapsConfigured() || !dest || !(agent || dispatch || delivered)) return null;
+  // Only once this parcel is on its way to the customer. Before Out for Delivery the
+  // stepper carries the tracking even if a dispatch/agent point already has coords.
+  const enRoute = to?.status === 'Out for Delivery' || to?.status === 'Delivered';
+
+  if (!enRoute || !isMapsConfigured() || !dest || !(agent || dispatch || delivered)) return null;
 
   return (
     <Suspense

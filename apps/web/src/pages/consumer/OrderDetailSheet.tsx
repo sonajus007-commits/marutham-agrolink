@@ -211,8 +211,19 @@ function OrderDetailBody({
     : null;
   const mapDispatch = pt(to?.dispatched_lat, to?.dispatched_lng);
   const mapDelivered = pt(to?.delivered_lat, to?.delivered_lng);
+  // The map only appears once the parcel is genuinely on its way to the customer —
+  // i.e. the delivery agent has picked it up and marked it Out for Delivery (kept
+  // through Delivered so the completed route stays visible after confirm-receipt).
+  // Before that (placed / accepted / packed / at hub) the pipeline stepper carries
+  // the tracking, even if an agent or dispatch point already has coordinates. Mirrors
+  // the same status gate in LiveOrderMap for the split parcels.
+  const mapEnRoute = effectiveStatus === 'Out for Delivery' || effectiveStatus === 'Delivered';
   const mapView =
-    isMapsConfigured() && !isSplit && mapDest && (mapAgent || mapDispatch || mapDelivered)
+    mapEnRoute &&
+    isMapsConfigured() &&
+    !isSplit &&
+    mapDest &&
+    (mapAgent || mapDispatch || mapDelivered)
       ? { dest: mapDest, agent: mapAgent, dispatch: mapDispatch, delivered: mapDelivered }
       : null;
 
