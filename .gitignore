@@ -39,3 +39,4 @@ Thumbs.db
 
 # Downloaded APK artifacts (build output, not source)
 dist-apk/
+.dev-logs/
