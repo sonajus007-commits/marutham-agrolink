@@ -40,3 +40,10 @@ Thumbs.db
 # Downloaded APK artifacts (build output, not source)
 dist-apk/
 .dev-logs/
+
+# Firebase (push). The repo is PUBLIC — never commit these.
+# google-services.json: Android client config, injected at build time.
+# *service-account*.json / firebase-adminsdk*.json: the SERVER private key.
+google-services.json
+*service-account*.json
+*firebase-adminsdk*.json
