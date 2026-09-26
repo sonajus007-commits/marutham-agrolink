@@ -8,11 +8,12 @@
 // the action that triggered it. (Express 4 does not catch async throws — an
 // unhandled rejection here would take the process down; see project_route_tests.)
 //
-// Push (FCM) and email/SMS are separate channels that ride the same events; this
-// is the always-on one that needs no external service.
+// Phone push (FCM, utils/push.js) rides every successful insert here; email/SMS
+// are separate. The bell is the always-on channel that needs no external service.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const supabase = require('../db/supabase');
+const { pushToUsers } = require('./push');
 
 // Create one notification. `data` is a small routing payload (e.g. {order_id, code})
 // the client uses to deep-link the bell item. Returns nothing meaningful — callers
@@ -28,6 +29,9 @@ async function notify(userId, { type, title, body = null, data = {} }) {
       data: data || {},
     });
     if (error) console.error(`notify(${type}) insert failed:`, error.message);
+    // Phone push rides along, not awaited: FCM latency must not slow the caller,
+    // and pushToUsers never rejects. A no-op when FCM isn't configured.
+    else void pushToUsers([userId], { type, title, body, data });
   } catch (e) {
     console.error(`notify(${type}) threw:`, e && e.message);
   }
@@ -42,6 +46,7 @@ async function notifyMany(userIds, { type, title, body = null, data = {} }) {
     const rows = ids.map((user_id) => ({ user_id, type, title, body, data: data || {} }));
     const { error } = await supabase.from('notifications').insert(rows);
     if (error) console.error(`notifyMany(${type}) insert failed:`, error.message);
+    else void pushToUsers(ids, { type, title, body, data });
   } catch (e) {
     console.error(`notifyMany(${type}) threw:`, e && e.message);
   }
