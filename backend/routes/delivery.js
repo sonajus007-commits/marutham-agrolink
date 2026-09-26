@@ -2,7 +2,7 @@ const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { can } = require('../middleware/permissions');
-const { distanceMeters } = require('../utils/geo');
+const { distanceMeters, toCoord } = require('../utils/geo');
 const { SPLIT_ROUTE } = require('../utils/orderSplit');
 const { rollupToParent } = require('../utils/orderRollup');
 const { geocodeAddress, geocodingEnabled } = require('../utils/geocode');
@@ -20,6 +20,13 @@ router.use(requireAuth);
 // and a pin dropped at the gate of a large plot are normal; this catches the
 // "delivered in the wrong village" case, not the wrong doorstep.
 const GEOFENCE_RADIUS_M = 500;
+
+// A VCO verify captured more than this far from the seller's farm pin is flagged
+// the same way. Much wider than the delivery fence because a farm pin is often a
+// GEOCODED village centroid (backfillDispatchOrigin), not a GPS drop — a real
+// collection can sit a kilometre or more from it. This catches "verified from home
+// or the office, a village away", not a VCO standing in the wrong field.
+const VERIFY_PROXIMITY_RADIUS_M = 2000;
 
 // ── Stage maps ────────────────────────────────────────────────────────────────
 // Each route type has its own ordered list of statuses.
@@ -229,6 +236,47 @@ async function fetchActiveOrder(id, res) {
   if (order.status === 'Delivered') { res.status(400).json({ error: 'Order is already delivered.' }); return null; }
   if (isSplitParent(order)) { res.status(400).json({ error: SPLIT_PARENT_MESSAGE }); return null; }
   return order;
+}
+
+// Proximity-verified collection. The VCO's verify fix is compared to the seller's
+// farm pin; a verify beyond VERIFY_PROXIMITY_RADIUS_M gets an advisory timeline note,
+// exactly like an off-site delivery. ADVISORY ONLY and FAIL-OPEN: no fix, no pin, no
+// seller, or a failed read all mean "cannot compare" and add nothing — the verify has
+// already committed and is never undone or refused here. Many farmers have no pin.
+async function flagOffSiteVerify(order, fix, actorLabel) {
+  // A split child names its seller; a single-seller order reads it off the items
+  // (same resolution as backfillDispatchOrigin).
+  let farmerId = order.seller_id || null;
+  if (!farmerId) {
+    const { data: items, error: iErr } = await supabase
+      .from('order_items').select('farmer_id').eq('order_id', order.id);
+    if (iErr) {
+      console.error(`Order ${order.id}: verify-proximity item lookup failed:`, iErr.message);
+      return;
+    }
+    const withFarmer = (items || []).find((i) => i.farmer_id);
+    farmerId = withFarmer ? withFarmer.farmer_id : null;
+  }
+  if (!farmerId) return;
+
+  const { data: farmer, error: fErr } = await supabase
+    .from('users').select('farm_lat, farm_lng').eq('id', farmerId).maybeSingle();
+  if (fErr) {
+    console.error(`Order ${order.id}: verify-proximity farm lookup failed:`, fErr.message);
+    return;
+  }
+  if (!farmer) return;
+
+  const d = distanceMeters(fix.lat, fix.lng, toCoord(farmer.farm_lat), toCoord(farmer.farm_lng));
+  if (d === null || d <= VERIFY_PROXIMITY_RADIUS_M) return;
+
+  const km = (d / 1000).toFixed(1);
+  const { error: noteErr } = await supabase.from('order_history').insert({
+    order_id: order.id,
+    label: 'Off-site verification',
+    note: `Verified by ${actorLabel} ~${km} km from the farm pin (limit ${VERIFY_PROXIMITY_RADIUS_M / 1000} km).`,
+  });
+  if (noteErr) console.error(`Order ${order.id}: off-site verification note failed:`, noteErr.message);
 }
 
 // Optional "where the scanner is" coordinates on a scan body. One generic lat/lng
@@ -654,6 +702,10 @@ router.post('/:id/scan', async (req, res) => {
     // Optional collection proof photo (migration 060). Best-effort, never blocks.
     if (!result.error && !result.conflict) {
       await storeProof(order, 'verify', req.body, req.user.id);
+    }
+    // Was the VCO actually at the farm? Advisory note only (see flagOffSiteVerify).
+    if (!result.error && !result.conflict && coords.coords) {
+      await flagOffSiteVerify(order, coords.coords, `VCO ${req.user.fname}`);
     }
 
   // A verified order leaves the village. Where it goes next is the VCO's route

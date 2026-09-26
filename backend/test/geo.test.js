@@ -2,7 +2,7 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { distanceMeters, isWithin } = require('../utils/geo');
+const { distanceMeters, isWithin, toCoord } = require('../utils/geo');
 
 test('distanceMeters — identical points are zero', () => {
   assert.equal(distanceMeters(10.5, 78.8, 10.5, 78.8), 0);
@@ -29,4 +29,16 @@ test('isWithin — inside the radius is true, outside is false, uncomparable is 
   assert.equal(isWithin(0, 0, 0.001, 0, 500), true); // ~111 m
   assert.equal(isWithin(0, 0, 1, 0, 500), false); // ~111 km
   assert.equal(isWithin(0, 0, null, 0, 500), false); // no point → not within
+});
+
+test('toCoord — a Postgres numeric string becomes a number', () => {
+  assert.equal(toCoord('10.5'), 10.5);
+  assert.equal(toCoord(78.8), 78.8);
+});
+
+test('toCoord — a missing pin stays null, never Number(null) → 0', () => {
+  assert.equal(toCoord(null), null);
+  assert.equal(toCoord(undefined), null);
+  assert.equal(toCoord(''), null);
+  assert.equal(toCoord('abc'), null);
 });

@@ -217,6 +217,91 @@ test('VCO verify without a location still succeeds and stores no coordinates', a
   assert.ok(!('verified_lat' in update), 'no lat when none was sent');
 });
 
+// ── Proximity-verified collection ───────────────────────────────────────────────
+// The verify fix is compared to the seller's farm pin. Beyond 2 km → an advisory
+// 'Off-site verification' note. Never a gate: every case below still verifies.
+const FARM = { id: 'f1', farm_lat: 10.5, farm_lng: 78.8 };
+
+function verifyDb({ order = packaged(), farmer = FARM, items = [{ order_id: 'o1', farmer_id: 'f1' }], extra = {} } = {}) {
+  return fakeSupabase({
+    'orders:select': { data: [order] },
+    'orders:update': { data: { id: 'o1', status: 'VCO Verified' } },
+    'order_items:select': { data: items },
+    'users:select': { data: farmer ? [farmer] : [] },
+    ...extra,
+  });
+}
+
+const offSiteNotes = (db) =>
+  db.callsTo('order_history', 'insert').filter((c) => c.payload.label === 'Off-site verification');
+
+test('a VCO verifying at the farm adds no off-site note', async () => {
+  const db = verifyDb();
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { lat: 10.501, lng: 78.8, route: 'direct' }); // ~110 m
+
+  assert.equal(res.status, 200);
+  assert.equal(offSiteNotes(db).length, 0);
+});
+
+test('a VCO verifying far from the farm is flagged — and the verify still stands', async () => {
+  const db = verifyDb();
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct' }); // ~5.6 km
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('orders', 'update')[0].payload.status, 'VCO Verified');
+  const notes = offSiteNotes(db);
+  assert.equal(notes.length, 1);
+  assert.match(notes[0].payload.note, /~5\.6 km from the farm pin/);
+});
+
+test('a farm pin stored as numeric strings is still compared', async () => {
+  const db = verifyDb({ farmer: { id: 'f1', farm_lat: '10.5', farm_lng: '78.8' } });
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct' });
+
+  assert.equal(offSiteNotes(db).length, 1);
+});
+
+test('a split child uses its own seller_id, not the items', async () => {
+  const db = verifyDb({ order: { ...packaged(), seller_id: 'f1' }, items: [] });
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct' });
+
+  assert.equal(offSiteNotes(db).length, 1);
+  assert.equal(db.callsTo('order_items', 'select').length, 0);
+});
+
+test('fail-open: a farmer with no pin is never flagged', async () => {
+  const db = verifyDb({ farmer: { id: 'f1', farm_lat: null, farm_lng: null } });
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct' });
+
+  assert.equal(res.status, 200);
+  assert.equal(offSiteNotes(db).length, 0);
+});
+
+test('fail-open: a verify with no device fix does not even look up the farm', async () => {
+  const db = verifyDb();
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { route: 'direct' });
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('users', 'select').length, 0);
+  assert.equal(offSiteNotes(db).length, 0);
+});
+
+test('fail-open: a failed farm read still verifies (200) and adds no note', async () => {
+  const db = verifyDb({ extra: { 'users:select': { error: { message: 'boom' } } } });
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct' });
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('orders', 'update')[0].payload.status, 'VCO Verified');
+  assert.equal(offSiteNotes(db).length, 0);
+});
+
 // A VCO flagged can_deliver runs the goods to the consumer themselves — so the
 // verifying VCO may assign the order to their own id (Part 5). The agent lookup must
 // accept a can_deliver VCO, not only a Delivery Agent.

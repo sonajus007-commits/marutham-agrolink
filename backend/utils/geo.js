@@ -24,10 +24,21 @@ function distanceMeters(aLat, aLng, bLat, bLng) {
   return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
+/**
+ * A stored coordinate → a finite number, or null. Postgres numerics arrive as
+ * strings, which distanceMeters rightly refuses — but a bare Number() is wrong too:
+ * Number(null) is 0, and a missing pin must never become a point off West Africa.
+ */
+function toCoord(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 /** True when b is within `radiusMeters` of a. null distance (missing points) → false. */
 function isWithin(aLat, aLng, bLat, bLng, radiusMeters) {
   const d = distanceMeters(aLat, aLng, bLat, bLng);
   return d !== null && d <= radiusMeters;
 }
 
-module.exports = { distanceMeters, isWithin };
+module.exports = { distanceMeters, isWithin, toCoord };
