@@ -369,6 +369,7 @@ app.listen(PORT, () => {
   scheduleInactivityLock();
   scheduleAcceptDeadlineSweep();
   scheduleAcceptReminders();
+  scheduleDutyPrompts();
 });
 
 // ── Daily inactivity lock — no login for 90+ days → login_locked_at ────────────
@@ -638,4 +639,27 @@ function scheduleAcceptReminders() {
   runReminders();
   setInterval(runReminders, INTERVAL);
   console.log('[ACCEPT REMINDER] Scheduler started (every 15 min, 30-min cadence)');
+}
+
+// ── Morning duty prompt — nudge field staff who have not checked in ───────────
+// Checked every 15 min; utils/dutyPrompt owns the 07:00–12:00 IST window and the
+// once-per-day de-dup (read back from notifications), so the tick rate only decides
+// how soon after 07:00 — or after a restart — the nudge goes out.
+function scheduleDutyPrompts() {
+  const INTERVAL = 15 * 60 * 1000;
+  const { sendDutyPrompts } = require('./utils/dutyPrompt');
+  const { notifyMany } = require('./utils/notifications');
+
+  async function run() {
+    try {
+      const { sent } = await sendDutyPrompts({ db: supabase, notifyMany });
+      if (sent) console.log(`[DUTY PROMPT] Nudged ${sent} field staffer(s) to check in.`);
+    } catch (err) {
+      console.error('[DUTY PROMPT] Error:', err.message);
+    }
+  }
+
+  run();
+  setInterval(run, INTERVAL);
+  console.log('[DUTY PROMPT] Scheduler started (every 15 min, 07:00–12:00 IST)');
 }

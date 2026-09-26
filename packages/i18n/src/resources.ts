@@ -137,6 +137,11 @@ export const resources = {
       'agent.duty.failed': 'Could not update duty status',
       'agent.duty.tapOn': 'Tap to check in',
       'agent.duty.tapOff': 'Tap to check out',
+      'agent.duty.promptTitle': 'Are you on duty today?',
+      'agent.duty.promptBody':
+        'You have not checked in yet today. Check in so your manager can see you are on duty.',
+      'agent.duty.promptYes': 'Check in',
+      'agent.duty.promptNo': 'Not today',
       'agent.exit': 'Exit',
       'agent.profile': 'My Profile',
       'agent.nav.label': 'Field sections',
@@ -2526,6 +2531,11 @@ export const resources = {
       'agent.duty.failed': 'பணி நிலையை மாற்ற முடியவில்லை',
       'agent.duty.tapOn': 'செக்-இன் செய்ய தட்டவும்',
       'agent.duty.tapOff': 'செக்-அவுட் செய்ய தட்டவும்',
+      'agent.duty.promptTitle': 'இன்று நீங்கள் பணியில் இருக்கிறீர்களா?',
+      'agent.duty.promptBody':
+        'நீங்கள் இன்னும் இன்று செக்-இன் செய்யவில்லை. நீங்கள் பணியில் இருப்பதை உங்கள் மேலாளர் அறிய செக்-இன் செய்யவும்.',
+      'agent.duty.promptYes': 'செக்-இன்',
+      'agent.duty.promptNo': 'இன்று இல்லை',
       'agent.exit': 'வெளியேறு',
       'agent.profile': 'என் சுயவிவரம்',
       'agent.nav.label': 'கள பிரிவுகள்',
