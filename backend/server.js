@@ -12,6 +12,7 @@ const { redact } = require('./utils/redact');
 const supabase  = require('./db/supabase');
 const notify    = require('./utils/notify');
 const { syncPrices } = require('./utils/priceSync');
+const { DAILY_RESET } = require('./utils/listings');
 
 const app = express();
 
@@ -464,20 +465,23 @@ function scheduleSubscriptionChecks() {
   setInterval(runCheck, MS_PER_DAY);
 }
 
-// ── Hourly listing reset — after cutoff, set listed=false, confirmed=false ─────
+// ── Hourly listing reset — after cutoff, clear the day's offer (DAILY_RESET) ───
+// Unlists + unconfirms AND clears stock and photos; the price carries forward.
 function scheduleListingReset() {
   const INTERVAL = 60 * 60 * 1000; // 1 hour
 
   async function runReset() {
     try {
       const now = new Date().toISOString();
-      // Only reset active listings whose cutoff has passed and are still listed/confirmed
+      // Only reset active listings whose cutoff has passed and still carry part of
+      // the day's offer. Stock and photos are cleared together, so qty > 0 also
+      // catches rows reset before photos/stock were part of the reset.
       const { data, error } = await supabase
         .from('farmer_listings')
         .select('id')
         .eq('listing_status', 'active')
         .lt('cutoff_ts', now)
-        .or('confirmed.eq.true,listed.eq.true');
+        .or('confirmed.eq.true,listed.eq.true,qty_available.gt.0');
 
       if (error) { console.error('[LISTING RESET] Query error:', error.message); return; }
       if (!data || data.length === 0) return;
@@ -485,11 +489,11 @@ function scheduleListingReset() {
       const ids = data.map(r => r.id);
       const { error: upErr } = await supabase
         .from('farmer_listings')
-        .update({ confirmed: false, listed: false })
+        .update(DAILY_RESET)
         .in('id', ids);
 
       if (upErr) { console.error('[LISTING RESET] Update error:', upErr.message); return; }
-      console.log(`[LISTING RESET] Reset ${ids.length} listing(s) — cutoff passed, listed=false confirmed=false`);
+      console.log(`[LISTING RESET] Reset ${ids.length} listing(s) — cutoff passed, stock + photos cleared, unconfirmed`);
     } catch (err) {
       console.error('[LISTING RESET] Error:', err.message);
     }

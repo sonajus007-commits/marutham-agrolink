@@ -1233,8 +1233,8 @@
   line-height: 1.5;
   margin: 8px 0 12px;
 }
-/* The table scrolls horizontally inside its own box on narrow screens, so the
-   dashboard body never scrolls sideways. */
+/* Tablet widths: the table scrolls horizontally inside its own box, so the
+   dashboard body never scrolls sideways. Phones get stacked cards (below). */
 .fm-supply__scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -1302,6 +1302,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
+  word-spacing: 2px;
   color: var(--warning-fg);
 }
 .fm-supply__money {
@@ -1311,7 +1312,7 @@
   color: var(--gray);
 }
 .fm-supply__input {
-  width: 84px;
+  width: 100px;
   padding: 6px 8px;
   font-size: 13px;
   border: 1px solid var(--border-subtle);
@@ -1350,8 +1351,140 @@
   cursor: pointer;
   white-space: nowrap;
 }
+.fm-supply__photobtn.is-needed {
+  color: var(--warning-fg);
+  border-color: var(--warning-strong);
+  background: var(--warning-bg);
+}
 .fm-supply__actions {
   margin-top: 12px;
+}
+.fm-supply__need {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--warning-fg);
+}
+
+/* Phone: the table becomes one stacked card per product, so quantity, price,
+   cut-off and the photo button are all on screen without a sideways swipe.
+   Inputs grow to full width with 44px touch targets and 16px text (no iOS
+   zoom-on-focus), and the confirm button sticks above the bottom navigation. */
+@media (max-width: 640px) {
+  .fm-supply {
+    padding: 14px 12px;
+  }
+  .fm-supply__scroll {
+    overflow: visible;
+  }
+  .fm-supply__table {
+    min-width: 0;
+  }
+  .fm-supply__table thead {
+    display: none;
+  }
+  .fm-supply__table,
+  .fm-supply__table tbody {
+    display: block;
+  }
+  .fm-supply__table tbody tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'prod   prod'
+      'qty    price'
+      'cutoff pays'
+      'photo  photo';
+    gap: 10px 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    background: var(--white);
+  }
+  .fm-supply__table tbody tr.is-on {
+    border-color: var(--forest);
+  }
+  .fm-supply__table tbody td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border-bottom: none;
+  }
+  .fm-supply__table tbody td.fm-supply__pick {
+    position: absolute;
+    top: 14px;
+    left: 12px;
+    width: auto;
+  }
+  .fm-supply__pick input {
+    width: 22px;
+    height: 22px;
+  }
+  .fm-supply__table tbody td.fm-supply__prod {
+    grid-area: prod;
+    padding-left: 34px;
+    white-space: normal;
+  }
+  .fm-supply__pname {
+    font-size: 15px;
+  }
+  .fm-supply__cell--qty {
+    grid-area: qty;
+  }
+  .fm-supply__cell--price {
+    grid-area: price;
+  }
+  .fm-supply__cell--cutoff {
+    grid-area: cutoff;
+  }
+  .fm-supply__cell--pays {
+    grid-area: pays;
+    font-size: 16px;
+  }
+  .fm-supply__cell--photo {
+    grid-area: photo;
+  }
+  .fm-supply__cell::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--fg-muted);
+  }
+  .fm-supply__money {
+    display: flex;
+  }
+  .fm-supply__input,
+  .fm-supply__select {
+    width: 100%;
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .fm-supply__photobtn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .fm-supply__actions {
+    position: sticky;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    z-index: 5;
+    margin: 4px -12px -14px;
+    padding: 10px 12px;
+    background: var(--white);
+    border-top: 1px solid var(--border-subtle);
+    border-radius: 0 0 14px 14px;
+  }
+  .fm-supply__actions > button {
+    width: 100%;
+    min-height: 48px;
+  }
 }
 
 /* ── Pack-first action banner ───────────────────────────────────────────────

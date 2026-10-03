@@ -25,9 +25,9 @@ type Row = { checked: boolean; qty: string; price: string; cutoff: string };
 /**
  * "Confirm today's supply" — the daily one-tap panel on the farmer dashboard.
  *
- * The overnight reset clears `listed`/`confirmed` on every priced listing, so
- * each market day the seller must re-list and confirm what they are bringing to
- * market. This collapses that repetitive per-card chore into a single table:
+ * The overnight reset clears `listed`/`confirmed`, today's stock and the photos
+ * on every priced listing (the price carries over), so each market day the seller
+ * states fresh stock, takes a fresh photo and confirms what they are bringing. This collapses that repetitive per-card chore into a single table:
  * every already-approved, priced product (staples included — it is NOT filtered
  * by how recently the product was registered) in a row with its quantity,
  * selling price, the fee-adjusted price the customer pays (read-only, live),
@@ -90,13 +90,17 @@ export function TodaysSupplyCard({
     setRows((r) => ({ ...r, [id]: { ...r[id], ...part } }));
 
   const selected = pending.filter((l) => rows[l.id]?.checked);
-  // A row can be confirmed only once it has a real quantity, a real selling price
-  // and a cut-off — a blank price must never fall back to yesterday's silently.
+  // A row can be confirmed only once it has today's quantity, a real selling price,
+  // a cut-off and today's photo. The overnight reset clears stock and photos (the
+  // price carries over), and the server refuses a confirm without them too.
   const rowReady = (l: FarmerListing) => {
     const r = rows[l.id];
-    return !!r && Number(r.qty) > 0 && Number(r.price) > 0 && !!r.cutoff;
+    return (
+      !!r && Number(r.qty) > 0 && Number(r.price) > 0 && !!r.cutoff && (l.images?.length ?? 0) > 0
+    );
   };
   const readyCount = selected.filter(rowReady).length;
+  const notReadyCount = selected.length - readyCount;
 
   function openPhotos(l: FarmerListing) {
     setPhotoFor(l);
@@ -125,7 +129,7 @@ export function TodaysSupplyCard({
       toast(
         t(
           'farmer.supply.needQtyPrice',
-          'Enter a quantity and selling price for at least one product.',
+          'Enter today’s quantity, price and photo for at least one product.',
         ),
         'er',
       );
@@ -204,7 +208,11 @@ export function TodaysSupplyCard({
           <p className="fm-supply__sub">
             {t(
               'farmer.supply.sub',
-              'Tick what you are bringing to market today, set the quantity, then confirm — customers can order it right away.',
+              'Each market day, enter today’s stock and take a fresh photo. Your price carries over from yesterday — change it only if it moved. Then confirm and customers can order right away.',
+            )}{' '}
+            {t(
+              'farmer.supply.cutoffHint',
+              'Pick when orders close — any hour from now up to 8 AM.',
             )}
           </p>
 
@@ -259,27 +267,33 @@ export function TodaysSupplyCard({
                           {unit ? <span className="fm-supply__unit">/ {unit}</span> : null}
                           {stale ? (
                             <span className="fm-supply__stale">
-                              {t('farmer.supply.stale', 'from yesterday')}
+                              {t('farmer.supply.stale', 'price from yesterday')}
                             </span>
                           ) : null}
                         </span>
                       </td>
 
-                      <td>
+                      <td
+                        className="fm-supply__cell fm-supply__cell--qty"
+                        data-label={t('farmer.supply.colQty', 'Available Quantity')}
+                      >
                         <input
                           type="number"
                           inputMode="decimal"
                           min="0"
                           className="fm-supply__input"
                           aria-label={t('farmer.supply.colQty', 'Available Quantity')}
-                          placeholder={t('farmer.supply.qtyPh', 'Qty')}
+                          placeholder={t('farmer.supply.qtyPh', 'Today’s qty')}
                           value={row.qty}
                           disabled={!row.checked}
                           onChange={(e) => patch(l.id, { qty: e.target.value })}
                         />
                       </td>
 
-                      <td>
+                      <td
+                        className="fm-supply__cell fm-supply__cell--price"
+                        data-label={t('farmer.supply.colPrice', 'My Selling Price')}
+                      >
                         <span className="fm-supply__money">
                           <span aria-hidden="true">₹</span>
                           <input
@@ -296,13 +310,17 @@ export function TodaysSupplyCard({
                       </td>
 
                       <td
-                        className="fm-supply__pays"
+                        className="fm-supply__cell fm-supply__cell--pays fm-supply__pays"
+                        data-label={t('farmer.supply.colCustomer', 'Customer Pays')}
                         title={t('farmer.supply.paysHint', 'Your price + platform fee')}
                       >
                         {customerPays}
                       </td>
 
-                      <td>
+                      <td
+                        className="fm-supply__cell fm-supply__cell--cutoff"
+                        data-label={t('farmer.supply.colCutoff', 'Order Cut-off Time')}
+                      >
                         <select
                           className="fm-supply__select"
                           aria-label={t('farmer.supply.colCutoff', 'Order Cut-off Time')}
@@ -333,14 +351,19 @@ export function TodaysSupplyCard({
                         </select>
                       </td>
 
-                      <td>
+                      <td
+                        className="fm-supply__cell fm-supply__cell--photo"
+                        data-label={t('farmer.supply.colPhotos', 'Images')}
+                      >
                         <button
                           type="button"
-                          className="fm-supply__photobtn"
+                          className={`fm-supply__photobtn${photoCount === 0 ? ' is-needed' : ''}`}
                           onClick={() => openPhotos(l)}
                         >
-                          📷 {t('farmer.supply.photosBtn', 'Photos')}
-                          {photoCount > 0 ? ` (${photoCount})` : ''}
+                          📷{' '}
+                          {photoCount > 0
+                            ? `${t('farmer.supply.photosBtn', 'Photos')} (${photoCount})`
+                            : t('farmer.supply.photoNeeded', 'Take today’s photo')}
                         </button>
                       </td>
                     </tr>
@@ -351,6 +374,13 @@ export function TodaysSupplyCard({
           </div>
 
           <div className="fm-supply__actions">
+            {notReadyCount > 0 ? (
+              <p className="fm-supply__need">
+                {t('farmer.supply.needToday', '{{count}} still need today’s quantity and photo.', {
+                  count: notReadyCount,
+                })}
+              </p>
+            ) : null}
             <Button onClick={confirmAll} disabled={busy || readyCount === 0}>
               {busy
                 ? t('farmer.supply.confirming', 'Confirming…')

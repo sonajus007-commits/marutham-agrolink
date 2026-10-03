@@ -186,3 +186,50 @@ describe('POST /listings — create validation', () => {
     assert.equal(insert.payload.qty_available, 5);
   });
 });
+
+// The daily supply cycle: the overnight reset clears stock and photos, so a
+// confirmation must bring today's of both. Locked here so the second confirm path
+// (the product card's flag-only PATCH) cannot publish yesterday's offer.
+describe('PATCH /listings/:id — confirming needs today\'s stock and photo', () => {
+  let app, mute;
+  beforeEach(() => { mute = muteConsoleError(); });
+  afterEach(async () => { mute.restore(); if (app) await app.close(); });
+
+  function owned(row) {
+    return fakeSupabase({
+      'farmer_listings:select': { data: [{ id: 'listing-1', farmer_id: 'farmer-1', product_id: 'p1', ...row }] },
+      'farmer_listings:update': { data: [{ id: 'listing-1', confirmed: true }] },
+    });
+  }
+
+  test('a flag-only confirm on a reset listing (no stock) is refused', async () => {
+    const supa = owned({ qty_available: 0, images: [] });
+    app = await mountRoute('listings', { supabase: supa, user: FARMER });
+    const res = await app.patch('/listing-1', { confirmed: true });
+    assert.equal(res.status, 400);
+    assert.match(res.body.error, /quantity/i);
+    assert.equal(supa.calls.filter(c => c.op === 'update').length, 0);
+  });
+
+  test('fresh stock but no photo is refused', async () => {
+    const supa = owned({ qty_available: 0, images: [] });
+    app = await mountRoute('listings', { supabase: supa, user: FARMER });
+    const res = await app.patch('/listing-1', { confirmed: true, listed: true, qty_available: 20 });
+    assert.equal(res.status, 400);
+    assert.match(res.body.error, /photo/i);
+  });
+
+  test('fresh stock with today\'s photo confirms', async () => {
+    const supa = owned({ qty_available: 0, images: ['https://x/today.jpg'] });
+    app = await mountRoute('listings', { supabase: supa, user: FARMER });
+    const res = await app.patch('/listing-1', { confirmed: true, listed: true, qty_available: 20 });
+    assert.equal(res.status, 200);
+  });
+
+  test('un-confirming is never blocked', async () => {
+    const supa = owned({ qty_available: 0, images: [] });
+    app = await mountRoute('listings', { supabase: supa, user: FARMER });
+    const res = await app.patch('/listing-1', { confirmed: false });
+    assert.equal(res.status, 200);
+  });
+});

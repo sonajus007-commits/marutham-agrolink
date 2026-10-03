@@ -5,7 +5,7 @@ const { can } = require('../middleware/permissions');
 const { validateBody, z } = require('../middleware/validate');
 const { getFeeForSeller } = require('../utils/fees');
 const { reliabilityScore } = require('../utils/reliability');
-const { validateImages } = require('../utils/listings');
+const { validateImages, confirmProblem } = require('../utils/listings');
 const { priceBandCheck, priceBandMessage } = require('../utils/priceGuard');
 const notify = require('../utils/notify');
 
@@ -311,7 +311,7 @@ router.patch('/:id', async (req, res) => {
   // it tells the farmer their own listing has vanished.
   const { data: existing, error: existingErr } = await supabase
     .from('farmer_listings')
-    .select('id, farmer_id, product_id')
+    .select('id, farmer_id, product_id, qty_available, images')
     .eq('id', req.params.id)
     .maybeSingle();
 
@@ -346,6 +346,13 @@ router.patch('/:id', async (req, res) => {
   }
   if (Object.keys(updates).length === 0) {
     return res.status(400).json({ error: 'No updatable fields provided.' });
+  }
+  // Confirming puts the listing in front of customers for today's market, so it
+  // must carry today's stock and today's photo — both are cleared by the daily
+  // reset (utils/listings DAILY_RESET). Checked against the row as it WILL be.
+  if (updates.confirmed === true) {
+    const problem = confirmProblem({ ...existing, ...updates });
+    if (problem) return res.status(400).json({ error: problem });
   }
   updates.updated_at = new Date().toISOString();
 

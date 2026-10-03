@@ -36,4 +36,25 @@ function validateImages(images) {
   return { images };
 }
 
-module.exports = { validateImages, MAX_IMAGES, MAX_IMAGE_CHARS };
+// ── Daily supply cycle ───────────────────────────────────────────────────────
+// When a listing's cut-off passes, the day's offer is over. The price carries
+// forward (the farmer edits it only when it changed), but the stock and the
+// photos do NOT: each market day the farmer states fresh stock and shares a fresh
+// picture of what they are actually bringing, so customers see today's produce.
+const DAILY_RESET = Object.freeze({ confirmed: false, listed: false, qty_available: 0, images: [] });
+
+/**
+ * Why a listing cannot be confirmed for today's market, or null when it can.
+ * `row` is the listing as it will be AFTER the update (existing merged with body).
+ */
+function confirmProblem(row) {
+  if (!(Number(row.qty_available) > 0)) {
+    return 'Enter today\'s available quantity before confirming.';
+  }
+  if (!Array.isArray(row.images) || row.images.length === 0) {
+    return 'Add today\'s photo of the produce before confirming.';
+  }
+  return null;
+}
+
+module.exports = { validateImages, MAX_IMAGES, MAX_IMAGE_CHARS, DAILY_RESET, confirmProblem };
