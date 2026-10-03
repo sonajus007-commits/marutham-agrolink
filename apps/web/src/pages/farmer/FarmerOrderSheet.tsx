@@ -5,6 +5,7 @@ import { api } from '@marutham/api-client';
 import { useToast } from '../../components/Toast';
 import {
   buildPipeline,
+  displayStatus,
   fmtDate,
   fmtMoney,
   getProductEmoji,
@@ -13,6 +14,7 @@ import {
   payStatusKey,
   statusColor,
   statusKey,
+  type DeclinedOrderItem,
   type Order,
   type OrderHistoryEntry,
   type OrderItem,
@@ -51,6 +53,13 @@ export function FarmerOrderSheet({
   const [localStatus, setLocalStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmDecline, setConfirmDecline] = useState(false);
+  // Item-level decline: the lines ticked to decline, the confirm for a partial
+  // decline, this seller's already-declined lines, and a "re-read the detail" tick.
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [confirmPartial, setConfirmPartial] = useState(false);
+  const [declined, setDeclined] = useState<DeclinedOrderItem[]>([]);
+  const [localPartial, setLocalPartial] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!open || !order) return;
@@ -58,13 +67,18 @@ export function FarmerOrderSheet({
     setItems(null);
     setHistory([]);
     setError(null);
-    setLocalStatus(null);
+    setPicked(new Set());
+    if (reloadKey === 0) {
+      setLocalStatus(null);
+      setLocalPartial(false);
+    }
     api
       .getOrder(order.id)
       .then((detail) => {
         if (!active) return;
         const mine = (detail.items || []).filter((it) => it.farmer_id === user?.id);
         setItems(mine);
+        setDeclined((detail.declined_items || []).filter((it) => it.farmer_id === user?.id));
         // The status-timeline notes are server-authored and name the buyer
         // (e.g. "…placed by Kavitha R."). A seller has no need for the buyer's
         // name, so redact it out of the notes before showing them.
@@ -82,12 +96,19 @@ export function FarmerOrderSheet({
     return () => {
       active = false;
     };
-  }, [open, order, user?.id]);
+  }, [open, order, user?.id, reloadKey]);
+  // A different order (or reopening) starts clean.
+  useEffect(() => setReloadKey(0), [open, order]);
 
   // The English value drives statusColor; only the spoken form is translated.
   // localStatus wins when set, so the pipeline + badge reflect the action we just did.
   const rawStatus = localStatus ?? (order ? String(order.status ?? '') : '');
-  const status = order ? (isOrderCancelled(order) ? 'Cancelled' : rawStatus) : '';
+  const status = order
+    ? displayStatus(
+        { ...order, partially_accepted: order.partially_accepted || localPartial },
+        rawStatus,
+      )
+    : '';
 
   // The seller's status actions, each only for an order that carries their produce.
   // The server re-checks role, status, has-items and the deadline, so these are UX.
@@ -95,6 +116,25 @@ export function FarmerOrderSheet({
   const activeForMe = !!order && !isOrderCancelled(order) && hasItems;
   const canAccept = activeForMe && rawStatus === 'Order Received';
   const canPack = activeForMe && rawStatus === 'Order Accepted';
+
+  // Per-item decline is offered while the parcel is still the seller's to change
+  // (to accept or to pack) and has more than one line. Ticking every line is the
+  // same as declining the whole order.
+  const itemPick = (canAccept || canPack) && (items?.length ?? 0) > 1;
+  const pickedCount = picked.size;
+  const allPicked = itemPick && pickedCount === (items?.length ?? 0);
+  const somePicked = itemPick && pickedCount > 0 && !allPicked;
+  const togglePick = (id: string) =>
+    setPicked((p) => {
+      const n = new Set(p);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const toggleAll = () =>
+    setPicked(
+      allPicked ? new Set() : new Set((items || []).map((it) => it.id || '').filter(Boolean)),
+    );
 
   // Minutes left in the acceptance window, for the countdown shown while un-accepted.
   const deadlineMs = order?.accept_deadline ? new Date(order.accept_deadline).getTime() : null;
@@ -159,6 +199,60 @@ export function FarmerOrderSheet({
     }
   }
 
+  async function declinePicked(reason?: string) {
+    if (!order) return;
+    setConfirmPartial(false);
+    setBusy(true);
+    try {
+      const res = await api.declineOrderItems(order.id, [...picked], reason);
+      if (res.declined === 'all') {
+        setLocalStatus('Cancelled');
+      } else {
+        setLocalStatus('Order Accepted');
+        setLocalPartial(true);
+      }
+      toast(res.message || t('farmer.orders.itemsDeclined', 'Items declined.'), 'ok');
+      setReloadKey((k) => k + 1);
+      onChanged?.();
+    } catch (e) {
+      toast(
+        e instanceof Error
+          ? e.message
+          : t('farmer.orders.declineFailed', 'Could not decline the order'),
+        'er',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // The action row: with nothing ticked it is the usual Accept / Pack + Decline;
+  // with some lines ticked it declines just those; with every line ticked it
+  // declines the whole order.
+  const declineSelectedRow = somePicked ? (
+    <div className="flex flex-wrap gap-2">
+      <Button variant="danger" onClick={() => setConfirmPartial(true)} disabled={busy}>
+        {canAccept
+          ? t('farmer.orders.declinePickedAccept', 'Decline {{count}} item(s) & accept the rest', {
+              count: pickedCount,
+            })
+          : t('farmer.orders.declinePicked', 'Decline {{count}} item(s)', { count: pickedCount })}
+      </Button>
+      <Button variant="ghost" onClick={() => setPicked(new Set())} disabled={busy}>
+        {t('farmer.orders.clearPick', 'Clear selection')}
+      </Button>
+    </div>
+  ) : allPicked ? (
+    <div className="flex flex-wrap gap-2">
+      <Button variant="danger" onClick={() => setConfirmDecline(true)} disabled={busy}>
+        {t('farmer.orders.declineAll', 'Decline whole order')}
+      </Button>
+      <Button variant="ghost" onClick={() => setPicked(new Set())} disabled={busy}>
+        {t('farmer.orders.clearPick', 'Clear selection')}
+      </Button>
+    </div>
+  ) : null;
+
   return (
     <Sheet
       open={open}
@@ -203,7 +297,9 @@ export function FarmerOrderSheet({
             </p>
           ) : null}
 
-          {canAccept ? (
+          {declineSelectedRow}
+
+          {canAccept && !declineSelectedRow ? (
             <div className="flex gap-2">
               <Button variant="primary" onClick={accept} disabled={busy}>
                 {busy
@@ -216,7 +312,7 @@ export function FarmerOrderSheet({
             </div>
           ) : null}
 
-          {canPack ? (
+          {canPack && !declineSelectedRow ? (
             <div className="flex gap-2">
               <Button variant="primary" onClick={pack} disabled={busy}>
                 {busy
@@ -250,6 +346,37 @@ export function FarmerOrderSheet({
             )}
           </ConfirmDialog>
 
+          <ConfirmDialog
+            open={confirmPartial}
+            title={t('farmer.orders.declinePickedTitle', 'Decline {{count}} item(s)?', {
+              count: pickedCount,
+            })}
+            subtitle={(items || [])
+              .filter((it) => it.id && picked.has(it.id))
+              .map((it) => it.name)
+              .join(', ')}
+            confirmLabel={t('farmer.orders.decline', 'Decline')}
+            cancelLabel={t('common.cancel', 'Cancel')}
+            tone="danger"
+            busy={busy}
+            reason={{
+              label: t('farmer.orders.declineReason', 'Reason (optional)'),
+              placeholder: t('farmer.orders.declineReasonHint', 'e.g. crop damaged, sold out'),
+            }}
+            onConfirm={(reason) => declinePicked(reason)}
+            onClose={() => setConfirmPartial(false)}
+          >
+            {canAccept
+              ? t(
+                  'farmer.orders.declinePickedBodyAccept',
+                  'These items are removed and the customer is refunded and told. The rest of the order is accepted and shows as Partially Accepted. This cannot be undone.',
+                )
+              : t(
+                  'farmer.orders.declinePickedBody',
+                  'These items are removed and the customer is refunded and told. The rest of the order stays accepted (Partially Accepted). This cannot be undone.',
+                )}
+          </ConfirmDialog>
+
           <section className="rounded-base border border-border-subtle bg-surface p-4">
             <h3 className="mb-2 text-sm font-bold text-primary">📋 {t('farmer.orders.info')}</h3>
             <InfoRow label={t('farmer.orders.code')} value={order.code || '—'} />
@@ -272,26 +399,93 @@ export function FarmerOrderSheet({
             <h3 className="mb-2 text-sm font-bold text-primary">
               🌿 {t('farmer.orders.yourItems')}
             </h3>
+            {itemPick ? (
+              <p className="mb-2 text-xs text-fg-muted">
+                {t(
+                  'farmer.orders.pickHint',
+                  'Can’t supply something? Tick those items to decline just them.',
+                )}
+              </p>
+            ) : null}
             {items.length === 0 ? (
               <p className="text-xs text-fg-muted">{t('farmer.orders.noItems')}</p>
             ) : (
+              <ul className="flex flex-col gap-1">
+                {itemPick ? (
+                  <li className="fm-pick-row fm-pick-row--all">
+                    <label className="fm-pick">
+                      <input
+                        type="checkbox"
+                        checked={allPicked}
+                        ref={(el) => {
+                          if (el) el.indeterminate = somePicked;
+                        }}
+                        onChange={toggleAll}
+                        disabled={busy}
+                        aria-label={t('farmer.orders.pickAll', 'Select all items')}
+                      />
+                      <span>{t('farmer.orders.pickAll', 'Select all items')}</span>
+                    </label>
+                  </li>
+                ) : null}
+                {items.map((item, idx) => {
+                  const id = item.id || '';
+                  const on = !!id && picked.has(id);
+                  const body = (
+                    <>
+                      <span className="font-semibold text-fg">
+                        {getProductEmoji(item.name)} {item.name}
+                      </span>
+                      <span className="text-2xs text-fg-muted">
+                        {item.qty} {item.unit || ''}
+                      </span>
+                    </>
+                  );
+                  return (
+                    <li key={id || idx} className={`fm-pick-row${on ? ' is-picked' : ''}`}>
+                      {itemPick && id ? (
+                        <label className="fm-pick fm-pick--item">
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={() => togglePick(id)}
+                            disabled={busy}
+                            aria-label={t('farmer.orders.pickItem', 'Decline {{name}}', {
+                              name: item.name,
+                            })}
+                          />
+                          <span className="fm-pick__body">{body}</span>
+                        </label>
+                      ) : (
+                        <span className="fm-pick__body">{body}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+
+          {declined.length > 0 ? (
+            <section className="rounded-base border border-border-subtle bg-surface p-4">
+              <h3 className="mb-2 text-sm font-bold text-danger">
+                🚫 {t('farmer.orders.declinedItems', 'Declined by you')}
+              </h3>
               <ul className="flex flex-col gap-2">
-                {items.map((item, idx) => (
-                  <li
-                    key={item.id || idx}
-                    className="flex items-center justify-between gap-2 text-sm"
-                  >
-                    <span className="font-semibold text-fg">
-                      {getProductEmoji(item.name)} {item.name}
+                {declined.map((d) => (
+                  <li key={d.id} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="text-fg-muted line-through">
+                      {getProductEmoji(d.name)} {d.name}
                     </span>
                     <span className="text-2xs text-fg-muted">
-                      {item.qty} {item.unit || ''}
+                      {Number(d.qty)} {d.unit || ''}
+                      {d.reason ? ` · ${d.reason}` : ''}
                     </span>
                   </li>
                 ))}
               </ul>
-            )}
-          </section>
+            </section>
+          ) : null}
 
           <section className="flex items-center justify-between rounded-base border border-border-subtle bg-surface-muted p-4">
             <span className="text-sm font-bold text-primary">💰 {t('farmer.orders.youEarn')}</span>

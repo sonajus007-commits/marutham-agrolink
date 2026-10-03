@@ -11,6 +11,11 @@ const { agentServesOrder, coverageBlockMessage } = require('../utils/agentCovera
 const { notify } = require('../utils/notifications');
 const { bumpFulfilled } = require('../utils/reliability');
 const { notifyCollectionParties } = require('../utils/collectionNotify');
+const { lineSums, moneyAfterDecline } = require('../utils/partialDecline');
+const { restockLines } = require('../utils/cancelOrder');
+const {
+  declineWholeParcel, moveLinesOut, restoreLines, refundDeclinedLines,
+} = require('../utils/declineOrder');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -461,6 +466,149 @@ router.post('/:id/accept', async (req, res) => {
   await notifyCollectionParties(updated, 'accepted');
 
   res.json({ ok: true, message: 'Order accepted.', newStatus: updated.status, order: updated });
+});
+
+// ── POST /orders/:id/decline-items  (farmer: decline some lines, accept the rest) ──
+// Body: { item_ids: [order_items.id, ...], reason?: string }.
+// While the parcel is Order Received or Order Accepted, the seller may decline any
+// of THEIR lines. Declining every line of the parcel is a whole-parcel decline
+// (cancel + refund + reliability). Declining some lines moves them out of
+// order_items (utils/declineOrder), takes their value off the bill (charges stay —
+// utils/partialDecline), restocks them, refunds a prepaid customer, and leaves the
+// parcel Order Accepted with partially_accepted = true → shown "Partially Accepted".
+router.post('/:id/decline-items', async (req, res) => {
+  if (req.user.role !== 'farmer') {
+    return res.status(403).json({ error: 'Only the seller can decline items.' });
+  }
+  const ids = Array.isArray(req.body && req.body.item_ids)
+    ? [...new Set(req.body.item_ids.filter((x) => typeof x === 'string' && x))]
+    : [];
+  if (ids.length === 0) return res.status(400).json({ error: 'Choose at least one item to decline.' });
+  const reason = typeof (req.body && req.body.reason) === 'string' ? req.body.reason.trim().slice(0, 200) : '';
+
+  const order = await fetchActiveOrder(req.params.id, res);
+  if (!order) return;
+  if (!['Order Received', 'Order Accepted'].includes(order.status)) {
+    return res.status(409).json({ error: `Cannot decline items. Order is currently: "${order.status}".` });
+  }
+  if (order.status === 'Order Received' && order.accept_deadline && new Date(order.accept_deadline) < new Date()) {
+    return res.status(409).json({ error: 'The acceptance window for this order has closed.' });
+  }
+
+  const { data: lines, error: linesErr } = await supabase
+    .from('order_items')
+    .select('*')
+    .eq('order_id', order.id);
+  if (linesErr) {
+    console.error('Decline items: line read failed:', linesErr.message);
+    return res.status(500).json({ error: 'Could not load the order items. Please try again.' });
+  }
+  const mine = (lines || []).filter((l) => l.farmer_id === req.user.id);
+  if (mine.length === 0) return res.status(403).json({ error: 'You have no items in this order.' });
+  const picked = mine.filter((l) => ids.includes(l.id));
+  if (picked.length !== ids.length) {
+    return res.status(400).json({ error: 'Some of those items are not yours or are no longer in this order.' });
+  }
+
+  // Every line declined → it is simply a decline of the parcel.
+  if (picked.length === lines.length) {
+    const { refunds } = await declineWholeParcel(order, reason);
+    return res.json({
+      message: 'Order declined.',
+      declined: 'all',
+      ...(refunds.length ? { refund: { amount_paise: refunds[0].amount_paise, to: refunds[0].to } } : {}),
+    });
+  }
+
+  // Partial. Read the split parent BEFORE any write — its total drop is the refund.
+  let parentBefore = null;
+  if (order.parent_order_id) {
+    const { data: parent, error: parentErr } = await supabase
+      .from('orders')
+      .select('total, pay_status, pay_method, refund_amt')
+      .eq('id', order.parent_order_id)
+      .maybeSingle();
+    if (parentErr) {
+      console.error('Decline items: parent read failed:', parentErr.message);
+      return res.status(500).json({ error: 'Could not load the order. Please try again.' });
+    }
+    parentBefore = parent;
+  }
+
+  const sums = lineSums(picked);
+  const extra = { ...moneyAfterDecline(order, sums), partially_accepted: true };
+
+  const moved = await moveLinesOut(order, picked, reason);
+  if (moved.error) {
+    console.error('Decline items: move failed:', moved.error);
+    return res.status(500).json({ error: 'Could not decline those items. Please try again.' });
+  }
+
+  let updated;
+  if (order.status === 'Order Received') {
+    // Declining some lines IS accepting the rest: advance exactly as Accept does.
+    const r = await advanceStage(order, `Farmer ${req.user.fname}`, {
+      accepted_at: new Date().toISOString(),
+      ...extra,
+    });
+    if (r.conflict || r.error) {
+      await restoreLines(order, picked);
+      return r.conflict ? conflictResponse(res) : res.status(500).json({ error: r.error });
+    }
+    updated = r.updated;
+  } else {
+    // Already accepted: re-price in place. CAS on stage AND item_total so a pack
+    // or a second decline racing this one cannot both apply.
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ ...extra, updated_at: new Date().toISOString() })
+      .eq('id', order.id)
+      .eq('stage', order.stage)
+      .eq('item_total', order.item_total)
+      .select()
+      .maybeSingle();
+    if (error || !data) {
+      await restoreLines(order, picked);
+      if (error) console.error('Decline items: order update failed:', error.message);
+      return error ? res.status(500).json({ error: 'Could not decline those items.' }) : conflictResponse(res);
+    }
+    updated = data;
+  }
+
+  // Committed. Everything below is best effort and logged, never undone.
+  await restockLines(picked);
+
+  const what = picked.map((l) => `${l.name} × ${Number(l.qty)}${l.unit ? ' ' + l.unit : ''}`).join(', ');
+  const { error: histErr } = await supabase.from('order_history').insert({
+    order_id: order.id,
+    label: 'Partially Accepted',
+    note: `Declined by seller: ${what}${reason ? ` — ${reason}` : ''}.`,
+  });
+  if (histErr) console.error(`Order ${order.id}: 'Partially Accepted' history failed:`, histErr.message);
+
+  const refund = await refundDeclinedLines(order, parentBefore, sums.line);
+
+  if (order.status === 'Order Received') await notifyCollectionParties(updated, 'accepted');
+
+  if (order.consumer_id) {
+    await notify(order.consumer_id, {
+      type: 'order_partially_accepted',
+      title: 'Part of your order could not be supplied',
+      body: `${order.seller_name || 'The seller'} could not supply: ${picked.map((l) => l.name).join(', ')}. ` +
+        'The rest of your order is on its way.' +
+        (refund ? ' The amount for the missing items is being refunded.' : ' You will not be charged for them.'),
+      data: { order_id: order.parent_order_id || order.id, code: order.code },
+    });
+  }
+
+  res.json({
+    ok: true,
+    message: `Order accepted — ${picked.length} item(s) declined.`,
+    newStatus: updated.status,
+    partially_accepted: true,
+    declined: picked.map((l) => l.id),
+    ...(refund ? { refund } : {}),
+  });
 });
 
 // ── POST /orders/:id/pack  (farmer only) ──────────────────────────────────────

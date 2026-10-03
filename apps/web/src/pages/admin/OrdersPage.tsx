@@ -5,18 +5,18 @@ import { api } from '@marutham/api-client';
 import {
   fmtDateShort,
   fmtMoney,
-  isOrderCancelled,
   payMethodKey,
   statusColor,
   statusKey,
   type Order,
+  displayStatus,
 } from '@marutham/lib';
 import { AdminOrderSheet } from './AdminOrderSheet';
 import { useAdminGeo } from './AdminGeoContext';
 import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
 
-const statusOf = (o: Order) => (isOrderCancelled(o) ? 'Cancelled' : o.status);
+const statusOf = (o: Order) => displayStatus(o);
 
 export function OrdersPage() {
   const { t, i18n } = useTranslation();

@@ -10,6 +10,7 @@ import {
   sellerRejectKind,
   sellerDeclineNote,
   acceptMinutesLeft,
+  displayStatus,
   groupOrders,
   deriveAgentStats,
   deriveOrderCharges,
@@ -327,5 +328,29 @@ describe('seller rejection reasons', () => {
       acceptMinutesLeft(order({ accept_deadline: new Date(now - HOUR).toISOString() }), now),
     ).toBe(0);
     expect(acceptMinutesLeft(order({}), now)).toBeNull();
+  });
+});
+
+describe('displayStatus — what the pill says', () => {
+  it('shows Partially Accepted only for an accepted parcel with declined lines', () => {
+    expect(displayStatus(order({ status: 'Order Accepted', partially_accepted: true }))).toBe(
+      'Partially Accepted',
+    );
+    expect(displayStatus(order({ status: 'Order Accepted' }))).toBe('Order Accepted');
+    // Once it moves on, the raw status leads again (packing is what matters next).
+    expect(displayStatus(order({ status: 'Packed', partially_accepted: true }))).toBe('Packed');
+  });
+  it('a cancelled order reads Cancelled whatever else it carries', () => {
+    expect(
+      displayStatus(order({ status: 'Order Accepted', partially_accepted: true, cancelled: true })),
+    ).toBe('Cancelled');
+  });
+  it('honours an optimistic raw status passed by the caller', () => {
+    expect(
+      displayStatus(
+        order({ status: 'Order Received', partially_accepted: true }),
+        'Order Accepted',
+      ),
+    ).toBe('Partially Accepted');
   });
 });

@@ -59,6 +59,9 @@ export interface Order {
    * with no deadline (e.g. a split parent container).
    */
   accept_deadline?: string | null;
+  /** Seller accepted but declined some lines (migration 065). Status stays
+   *  'Order Accepted'; display it with displayStatus() → 'Partially Accepted'. */
+  partially_accepted?: boolean;
   /** Why the order was cancelled — server-authored (decline, missed window, admin). */
   cancel_reason?: string | null;
   consumer_name?: string;
@@ -129,11 +132,31 @@ export interface OrderPart extends Order {
   seller_name?: string;
   /** This parcel's own lines. The parent's `items` is all of them together. */
   items?: OrderItem[];
+  /** Lines this parcel's seller declined (partial accept). */
+  declined_items?: DeclinedOrderItem[];
+}
+
+/** A line the seller declined while accepting the rest (migration 065). It is no
+ *  longer part of the order's money — shown struck through as "not supplied". */
+export interface DeclinedOrderItem {
+  id: string;
+  order_id: string;
+  product_id?: string;
+  name: string;
+  farmer_id?: string;
+  farmer_name?: string;
+  qty: number | string;
+  unit?: string;
+  price?: number | string;
+  reason?: string | null;
+  declined_at?: string;
 }
 
 export interface OrderDetail {
   order: Order;
   items: OrderItem[];
+  /** Lines the seller declined (partial accept). Absent on older servers. */
+  declined_items?: DeclinedOrderItem[];
   history: OrderHistoryEntry[];
   qr_svg?: string;
   /**
@@ -248,6 +271,19 @@ const MS_PER_HOUR = 36e5;
  */
 export function isOrderCancelled(o: Order): boolean {
   return !!o.cancelled || o.status === 'Cancelled';
+}
+
+/**
+ * The status to SHOW for an order: 'Cancelled' for a cancelled row, 'Partially
+ * Accepted' for an accepted parcel the seller declined some lines of, else the raw
+ * status. Display only — the pipeline, rollups and every rule key off the raw
+ * status (`o.status`), where 'Partially Accepted' is not a value and never will be.
+ * `raw` lets a caller pass an optimistic status it has just set locally.
+ */
+export function displayStatus(o: Order, raw: string = String(o.status ?? '')): string {
+  if (isOrderCancelled(o)) return 'Cancelled';
+  if (raw === 'Order Accepted' && o.partially_accepted) return 'Partially Accepted';
+  return raw;
 }
 
 /** In flight — neither delivered nor cancelled. */

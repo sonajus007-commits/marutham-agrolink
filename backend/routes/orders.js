@@ -23,7 +23,7 @@ const {
 const { rollupToParent } = require('../utils/orderRollup');
 const { resolveTalukHubId } = require('../utils/hubResolver');
 const { computeAcceptDeadline } = require('../utils/acceptWindow');
-const { cancelOrders } = require('../utils/cancelOrder');
+const { declineWholeParcel } = require('../utils/declineOrder');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -618,7 +618,7 @@ router.get('/', async (req, res) => {
   /** Farmers only: { order_id → paise this farmer is owed }. Attached below. */
   let farmerPayouts = null;
 
-  const COLUMNS = 'id, code, consumer_name, district, village, delivery_village, total, status, stage, route, pay_method, pay_status, created_at, agent_name, dest_lat, dest_lng, delivery_attempts, cancel_reason, accept_deadline';
+  const COLUMNS = 'id, code, consumer_name, district, village, delivery_village, total, status, stage, route, pay_method, pay_status, created_at, agent_name, dest_lat, dest_lng, delivery_attempts, cancel_reason, accept_deadline, partially_accepted';
 
   /* Consumers also get a line-item count, for the dashboard's Recent Orders table.
    * It is an EMBEDDED AGGREGATE rather than a second fetch-and-group (the shape the
@@ -1002,7 +1002,7 @@ router.get('/:id', async (req, res) => {
   if (isSplitParent) {
     const { data: children, error: childErr } = await supabase
       .from('orders')
-      .select('id, code, split_seq, seller_id, seller_name, village, district, status, stage, route, total, item_total, cancelled, cancel_reason, agent_id, agent_name, agent_phone, eta_ts, picked_up_at, delivered_at, pay_status, dest_lat, dest_lng')
+      .select('id, code, split_seq, seller_id, seller_name, village, district, status, stage, route, total, item_total, cancelled, cancel_reason, partially_accepted, agent_id, agent_name, agent_phone, eta_ts, picked_up_at, delivered_at, pay_status, dest_lat, dest_lng')
       .eq('parent_order_id', order.id)
       .order('split_seq', { ascending: true });
 
@@ -1030,11 +1030,22 @@ router.get('/:id', async (req, res) => {
     return res.status(500).json({ error: 'Could not load the order. Please try again.' });
   }
 
+  // Lines a seller declined while accepting the rest (migration 065). Display only —
+  // they are no longer part of the order's money — so a failed read degrades to
+  // "none shown" rather than failing the whole detail page.
+  const { data: declinedRows, error: declinedErr } = await supabase
+    .from('declined_order_items')
+    .select('id, order_id, product_id, name, farmer_id, farmer_name, qty, unit, price, reason, declined_at')
+    .in('order_id', itemOwnerIds);
+  if (declinedErr) console.error('GET /orders/:id declined lines lookup failed:', declinedErr.message);
+  const declined_items = declinedRows || [];
+
   // Hand each part its own lines, so a client can render the breakdown without
   // re-grouping by seller and without a second round trip per part.
   if (isSplitParent) {
     for (const part of parts) {
       part.items = (items || []).filter(i => i.order_id === part.id);
+      part.declined_items = declined_items.filter(i => i.order_id === part.id);
     }
   }
 
@@ -1120,6 +1131,7 @@ router.get('/:id', async (req, res) => {
   res.json({
     order,
     items,
+    declined_items,
     history,
     qr_token,
     qr_svg,
@@ -1753,19 +1765,7 @@ router.post('/:id/decline', async (req, res) => {
     return res.status(409).json({ error: `Cannot decline. Order is currently: "${order.status}".` });
   }
 
-  const reason = (req.body && req.body.reason)
-    ? `Declined by seller: ${req.body.reason}`
-    : 'Declined by seller.';
-  const { refunds } = await cancelOrders([order], { reason, sellerFault: true });
-
-  if (order.consumer_id) {
-    await notify(order.consumer_id, {
-      type: 'order_cancelled',
-      title: 'A seller could not fulfil your order',
-      body: `${order.seller_name || 'A seller'} declined part of your order. Any prepayment is being refunded.`,
-      data: { order_id: order.id, code: order.code },
-    });
-  }
+  const { refunds } = await declineWholeParcel(order, req.body && req.body.reason);
 
   res.json({
     message: 'Order declined.',

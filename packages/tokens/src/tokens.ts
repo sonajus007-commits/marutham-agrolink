@@ -84,6 +84,8 @@ export const statusPalette = {
   'Order Placed': colors.sun,
   'Order Received': colors.gold,
   'Order Accepted': '#d4a015',
+  // Display-only status (an accepted parcel with some lines declined).
+  'Partially Accepted': '#d4a015',
   Packed: colors.gold2,
   'VCO Verified': '#52b788',
   'Picked Up': colors.forestSoft,

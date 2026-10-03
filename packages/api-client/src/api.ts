@@ -464,6 +464,23 @@ export const api = {
   ): Promise<{ message?: string; refund?: { amount_paise: number; to: string } }> {
     return apiFetch('POST', '/orders/' + id + '/decline', reason ? { reason } : undefined);
   },
+  /** Seller declines some of their lines and accepts the rest (Partially Accepted).
+   *  Declining every line is a whole-order decline (`declined: 'all'`). */
+  declineOrderItems(
+    id: string,
+    itemIds: string[],
+    reason?: string,
+  ): Promise<{
+    message?: string;
+    declined?: 'all' | string[];
+    partially_accepted?: boolean;
+    refund?: { amount_paise: number; to: string };
+  }> {
+    return apiFetch('POST', '/orders/' + id + '/decline-items', {
+      item_ids: itemIds,
+      ...(reason ? { reason } : {}),
+    });
+  },
   /** Farmer marks their own order Packed (Order Accepted → Packed). The server
    *  enforces farmer-role + the current status + "you have items in this order" (POST
    *  /orders/:id/pack). Online-only: unlike the field scans, packing happens at

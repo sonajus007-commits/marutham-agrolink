@@ -32,8 +32,14 @@ async function restockParcel(orderId) {
     console.error(`cancelOrders: could not read items for ${orderId}: ${error.message}`);
     return sellerIds;
   }
+  return restockLines(items || []);
+}
 
-  for (const item of items || []) {
+// Put each line's quantity back on its listing (and re-list one its sale emptied).
+// Also used for an item-level decline, which restocks only the declined lines.
+async function restockLines(items) {
+  const sellerIds = new Set();
+  for (const item of items) {
     if (item.farmer_id) sellerIds.add(item.farmer_id);
     const { data: listing, error: readErr } = await supabase
       .from('farmer_listings')
@@ -155,4 +161,4 @@ async function cancelOrders(parcels, { reason, sellerFault = false } = {}) {
   return { cancelled, refunds };
 }
 
-module.exports = { cancelOrders };
+module.exports = { cancelOrders, restockLines };

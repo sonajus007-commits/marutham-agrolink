@@ -1571,3 +1571,50 @@
     white-space: normal;
   }
 }
+
+/* ── Order sheet: per-item decline picker ──────────────────────────────────
+   Each line is a full-width tap target (≥44px) with its checkbox; a ticked line
+   turns the warning tint so what will be declined is obvious at a glance. */
+.fm-pick-row {
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
+}
+.fm-pick-row.is-picked {
+  background: var(--warning-bg);
+}
+.fm-pick-row--all {
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 4px;
+}
+.fm-pick {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 4px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--forest);
+  cursor: pointer;
+}
+.fm-pick input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: var(--danger);
+}
+.fm-pick__body {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  font-size: 14px;
+}
+.fm-pick-row > .fm-pick__body {
+  min-height: 36px;
+  padding: 4px 6px;
+}

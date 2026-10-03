@@ -99,6 +99,8 @@ async function mountRoute(routeModule, { supabase, user = null }) {
                    path.join(__dirname, '..', '..', 'utils', 'cancelOrder.js'),
                    path.join(__dirname, '..', '..', 'utils', 'reliability.js'),
                    path.join(__dirname, '..', '..', 'utils', 'collectionNotify.js'),
+                   path.join(__dirname, '..', '..', 'utils', 'orderRollup.js'),
+                   path.join(__dirname, '..', '..', 'utils', 'declineOrder.js'),
                    // The phone-push sender reads device_tokens through the client too.
                    path.join(__dirname, '..', '..', 'utils', 'push.js')]) {
     delete require.cache[p];

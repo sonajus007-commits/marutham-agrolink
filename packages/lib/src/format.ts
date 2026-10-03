@@ -145,6 +145,8 @@ const STATUS_KEYS: Record<string, string> = {
   'Order Placed': 'status.orderPlaced',
   'Order Received': 'status.orderReceived',
   'Order Accepted': 'status.orderAccepted',
+  // Display-only (displayStatus): an accepted parcel with declined lines.
+  'Partially Accepted': 'status.partiallyAccepted',
   Packed: 'status.packaged',
   'VCO Verified': 'status.vcoVerified',
   'Picked Up': 'status.pickedUp',
@@ -331,6 +333,7 @@ export function statusTone(status: string): OrderStatusTone {
     case 'Order Placed':
     case 'Order Received':
     case 'Order Accepted':
+    case 'Partially Accepted':
     case 'Packed':
       return 'warning';
     // In flight. Nothing is wrong and nothing is finished.

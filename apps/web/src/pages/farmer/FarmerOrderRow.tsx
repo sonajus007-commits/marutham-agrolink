@@ -9,6 +9,7 @@ import {
   statusKey,
   statusTone,
   type Order,
+  displayStatus,
 } from '@marutham/lib';
 
 /** Short human handle for an order — the code, or a truncated id for old rows. */
@@ -34,7 +35,7 @@ export function FarmerOrderRow({
 }) {
   const { t, i18n } = useTranslation();
   // The English value drives statusColor; only the spoken form is translated.
-  const status = isOrderCancelled(order) ? 'Cancelled' : String(order.status ?? '');
+  const status = displayStatus(order);
   return (
     <button
       type="button"

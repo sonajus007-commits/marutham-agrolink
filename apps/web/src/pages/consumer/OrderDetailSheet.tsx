@@ -31,6 +31,8 @@ import {
   type OrderDetail,
   type OrderItem,
   type OrderPart,
+  displayStatus,
+  type DeclinedOrderItem,
 } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
 import { isMapsConfigured } from '../../lib/googleMaps';
@@ -231,7 +233,7 @@ function OrderDetailBody({
   // Delivered. The server re-checks role, ownership and stage, so this is just UX.
   const canConfirm = !isOrderCancelled(o) && effectiveStatus === 'Out for Delivery';
   // The English value drives statusColor; only the spoken form is translated.
-  const status = isOrderCancelled(o) ? 'Cancelled' : effectiveStatus;
+  const status = displayStatus(o, effectiveStatus);
   const hoursLeft = canRequestReturn(o) ? Math.ceil(returnWindowHoursLeft(o)) : 0;
 
   async function confirmReceived() {
@@ -543,6 +545,7 @@ function OrderDetailBody({
               }
             />
           ))}
+          <DeclinedLines rows={data.declined_items} />
         </div>
       )}
 
@@ -683,6 +686,33 @@ function OrderDetailBody({
  * that is still two days out. Rating calls the part's id because the server checks
  * the line against the order row it was asked about, and the lines live on the child.
  */
+/**
+ * Lines the seller could not supply (they declined them and accepted the rest).
+ * They are already off the bill, so they are shown struck through and labelled —
+ * the customer should see what is NOT coming, not just a shorter list.
+ */
+function DeclinedLines({ rows }: { rows?: DeclinedOrderItem[] }) {
+  const { t } = useTranslation();
+  if (!rows || rows.length === 0) return null;
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div className="ilbl" style={{ fontWeight: 700, color: 'var(--danger)' }}>
+        🚫 {t('consumer.order.notSupplied', 'Not supplied by the seller — not charged')}
+      </div>
+      {rows.map((d) => (
+        <div key={d.id} className="irow">
+          <span className="ilbl" style={{ textDecoration: 'line-through' }}>
+            {d.name}
+          </span>
+          <span className="ival" style={{ color: 'var(--gray)' }}>
+            {Number(d.qty)} {d.unit || ''}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function PartCard({
   part,
   items,
@@ -706,6 +736,8 @@ function PartCard({
   const liveStatus = partTrack?.order.status;
   const partStatus = isOrderCancelled(part) ? 'Cancelled' : String(liveStatus ?? part.status ?? '');
   const partDelivered = partStatus === 'Delivered';
+  // Pill only (never the pipeline): a part the seller partly declined.
+  const partLabel = displayStatus(part, partStatus);
 
   return (
     <div className="ord-card">
@@ -721,8 +753,8 @@ function PartCard({
         <h3 style={{ margin: 0 }}>
           📦 {part.seller_name || t('consumer.order.partSeller', 'Seller')}
         </h3>
-        <span className="ord-status-pill" style={{ background: statusColor(partStatus) }}>
-          {t(statusKey(partStatus), partStatus)}
+        <span className="ord-status-pill" style={{ background: statusColor(partLabel) }}>
+          {t(statusKey(partLabel), partLabel)}
         </span>
       </div>
 
@@ -760,6 +792,7 @@ function PartCard({
           onRated={(stars) => onRated(item.id || '', stars)}
         />
       ))}
+      <DeclinedLines rows={part.declined_items} />
 
       {/* A cancelled part keeps the figure it was cancelled at — that is what the
           refund was worked out from — but showing it here reads as money still

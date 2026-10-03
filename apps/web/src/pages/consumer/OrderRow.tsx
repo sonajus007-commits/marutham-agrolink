@@ -3,12 +3,12 @@ import { StatusPill } from '@marutham/ui';
 import {
   fmtDateShort,
   fmtMoney,
-  isOrderCancelled,
   payMethodKey,
   statusColor,
   statusKey,
   statusTone,
   type Order,
+  displayStatus,
 } from '@marutham/lib';
 
 /** Short human handle for an order — the code, or a truncated id for old rows. */
@@ -25,7 +25,7 @@ export function OrderRow({ order, onOpen }: { order: Order; onOpen: (id: string)
   const { t, i18n } = useTranslation();
   /* The English status stays the value — statusColor keys off it. Only the
    * spoken version is translated. */
-  const status = isOrderCancelled(order) ? 'Cancelled' : String(order.status ?? '');
+  const status = displayStatus(order);
   return (
     <button type="button" className="ord-item" onClick={() => onOpen(order.id)}>
       <span

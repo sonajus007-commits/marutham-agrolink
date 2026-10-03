@@ -27,6 +27,7 @@ import {
   payMethodKey,
   payStatusKey,
   can,
+  displayStatus,
 } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../auth/AuthContext';
@@ -101,6 +102,8 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
   const charges = deriveOrderCharges(o);
   const address = resolveAddress(o.delivery_address);
   const statusLabel = isOrderCancelled(o) ? 'Cancelled' : o.status;
+  // What the pill SAYS (adds 'Partially Accepted'); statusLabel stays the raw value.
+  const statusShown = displayStatus(o);
 
   // Manual override: senior admins only, and never on a cancelled order (that
   // lifecycle is terminal). Offer the statuses valid for THIS order's route,
@@ -151,9 +154,9 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
       <div className="flex flex-wrap items-center gap-3">
         <span
           className="rounded-pill px-3 py-1 text-xs font-bold text-white"
-          style={{ background: statusColor(statusLabel) }}
+          style={{ background: statusColor(statusShown) }}
         >
-          {statusLabel}
+          {statusShown}
         </span>
         {canCancelOrder(o) ? (
           <Button variant="danger" onClick={() => setShowCancel(true)}>
