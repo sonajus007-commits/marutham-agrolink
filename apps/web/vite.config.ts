@@ -1,5 +1,5 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -21,23 +21,58 @@ const BACKEND = process.env.BACKEND_URL || 'http://localhost:3000';
 // (import.meta.env.BASE_URL), so one flag flips the whole app between the two.
 const isCapacitor = process.env.CAPACITOR === '1';
 
+// Dev only: answer /app/sw.js with a worker that removes itself. A browser that
+// once installed the production app-shell worker keeps serving that old build;
+// its update check fetches /app/sw.js, and the dev server would otherwise return
+// the SPA's HTML there, so the check fails and the stale worker never leaves.
+// This one installs, clears the workbox caches, unregisters and reloads the tab.
+const SW_KILL_SWITCH = `self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    for (const key of await caches.keys()) if (key.startsWith('workbox-')) await caches.delete(key);
+    await self.registration.unregister();
+    for (const c of await self.clients.matchAll({ type: 'window' })) c.navigate(c.url);
+  })());
+});
+`;
+function devServiceWorkerKillSwitch(): Plugin {
+  return {
+    name: 'marutham:dev-sw-kill-switch',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const p = (req.url || '').split('?')[0];
+        if (p !== '/app/sw.js' && p !== '/sw.js') return next();
+        res.setHeader('Content-Type', 'application/javascript');
+        res.setHeader('Cache-Control', 'no-store');
+        res.end(SW_KILL_SWITCH);
+      });
+    },
+  };
+}
+
 export default defineConfig({
   // Built assets and routes live under /app so Express can serve the SPA there
   // alongside the legacy HTML site at the root — except in a native build (see above).
   base: isCapacitor ? '/' : '/app/',
+  // Whether this build ships the app-shell worker at all (see src/pwa.ts).
+  define: { __PWA__: JSON.stringify(!isCapacitor) },
   plugins: [
+    devServiceWorkerKillSwitch(),
     react(),
     tailwindcss(),
     // Progressive Web App: makes the /app portal installable and offline-capable.
     // The service worker's scope follows the base ('/app/'), so it only ever controls
     // the SPA — never the legacy site at '/' or the '/api' backend. autoUpdate ships a
     // new worker as soon as a deploy lands. Disabled in dev (devOptions.enabled:false).
+    // Registration is done by hand in src/pwa.ts (injectRegister: false) so it can
+    // be skipped on developer hosts, where a cached build only gets in the way.
     // Skipped for native builds: Capacitor already serves the bundle from a local
     // webview, so a second service worker would only fight it for cache control.
     !isCapacitor &&
       VitePWA({
         registerType: 'autoUpdate',
-        injectRegister: 'auto',
+        injectRegister: false,
         includeAssets: ['favicon-32.png', 'apple-touch-icon.png', 'icons/*.png'],
         manifest: {
           name: 'Marutham AgroLink',

@@ -6,6 +6,7 @@ import { initSentry, AppErrorBoundary } from './sentry';
 import { queryClient } from './lib/queryClient';
 import { initNative } from './native';
 import { startOfflineSync } from '@marutham/api-client';
+import { setupServiceWorker } from './pwa';
 // tailwind.css imports @marutham/tokens/tokens.css itself — the theme mapping
 // is meaningless without it. Keep it first so the tokens land before styles.css.
 import './tailwind.css';
@@ -22,6 +23,9 @@ void initNative();
 // and keep replaying whenever connectivity returns. A no-op with an empty queue,
 // and works in both the PWA and the Capacitor webview (no service worker needed).
 startOfflineSync();
+// App-shell offline worker: installed for real users only; on a developer host
+// any stale one is removed so the browser always shows the live build (src/pwa.ts).
+void setupServiceWorker(__PWA__);
 
 // Runtime accessibility audit — DEV ONLY. axe checks what static linting cannot:
 // computed colour contrast, ARIA that only resolves at render, focus order. The
