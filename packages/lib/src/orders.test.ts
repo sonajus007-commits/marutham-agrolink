@@ -6,6 +6,10 @@ import {
   canRequestReturn,
   returnWindowHoursLeft,
   groupConsumerOrders,
+  groupSellerOrders,
+  sellerRejectKind,
+  sellerDeclineNote,
+  acceptMinutesLeft,
   groupOrders,
   deriveAgentStats,
   deriveOrderCharges,
@@ -253,5 +257,75 @@ describe('groupOrders — the agent queues', () => {
     const q = groupOrders([order({ status: 'At Hub', route: 'hub' })]);
     expect(deriveAgentStats(q, false).queue).toBe(1);
     expect(deriveAgentStats(q, true).queue).toBe(0); // a VCO does not work the hub
+  });
+});
+
+describe('groupSellerOrders — the seller Orders tab split', () => {
+  const now = Date.now();
+  const orders = [
+    order({
+      id: 'late',
+      status: 'Order Received',
+      accept_deadline: new Date(now + 2 * HOUR).toISOString(),
+    }),
+    order({
+      id: 'soon',
+      status: 'Order Received',
+      accept_deadline: new Date(now + 0.5 * HOUR).toISOString(),
+    }),
+    order({ id: 'acc', status: 'Order Accepted' }),
+    order({ id: 'packed', status: 'Packed' }),
+    order({ id: 'del', status: 'Delivered' }),
+    order({ id: 'can', status: 'Cancelled' }),
+    order({ id: 'flag', status: 'Order Received', cancelled: true }),
+  ];
+  const g = groupSellerOrders(orders);
+
+  it('puts new orders in toAccept, soonest deadline first', () => {
+    expect(g.toAccept.map((o) => o.id)).toEqual(['soon', 'late']);
+  });
+  it('puts accepted orders in toPack', () => {
+    expect(g.toPack.map((o) => o.id)).toEqual(['acc']);
+  });
+  it('treats any cancelled order as rejected, even with a stale status', () => {
+    expect(g.rejected.map((o) => o.id)).toEqual(['can', 'flag']);
+  });
+  it('keeps packed-onward and delivered orders out of the seller queues', () => {
+    expect(g.inProgress.map((o) => o.id)).toEqual(['packed']);
+    expect(g.delivered.map((o) => o.id)).toEqual(['del']);
+  });
+});
+
+describe('seller rejection reasons', () => {
+  it('reads who caused the rejection from cancel_reason', () => {
+    expect(sellerRejectKind(order({ cancel_reason: 'Declined by seller: sold out' }))).toBe(
+      'declined',
+    );
+    expect(sellerRejectKind(order({ cancel_reason: 'Declined by seller.' }))).toBe('declined');
+    expect(
+      sellerRejectKind(
+        order({
+          cancel_reason: 'Auto-cancelled — the seller did not accept within the 2-hour window.',
+        }),
+      ),
+    ).toBe('missed');
+    expect(sellerRejectKind(order({ cancel_reason: 'Changed my mind' }))).toBe('other');
+    expect(sellerRejectKind(order({}))).toBe('other');
+  });
+  it("extracts the seller's own decline note", () => {
+    expect(sellerDeclineNote(order({ cancel_reason: 'Declined by seller: crop damaged' }))).toBe(
+      'crop damaged',
+    );
+    expect(sellerDeclineNote(order({ cancel_reason: 'Declined by seller.' }))).toBe('');
+  });
+  it('counts whole minutes to the accept deadline, never negative', () => {
+    const now = Date.now();
+    expect(
+      acceptMinutesLeft(order({ accept_deadline: new Date(now + 90.5 * 60e3).toISOString() }), now),
+    ).toBe(90);
+    expect(
+      acceptMinutesLeft(order({ accept_deadline: new Date(now - HOUR).toISOString() }), now),
+    ).toBe(0);
+    expect(acceptMinutesLeft(order({}), now)).toBeNull();
   });
 });

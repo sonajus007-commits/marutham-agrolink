@@ -14,7 +14,7 @@ import { api } from '@marutham/api-client';
 import {
   farmerEarnings,
   getProductEmoji,
-  groupConsumerOrders,
+  groupSellerOrders,
   isOrderCancelled,
   listingPriceRs,
   listingState,
@@ -33,16 +33,19 @@ import {
   PlusDuo,
   WalletDuo,
   UserDuo,
+  ClipboardDuo,
+  XCircleDuo,
 } from '../../components/icons';
 import { FadeIn } from '../../components/FadeIn';
 import { FarmerOrderRow } from './FarmerOrderRow';
 import { FarmerOrderSheet } from './FarmerOrderSheet';
 import { TodaysSupplyCard } from './TodaysSupplyCard';
+import { useSellerOrderNotes } from './sellerOrderNotes';
 
 const FarmerInsights = lazy(() => import('./FarmerInsights'));
 
 /** Which KPI tile's detail popup is open, if any. */
-type TileView = 'pack' | 'active' | 'delivered' | 'awaiting' | 'listings';
+type TileView = 'accept' | 'pack' | 'rejected' | 'active' | 'delivered' | 'awaiting' | 'listings';
 
 /** A farmer tab id the quick actions can jump to. */
 export type FarmerNavTarget = 'earnings' | 'products' | 'orders' | 'profile';
@@ -93,7 +96,9 @@ export function FarmerHomeTab({
     void loadSide();
   }, [loadSide]);
 
-  const groups = useMemo(() => groupConsumerOrders(orders), [orders]);
+  // Split by what the seller must do: accept → pack; rejected; then the platform's
+  // part (in progress → delivered). Same grouping as the Orders tab.
+  const groups = useMemo(() => groupSellerOrders(orders), [orders]);
   const earnings = useMemo(() => farmerEarnings(orders, payouts), [orders, payouts]);
 
   const packOrders = useMemo(
@@ -150,19 +155,37 @@ export function FarmerHomeTab({
       <FadeIn>
         <div className="fm-kpis">
           <StatTile
-            icon={<PackageDuo />}
+            icon={<ClipboardDuo />}
             tone="gold"
-            label={t('farmer.home.kpi.toPack')}
-            value={packOrders.length}
+            label={t('farmer.orders.tabAccept', 'To accept')}
+            value={groups.toAccept.length}
+            hint={t('farmer.home.kpi.toAcceptHint', 'New orders — accept before the window closes')}
+            onClick={() => setView('accept')}
+            selected={view === 'accept'}
+          />
+          <StatTile
+            icon={<PackageDuo />}
+            tone="leaf"
+            label={t('farmer.orders.tabPack', 'Ready to pack')}
+            value={groups.toPack.length}
             hint={t('farmer.home.kpi.toPackHint')}
             onClick={() => setView('pack')}
             selected={view === 'pack'}
           />
           <StatTile
+            icon={<XCircleDuo />}
+            tone="pink"
+            label={t('farmer.orders.tabRejected', 'Rejected')}
+            value={groups.rejected.length}
+            hint={t('farmer.home.kpi.rejectedHint', 'Declined, missed or cancelled')}
+            onClick={() => setView('rejected')}
+            selected={view === 'rejected'}
+          />
+          <StatTile
             icon={<TruckDuo />}
             tone="green"
             label={t('farmer.home.kpi.inProgress')}
-            value={groups.active.length}
+            value={groups.inProgress.length}
             hint={t('farmer.home.kpi.inProgressHint')}
             onClick={() => setView('active')}
             selected={view === 'active'}
@@ -302,8 +325,10 @@ export function FarmerHomeTab({
       <TileModal
         view={view}
         onClose={() => setView(null)}
-        packOrders={packOrders}
-        active={groups.active}
+        toAccept={groups.toAccept}
+        toPack={groups.toPack}
+        rejected={groups.rejected}
+        active={groups.inProgress}
         delivered={groups.delivered}
         awaitingOrders={awaitingOrders}
         liveListings={liveListings}
@@ -377,7 +402,9 @@ function QaCard({
 function TileModal({
   view,
   onClose,
-  packOrders,
+  toAccept,
+  toPack,
+  rejected,
   active,
   delivered,
   awaitingOrders,
@@ -387,7 +414,9 @@ function TileModal({
 }: {
   view: TileView | null;
   onClose: () => void;
-  packOrders: Order[];
+  toAccept: Order[];
+  toPack: Order[];
+  rejected: Order[];
   active: Order[];
   delivered: Order[];
   awaitingOrders: Order[];
@@ -396,14 +425,15 @@ function TileModal({
   onManageProducts: () => void;
 }) {
   const { t } = useTranslation();
+  const { acceptNote, rejectNote } = useSellerOrderNotes();
 
-  const rowList = (rows: Order[], icon: string, empty: string) =>
+  const rowList = (rows: Order[], icon: string, empty: string, note?: (o: Order) => ReactNode) =>
     rows.length === 0 ? (
       <EmptyState icon={icon}>{empty}</EmptyState>
     ) : (
       <div className="fm-recent__list">
         {rows.map((o) => (
-          <FarmerOrderRow key={o.id} order={o} onOpen={onOpenOrder} />
+          <FarmerOrderRow key={o.id} order={o} onOpen={onOpenOrder} note={note?.(o)} />
         ))}
       </div>
     );
@@ -411,9 +441,27 @@ function TileModal({
   let title = '';
   let body: ReactNode = null;
   switch (view) {
+    case 'accept':
+      title = t('farmer.orders.tabAccept', 'To accept');
+      body = rowList(
+        toAccept,
+        '📋',
+        t('farmer.orders.emptyAccept', 'No new orders waiting for you.'),
+        acceptNote,
+      );
+      break;
     case 'pack':
       title = t('farmer.home.pop.pack');
-      body = rowList(packOrders, '📦', t('farmer.home.pop.packEmpty'));
+      body = rowList(toPack, '📦', t('farmer.home.pop.packEmpty'));
+      break;
+    case 'rejected':
+      title = t('farmer.orders.tabRejected', 'Rejected');
+      body = rowList(
+        rejected,
+        '🚫',
+        t('farmer.orders.emptyRejected', 'No rejected orders. 👍'),
+        rejectNote,
+      );
       break;
     case 'active':
       title = t('farmer.home.pop.active');

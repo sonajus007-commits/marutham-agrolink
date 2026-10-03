@@ -59,6 +59,8 @@ export interface Order {
    * with no deadline (e.g. a split parent container).
    */
   accept_deadline?: string | null;
+  /** Why the order was cancelled — server-authored (decline, missed window, admin). */
+  cancel_reason?: string | null;
   consumer_name?: string;
   consumer_phone?: string;
   delivery_address?: string | AddressObject | null;
@@ -273,6 +275,68 @@ export function canRequestReturn(o: Order, now: number = Date.now()): boolean {
   if (o.status !== 'Delivered' || isOrderCancelled(o) || o.return_id || !o.delivered_at)
     return false;
   return returnWindowHoursLeft(o, now) > 0;
+}
+
+/* ── Seller order split ─────────────────────────────────────────────────────
+ * The seller's Orders tab is split by what the seller must DO: accept new
+ * orders, pack accepted ones, and see the ones that were rejected. Everything
+ * after packing (collection → delivery) is the platform's work and sits in
+ * `inProgress` / `delivered`. Keyed off `status`, never `stage` (stage is an
+ * index into the order's own route map). */
+export interface SellerOrderGroups {
+  /** New orders the seller must accept (or decline) before the deadline. */
+  toAccept: Order[];
+  /** Accepted orders waiting to be packed for the VCO. */
+  toPack: Order[];
+  /** Cancelled for any reason — declined, missed window, customer or admin. */
+  rejected: Order[];
+  /** Packed and moving through collection / delivery. */
+  inProgress: Order[];
+  delivered: Order[];
+}
+
+export function groupSellerOrders(orders: Order[]): SellerOrderGroups {
+  const g: SellerOrderGroups = {
+    toAccept: [],
+    toPack: [],
+    rejected: [],
+    inProgress: [],
+    delivered: [],
+  };
+  for (const o of orders) {
+    if (isOrderCancelled(o)) g.rejected.push(o);
+    else if (o.status === 'Order Received') g.toAccept.push(o);
+    else if (o.status === 'Order Accepted') g.toPack.push(o);
+    else if (o.status === 'Delivered') g.delivered.push(o);
+    else g.inProgress.push(o);
+  }
+  // Most urgent first: the accept queue by deadline (soonest auto-cancel on top).
+  const deadline = (o: Order) =>
+    o.accept_deadline ? new Date(o.accept_deadline).getTime() : Number.POSITIVE_INFINITY;
+  g.toAccept.sort((a, b) => deadline(a) - deadline(b));
+  return g;
+}
+
+/** Who caused a rejection, read from the server-authored cancel_reason. */
+export type SellerRejectKind = 'declined' | 'missed' | 'other';
+
+export function sellerRejectKind(o: Order): SellerRejectKind {
+  const r = String(o.cancel_reason ?? '');
+  if (/^Declined by seller/i.test(r)) return 'declined';
+  if (/^Auto-cancelled/i.test(r)) return 'missed';
+  return 'other';
+}
+
+/** The seller's own words after "Declined by seller:", if they gave a reason. */
+export function sellerDeclineNote(o: Order): string {
+  const m = /^Declined by seller:\s*(.+)$/i.exec(String(o.cancel_reason ?? ''));
+  return m ? m[1].trim() : '';
+}
+
+/** Whole minutes until the accept deadline (0 once passed), or null with none. */
+export function acceptMinutesLeft(o: Order, now: number = Date.now()): number | null {
+  if (!o.accept_deadline) return null;
+  return Math.max(0, Math.floor((new Date(o.accept_deadline).getTime() - now) / 60000));
 }
 
 export interface ConsumerOrderGroups {

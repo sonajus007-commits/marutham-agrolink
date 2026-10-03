@@ -1551,3 +1551,23 @@
     width: 100%;
   }
 }
+
+/* ── Seller Orders split (To accept / Ready to pack / Rejected / On the way) ──
+   On a phone the four tabs share the width equally and wrap their labels, so
+   none is pushed off-screen behind a sideways scroll. */
+@media (max-width: 640px) {
+  .fm-order-tabs [role='tablist'] {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow: visible;
+  }
+  .fm-order-tabs [role='tab'] {
+    justify-content: center;
+    min-height: 48px;
+    padding: 8px 2px;
+    font-size: 12px;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+  }
+}

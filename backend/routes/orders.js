@@ -618,7 +618,7 @@ router.get('/', async (req, res) => {
   /** Farmers only: { order_id → paise this farmer is owed }. Attached below. */
   let farmerPayouts = null;
 
-  const COLUMNS = 'id, code, consumer_name, district, village, delivery_village, total, status, stage, route, pay_method, pay_status, created_at, agent_name, dest_lat, dest_lng, delivery_attempts';
+  const COLUMNS = 'id, code, consumer_name, district, village, delivery_village, total, status, stage, route, pay_method, pay_status, created_at, agent_name, dest_lat, dest_lng, delivery_attempts, cancel_reason, accept_deadline';
 
   /* Consumers also get a line-item count, for the dashboard's Recent Orders table.
    * It is an EMBEDDED AGGREGATE rather than a second fetch-and-group (the shape the

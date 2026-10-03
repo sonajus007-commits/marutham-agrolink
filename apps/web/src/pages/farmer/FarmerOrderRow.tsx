@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StatusPill } from '@marutham/ui';
 import {
@@ -21,7 +22,16 @@ export function orderLabel(o: Order): string {
  * consumer's total, and shows only the delivery village — never the buyer's
  * name, phone or address.
  */
-export function FarmerOrderRow({ order, onOpen }: { order: Order; onOpen: (o: Order) => void }) {
+export function FarmerOrderRow({
+  order,
+  onOpen,
+  note,
+}: {
+  order: Order;
+  onOpen: (o: Order) => void;
+  /** One line under the status — the accept countdown, or why it was rejected. */
+  note?: ReactNode;
+}) {
   const { t, i18n } = useTranslation();
   // The English value drives statusColor; only the spoken form is translated.
   const status = isOrderCancelled(order) ? 'Cancelled' : String(order.status ?? '');
@@ -47,12 +57,18 @@ export function FarmerOrderRow({ order, onOpen }: { order: Order; onOpen: (o: Or
             {order.village ? ` · ${order.village}` : ''}
           </span>
         </span>
+        {note ? <span className="mt-1 text-xs font-semibold">{note}</span> : null}
       </span>
       <span className="flex flex-col items-end justify-center">
+        {/* A cancelled order pays nothing — show what it was worth, struck through. */}
         <span className="text-2xs uppercase tracking-wide text-fg-muted">
-          {t('farmer.orders.youEarn')}
+          {isOrderCancelled(order) ? t('farmer.orders.notEarned') : t('farmer.orders.youEarn')}
         </span>
-        <span className="text-sm font-bold">{fmtMoney(order.farmer_payout)}</span>
+        <span
+          className={`text-sm font-bold${isOrderCancelled(order) ? ' text-fg-muted line-through' : ''}`}
+        >
+          {fmtMoney(order.farmer_payout)}
+        </span>
       </span>
     </button>
   );
