@@ -35,6 +35,20 @@ self.addEventListener('activate', (event) => {
   })());
 });
 `;
+// Dev only: always watch the workspace packages (@marutham/lib, ui, i18n, …). They
+// sit outside this app's root, so Vite only picks them up lazily as files are
+// served — and loses them when the dev server restarts itself (e.g. after a config
+// edit), after which changes to shared code silently stop reaching the browser.
+function watchWorkspacePackages(): Plugin {
+  return {
+    name: 'marutham:watch-workspace-packages',
+    apply: 'serve',
+    configureServer(server) {
+      server.watcher.add(path.resolve(__dirname, '../../packages/*/src'));
+    },
+  };
+}
+
 function devServiceWorkerKillSwitch(): Plugin {
   return {
     name: 'marutham:dev-sw-kill-switch',
@@ -59,6 +73,7 @@ export default defineConfig({
   define: { __PWA__: JSON.stringify(!isCapacitor) },
   plugins: [
     devServiceWorkerKillSwitch(),
+    watchWorkspacePackages(),
     react(),
     tailwindcss(),
     // Progressive Web App: makes the /app portal installable and offline-capable.
