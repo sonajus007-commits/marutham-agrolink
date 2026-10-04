@@ -117,10 +117,10 @@ export function FarmerOrderSheet({
   const canAccept = activeForMe && rawStatus === 'Order Received';
   const canPack = activeForMe && rawStatus === 'Order Accepted';
 
-  // Per-item decline is offered while the parcel is still the seller's to change
-  // (to accept or to pack) and has more than one line. Ticking every line is the
-  // same as declining the whole order.
-  const itemPick = (canAccept || canPack) && (items?.length ?? 0) > 1;
+  // Declining — whole order or some lines — is offered only inside the acceptance
+  // window. Once accepted, the seller has committed and can only pack it. Ticking
+  // every line is the same as declining the whole order.
+  const itemPick = canAccept && (items?.length ?? 0) > 1;
   const pickedCount = picked.size;
   const allPicked = itemPick && pickedCount === (items?.length ?? 0);
   const somePicked = itemPick && pickedCount > 0 && !allPicked;
@@ -232,11 +232,9 @@ export function FarmerOrderSheet({
   const declineSelectedRow = somePicked ? (
     <div className="flex flex-wrap gap-2">
       <Button variant="danger" onClick={() => setConfirmPartial(true)} disabled={busy}>
-        {canAccept
-          ? t('farmer.orders.declinePickedAccept', 'Decline {{count}} item(s) & accept the rest', {
-              count: pickedCount,
-            })
-          : t('farmer.orders.declinePicked', 'Decline {{count}} item(s)', { count: pickedCount })}
+        {t('farmer.orders.declinePickedAccept', 'Decline {{count}} item(s) & accept the rest', {
+          count: pickedCount,
+        })}
       </Button>
       <Button variant="ghost" onClick={() => setPicked(new Set())} disabled={busy}>
         {t('farmer.orders.clearPick', 'Clear selection')}
@@ -319,9 +317,6 @@ export function FarmerOrderSheet({
                   ? t('farmer.orders.working', 'Working…')
                   : `📦 ${t('farmer.orders.markPackaged', 'Mark Packed')}`}
               </Button>
-              <Button variant="ghost" onClick={() => setConfirmDecline(true)} disabled={busy}>
-                {t('farmer.orders.decline', 'Decline')}
-              </Button>
             </div>
           ) : null}
 
@@ -366,15 +361,10 @@ export function FarmerOrderSheet({
             onConfirm={(reason) => declinePicked(reason)}
             onClose={() => setConfirmPartial(false)}
           >
-            {canAccept
-              ? t(
-                  'farmer.orders.declinePickedBodyAccept',
-                  'These items are removed and the customer is refunded and told. The rest of the order is accepted and shows as Partially Accepted. This cannot be undone.',
-                )
-              : t(
-                  'farmer.orders.declinePickedBody',
-                  'These items are removed and the customer is refunded and told. The rest of the order stays accepted (Partially Accepted). This cannot be undone.',
-                )}
+            {t(
+              'farmer.orders.declinePickedBodyAccept',
+              'These items are removed and the customer is refunded and told. The rest of the order is accepted and shows as Partially Accepted. This cannot be undone.',
+            )}
           </ConfirmDialog>
 
           <section className="rounded-base border border-border-subtle bg-surface p-4">

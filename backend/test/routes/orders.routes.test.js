@@ -559,6 +559,33 @@ describe('POST /orders/:id/decline — seller declines an order', () => {
     assert.equal(supa.callsTo('orders', 'update').length, 0);
   });
 
+  test('declining is refused once the seller has accepted — it can only be packed', async () => {
+    const supa = declinable({ 'orders|select': { data: [{
+      id: 'o1', code: 'ORD1', consumer_id: CONSUMER.id, status: 'Order Accepted',
+      cancelled: false, pay_method: 'UPI', pay_status: 'paid', total: 5000,
+    }] } });
+    app = await mountRoute('orders', { supabase: supa, user: FARMER });
+
+    const res = await app.post('/o1/decline', {});
+
+    assert.equal(res.status, 409);
+    assert.equal(supa.callsTo('orders', 'update').length, 0);
+  });
+
+  test('declining is refused once the acceptance window has closed', async () => {
+    const supa = declinable({ 'orders|select': { data: [{
+      id: 'o1', code: 'ORD1', consumer_id: CONSUMER.id, status: 'Order Received',
+      accept_deadline: new Date(Date.now() - 60e3).toISOString(),
+      cancelled: false, pay_method: 'UPI', pay_status: 'paid', total: 5000,
+    }] } });
+    app = await mountRoute('orders', { supabase: supa, user: FARMER });
+
+    const res = await app.post('/o1/decline', {});
+
+    assert.equal(res.status, 409);
+    assert.equal(supa.callsTo('orders', 'update').length, 0);
+  });
+
   test('declining is refused once the order is past acceptance/packing', async () => {
     const supa = declinable({ 'orders|select': { data: [{
       id: 'o1', code: 'ORD1', consumer_id: CONSUMER.id, status: 'VCO Verified',

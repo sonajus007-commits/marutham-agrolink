@@ -1719,11 +1719,11 @@ router.post('/:id/cancel', async (req, res) => {
 });
 
 // ── POST /orders/:id/decline  (seller declines an order they cannot fulfil) ───
-// The seller's own cancellation, before they hand the parcel to the VCO — while it
-// is Order Received or Order Accepted. It refunds the customer (via the shared
+// The seller's own cancellation — only inside the acceptance window, while the
+// parcel is still Order Received. It refunds the customer (via the shared
 // cancelOrders helper) and counts against the seller's reliability, exactly like a
-// missed-acceptance auto-cancel. A parcel already Packed / verified is on its way to
-// collection and cannot be declined here.
+// missed-acceptance auto-cancel. Once accepted, the seller has committed: the only
+// way forward is to pack it, so an Accepted / Packed / verified parcel is refused.
 router.post('/:id/decline', async (req, res) => {
   if (req.user.role !== 'farmer') {
     return res.status(403).json({ error: 'Only the seller can decline an order.' });
@@ -1761,8 +1761,11 @@ router.post('/:id/decline', async (req, res) => {
   if (!ownsIt) return res.status(403).json({ error: 'You can only decline your own orders.' });
 
   if (order.cancelled) return res.status(400).json({ error: 'Order is already cancelled.' });
-  if (!['Order Received', 'Order Accepted'].includes(order.status)) {
+  if (order.status !== 'Order Received') {
     return res.status(409).json({ error: `Cannot decline. Order is currently: "${order.status}".` });
+  }
+  if (order.accept_deadline && new Date(order.accept_deadline) < new Date()) {
+    return res.status(409).json({ error: 'The acceptance window for this order has closed.' });
   }
 
   const { refunds } = await declineWholeParcel(order, req.body && req.body.reason);

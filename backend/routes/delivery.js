@@ -470,8 +470,8 @@ router.post('/:id/accept', async (req, res) => {
 
 // ── POST /orders/:id/decline-items  (farmer: decline some lines, accept the rest) ──
 // Body: { item_ids: [order_items.id, ...], reason?: string }.
-// While the parcel is Order Received or Order Accepted, the seller may decline any
-// of THEIR lines. Declining every line of the parcel is a whole-parcel decline
+// Only inside the acceptance window (Order Received) may the seller decline any of
+// THEIR lines — once accepted, the parcel can only be packed. Declining every line of the parcel is a whole-parcel decline
 // (cancel + refund + reliability). Declining some lines moves them out of
 // order_items (utils/declineOrder), takes their value off the bill (charges stay —
 // utils/partialDecline), restocks them, refunds a prepaid customer, and leaves the
@@ -488,10 +488,10 @@ router.post('/:id/decline-items', async (req, res) => {
 
   const order = await fetchActiveOrder(req.params.id, res);
   if (!order) return;
-  if (!['Order Received', 'Order Accepted'].includes(order.status)) {
+  if (order.status !== 'Order Received') {
     return res.status(409).json({ error: `Cannot decline items. Order is currently: "${order.status}".` });
   }
-  if (order.status === 'Order Received' && order.accept_deadline && new Date(order.accept_deadline) < new Date()) {
+  if (order.accept_deadline && new Date(order.accept_deadline) < new Date()) {
     return res.status(409).json({ error: 'The acceptance window for this order has closed.' });
   }
 
@@ -544,36 +544,16 @@ router.post('/:id/decline-items', async (req, res) => {
     return res.status(500).json({ error: 'Could not decline those items. Please try again.' });
   }
 
-  let updated;
-  if (order.status === 'Order Received') {
-    // Declining some lines IS accepting the rest: advance exactly as Accept does.
-    const r = await advanceStage(order, `Farmer ${req.user.fname}`, {
-      accepted_at: new Date().toISOString(),
-      ...extra,
-    });
-    if (r.conflict || r.error) {
-      await restoreLines(order, picked);
-      return r.conflict ? conflictResponse(res) : res.status(500).json({ error: r.error });
-    }
-    updated = r.updated;
-  } else {
-    // Already accepted: re-price in place. CAS on stage AND item_total so a pack
-    // or a second decline racing this one cannot both apply.
-    const { data, error } = await supabase
-      .from('orders')
-      .update({ ...extra, updated_at: new Date().toISOString() })
-      .eq('id', order.id)
-      .eq('stage', order.stage)
-      .eq('item_total', order.item_total)
-      .select()
-      .maybeSingle();
-    if (error || !data) {
-      await restoreLines(order, picked);
-      if (error) console.error('Decline items: order update failed:', error.message);
-      return error ? res.status(500).json({ error: 'Could not decline those items.' }) : conflictResponse(res);
-    }
-    updated = data;
+  // Declining some lines IS accepting the rest: advance exactly as Accept does.
+  const r = await advanceStage(order, `Farmer ${req.user.fname}`, {
+    accepted_at: new Date().toISOString(),
+    ...extra,
+  });
+  if (r.conflict || r.error) {
+    await restoreLines(order, picked);
+    return r.conflict ? conflictResponse(res) : res.status(500).json({ error: r.error });
   }
+  const updated = r.updated;
 
   // Committed. Everything below is best effort and logged, never undone.
   await restockLines(picked);
@@ -588,7 +568,7 @@ router.post('/:id/decline-items', async (req, res) => {
 
   const refund = await refundDeclinedLines(order, parentBefore, sums.line);
 
-  if (order.status === 'Order Received') await notifyCollectionParties(updated, 'accepted');
+  await notifyCollectionParties(updated, 'accepted');
 
   if (order.consumer_id) {
     await notify(order.consumer_id, {

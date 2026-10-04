@@ -1236,14 +1236,11 @@ export const resources = {
       'farmer.orders.pickAll': 'Select all items',
       'farmer.orders.pickItem': 'Decline {{name}}',
       'farmer.orders.declinePickedAccept': 'Decline {{count}} item(s) & accept the rest',
-      'farmer.orders.declinePicked': 'Decline {{count}} item(s)',
       'farmer.orders.declineAll': 'Decline whole order',
       'farmer.orders.clearPick': 'Clear selection',
       'farmer.orders.declinePickedTitle': 'Decline {{count}} item(s)?',
       'farmer.orders.declinePickedBodyAccept':
         'These items are removed and the customer is refunded and told. The rest of the order is accepted and shows as Partially Accepted. This cannot be undone.',
-      'farmer.orders.declinePickedBody':
-        'These items are removed and the customer is refunded and told. The rest of the order stays accepted (Partially Accepted). This cannot be undone.',
       'farmer.orders.itemsDeclined': 'Items declined.',
       'farmer.orders.declinedItems': 'Declined by you',
       'farmer.orders.decline': 'Decline',
@@ -3705,14 +3702,11 @@ export const resources = {
       'farmer.orders.pickAll': 'அனைத்து பொருட்களையும் தேர்ந்தெடு',
       'farmer.orders.pickItem': '{{name}} ஐ மறு',
       'farmer.orders.declinePickedAccept': '{{count}} பொருளை மறுத்து மீதியை ஏற்கவும்',
-      'farmer.orders.declinePicked': '{{count}} பொருளை மறு',
       'farmer.orders.declineAll': 'முழு ஆர்டரையும் மறு',
       'farmer.orders.clearPick': 'தேர்வை அழி',
       'farmer.orders.declinePickedTitle': '{{count}} பொருளை மறுக்கவா?',
       'farmer.orders.declinePickedBodyAccept':
         'இந்தப் பொருட்கள் நீக்கப்பட்டு, வாடிக்கையாளருக்கு பணம் திருப்பி அளிக்கப்பட்டு தெரிவிக்கப்படும். மீதமுள்ள ஆர்டர் ஏற்கப்பட்டு "பகுதியாக ஏற்கப்பட்டது" எனக் காட்டப்படும். இதைத் திரும்பப் பெற முடியாது.',
-      'farmer.orders.declinePickedBody':
-        'இந்தப் பொருட்கள் நீக்கப்பட்டு, வாடிக்கையாளருக்கு பணம் திருப்பி அளிக்கப்பட்டு தெரிவிக்கப்படும். மீதமுள்ள ஆர்டர் ஏற்கப்பட்டதாகவே இருக்கும் (பகுதியாக ஏற்கப்பட்டது). இதைத் திரும்பப் பெற முடியாது.',
       'farmer.orders.itemsDeclined': 'பொருட்கள் மறுக்கப்பட்டன.',
       'farmer.orders.declinedItems': 'நீங்கள் மறுத்தவை',
       'farmer.orders.decline': 'மறு',

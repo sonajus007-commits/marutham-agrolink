@@ -3,7 +3,7 @@
 // 'Order Accepted', flagged partially_accepted), takes ONLY the declined goods off
 // the bill, moves the lines out of order_items, and refunds a prepaid customer;
 // declining every line is a whole-parcel decline; nothing is written for lines that
-// are not the seller's, or once the parcel has moved past acceptance.
+// are not the seller's, or once the parcel has been accepted (it can only be packed).
 
 const { test, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
@@ -110,9 +110,19 @@ test('a packed parcel can no longer have items declined', async () => {
   assert.equal(supa.callsTo('order_items', 'delete').length, 0);
 });
 
-test('a lost race on an accepted parcel restores the lines and answers 409', async () => {
+test('once accepted, no items can be declined — the parcel can only be packed', async () => {
+  const supa = db(order({ status: 'Order Accepted', stage: 2 }));
+  app = await mountRoute('delivery', { supabase: supa, user: FARMER });
+  const res = await app.post('/o1/decline-items', { item_ids: ['i1'] });
+  assert.equal(res.status, 409);
+  assert.equal(supa.callsTo('order_items', 'delete').length, 0);
+  assert.equal(supa.callsTo('declined_order_items', 'insert').length, 0);
+  assert.equal(supa.callsTo('orders', 'update').length, 0);
+});
+
+test('a lost race restores the lines and answers 409', async () => {
   mute = muteConsoleError();
-  const supa = db(order({ status: 'Order Accepted', stage: 2 }), { 'orders|update': { data: null } });
+  const supa = db(order(), { 'orders|update': { data: null } });
   app = await mountRoute('delivery', { supabase: supa, user: FARMER });
   const res = await app.post('/o1/decline-items', { item_ids: ['i1'] });
 
