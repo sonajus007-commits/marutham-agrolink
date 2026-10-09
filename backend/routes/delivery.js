@@ -305,23 +305,29 @@ function parseScanCoords(body) {
 // workflow state — 'rejected' flags the line and tells the seller; it does not cancel.
 const ITEM_QUALITIES = ['good', 'fair', 'poor', 'rejected'];
 
-// Persist the received quantity + quality the VCO recorded at verify, and tell any
-// seller whose line came up short or graded poor/rejected. Best-effort by design:
-// the order has ALREADY advanced to VCO Verified by the time this runs, so a failure
-// here must not fail the request — it logs and moves on. Returns a small summary.
-async function applyItemVerification(order, rawItems, actor) {
+// The VCO's one optional rating of how the parcel was packed (migration 066).
+// Advisory only — recorded and shown in the timeline, never acted on.
+const PACKING_QUALITIES = ['good', 'fair', 'poor'];
+
+// A line's weighed quantity as sent at verify, or null when it is missing or not a
+// usable number. '' counts as missing (Number('') would read it as a weighed 0).
+function weighedQty(raw) {
+  const v = raw && raw.verified_qty;
+  if (v === undefined || v === null || v === '') return null;
+  const q = Number(v);
+  return Number.isFinite(q) && q >= 0 ? q : null;
+}
+
+// Persist the received quantity (+ any legacy per-line quality) the VCO recorded at
+// verify, and tell any seller whose line came up short or graded poor/rejected.
+// `lines` are the order's real lines, loaded by the route — the source of truth for
+// which ids are valid, the ordered quantity to compare against, and which seller to
+// notify. Best-effort by design: the order has ALREADY advanced to VCO Verified by
+// the time this runs, so a failure here must not fail the request — it logs and
+// moves on. Returns a small summary.
+async function applyItemVerification(order, lines, rawItems, actor) {
   const summary = { updated: 0, short: 0, flagged: 0 };
   try {
-    // The order's real lines — the source of truth for which ids are valid, the
-    // ordered quantity to compare against, and which seller to notify.
-    const { data: lines, error: linesErr } = await supabase
-      .from('order_items')
-      .select('id, name, qty, farmer_id')
-      .eq('order_id', order.id);
-    if (linesErr) {
-      console.error(`Order ${order.id}: verify item lookup failed:`, linesErr.message);
-      return summary;
-    }
     const byId = new Map((lines || []).map((l) => [l.id, l]));
     const sellersToNotify = new Set();
     const notes = [];
@@ -400,26 +406,37 @@ async function applyItemVerification(order, rawItems, actor) {
 // only ever called AFTER the status has already advanced.
 const PROOF_MAX_CHARS = 300_000; // ~220 KB decoded — comfortably above a 640px JPEG
 
+// A hand-off carries at most this many photos: `proof_photos` (an array) and/or the
+// original single `proof_photo`, which older app builds still send.
+const MAX_PROOFS = 3;
+
 async function storeProof(order, kind, body, userId) {
-  const img = body && body.proof_photo;
-  if (img == null || img === '') return; // no photo attached — nothing to do
-  if (typeof img !== 'string' || !img.startsWith('data:image/') || img.length > PROOF_MAX_CHARS) {
-    console.error(`Order ${order.id}: proof photo (${kind}) rejected — bad shape or too large.`);
-    return;
+  const sent = [];
+  if (body && body.proof_photo != null && body.proof_photo !== '') sent.push(body.proof_photo);
+  if (body && Array.isArray(body.proof_photos)) sent.push(...body.proof_photos);
+  if (!sent.length) return; // no photo attached — nothing to do
+  if (sent.length > MAX_PROOFS) {
+    console.error(`Order ${order.id}: ${sent.length} proof photos (${kind}) sent — keeping the first ${MAX_PROOFS}.`);
   }
   const coords = parseScanCoords(body);
-  const row = {
-    order_id: order.id,
-    kind,
-    image: img,
-    created_by: userId || null,
-  };
-  if (!coords.error && coords.coords) {
-    row.lat = coords.coords.lat;
-    row.lng = coords.coords.lng;
+  for (const img of sent.slice(0, MAX_PROOFS)) {
+    if (typeof img !== 'string' || !img.startsWith('data:image/') || img.length > PROOF_MAX_CHARS) {
+      console.error(`Order ${order.id}: proof photo (${kind}) rejected — bad shape or too large.`);
+      continue;
+    }
+    const row = {
+      order_id: order.id,
+      kind,
+      image: img,
+      created_by: userId || null,
+    };
+    if (!coords.error && coords.coords) {
+      row.lat = coords.coords.lat;
+      row.lng = coords.coords.lng;
+    }
+    const { error } = await supabase.from('order_proofs').insert(row);
+    if (error) console.error(`Order ${order.id}: proof photo (${kind}) insert failed:`, error.message);
   }
-  const { error } = await supabase.from('order_proofs').insert(row);
-  if (error) console.error(`Order ${order.id}: proof photo (${kind}) insert failed:`, error.message);
 }
 
 // ── POST /orders/:id/accept  (farmer only) ────────────────────────────────────
@@ -738,6 +755,39 @@ router.post('/:id/scan', async (req, res) => {
     const { agent_id, route } = req.body;
     const extra = {};
 
+    // The VCO must weigh every line: each one needs a verified quantity. This is the
+    // gate, not just the screen — an order can also be verified by typing its code
+    // into the scan box, which would otherwise skip the weighing entirely. More than
+    // ordered is allowed (scale variance); less is recorded and the seller is told.
+    const { data: lines, error: linesErr } = await supabase
+      .from('order_items')
+      .select('id, name, qty, farmer_id')
+      .eq('order_id', order.id);
+    if (linesErr) {
+      console.error(`Order ${order.id}: verify item lookup failed:`, linesErr.message);
+      return res.status(500).json({ error: 'Could not load the items in this order. Please try again.' });
+    }
+    const sentItems = Array.isArray(req.body.items) ? req.body.items : [];
+    const sentById = new Map(sentItems.filter((it) => it && it.id).map((it) => [it.id, it]));
+    const unweighed = (lines || []).filter((l) => weighedQty(sentById.get(l.id)) === null);
+    if (unweighed.length) {
+      return res.status(400).json({
+        error: `Enter the verified quantity for every item before verifying (missing: ${unweighed
+          .map((l) => l.name)
+          .join(', ')}). Open the order's Verify screen to weigh them.`,
+        missing: unweighed.map((l) => l.id),
+      });
+    }
+
+    // Optional packing rating — a suggestion only (migration 066).
+    const packing = req.body.packing_quality;
+    if (packing !== undefined && packing !== null && packing !== '') {
+      if (!PACKING_QUALITIES.includes(packing)) {
+        return res.status(400).json({ error: "packing_quality must be 'good', 'fair' or 'poor'." });
+      }
+      extra.packing_quality = packing;
+    }
+
     // Where the VCO verified/collected the order. This branch only ever produces
     // 'VCO Verified', so it is stored unconditionally (no gating needed).
     if (coords.coords) {
@@ -821,13 +871,22 @@ router.post('/:id/scan', async (req, res) => {
       if (histErr) console.error(`Order ${order.id}: agent-assigned history entry failed:`, histErr.message);
     }
 
-    // Per-line verification the VCO recorded (received qty + quality). Optional and
-    // additive — absent, verify is exactly as before. Only after a real advance, so
-    // a stale-replay conflict never writes item data.
-    if (!result.error && !result.conflict && Array.isArray(req.body.items) && req.body.items.length) {
-      await applyItemVerification(order, req.body.items, req.user);
+    // Per-line verification the VCO recorded (weighed qty, checked above). Only after
+    // a real advance, so a stale-replay conflict never writes item data.
+    if (!result.error && !result.conflict && sentItems.length) {
+      await applyItemVerification(order, lines || [], sentItems, req.user);
     }
-    // Optional collection proof photo (migration 060). Best-effort, never blocks.
+    // The packing rating lands in the timeline so the seller and ops can read it.
+    // Advisory: no notification, nothing changes because of it.
+    if (!result.error && !result.conflict && extra.packing_quality) {
+      const { error: packErr } = await supabase.from('order_history').insert({
+        order_id: order.id,
+        label: 'Packing check',
+        note: `VCO ${req.user.fname} rated the packing ${extra.packing_quality} (suggestion only).`,
+      });
+      if (packErr) console.error(`Order ${order.id}: packing-check history failed:`, packErr.message);
+    }
+    // Optional collection proof photos, up to 3 (migration 060). Best-effort, never blocks.
     if (!result.error && !result.conflict) {
       await storeProof(order, 'verify', req.body, req.user.id);
     }

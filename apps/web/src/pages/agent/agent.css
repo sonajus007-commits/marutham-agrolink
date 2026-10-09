@@ -1010,23 +1010,42 @@
   border-top: 0;
   padding-top: 4px;
 }
-.verify-line__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 8px;
-}
 .verify-line__name {
   font-weight: 700;
   font-size: 14px;
   color: var(--forest);
   min-width: 0;
+  margin-bottom: 8px;
 }
+/* Order quantity — display only, so it reads as a value, not an input. */
 .verify-line__ordered {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+.verify-line__label {
   font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--gray);
+}
+.verify-line__orderedQty {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--forest);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+.verify-gate {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--warning-fg);
 }
 .verify-line__short {
   margin-top: 6px;
@@ -1067,13 +1086,18 @@
   color: var(--warning-fg);
   border-color: var(--gold2);
 }
-.quality-chip.on.quality-chip--rejected {
-  background: color-mix(in srgb, var(--red) 12%, var(--surface));
-  color: var(--red);
-  border-color: var(--red);
-}
 
 /* ── Proof photo capture (migration 060) ─────────────────────────────────────*/
+/* Several photos (VCO collection, up to 3): thumbnails wrap beside the add button. */
+.photo-set {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+}
+.photo-set .photo-capture__preview img {
+  max-height: 120px;
+}
 .photo-capture__add {
   display: inline-flex;
   align-items: center;

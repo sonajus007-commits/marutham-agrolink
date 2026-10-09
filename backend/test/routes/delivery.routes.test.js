@@ -222,7 +222,11 @@ test('VCO verify without a location still succeeds and stores no coordinates', a
 // 'Off-site verification' note. Never a gate: every case below still verifies.
 const FARM = { id: 'f1', farm_lat: 10.5, farm_lng: 78.8 };
 
-function verifyDb({ order = packaged(), farmer = FARM, items = [{ order_id: 'o1', farmer_id: 'f1' }], extra = {} } = {}) {
+// Every line must be weighed to verify, so these orders carry one line, sent weighed.
+const LINE = { id: 'i1', name: 'Tomato', qty: 5, order_id: 'o1', farmer_id: 'f1' };
+const WEIGHED = [{ id: 'i1', verified_qty: 5 }];
+
+function verifyDb({ order = packaged(), farmer = FARM, items = [LINE], extra = {} } = {}) {
   return fakeSupabase({
     'orders:select': { data: [order] },
     'orders:update': { data: { id: 'o1', status: 'VCO Verified' } },
@@ -238,7 +242,7 @@ const offSiteNotes = (db) =>
 test('a VCO verifying at the farm adds no off-site note', async () => {
   const db = verifyDb();
   app = await mountRoute('delivery', { supabase: db, user: VCO });
-  const res = await app.post('/o1/scan', { lat: 10.501, lng: 78.8, route: 'direct' }); // ~110 m
+  const res = await app.post('/o1/scan', { lat: 10.501, lng: 78.8, route: 'direct', items: WEIGHED }); // ~110 m
 
   assert.equal(res.status, 200);
   assert.equal(offSiteNotes(db).length, 0);
@@ -247,7 +251,7 @@ test('a VCO verifying at the farm adds no off-site note', async () => {
 test('a VCO verifying far from the farm is flagged — and the verify still stands', async () => {
   const db = verifyDb();
   app = await mountRoute('delivery', { supabase: db, user: VCO });
-  const res = await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct' }); // ~5.6 km
+  const res = await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct', items: WEIGHED }); // ~5.6 km
 
   assert.equal(res.status, 200);
   assert.equal(db.callsTo('orders', 'update')[0].payload.status, 'VCO Verified');
@@ -259,7 +263,7 @@ test('a VCO verifying far from the farm is flagged — and the verify still stan
 test('a farm pin stored as numeric strings is still compared', async () => {
   const db = verifyDb({ farmer: { id: 'f1', farm_lat: '10.5', farm_lng: '78.8' } });
   app = await mountRoute('delivery', { supabase: db, user: VCO });
-  await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct' });
+  await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct', items: WEIGHED });
 
   assert.equal(offSiteNotes(db).length, 1);
 });
@@ -267,16 +271,17 @@ test('a farm pin stored as numeric strings is still compared', async () => {
 test('a split child uses its own seller_id, not the items', async () => {
   const db = verifyDb({ order: { ...packaged(), seller_id: 'f1' }, items: [] });
   app = await mountRoute('delivery', { supabase: db, user: VCO });
-  await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct' });
+  await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct', items: WEIGHED });
 
   assert.equal(offSiteNotes(db).length, 1);
-  assert.equal(db.callsTo('order_items', 'select').length, 0);
+  // The one order_items read is the weighed-quantity check, not a farm lookup.
+  assert.equal(db.callsTo('order_items', 'select').length, 1);
 });
 
 test('fail-open: a farmer with no pin is never flagged', async () => {
   const db = verifyDb({ farmer: { id: 'f1', farm_lat: null, farm_lng: null } });
   app = await mountRoute('delivery', { supabase: db, user: VCO });
-  const res = await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct' });
+  const res = await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct', items: WEIGHED });
 
   assert.equal(res.status, 200);
   assert.equal(offSiteNotes(db).length, 0);
@@ -285,7 +290,7 @@ test('fail-open: a farmer with no pin is never flagged', async () => {
 test('fail-open: a verify with no device fix does not even look up the farm', async () => {
   const db = verifyDb();
   app = await mountRoute('delivery', { supabase: db, user: VCO });
-  const res = await app.post('/o1/scan', { route: 'direct' });
+  const res = await app.post('/o1/scan', { route: 'direct', items: WEIGHED });
 
   assert.equal(res.status, 200);
   assert.equal(db.callsTo('users', 'select').length, 0);
@@ -295,7 +300,7 @@ test('fail-open: a verify with no device fix does not even look up the farm', as
 test('fail-open: a failed farm read still verifies (200) and adds no note', async () => {
   const db = verifyDb({ extra: { 'users:select': { error: { message: 'boom' } } } });
   app = await mountRoute('delivery', { supabase: db, user: VCO });
-  const res = await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct' });
+  const res = await app.post('/o1/scan', { lat: 10.55, lng: 78.8, route: 'direct', items: WEIGHED });
 
   assert.equal(res.status, 200);
   assert.equal(db.callsTo('orders', 'update')[0].payload.status, 'VCO Verified');
@@ -1110,11 +1115,15 @@ test('VCO verify ignores an item id that is not a line of this order', async () 
   app = await mountRoute('delivery', { supabase: db, user: VCO });
   const res = await app.post('/o1/scan', {
     route: 'direct',
-    items: [{ id: 'ghost', verified_qty: 9, quality: 'good' }],
+    items: [
+      { id: 'i1', verified_qty: 5 },
+      { id: 'ghost', verified_qty: 9, quality: 'good' },
+    ],
   });
 
   assert.equal(res.status, 200);
-  assert.equal(db.callsTo('order_items', 'update').length, 0, 'no write for an unknown line');
+  const updates = db.callsTo('order_items', 'update');
+  assert.equal(updates.length, 1, 'only the real line is written, never the unknown one');
 });
 
 test('VCO verify skips a line with an invalid quality grade', async () => {
@@ -1122,20 +1131,111 @@ test('VCO verify skips a line with an invalid quality grade', async () => {
   app = await mountRoute('delivery', { supabase: db, user: VCO });
   const res = await app.post('/o1/scan', {
     route: 'direct',
-    items: [{ id: 'i1', quality: 'excellent' }],
+    items: [{ id: 'i1', verified_qty: 5, quality: 'excellent' }],
   });
 
   assert.equal(res.status, 200);
   assert.equal(db.callsTo('order_items', 'update').length, 0, 'a bad grade writes nothing');
 });
 
-test('VCO verify still advances the order when no items are sent', async () => {
+// The VCO must weigh every line. The scan-box path (typing the order code) sends no
+// items at all, so the gate lives on the server, not only in the Verify screen.
+test('VCO verify refuses when no items are sent — nothing advances', async () => {
   const db = verifyItemsDb([{ id: 'i1', name: 'Tomato', qty: 5, farmer_id: 'f1' }]);
   app = await mountRoute('delivery', { supabase: db, user: VCO });
   const res = await app.post('/o1/scan', { route: 'direct' });
 
+  assert.equal(res.status, 400);
+  assert.match(res.body.error, /verified quantity for every item.*Tomato/);
+  assert.deepEqual(res.body.missing, ['i1']);
+  assert.equal(db.callsTo('orders', 'update').length, 0, 'the order stays Packed');
+});
+
+test('VCO verify refuses when one line is left unweighed (blank counts as missing)', async () => {
+  const db = verifyItemsDb([
+    { id: 'i1', name: 'Tomato', qty: 5, farmer_id: 'f1' },
+    { id: 'i2', name: 'Onion', qty: 3, farmer_id: 'f1' },
+  ]);
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', {
+    route: 'direct',
+    items: [
+      { id: 'i1', verified_qty: 5 },
+      { id: 'i2', verified_qty: '' },
+    ],
+  });
+
+  assert.equal(res.status, 400);
+  assert.deepEqual(res.body.missing, ['i2']);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+test('VCO verify accepts a weighed 0 and more than ordered', async () => {
+  const db = verifyItemsDb([
+    { id: 'i1', name: 'Tomato', qty: 5, farmer_id: 'f1' },
+    { id: 'i2', name: 'Onion', qty: 3, farmer_id: 'f1' },
+  ]);
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', {
+    route: 'direct',
+    items: [
+      { id: 'i1', verified_qty: 0 },
+      { id: 'i2', verified_qty: 3.2 },
+    ],
+  });
+
   assert.equal(res.status, 200);
-  assert.equal(db.callsTo('order_items', 'update').length, 0, 'no item writes without an items array');
+  const updates = db.callsTo('order_items', 'update').map((c) => c.payload.verified_qty);
+  assert.deepEqual(updates, [0, 3.2]);
+  // 0 < 5 is short → flagged; 3.2 > 3 is scale variance, not an issue.
+  const issue = db.callsTo('order_history', 'insert').find((c) => c.payload.label === 'Verification issue');
+  assert.ok(issue);
+  assert.match(issue.payload.note, /Tomato: 0 vs 5/);
+  assert.doesNotMatch(issue.payload.note, /Onion/);
+});
+
+test('VCO verify fails closed (500) when the order lines cannot be read', async () => {
+  const db = fakeSupabase({
+    'orders:select': { data: [packaged()] },
+    'order_items:select': { error: { message: 'boom' } },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { route: 'direct', items: WEIGHED });
+
+  assert.equal(res.status, 500);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
+});
+
+// ── Packing quality — one advisory rating per order (migration 066) ───────────
+test('VCO packing rating is stored on the order and noted in the timeline — nobody is notified', async () => {
+  const db = verifyItemsDb([{ id: 'i1', name: 'Tomato', qty: 5, farmer_id: 'f1' }]);
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { route: 'direct', items: WEIGHED, packing_quality: 'poor' });
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('orders', 'update')[0].payload.packing_quality, 'poor');
+  const note = db.callsTo('order_history', 'insert').find((c) => c.payload.label === 'Packing check');
+  assert.match(note.payload.note, /rated the packing poor \(suggestion only\)/);
+  assert.equal(db.callsTo('notifications', 'insert').length, 0, 'advisory — no seller alert');
+});
+
+test('VCO verify without a packing rating stores none', async () => {
+  const db = verifyItemsDb([{ id: 'i1', name: 'Tomato', qty: 5, farmer_id: 'f1' }]);
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { route: 'direct', items: WEIGHED });
+
+  assert.equal(res.status, 200);
+  assert.ok(!('packing_quality' in db.callsTo('orders', 'update')[0].payload));
+  assert.ok(!db.callsTo('order_history', 'insert').some((c) => c.payload.label === 'Packing check'));
+});
+
+test('VCO verify refuses an unknown packing rating', async () => {
+  const db = verifyItemsDb([{ id: 'i1', name: 'Tomato', qty: 5, farmer_id: 'f1' }]);
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', { route: 'direct', items: WEIGHED, packing_quality: 'rejected' });
+
+  assert.equal(res.status, 400);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
 });
 
 // ── Field proof photos (migration 060) ────────────────────────────────────────
@@ -1185,6 +1285,35 @@ test('VCO verify stores an attached collection photo (kind: verify)', async () =
   const proofs = db.callsTo('order_proofs', 'insert');
   assert.equal(proofs.length, 1);
   assert.equal(proofs[0].payload.kind, 'verify');
+});
+
+test('VCO verify stores up to 3 collection photos and drops the rest', async () => {
+  const db = fakeSupabase({
+    'orders:select': { data: [packaged()] },
+    'orders:update': { data: { id: 'o1', status: 'VCO Verified' } },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const photos = ['1', '2', '3', '4'].map((n) => DATA_URI + n);
+  const res = await app.post('/o1/scan', { route: 'direct', proof_photos: photos });
+
+  assert.equal(res.status, 200);
+  const stored = db.callsTo('order_proofs', 'insert').map((c) => c.payload.image);
+  assert.deepEqual(stored, photos.slice(0, 3));
+});
+
+test('a bad photo among several is skipped; the good ones are kept', async () => {
+  const db = fakeSupabase({
+    'orders:select': { data: [packaged()] },
+    'orders:update': { data: { id: 'o1', status: 'VCO Verified' } },
+  });
+  app = await mountRoute('delivery', { supabase: db, user: VCO });
+  const res = await app.post('/o1/scan', {
+    route: 'direct',
+    proof_photos: [DATA_URI, 'not-a-data-uri', DATA_URI + 'x'],
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(db.callsTo('order_proofs', 'insert').length, 2);
 });
 
 test('GET proofs returns the order’s proofs for staff', async () => {

@@ -1013,6 +1013,10 @@
           "notNull": true,
           "default": "0"
         },
+        "packing_quality": {
+          "type": "text",
+          "notNull": false
+        },
         "parent_order_id": {
           "type": "uuid",
           "notNull": false,

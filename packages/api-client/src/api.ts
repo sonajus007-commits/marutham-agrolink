@@ -126,8 +126,12 @@ function toListingBody(draft: Partial<ListingPayload>): Record<string, unknown> 
 
 /* Every scan-to-advance action — VCO verify, hub dispatch, delivery — is the same
  * POST /orders/:id/scan; only the body differs. */
-/** One line a VCO verified at collection — the quantity actually received and its
- *  quality grade. All fields but `id` optional; an empty entry is ignored server-side. */
+/** One line a VCO verified at collection — the weighed quantity. The server refuses
+ *  a verify unless every line of the order carries `verified_qty`. `quality` is the
+ *  retired per-line grade, still accepted from older app builds. */
+/** The VCO's one optional, advisory rating of how a parcel was packed. */
+export type PackingQuality = 'good' | 'fair' | 'poor';
+
 export interface VerifyItem {
   id: string;
   verified_qty?: number | null;
@@ -142,7 +146,9 @@ function scanBody(o: {
   coords?: { lat: number; lng: number };
   deliveryCode?: string;
   items?: VerifyItem[];
+  packingQuality?: PackingQuality;
   proofPhoto?: string;
+  proofPhotos?: string[];
   fromStage?: number;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = {};
@@ -158,8 +164,11 @@ function scanBody(o: {
   if (o.deliveryCode) body.delivery_code = o.deliveryCode;
   // Per-line VCO verification (received qty + quality). Optional and additive.
   if (o.items && o.items.length) body.items = o.items;
-  // Optional field proof photo (downscaled JPEG data URI). Never blocks the scan.
+  // The VCO's optional packing rating — advisory only (migration 066).
+  if (o.packingQuality) body.packing_quality = o.packingQuality;
+  // Optional field proof photo(s) (downscaled JPEG data URIs, up to 3). Never block the scan.
   if (o.proofPhoto) body.proof_photo = o.proofPhoto;
+  if (o.proofPhotos && o.proofPhotos.length) body.proof_photos = o.proofPhotos;
   if (o.fromStage !== undefined) body.from_stage = o.fromStage;
   return body;
 }
@@ -189,7 +198,9 @@ function queuedScan(
     coords?: { lat: number; lng: number };
     deliveryCode?: string;
     items?: VerifyItem[];
+    packingQuality?: PackingQuality;
     proofPhoto?: string;
+    proofPhotos?: string[];
   } = {},
 ): Promise<ScanResponse> {
   // The body is built HERE rather than by the caller, so a queued scan cannot be
@@ -368,20 +379,24 @@ export const api = {
       /** Destination hub for a via-hub order (from getDeliveryHubs); ignored direct. */
       delivery_hub_id?: string;
       coords?: { lat: number; lng: number };
-      /** Per-line verification the VCO recorded (received qty + quality). Optional. */
+      /** The weighed quantity of EVERY line — the server refuses a verify without. */
       items?: VerifyItem[];
-      /** Optional collection proof photo (downscaled JPEG data URI). */
-      proof_photo?: string;
+      /** Optional packing rating, a suggestion only. */
+      packing_quality?: PackingQuality;
+      /** Optional collection proof photos (downscaled JPEG data URIs), up to 3. */
+      proof_photos?: string[];
     },
   ): Promise<ScanResponse> {
-    const { coords, route, agent_id, delivery_hub_id, items, proof_photo } = data || {};
+    const { coords, route, agent_id, delivery_hub_id, items, packing_quality, proof_photos } =
+      data || {};
     return queuedScan(id, fromStage, {
       route,
       agentId: agent_id,
       deliveryHubId: delivery_hub_id,
       coords,
       items,
-      proofPhoto: proof_photo,
+      packingQuality: packing_quality,
+      proofPhotos: proof_photos,
     });
   },
   /* Name the last-mile Delivery Agent on an order sitting At Hub.

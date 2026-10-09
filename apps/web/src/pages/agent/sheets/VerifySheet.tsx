@@ -7,21 +7,22 @@ import {
   type EligibleAgent,
   type DeliveryHubCandidate,
   type VerifyItem,
+  type PackingQuality,
 } from '@marutham/api-client';
-import type { Order, OrderItem, ItemQuality } from '@marutham/lib';
+import type { Order, OrderItem } from '@marutham/lib';
 import { useToast } from '../../../components/Toast';
 import { PhotoCapture } from '../../../components/PhotoCapture';
 import { useAuth } from '../../../auth/AuthContext';
 import { getCurrentPosition } from '../../../native/geolocation';
 
-/** Per-line state the VCO edits at collection: what they actually received and its
- *  grade. Seeded from the ordered quantity + 'good' so an unchanged line records
- *  "received as ordered, good". */
-interface LineCheck {
-  qty: number | null;
-  quality: ItemQuality;
-}
-const QUALITIES: ItemQuality[] = ['good', 'fair', 'poor', 'rejected'];
+/** The VCO weighs every line and types what the scale shows. Starts EMPTY (never
+ *  pre-filled with the ordered quantity) so a line can't be verified unweighed —
+ *  Verify stays disabled until each one has a number. Keyed by order_items.id. */
+type Weighed = Record<string, number | null>;
+/** One optional rating of how the seller packed the parcel — a suggestion only. */
+const PACKING: PackingQuality[] = ['good', 'fair', 'poor'];
+/** Up to this many collection photos (the server keeps the first 3). */
+const MAX_PHOTOS = 3;
 
 export function VerifySheet({
   open,
@@ -54,9 +55,10 @@ export function VerifySheet({
   const [busy, setBusy] = useState(false);
   // Per-line verification (migration 059): the order's lines and the VCO's checks.
   const [items, setItems] = useState<OrderItem[]>([]);
-  const [checks, setChecks] = useState<Record<string, LineCheck>>({});
-  // Optional collection proof photo (migration 060).
-  const [proofPhoto, setProofPhoto] = useState<string | null>(null);
+  const [weighed, setWeighed] = useState<Weighed>({});
+  // Optional packing rating (migration 066) and up to 3 collection photos (060).
+  const [packing, setPacking] = useState<PackingQuality | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open || !orderId) return;
@@ -69,8 +71,9 @@ export function VerifySheet({
     setSuggestedHubId(null);
     setDeliveryHubId('');
     setItems([]);
-    setChecks({});
-    setProofPhoto(null);
+    setWeighed({});
+    setPacking(null);
+    setPhotos([]);
     setBusy(false); // the sheet stays mounted between orders — a finished verify
     // would otherwise leave the next order's button stuck on "Verifying…"
     // 'delivery' leg: the agent list is matched against the CONSUMER's delivery
@@ -86,18 +89,10 @@ export function VerifySheet({
       .then(([ord, elig, hubs]) => {
         if (!active) return;
         setOrder(ord.order);
-        // Seed the per-line checks from the ordered lines: received = ordered, good.
-        // The VCO adjusts what differs before confirming.
+        // Every line starts unweighed — the VCO enters what the scale shows.
         const lines = (ord.items || []).filter((it): it is OrderItem & { id: string } => !!it.id);
         setItems(lines);
-        setChecks(
-          Object.fromEntries(
-            lines.map((it) => [
-              it.id,
-              { qty: Number(it.qty) || 0, quality: 'good' as ItemQuality },
-            ]),
-          ),
-        );
+        setWeighed(Object.fromEntries(lines.map((it) => [it.id, null])));
         setMatched(elig.matched || []);
         setAll(elig.all || []);
         // Only an agent who is available for duty today can be pre-selected — an
@@ -129,6 +124,10 @@ export function VerifySheet({
     // Every scan asserts the stage it saw, so without one there is nothing safe to
     // send. GET /orders/:id selects *, so this cannot happen in practice — but a
     // silent weaker request is worse than saying so.
+    if (unweighedCount > 0) {
+      toast(t('agent.verify.weighAll', 'Enter the verified quantity for every item.'), 'er');
+      return;
+    }
     if (typeof stage !== 'number') {
       toast(
         t('agent.err.noStage', 'Could not read this order’s stage. Reload and try again.'),
@@ -140,14 +139,11 @@ export function VerifySheet({
     try {
       // Best-effort collection location; a declined permission never blocks verify.
       const coords = (await getCurrentPosition()) ?? undefined;
-      // The lines the VCO checked — received qty + grade. Every line is sent (an
-      // untouched one records "as ordered, good"); the server ignores unknown ids.
-      const itemChecks: VerifyItem[] = items
-        .filter((it) => it.id)
-        .map((it) => {
-          const c = checks[it.id as string];
-          return { id: it.id as string, verified_qty: c?.qty ?? null, quality: c?.quality };
-        });
+      // The weighed quantity of every line — the server refuses a verify without.
+      const itemChecks: VerifyItem[] = items.map((it) => ({
+        id: it.id as string,
+        verified_qty: weighed[it.id as string] ?? null,
+      }));
       // Collection points are rural and often have no signal, so this is queueable.
       // The stage guard matters most here: replayed a stage late, this same body would
       // land on the pick-up branch and make the VCO the delivery agent, silently
@@ -162,7 +158,8 @@ export function VerifySheet({
         delivery_hub_id: route === 'hub' ? deliveryHubId || undefined : undefined,
         coords,
         items: itemChecks.length ? itemChecks : undefined,
-        proof_photo: proofPhoto || undefined,
+        packing_quality: packing || undefined,
+        proof_photos: photos.length ? photos : undefined,
       });
       /* Our own wording, not res.message: the server's is English prose composed
        * server-side ("Order advanced to: Picked Up."), so echoing it would put an
@@ -206,15 +203,13 @@ export function VerifySheet({
     return s;
   };
 
-  const setLine = (id: string, patch: Partial<LineCheck>) =>
-    setChecks((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  const unweighedCount = items.filter((it) => weighed[it.id as string] == null).length;
 
-  const qualityLabel = (q: ItemQuality) =>
+  const packingLabel = (q: PackingQuality) =>
     ({
       good: t('agent.verify.quality.good', 'Good'),
       fair: t('agent.verify.quality.fair', 'Fair'),
       poor: t('agent.verify.quality.poor', 'Poor'),
-      rejected: t('agent.verify.quality.rejected', 'Reject'),
     })[q];
 
   return (
@@ -241,58 +236,45 @@ export function VerifySheet({
             </div>
           </div>
 
-          {/* Per-line check: weigh what was received and grade it. Seeded to the
-              ordered quantity + Good; the VCO adjusts what differs before verifying. */}
+          {/* Per-line check: the ordered quantity (display only) beside the verified
+              quantity the VCO types in from the scale. Nothing is pre-filled. */}
           {items.length ? (
             <div className="a-card verify-items">
-              <h3>⚖️ {t('agent.verify.itemsTitle', 'Check what you received')}</h3>
+              <h3>⚖️ {t('agent.verify.itemsTitle', 'Weigh what you received')}</h3>
               <p style={{ margin: '2px 0 12px', fontSize: 12, color: 'var(--gray)' }}>
-                {t('agent.verify.itemsHelp', 'Weigh each line and grade it before verifying.')}
+                {t(
+                  'agent.verify.itemsHelp',
+                  'Weigh each item and enter the verified quantity before verifying.',
+                )}
               </p>
               {items.map((it) => {
                 const id = it.id as string;
-                const c = checks[id] || {
-                  qty: Number(it.qty) || 0,
-                  quality: 'good' as ItemQuality,
-                };
-                const short = c.qty != null && c.qty < (Number(it.qty) || 0);
+                const ordered = Number(it.qty) || 0;
+                const qty = weighed[id] ?? null;
+                const short = qty != null && qty < ordered;
                 return (
                   <div className="verify-line" key={id}>
-                    <div className="verify-line__head">
-                      <span className="verify-line__name">{it.name}</span>
-                      <span className="verify-line__ordered">
-                        {t('agent.verify.ordered', 'Ordered')} {it.qty} {it.unit || ''}
+                    <div className="verify-line__name">{it.name}</div>
+                    <div className="verify-line__ordered">
+                      <span className="verify-line__label">
+                        {t('agent.verify.ordered', 'Order quantity')}
                       </span>
+                      <output className="verify-line__orderedQty" aria-readonly="true">
+                        {it.qty} {it.unit || ''}
+                      </output>
                     </div>
                     <NumericInput
                       id={`vq-${id}`}
-                      value={c.qty}
-                      onChange={(v) => setLine(id, { qty: v })}
+                      value={qty}
+                      onChange={(v) => setWeighed((prev) => ({ ...prev, [id]: v }))}
                       unit={it.unit || undefined}
-                      label={t('agent.verify.received', 'Received')}
+                      label={t('agent.verify.received', 'Verified quantity')}
                     />
                     {short ? (
                       <div className="verify-line__short">
                         ⚠️ {t('agent.verify.shortWarn', 'Less than ordered — the seller is told.')}
                       </div>
                     ) : null}
-                    <div
-                      className="quality-chips"
-                      role="group"
-                      aria-label={t('agent.verify.qualityLabel', 'Quality')}
-                    >
-                      {QUALITIES.map((q) => (
-                        <button
-                          type="button"
-                          key={q}
-                          className={`quality-chip quality-chip--${q}${c.quality === q ? ' on' : ''}`}
-                          aria-pressed={c.quality === q}
-                          onClick={() => setLine(id, { quality: q })}
-                        >
-                          {qualityLabel(q)}
-                        </button>
-                      ))}
-                    </div>
                   </div>
                 );
               })}
@@ -301,15 +283,68 @@ export function VerifySheet({
 
           {items.length ? (
             <div className="a-card">
-              <h3>📷 {t('agent.verify.proofTitle', 'Collection photo')}</h3>
+              <h3>📦 {t('agent.verify.packingTitle', 'Packing quality')}</h3>
               <p style={{ margin: '2px 0 10px', fontSize: 12, color: 'var(--gray)' }}>
-                {t('agent.verify.proofHelp', 'Optional — a photo of the goods you received.')}
+                {t(
+                  'agent.verify.packingHelp',
+                  'Optional — your suggestion on how the seller packed it. It does not change the order.',
+                )}
               </p>
-              <PhotoCapture
-                value={proofPhoto}
-                onChange={setProofPhoto}
-                label={t('agent.verify.proofAdd', 'Add photo')}
-              />
+              <div
+                className="quality-chips"
+                role="group"
+                aria-label={t('agent.verify.packingTitle', 'Packing quality')}
+              >
+                {PACKING.map((q) => (
+                  <button
+                    type="button"
+                    key={q}
+                    className={`quality-chip quality-chip--${q}${packing === q ? ' on' : ''}`}
+                    aria-pressed={packing === q}
+                    // Tap the chosen one again to clear it — the rating is optional.
+                    onClick={() => setPacking(packing === q ? null : q)}
+                  >
+                    {packingLabel(q)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {items.length ? (
+            <div className="a-card">
+              <h3>📷 {t('agent.verify.proofTitle', 'Collection photos')}</h3>
+              <p style={{ margin: '2px 0 10px', fontSize: 12, color: 'var(--gray)' }}>
+                {t(
+                  'agent.verify.proofHelp',
+                  'Optional — up to 3 photos of the goods you received.',
+                )}
+              </p>
+              <div className="photo-set">
+                {photos.map((p, i) => (
+                  <PhotoCapture
+                    key={i}
+                    value={p}
+                    onChange={(v) =>
+                      setPhotos((prev) =>
+                        v ? prev.map((x, j) => (j === i ? v : x)) : prev.filter((_, j) => j !== i),
+                      )
+                    }
+                    label={t('agent.verify.proofAdd', 'Add photo')}
+                  />
+                ))}
+                {photos.length < MAX_PHOTOS ? (
+                  <PhotoCapture
+                    key={`add-${photos.length}`}
+                    value={null}
+                    onChange={(v) => v && setPhotos((prev) => [...prev, v].slice(0, MAX_PHOTOS))}
+                    label={t('agent.verify.proofAddN', 'Add photo ({{n}}/{{max}})', {
+                      n: photos.length + 1,
+                      max: MAX_PHOTOS,
+                    })}
+                  />
+                ) : null}
+              </div>
             </div>
           ) : null}
 
@@ -503,7 +538,20 @@ export function VerifySheet({
 
           {/* Sticky action bar so Verify stays under the thumb after scrolling past
               the route toggle, hub picker and agent list. */}
-          <ActionBar sticky>
+          <ActionBar
+            sticky
+            summary={
+              unweighedCount > 0 ? (
+                <span className="verify-gate" role="status">
+                  ⚖️{' '}
+                  {t('agent.verify.weighLeft', {
+                    count: unweighedCount,
+                    defaultValue: 'Enter the verified quantity for {{count}} more item(s).',
+                  })}
+                </span>
+              ) : undefined
+            }
+          >
             <button
               className="confirm-btn"
               style={{
@@ -514,7 +562,7 @@ export function VerifySheet({
                 fontSize: 14,
               }}
               onClick={confirm}
-              disabled={busy}
+              disabled={busy || unweighedCount > 0}
             >
               {busy
                 ? `⏳ ${t('agent.verify.busy', 'Verifying…')}`

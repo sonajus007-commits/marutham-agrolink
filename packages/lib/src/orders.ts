@@ -62,6 +62,8 @@ export interface Order {
   /** Seller accepted but declined some lines (migration 065). Status stays
    *  'Order Accepted'; display it with displayStatus() → 'Partially Accepted'. */
   partially_accepted?: boolean;
+  /** The VCO's advisory packing rating at verify (migration 066); null = not rated. */
+  packing_quality?: 'good' | 'fair' | 'poor' | null;
   /** Why the order was cancelled — server-authored (decline, missed window, admin). */
   cancel_reason?: string | null;
   consumer_name?: string;
