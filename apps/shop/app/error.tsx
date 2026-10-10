@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import * as Sentry from '@sentry/nextjs';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Lang } from '@/lib/dict';
+import { isTaPath } from '@/lib/locale';
 
 /* A page that threw while rendering — almost always the API being unreachable,
  * since lib/api.ts throws on an outage rather than pretending a product is gone
@@ -11,8 +12,9 @@ import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Lang } from '@/lib/dict';
  * reads as "come back later"; this is what a person sees instead of a blank page.
  *
  * An error boundary must be a Client Component, so the language comes from the
- * cookie in the browser rather than next/headers. */
+ * URL (/ta) or the cookie in the browser rather than next/headers. */
 function cookieLang(): Lang {
+  if (isTaPath(window.location.pathname)) return 'ta';
   const m = document.cookie.match(new RegExp(`(?:^|; )${LANG_COOKIE}=([^;]*)`));
   const v = m ? decodeURIComponent(m[1]) : null;
   return isLang(v) ? v : DEFAULT_LANG;

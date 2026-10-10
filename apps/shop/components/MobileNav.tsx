@@ -12,6 +12,7 @@
  * the login overlay. */
 
 import { usePathname } from 'next/navigation';
+import { stripLocale } from '@/lib/locale';
 import { Home, ShoppingBag, LayoutGrid, ShoppingCart, User } from 'lucide-react';
 import { useLoginModal } from '@/components/auth/LoginModalProvider';
 import { useCart } from '@/components/cart/CartProvider';
@@ -21,7 +22,8 @@ import type { Dict } from '@/lib/dict';
  * and the Dict carries function-valued keys (categories.count, product metaDesc)
  * that cannot cross the server→client boundary. */
 export function MobileNav({ nav }: { nav: Dict['nav'] }) {
-  const pathname = usePathname();
+  // The /ta twin of a page is the same tab.
+  const pathname = stripLocale(usePathname());
   const modal = useLoginModal();
   const { count, ready } = useCart();
 

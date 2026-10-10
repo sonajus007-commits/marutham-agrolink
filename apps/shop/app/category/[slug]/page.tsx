@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
-import { cookies } from 'next/headers';
+import { getLang } from '@/lib/lang';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getCategories, getCatalogue } from '@/lib/api';
 import { categorySlug } from '@/lib/categorySlug';
 import { OG_IMAGE, absoluteUrl } from '@/lib/site';
-import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Lang } from '@/lib/dict';
+import { langAlternates, localePath, ogLocale } from '@/lib/locale';
+import { DICT } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
 import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
 import { ProductCard } from '@/components/ProductCard';
@@ -19,11 +20,6 @@ export const revalidate = 300;
 const PAGE_SIZE = 20;
 
 type SP = { sort?: string; page?: string };
-
-async function lang(): Promise<Lang> {
-  const c = (await cookies()).get(LANG_COOKIE)?.value;
-  return isLang(c) ? c : DEFAULT_LANG;
-}
 
 export async function generateStaticParams() {
   const categories = await getCategories();
@@ -43,20 +39,22 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const name = await resolveCategory(slug);
-  const t = DICT[await lang()];
+  const lang = await getLang();
+  const t = DICT[lang];
   if (!name) return { title: t.catalogue.metaTitle };
   const title = `${name} — Marutham AgroLink`;
   const canonical = `/category/${slug}`;
   return {
     title,
     description: t.catalogue.metaDesc,
-    alternates: { canonical },
+    alternates: langAlternates(canonical, lang),
     openGraph: {
       images: [OG_IMAGE],
       title,
       description: t.catalogue.metaDesc,
       type: 'website',
-      url: absoluteUrl(canonical),
+      url: absoluteUrl(localePath(lang, canonical)),
+      locale: ogLocale(lang),
     },
   };
 }
@@ -72,7 +70,7 @@ export default async function CategoryPage({
   const name = await resolveCategory(slug);
   if (!name) notFound();
 
-  const l = await lang();
+  const l = await getLang();
   const t = DICT[l];
   const sp = await searchParams;
   const sort = sp.sort === 'newest' ? 'newest' : 'name';

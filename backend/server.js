@@ -230,6 +230,10 @@ function isShopPath(pathname) {
   return (
     pathname === '/' ||
     pathname.startsWith('/_next/') ||
+    // Tamil twins of every public page (/ta, /ta/products/…). The shop's
+    // middleware maps them onto the same pages; see apps/shop/lib/locale.ts.
+    pathname === '/ta' ||
+    pathname.startsWith('/ta/') ||
     pathname === '/products' ||
     pathname.startsWith('/products/') ||
     // Public marketplace pages the Next shop owns. This allow-list must grow with

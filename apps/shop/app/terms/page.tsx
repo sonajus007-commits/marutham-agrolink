@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getLang } from '@/lib/lang';
 import { OG_IMAGE, absoluteUrl } from '@/lib/site';
+import { langAlternates, localePath, ogLocale } from '@/lib/locale';
 import type { Lang } from '@/lib/dict';
 import { StaticShell, StaticSection } from '@/components/StaticShell';
 
@@ -52,18 +53,20 @@ function ta(): ReturnType<typeof en> {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const c = C[await getLang()];
+  const lang = await getLang();
+  const c = C[lang];
   return {
     title: c.meta,
     description: c.lede,
-    alternates: { canonical: '/terms' },
+    alternates: langAlternates('/terms', lang),
     robots: { index: false, follow: true },
     openGraph: {
       images: [OG_IMAGE],
       title: c.meta,
       description: c.lede,
       type: 'website',
-      url: absoluteUrl('/terms'),
+      url: absoluteUrl(localePath(lang, '/terms')),
+      locale: ogLocale(lang),
     },
   };
 }

@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-import { cookies } from 'next/headers';
-import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang } from '@/lib/dict';
+import { getLang } from '@/lib/lang';
+import { DICT } from '@/lib/dict';
 import { OG_IMAGE, SITE_URL } from '@/lib/site';
 import { LoginModalProvider } from '@/components/auth/LoginModalProvider';
 import { CartProvider } from '@/components/cart/CartProvider';
@@ -45,8 +45,7 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const cookieLang = (await cookies()).get(LANG_COOKIE)?.value;
-  const lang = isLang(cookieLang) ? cookieLang : DEFAULT_LANG;
+  const lang = await getLang();
 
   return (
     <html lang={DICT[lang].htmlLang}>

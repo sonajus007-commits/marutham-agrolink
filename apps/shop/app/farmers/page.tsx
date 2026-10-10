@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getPublicFarmers } from '@/lib/api';
 import { OG_IMAGE, absoluteUrl } from '@/lib/site';
+import { langAlternates, localePath, ogLocale } from '@/lib/locale';
 import { getLang } from '@/lib/lang';
 import { DICT, type Lang } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
@@ -37,17 +38,19 @@ function copyFor(l: Lang, sample: boolean) {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const c = copyFor(await getLang(), true);
+  const lang = await getLang();
+  const c = copyFor(lang, true);
   return {
     title: c.meta,
     description: c.lede,
-    alternates: { canonical: '/farmers' },
+    alternates: langAlternates('/farmers', lang),
     openGraph: {
       images: [OG_IMAGE],
       title: c.meta,
       description: c.lede,
       type: 'website',
-      url: absoluteUrl('/farmers'),
+      url: absoluteUrl(localePath(lang, '/farmers')),
+      locale: ogLocale(lang),
     },
   };
 }

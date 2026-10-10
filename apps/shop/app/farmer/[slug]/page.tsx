@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getPublicFarmer, type PublicFarmer } from '@/lib/api';
 import { OG_IMAGE, absoluteUrl } from '@/lib/site';
+import { langAlternates, localePath, ogLocale } from '@/lib/locale';
 import { getLang } from '@/lib/lang';
 import { DICT } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
@@ -45,6 +46,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  const lang = await getLang();
   const r = await resolve(slug);
   if (!r) return { title: 'Farmer — Marutham AgroLink' };
   const name = r.kind === 'real' ? r.farmer.name || 'Farmer' : r.story.name;
@@ -52,12 +54,12 @@ export async function generateMetadata({
     r.kind === 'real'
       ? [r.farmer.village, r.farmer.district].filter(Boolean).join(', ')
       : r.story.village;
-  const desc = r.kind === 'real' ? r.farmer.bio || '' : r.story.quote.en;
+  const desc = r.kind === 'real' ? r.farmer.bio || '' : r.story.quote[lang];
   const title = `${name}${place ? `, ${place}` : ''} — Marutham AgroLink`;
   return {
     title,
     description: desc,
-    alternates: { canonical: `/farmer/${slug}` },
+    alternates: langAlternates(`/farmer/${slug}`, lang),
     // Real, consented profiles are indexable; sample ones are noindex.
     robots: r.kind === 'real' ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
@@ -65,7 +67,8 @@ export async function generateMetadata({
       title,
       description: desc,
       type: 'profile',
-      url: absoluteUrl(`/farmer/${slug}`),
+      url: absoluteUrl(localePath(lang, `/farmer/${slug}`)),
+      locale: ogLocale(lang),
     },
   };
 }

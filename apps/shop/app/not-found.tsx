@@ -1,6 +1,6 @@
-import { cookies } from 'next/headers';
+import { getLang } from '@/lib/lang';
 import Link from 'next/link';
-import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Lang } from '@/lib/dict';
+import { DICT } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
 import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
 
@@ -10,8 +10,7 @@ import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
  * null, so an outage renders a 5xx. The difference matters to a crawler, which
  * reads a 404 as "drop this URL" and a 5xx as "come back later". */
 export default async function NotFound() {
-  const c = (await cookies()).get(LANG_COOKIE)?.value;
-  const l: Lang = isLang(c) ? c : DEFAULT_LANG;
+  const l = await getLang();
   const t = DICT[l];
 
   return (

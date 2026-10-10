@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { cookies } from 'next/headers';
+import { getLang } from '@/lib/lang';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
@@ -17,7 +17,8 @@ import { getProduct, getCatalogue } from '@/lib/api';
 import { produceImage } from '@/lib/produceImage';
 import { categorySlug } from '@/lib/categorySlug';
 import { OG_IMAGE, absoluteUrl } from '@/lib/site';
-import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Dict, type Lang } from '@/lib/dict';
+import { langAlternates, localePath, ogLocale } from '@/lib/locale';
+import { DICT, type Dict } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
 import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
 import { OrderButton } from '@/components/OrderButton';
@@ -41,17 +42,13 @@ interface Params {
   params: Promise<{ id: string }>;
 }
 
-async function lang(): Promise<Lang> {
-  const c = (await cookies()).get(LANG_COOKIE)?.value;
-  return isLang(c) ? c : DEFAULT_LANG;
-}
-
 /* Next memoises fetch() across generateMetadata and the render, so asking for the
  * product twice costs one request. */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const detail = await getProduct(id);
-  const t = DICT[await lang()];
+  const lang = await getLang();
+  const t = DICT[lang];
 
   if (!detail) {
     return { title: t.product.notFound, robots: { index: false, follow: false } };
@@ -60,14 +57,21 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { product } = detail;
   const price = homepagePrice(product);
   const priceText = price ? `${fmtMoney(price.amount)}/${price.unit}` : '';
-  const title = `${product.name}${product.regional_name ? ` (${product.regional_name})` : ''} — Marutham AgroLink`;
+  // Lead with the name the reader searches in: "வாழைப்பழம் (Banana)" on the
+  // Tamil page, "Banana (வாழைப்பழம்)" on the English one.
+  const [first, second] =
+    lang === 'ta' && product.regional_name
+      ? [product.regional_name, product.name]
+      : [product.name, product.regional_name];
+  const brand = lang === 'ta' ? 'மருதம் அக்ரோலிங்க்' : 'Marutham AgroLink';
+  const title = `${first}${second ? ` (${second})` : ''} — ${brand}`;
   const description = t.product.metaDesc(product.name, priceText);
   const img = produceImage(product.name, product.regional_name);
 
   return {
     title,
     description,
-    alternates: { canonical: `/products/${product.id}` },
+    alternates: langAlternates(`/products/${product.id}`, lang),
     openGraph: {
       // The produce photo when there is one — a tomato link should preview as a
       // tomato — else the brand card.
@@ -75,14 +79,15 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       title,
       description,
       type: 'website',
-      url: absoluteUrl(`/products/${product.id}`),
+      url: absoluteUrl(localePath(lang, `/products/${product.id}`)),
+      locale: ogLocale(lang),
     },
   };
 }
 
 export default async function ProductPage({ params }: Params) {
   const { id } = await params;
-  const l = await lang();
+  const l = await getLang();
   const t = DICT[l];
 
   // null means the API said 404. A dead backend THROWS instead of landing here —
@@ -124,7 +129,7 @@ export default async function ProductPage({ params }: Params) {
     product,
     price: price?.amount ?? null,
     listings,
-    url: absoluteUrl(`/products/${product.id}`),
+    url: absoluteUrl(localePath(l, `/products/${product.id}`)),
   });
 
   return (

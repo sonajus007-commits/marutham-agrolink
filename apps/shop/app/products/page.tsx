@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
-import { cookies } from 'next/headers';
+import { getLang } from '@/lib/lang';
 import Link from 'next/link';
 import { Search } from 'lucide-react';
 import { getCatalogue } from '@/lib/api';
 import { OG_IMAGE, absoluteUrl } from '@/lib/site';
-import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Lang } from '@/lib/dict';
+import { langAlternates, localePath, ogLocale } from '@/lib/locale';
+import { DICT } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
 import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
 import { ProductCard } from '@/components/ProductCard';
@@ -21,17 +22,13 @@ const PAGE_SIZE = 20;
 
 type SP = { q?: string; category?: string; sort?: string; page?: string };
 
-async function lang(): Promise<Lang> {
-  const c = (await cookies()).get(LANG_COOKIE)?.value;
-  return isLang(c) ? c : DEFAULT_LANG;
-}
-
 export async function generateMetadata({
   searchParams,
 }: {
   searchParams: Promise<SP>;
 }): Promise<Metadata> {
-  const t = DICT[await lang()];
+  const lang = await getLang();
+  const t = DICT[lang];
   const { q, category } = await searchParams;
   const title = q
     ? `${t.catalogue.resultsFor(q)} — Marutham AgroLink`
@@ -44,20 +41,21 @@ export async function generateMetadata({
   return {
     title,
     description: t.catalogue.metaDesc,
-    alternates: { canonical },
+    alternates: langAlternates(canonical, lang),
     robots: q ? { index: false, follow: true } : { index: true, follow: true },
     openGraph: {
       images: [OG_IMAGE],
       title,
       description: t.catalogue.metaDesc,
       type: 'website',
-      url: absoluteUrl(canonical),
+      url: absoluteUrl(localePath(lang, canonical)),
+      locale: ogLocale(lang),
     },
   };
 }
 
 export default async function CataloguePage({ searchParams }: { searchParams: Promise<SP> }) {
-  const l = await lang();
+  const l = await getLang();
   const t = DICT[l];
   const sp = await searchParams;
 

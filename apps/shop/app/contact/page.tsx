@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getLang } from '@/lib/lang';
 import { OG_IMAGE, absoluteUrl } from '@/lib/site';
+import { langAlternates, localePath, ogLocale } from '@/lib/locale';
 import type { Lang } from '@/lib/dict';
 import { StaticShell, StaticSection } from '@/components/StaticShell';
 
@@ -49,17 +50,19 @@ function ta(): ReturnType<typeof en> {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const c = C[await getLang()];
+  const lang = await getLang();
+  const c = C[lang];
   return {
     title: c.meta,
     description: c.lede,
-    alternates: { canonical: '/contact' },
+    alternates: langAlternates('/contact', lang),
     openGraph: {
       images: [OG_IMAGE],
       title: c.meta,
       description: c.lede,
       type: 'website',
-      url: absoluteUrl('/contact'),
+      url: absoluteUrl(localePath(lang, '/contact')),
+      locale: ogLocale(lang),
     },
   };
 }

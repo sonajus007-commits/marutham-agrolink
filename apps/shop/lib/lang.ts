@@ -1,9 +1,11 @@
-import { cookies } from 'next/headers';
-import { DEFAULT_LANG, LANG_COOKIE, isLang, type Lang } from '@/lib/dict';
+import { headers } from 'next/headers';
+import { DEFAULT_LANG, isLang, type Lang } from '@/lib/dict';
+import { LANG_HEADER } from '@/lib/locale';
 
-/** The viewer's language from the cookie, defaulting to English. Shared by the
- * server pages so the cookie read is written once. */
+/** The page's language, decided by its URL: middleware.ts stamps every page
+ *  request with it (/ta/* → Tamil, everything else → English). Shared by the
+ *  server pages so the read is written once. */
 export async function getLang(): Promise<Lang> {
-  const c = (await cookies()).get(LANG_COOKIE)?.value;
-  return isLang(c) ? c : DEFAULT_LANG;
+  const h = (await headers()).get(LANG_HEADER);
+  return isLang(h) ? h : DEFAULT_LANG;
 }

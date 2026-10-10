@@ -1,22 +1,23 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { LANG_COOKIE, type Lang } from '@/lib/dict';
+import { localePath, stripLocale } from '@/lib/locale';
 
-/* Language is decided on the SERVER (a cookie → one language of HTML), so the
- * toggle's job is only to set the cookie and ask for a fresh render. That keeps
- * the page crawlable in whichever language it is served, with no second copy of
- * the copy hidden in the markup.
+/* Language is part of the URL (/ta/... is Tamil, the bare path English — see
+ * lib/locale.ts), so switching language means going to the other address. The
+ * cookie is written FIRST: middleware sends a Tamil-cookie visitor on a bare path
+ * to /ta, so switching to English must clear that before the navigation lands.
+ * A full load, not router.push, so no cached render of the old language is reused.
  *
  * `ma_lang` is the same key the portal uses, so a visitor who chooses Tamil here
  * stays in Tamil after they sign in. */
 export function LangToggle({ current }: { current: Lang }) {
-  const router = useRouter();
-
   function pick(lang: Lang) {
+    if (lang === current) return;
     // 1 year, site-wide.
     document.cookie = `${LANG_COOKIE}=${lang};path=/;max-age=${60 * 60 * 24 * 365}`;
-    router.refresh();
+    const { pathname, search, hash } = window.location;
+    window.location.assign(localePath(lang, stripLocale(pathname)) + search + hash);
   }
 
   return (
