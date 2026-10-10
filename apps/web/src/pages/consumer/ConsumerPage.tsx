@@ -23,6 +23,7 @@ import { CartTab } from './CartTab';
 import { HomeTab } from './HomeTab';
 import { OrdersTab } from './OrdersTab';
 import { OrderDetailSheet } from './OrderDetailSheet';
+import { usePushTarget } from '../../native/pushTarget';
 import { ProfileTab } from './ProfileTab';
 import { AddressBook } from './AddressBook';
 import { NotificationBell } from '../../components/NotificationBell';
@@ -102,6 +103,14 @@ function ConsumerInner() {
     }
     if (intent === 'cart') setTab('cart');
   }, []);
+
+  // A tapped phone notification about an order (placed, out for delivery, failed
+  // attempt, part declined…) opens that order over the Orders tab.
+  usePushTarget((target) => {
+    if (!target.orderId) return;
+    setTab('orders');
+    setOpenOrderId(target.orderId);
+  });
 
   // A placed order lands in the list the moment the user sees the Orders tab.
   const onOrderPlaced = useCallback(() => {

@@ -1,9 +1,10 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, Spinner, Tabs } from '@marutham/ui';
 import { groupSellerOrders, type Order } from '@marutham/lib';
 import { FarmerOrderRow } from './FarmerOrderRow';
 import { FarmerOrderSheet } from './FarmerOrderSheet';
+import { matchesOrder } from '../../native/pushTarget';
 import { useSellerOrderNotes } from './sellerOrderNotes';
 
 type TabKey = 'accept' | 'pack' | 'rejected' | 'progress';
@@ -23,17 +24,30 @@ export function FarmerOrdersTab({
   loading,
   error,
   reload,
+  focusOrderId = null,
+  onFocusDone,
 }: {
   orders: Order[];
   loading: boolean;
   error: string | null;
   reload: () => void;
+  /** Open this order's sheet once it is in the list (a tapped phone notification).
+   *  Some events carry the customer's parent id, so a split parcel matches too. */
+  focusOrderId?: string | null;
+  onFocusDone?: () => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<Order | null>(null);
   // Null until the seller picks a tab; until then we land on the most urgent one.
   const [picked, setPicked] = useState<TabKey | null>(null);
   const { acceptNote, rejectNote } = useSellerOrderNotes();
+
+  useEffect(() => {
+    if (!focusOrderId || loading) return;
+    const hit = orders.find((o) => matchesOrder(o, focusOrderId));
+    if (hit) setOpen(hit);
+    onFocusDone?.();
+  }, [focusOrderId, loading, orders, onFocusDone]);
 
   if (loading && orders.length === 0) return <Spinner />;
   if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;

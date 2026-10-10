@@ -15,6 +15,7 @@ import { Capacitor } from '@capacitor/core';
 import { PushNotifications, type PushNotificationSchema } from '@capacitor/push-notifications';
 import { api } from '@marutham/api-client';
 import { getWebPushToken } from '../push/webPush';
+import { deliverPushTarget, clearPushTarget } from './pushTarget';
 
 export type PushMessageHandler = (message: PushNotificationSchema) => void;
 
@@ -42,6 +43,12 @@ export async function registerPush(onMessage?: PushMessageHandler): Promise<stri
     // Foreground delivery; taps that open the app arrive on pushNotificationActionPerformed.
     await PushNotifications.addListener('pushNotificationReceived', onMessage);
   }
+  // A tap on a notification opens the screen it is about. Added AFTER registration
+  // because the token promise above clears all listeners. The plugin retains the tap
+  // that launched the app until a listener exists, so a cold start lands here too.
+  await PushNotifications.addListener('pushNotificationActionPerformed', (action) =>
+    deliverPushTarget(action.notification.data),
+  );
 
   return token;
 }
@@ -98,5 +105,6 @@ export async function disablePushForSession(): Promise<void> {
     }
     registeredToken = null;
   }
+  clearPushTarget();
   await unregisterPush();
 }

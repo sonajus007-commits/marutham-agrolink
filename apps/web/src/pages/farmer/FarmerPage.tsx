@@ -26,6 +26,7 @@ import { FarmerHomeTab, type FarmerNavTarget } from './FarmerHomeTab';
 import { FarmerProfileTab } from './FarmerProfileTab';
 import { SubscriptionGate } from './SubscriptionGate';
 import { NotificationBell } from '../../components/NotificationBell';
+import { usePushTarget } from '../../native/pushTarget';
 import './farmer.css';
 
 type Tab = 'home' | 'earnings' | 'products' | 'orders' | 'profile';
@@ -95,6 +96,20 @@ function FarmerInner() {
   }, [updateUser]);
 
   const onPaid = useCallback(() => setRenewing(false), []);
+
+  /* A tapped phone notification lands on the tab it is about: an order event opens
+   * that order (Orders tab), a payout opens Earnings, stock/catalogue news opens
+   * Products. */
+  const [focusOrderId, setFocusOrderId] = useState<string | null>(null);
+  usePushTarget((target) => {
+    if (target.type === 'payout') setTab('earnings');
+    else if (target.type === 'out_of_stock' || target.type.startsWith('product_request_'))
+      setTab('products');
+    else if (target.orderId) {
+      setTab('orders');
+      setFocusOrderId(target.orderId);
+    }
+  });
 
   if (!user) return null;
   const setLang = (lang: AppLanguage) => changeLanguage(lang);
@@ -236,6 +251,8 @@ function FarmerInner() {
                 loading={ordersLoading}
                 error={ordersError}
                 reload={loadOrders}
+                focusOrderId={focusOrderId}
+                onFocusDone={() => setFocusOrderId(null)}
               />
             ) : (
               <FarmerProfileTab onRenew={() => setRenewing(true)} />

@@ -1,4 +1,4 @@
-import { useState, type ComponentType, type SVGProps } from 'react';
+import { useEffect, useState, type ComponentType, type SVGProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   HomeIcon,
@@ -25,6 +25,7 @@ import { DeliverSheet } from './sheets/DeliverSheet';
 import { VerifySheet } from './sheets/VerifySheet';
 import { ScanSheet } from './ScanSheet';
 import { LogVisitSheet } from './sheets/LogVisitSheet';
+import { usePushTarget, matchesOrder, type PushTarget } from '../../native/pushTarget';
 import { NotificationBell } from '../../components/NotificationBell';
 import { OfflineBar } from '../../components/OfflineBar';
 import { DutyToggle } from './DutyToggle';
@@ -99,6 +100,35 @@ function AgentPageInner() {
     reload();
     field.reload();
   };
+
+  /* A tapped phone notification about an order opens that order on the work tab.
+   * "Ready to collect" opens straight into Verify when the parcel is still waiting
+   * in this VCO's verify queue; anything else (or a parcel already moved on) opens
+   * the read-only view. Resolved once the queues have loaded. */
+  const [pushTarget, setPushTarget] = useState<PushTarget | null>(null);
+  usePushTarget((target) => {
+    if (target.type === 'duty_checkin_prompt') {
+      setTab('overview');
+      return;
+    }
+    if (!target.orderId) return;
+    setTab('work');
+    setPushTarget(target);
+  });
+  useEffect(() => {
+    if (!pushTarget?.orderId || !queues) return;
+    const id = pushTarget.orderId;
+    const toVerify = queues.toVerify.find((o) => matchesOrder(o, id));
+    if (isVCO && pushTarget.type === 'collection_ready' && toVerify) {
+      setSheet({ kind: 'verify', orderId: String(toVerify.id) });
+    } else {
+      const any = Object.values(queues)
+        .flat()
+        .find((o) => matchesOrder(o, id));
+      setSheet({ kind: 'view', orderId: any ? String(any.id) : id });
+    }
+    setPushTarget(null);
+  }, [pushTarget, queues, isVCO]);
 
   if (!user) return null;
 
