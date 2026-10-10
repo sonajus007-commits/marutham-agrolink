@@ -487,17 +487,17 @@ export const resources = {
       'agent.verify.title': 'Verify Order',
       'agent.verify.village': 'Fulfilment village:',
       // VCO per-line verification (migration 059)
-      'agent.verify.itemsTitle': 'Weigh what you received',
-      'agent.verify.itemsHelp': 'Weigh each item and enter the verified quantity before verifying.',
-      'agent.verify.ordered': 'Order quantity',
+      'agent.verify.itemsTitle': 'Check what you received',
+      'agent.verify.itemsHelp':
+        'Filled with the ordered quantity — change it only if the scale differs.',
+      'agent.verify.ordered': 'Ordered',
       'agent.verify.received': 'Verified quantity',
       'agent.verify.shortWarn': 'Less than ordered — the seller is told.',
       'agent.verify.weighAll': 'Enter the verified quantity for every item.',
       'agent.verify.weighLeft_one': 'Enter the verified quantity for {{count}} more item.',
       'agent.verify.weighLeft_other': 'Enter the verified quantity for {{count}} more items.',
-      'agent.verify.packingTitle': 'Packing quality',
-      'agent.verify.packingHelp':
-        'Optional — your suggestion on how the seller packed it. It does not change the order.',
+      'agent.verify.packingTitle': 'Packing',
+      'agent.verify.packingHelp': 'Optional',
       'agent.verify.quality.good': 'Good',
       'agent.verify.quality.fair': 'Fair',
       'agent.verify.quality.poor': 'Poor',
@@ -2936,19 +2936,18 @@ export const resources = {
       // Agent: verify sheet (VCO)
       'agent.verify.title': 'ஆர்டரைச் சரிபார்',
       // VCO per-line verification (migration 059)
-      'agent.verify.itemsTitle': 'பெற்றதை எடைபோடு',
+      'agent.verify.itemsTitle': 'பெற்றதைச் சரிபார்',
       'agent.verify.itemsHelp':
-        'சரிபார்ப்பதற்கு முன் ஒவ்வொரு பொருளையும் எடைபோட்டு, சரிபார்த்த அளவை உள்ளிடவும்.',
-      'agent.verify.ordered': 'ஆர்டர் அளவு',
+        'ஆர்டர் அளவு நிரப்பப்பட்டுள்ளது — தராசு காட்டுவது வேறுபட்டால் மட்டும் மாற்றவும்.',
+      'agent.verify.ordered': 'ஆர்டர்',
       'agent.verify.received': 'சரிபார்த்த அளவு',
       'agent.verify.shortWarn': 'ஆர்டரை விடக் குறைவு — விற்பனையாளருக்குத் தெரிவிக்கப்படும்.',
       'agent.verify.weighAll': 'ஒவ்வொரு பொருளுக்கும் சரிபார்த்த அளவை உள்ளிடவும்.',
       'agent.verify.weighLeft_one': 'இன்னும் {{count}} பொருளுக்குச் சரிபார்த்த அளவை உள்ளிடவும்.',
       'agent.verify.weighLeft_other':
         'இன்னும் {{count}} பொருட்களுக்குச் சரிபார்த்த அளவை உள்ளிடவும்.',
-      'agent.verify.packingTitle': 'பேக்கிங் தரம்',
-      'agent.verify.packingHelp':
-        'விருப்பமானது — விற்பனையாளர் பேக் செய்த விதம் குறித்த உங்கள் பரிந்துரை. இது ஆர்டரை மாற்றாது.',
+      'agent.verify.packingTitle': 'பேக்கிங்',
+      'agent.verify.packingHelp': 'விருப்பம்',
       'agent.verify.quality.good': 'நல்லது',
       'agent.verify.quality.fair': 'சராசரி',
       'agent.verify.quality.poor': 'மோசம்',

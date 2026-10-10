@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sheet, Spinner, ActionBar, NumericInput } from '@marutham/ui';
+import { Sheet, Spinner, ActionBar } from '@marutham/ui';
 import {
   api,
   OfflineQueuedError,
@@ -15,9 +15,9 @@ import { PhotoCapture } from '../../../components/PhotoCapture';
 import { useAuth } from '../../../auth/AuthContext';
 import { getCurrentPosition } from '../../../native/geolocation';
 
-/** The VCO weighs every line and types what the scale shows. Starts EMPTY (never
- *  pre-filled with the ordered quantity) so a line can't be verified unweighed —
- *  Verify stays disabled until each one has a number. Keyed by order_items.id. */
+/** The verified quantity per line, keyed by order_items.id. Pre-filled with the
+ *  ordered quantity so the VCO only overwrites a line the scale disagrees with;
+ *  a box they clear is null and keeps Verify disabled until it has a number. */
 type Weighed = Record<string, number | null>;
 /** One optional rating of how the seller packed the parcel — a suggestion only. */
 const PACKING: PackingQuality[] = ['good', 'fair', 'poor'];
@@ -89,10 +89,18 @@ export function VerifySheet({
       .then(([ord, elig, hubs]) => {
         if (!active) return;
         setOrder(ord.order);
-        // Every line starts unweighed — the VCO enters what the scale shows.
+        // Every line starts at the ordered quantity — the VCO overwrites only a
+        // line whose weight differs.
         const lines = (ord.items || []).filter((it): it is OrderItem & { id: string } => !!it.id);
         setItems(lines);
-        setWeighed(Object.fromEntries(lines.map((it) => [it.id, null])));
+        setWeighed(
+          Object.fromEntries(
+            lines.map((it) => {
+              const n = Number(it.qty);
+              return [it.id, Number.isFinite(n) ? n : null];
+            }),
+          ),
+        );
         setMatched(elig.matched || []);
         setAll(elig.all || []);
         // Only an agent who is available for duty today can be pre-selected — an
@@ -236,15 +244,16 @@ export function VerifySheet({
             </div>
           </div>
 
-          {/* Per-line check: the ordered quantity (display only) beside the verified
-              quantity the VCO types in from the scale. Nothing is pre-filled. */}
+          {/* Per-line check, one compact row each: the item and its ordered quantity
+              beside a small box pre-filled with that quantity. Tapping the box
+              selects it, so typing a different weight overwrites it in one go. */}
           {items.length ? (
             <div className="a-card verify-items">
-              <h3>⚖️ {t('agent.verify.itemsTitle', 'Weigh what you received')}</h3>
-              <p style={{ margin: '2px 0 12px', fontSize: 12, color: 'var(--gray)' }}>
+              <h3>⚖️ {t('agent.verify.itemsTitle', 'Check what you received')}</h3>
+              <p style={{ margin: '2px 0 6px', fontSize: 12, color: 'var(--gray)' }}>
                 {t(
                   'agent.verify.itemsHelp',
-                  'Weigh each item and enter the verified quantity before verifying.',
+                  'Filled with the ordered quantity — change it only if the scale differs.',
                 )}
               </p>
               {items.map((it) => {
@@ -252,24 +261,39 @@ export function VerifySheet({
                 const ordered = Number(it.qty) || 0;
                 const qty = weighed[id] ?? null;
                 const short = qty != null && qty < ordered;
+                const changed = qty != null && qty !== ordered;
                 return (
                   <div className="verify-line" key={id}>
-                    <div className="verify-line__name">{it.name}</div>
-                    <div className="verify-line__ordered">
-                      <span className="verify-line__label">
-                        {t('agent.verify.ordered', 'Order quantity')}
-                      </span>
-                      <output className="verify-line__orderedQty" aria-readonly="true">
-                        {it.qty} {it.unit || ''}
-                      </output>
+                    <div className="verify-line__info">
+                      <div className="verify-line__name">{it.name}</div>
+                      <div className="verify-line__ordered">
+                        {t('agent.verify.ordered', 'Ordered')}: {it.qty} {it.unit || ''}
+                      </div>
                     </div>
-                    <NumericInput
-                      id={`vq-${id}`}
-                      value={qty}
-                      onChange={(v) => setWeighed((prev) => ({ ...prev, [id]: v }))}
-                      unit={it.unit || undefined}
-                      label={t('agent.verify.received', 'Verified quantity')}
-                    />
+                    <div className="verify-line__entry">
+                      <input
+                        id={`vq-${id}`}
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        step="any"
+                        className={`verify-qty${changed ? ' verify-qty--changed' : ''}${
+                          qty == null ? ' verify-qty--empty' : ''
+                        }`}
+                        value={qty ?? ''}
+                        aria-label={`${t('agent.verify.received', 'Verified quantity')} · ${it.name}`}
+                        onFocus={(e) => e.currentTarget.select()}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          const n = Number(raw);
+                          setWeighed((prev) => ({
+                            ...prev,
+                            [id]: raw === '' || !Number.isFinite(n) ? null : Math.max(0, n),
+                          }));
+                        }}
+                      />
+                      {it.unit ? <span className="verify-line__unit">{it.unit}</span> : null}
+                    </div>
                     {short ? (
                       <div className="verify-line__short">
                         ⚠️ {t('agent.verify.shortWarn', 'Less than ordered — the seller is told.')}
@@ -278,35 +302,31 @@ export function VerifySheet({
                   </div>
                 );
               })}
-            </div>
-          ) : null}
 
-          {items.length ? (
-            <div className="a-card">
-              <h3>📦 {t('agent.verify.packingTitle', 'Packing quality')}</h3>
-              <p style={{ margin: '2px 0 10px', fontSize: 12, color: 'var(--gray)' }}>
-                {t(
-                  'agent.verify.packingHelp',
-                  'Optional — your suggestion on how the seller packed it. It does not change the order.',
-                )}
-              </p>
-              <div
-                className="quality-chips"
-                role="group"
-                aria-label={t('agent.verify.packingTitle', 'Packing quality')}
-              >
-                {PACKING.map((q) => (
-                  <button
-                    type="button"
-                    key={q}
-                    className={`quality-chip quality-chip--${q}${packing === q ? ' on' : ''}`}
-                    aria-pressed={packing === q}
-                    // Tap the chosen one again to clear it — the rating is optional.
-                    onClick={() => setPacking(packing === q ? null : q)}
-                  >
-                    {packingLabel(q)}
-                  </button>
-                ))}
+              {/* Packing rating — one optional, advisory row in the same card. */}
+              <div className="verify-packing">
+                <span className="verify-packing__label">
+                  📦 {t('agent.verify.packingTitle', 'Packing')}
+                  <small>{t('agent.verify.packingHelp', 'Optional')}</small>
+                </span>
+                <div
+                  className="quality-chips"
+                  role="group"
+                  aria-label={t('agent.verify.packingTitle', 'Packing')}
+                >
+                  {PACKING.map((q) => (
+                    <button
+                      type="button"
+                      key={q}
+                      className={`quality-chip quality-chip--${q}${packing === q ? ' on' : ''}`}
+                      aria-pressed={packing === q}
+                      // Tap the chosen one again to clear it — the rating is optional.
+                      onClick={() => setPacking(packing === q ? null : q)}
+                    >
+                      {packingLabel(q)}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           ) : null}

@@ -1000,47 +1000,78 @@
 }
 
 /* ── VCO per-line verification (migration 059) ───────────────────────────────
-   Weigh each line (big NumericInput) and grade it. Grade chips carry colour +
-   label together. */
+   One compact row per line: name + ordered qty on the left, a small pre-filled
+   quantity box on the right. Packing rating sits as one row under the lines. */
 .verify-line {
-  padding: 14px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  padding: 9px 0;
   border-top: 1px solid var(--tint-300);
 }
 .verify-line:first-of-type {
   border-top: 0;
-  padding-top: 4px;
+}
+.verify-line__info {
+  min-width: 0;
 }
 .verify-line__name {
   font-weight: 700;
   font-size: 14px;
   color: var(--forest);
-  min-width: 0;
-  margin-bottom: 8px;
-}
-/* Order quantity — display only, so it reads as a value, not an input. */
-.verify-line__ordered {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-  border-radius: 8px;
-  background: var(--surface-muted);
-}
-.verify-line__label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--gray);
-}
-.verify-line__orderedQty {
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--forest);
-  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+.verify-line__ordered {
+  font-size: 11px;
+  color: var(--gray);
+  font-variant-numeric: tabular-nums;
+}
+.verify-line__entry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.verify-qty {
+  width: 72px;
+  height: 40px;
+  padding: 0 6px;
+  border: 1.5px solid var(--tint-300);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: 16px; /* ≥16px stops iOS zooming on focus */
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.verify-qty::-webkit-inner-spin-button,
+.verify-qty::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.verify-qty:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 1px;
+}
+/* Overwritten from the ordered quantity — flag it so the change is noticed. */
+.verify-qty--changed {
+  border-color: var(--gold2);
+  background: var(--warning-bg);
+}
+.verify-qty--empty {
+  border-color: var(--warning-fg);
+}
+.verify-line__unit {
+  min-width: 22px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gray);
 }
 .verify-gate {
   font-size: 12px;
@@ -1048,21 +1079,41 @@
   color: var(--warning-fg);
 }
 .verify-line__short {
-  margin-top: 6px;
+  grid-column: 1 / -1;
+  margin-top: 4px;
   font-size: 11px;
   font-weight: 600;
   color: var(--warning-fg);
 }
+.verify-packing {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--tint-300);
+}
+.verify-packing__label {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--forest);
+  white-space: nowrap;
+}
+.verify-packing__label small {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gray);
+}
 .quality-chips {
   display: flex;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 4px;
 }
 .quality-chip {
-  flex: 1;
-  min-width: 0;
-  padding: 9px 4px;
-  border-radius: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
   border: 1.5px solid var(--tint-300);
   background: var(--surface);
   color: var(--gray);
