@@ -1,11 +1,17 @@
 import { DICT } from '@/lib/dict';
 import { getLang } from '@/lib/lang';
 
-/* Shown while a page's server render waits on the API (catalogue, product,
- * category). Without it a slow backend left the previous page frozen with no sign
+/* Shown while a LIST page's server render waits on the API (home, catalogue,
+ * farmers). Without it a slow backend left the previous page frozen with no sign
  * anything was happening. The shape echoes a product grid so the swap to real
- * content does not jump the layout around. */
-export default async function Loading() {
+ * content does not jump the layout around.
+ *
+ * Deliberately NOT used on the detail pages that can 404 (a product, category or
+ * farmer): a loading boundary starts streaming at once, and a page that has
+ * already sent its 200 cannot turn into a 404 when the item turns out not to
+ * exist — Next can then only add a noindex tag. Each list route opts in with its
+ * own loading.tsx instead of one at the root wrapping everything. */
+export async function LoadingGrid() {
   const t = DICT[await getLang()];
 
   return (
