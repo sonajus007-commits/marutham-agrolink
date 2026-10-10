@@ -253,6 +253,8 @@ function isShopPath(pathname) {
     // static site and 404.
     pathname === '/sitemap.xml' ||
     pathname === '/robots.txt' ||
+    // The link-preview card (app/opengraph-image.tsx) every page's og:image names.
+    pathname === '/opengraph-image' ||
     // The shop's own brand + PWA assets live in apps/shop/public and are served
     // by Next at the origin root. The <link rel="icon">, the web manifest and the
     // <MaruthamLogo> images all point here; without these lines they 404 through
