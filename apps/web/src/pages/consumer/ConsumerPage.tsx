@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ComponentType, type SVGProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconButton, LangToggle } from '@marutham/ui';
+import type { Order } from '@marutham/lib';
 import {
   HomeIcon,
   BagIcon,
@@ -23,6 +24,7 @@ import { CartTab } from './CartTab';
 import { HomeTab } from './HomeTab';
 import { OrdersTab } from './OrdersTab';
 import { OrderDetailSheet } from './OrderDetailSheet';
+import { OrderPlacedSheet } from './OrderPlacedSheet';
 import { usePushTarget } from '../../native/pushTarget';
 import { ProfileTab } from './ProfileTab';
 import { AddressBook } from './AddressBook';
@@ -112,11 +114,17 @@ function ConsumerInner() {
     setOpenOrderId(target.orderId);
   });
 
-  // A placed order lands in the list the moment the user sees the Orders tab.
-  const onOrderPlaced = useCallback(() => {
-    void refresh();
-    setTab('orders');
-  }, [refresh]);
+  // A placed order lands in the list the moment the user sees the Orders tab, which
+  // sits behind the thank-you screen until they close it.
+  const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
+  const onOrderPlaced = useCallback(
+    (order: Order) => {
+      void refresh();
+      setTab('orders');
+      setPlacedOrder(order);
+    },
+    [refresh],
+  );
 
   if (!user) return null;
   const setLang = (lang: AppLanguage) => changeLanguage(lang);
@@ -317,6 +325,19 @@ function ConsumerInner() {
           );
         })}
       </nav>
+
+      <OrderPlacedSheet
+        order={placedOrder}
+        onClose={() => setPlacedOrder(null)}
+        onViewOrder={(id) => {
+          setPlacedOrder(null);
+          setOpenOrderId(id);
+        }}
+        onContinue={() => {
+          setPlacedOrder(null);
+          setTab('home');
+        }}
+      />
 
       <OrderDetailSheet
         orderId={openOrderId}

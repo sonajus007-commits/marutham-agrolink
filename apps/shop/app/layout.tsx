@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang } from '@/lib/dict';
-import { SITE_URL } from '@/lib/site';
+import { OG_IMAGE, SITE_URL } from '@/lib/site';
 import { LoginModalProvider } from '@/components/auth/LoginModalProvider';
 import { CartProvider } from '@/components/cart/CartProvider';
 import { MobileNav } from '@/components/MobileNav';
@@ -23,7 +23,10 @@ export const metadata: Metadata = {
     description:
       'Fresh produce direct from Tamil Nadu farmers. Fair prices for farmers, fresh food for families.',
     type: 'website',
+    images: [OG_IMAGE],
   },
+  // Large preview card on X/Twitter, using the same share picture.
+  twitter: { card: 'summary_large_image', images: [OG_IMAGE] },
   robots: { index: true, follow: true },
   // Browser-tab favicon + iOS home-screen icon. The files live in public/ and
   // are the Marutham mark; without this Next emits no <link rel="icon"> at all.

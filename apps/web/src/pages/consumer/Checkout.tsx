@@ -11,6 +11,7 @@ import {
   validateAddress,
   type AddressObject,
   type CartBill,
+  type Order,
   type SavedAddress,
 } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
@@ -24,7 +25,13 @@ function addrLine(a: SavedAddress, i: number): string {
   return `${addressTitle(a, i)}: ${addressSummary(a)}`;
 }
 
-export function Checkout({ bill, onOrderPlaced }: { bill: CartBill; onOrderPlaced: () => void }) {
+export function Checkout({
+  bill,
+  onOrderPlaced,
+}: {
+  bill: CartBill;
+  onOrderPlaced: (order: Order) => void;
+}) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const cart = useCart();
@@ -191,10 +198,10 @@ export function Checkout({ bill, onOrderPlaced }: { bill: CartBill; onOrderPlace
         items={pending?.items || []}
         address={pending?.address || null}
         onClose={() => setPending(null)}
-        onPlaced={() => {
+        onPlaced={(order) => {
           setPending(null);
           cart.clear();
-          onOrderPlaced();
+          onOrderPlaced(order);
         }}
       />
     </div>

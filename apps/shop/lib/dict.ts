@@ -66,6 +66,8 @@ export interface Dict {
   founder: { title: string; heading: string; body: string; role: string };
   stories: { title: string; sub: string };
   footer: { tagline: string; rights: string };
+  /** The route-level loading and error screens (app/loading.tsx, app/error.tsx). */
+  status: { loading: string; errorTitle: string; errorSub: string; retry: string; home: string };
   catalogue: {
     title: string;
     sub: string;
@@ -179,6 +181,13 @@ const en: Dict = {
     role: 'Founder & Managing Director, Marutham AgroLink',
   },
   stories: { title: 'Farmer Stories', sub: 'Real farmers, real change' },
+  status: {
+    loading: 'Loading fresh produce…',
+    errorTitle: 'Something went wrong on our side.',
+    errorSub: 'The marketplace could not load just now. Please try again in a moment.',
+    retry: 'Try again',
+    home: 'Go to home',
+  },
   footer: {
     tagline: 'Fair prices for farmers. Fresh produce for families.',
     rights: 'Marutham AgroLink. All rights reserved.',
@@ -299,6 +308,13 @@ const ta: Dict = {
     role: 'நிறுவனர் & நிர்வாக இயக்குநர், மருதம் அக்ரோலிங்க்',
   },
   stories: { title: 'விவசாயி கதைகள்', sub: 'உண்மையான விவசாயிகள், உண்மையான மாற்றம்' },
+  status: {
+    loading: 'புதிய விளைபொருட்கள் ஏற்றப்படுகின்றன…',
+    errorTitle: 'எங்கள் பக்கத்தில் ஏதோ தவறு நடந்தது.',
+    errorSub: 'சந்தையை இப்போது ஏற்ற முடியவில்லை. சிறிது நேரம் கழித்து மீண்டும் முயலுங்கள்.',
+    retry: 'மீண்டும் முயல்க',
+    home: 'முகப்புக்குச் செல்',
+  },
   footer: {
     tagline: 'விவசாயிகளுக்கு நியாயமான விலை. குடும்பங்களுக்கு புதிய காய்கறிகள்.',
     rights: 'மருதம் அக்ரோலிங்க். அனைத்து உரிமைகளும் பாதுகாக்கப்பட்டவை.',

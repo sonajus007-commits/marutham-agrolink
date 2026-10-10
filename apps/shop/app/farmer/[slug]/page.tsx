@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getPublicFarmer, type PublicFarmer } from '@/lib/api';
-import { absoluteUrl } from '@/lib/site';
+import { OG_IMAGE, absoluteUrl } from '@/lib/site';
 import { getLang } from '@/lib/lang';
 import { DICT } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
@@ -60,7 +60,13 @@ export async function generateMetadata({
     alternates: { canonical: `/farmer/${slug}` },
     // Real, consented profiles are indexable; sample ones are noindex.
     robots: r.kind === 'real' ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: { title, description: desc, type: 'profile', url: absoluteUrl(`/farmer/${slug}`) },
+    openGraph: {
+      images: [OG_IMAGE],
+      title,
+      description: desc,
+      type: 'profile',
+      url: absoluteUrl(`/farmer/${slug}`),
+    },
   };
 }
 
@@ -103,7 +109,7 @@ export default async function FarmerPage({ params }: { params: Promise<{ slug: s
           >
             {isReal ? (
               r.farmer.photo_url ? (
-                <img src={r.farmer.photo_url} alt="" className="h-full w-full object-cover" />
+                <img src={r.farmer.photo_url} alt={name} className="h-full w-full object-cover" />
               ) : (
                 '🧑‍🌾'
               )

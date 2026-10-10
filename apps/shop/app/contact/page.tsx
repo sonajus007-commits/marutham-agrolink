@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getLang } from '@/lib/lang';
-import { absoluteUrl } from '@/lib/site';
+import { OG_IMAGE, absoluteUrl } from '@/lib/site';
 import type { Lang } from '@/lib/dict';
 import { StaticShell, StaticSection } from '@/components/StaticShell';
 
@@ -55,6 +55,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: c.lede,
     alternates: { canonical: '/contact' },
     openGraph: {
+      images: [OG_IMAGE],
       title: c.meta,
       description: c.lede,
       type: 'website',

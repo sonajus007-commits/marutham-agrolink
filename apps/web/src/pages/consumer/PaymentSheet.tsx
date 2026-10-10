@@ -2,8 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sheet } from '@marutham/ui';
 import { api, type PlaceOrderItem } from '@marutham/api-client';
-import { fmtMoney, type CartBill } from '@marutham/lib';
-import { useToast } from '../../components/Toast';
+import { fmtMoney, type CartBill, type Order } from '@marutham/lib';
 
 export function PaymentSheet({
   open,
@@ -20,10 +19,10 @@ export function PaymentSheet({
   items: PlaceOrderItem[];
   address: Record<string, unknown> | null;
   onClose: () => void;
-  onPlaced: () => void;
+  /** Gets the created order, so the thank-you screen can show its number. */
+  onPlaced: (order: Order) => void;
 }) {
   const { t } = useTranslation();
-  const toast = useToast();
   const [method, setMethod] = useState('UPI');
 
   /* `id` is the pay_method the API stores and prices off — never translated. The
@@ -59,11 +58,7 @@ export function PaymentSheet({
         delivery_fee: bill.delivery,
         delivery_address: address,
       });
-      toast(
-        t('consumer.pay.placed', 'Order placed! {{code}}', { code: res.order.code || '' }).trim(),
-        'ok',
-      );
-      onPlaced();
+      onPlaced(res.order);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('consumer.pay.failed', 'Could not place order'));
       setBusy(false);

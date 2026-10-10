@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getCategories, getCatalogue } from '@/lib/api';
 import { categorySlug } from '@/lib/categorySlug';
-import { absoluteUrl } from '@/lib/site';
+import { OG_IMAGE, absoluteUrl } from '@/lib/site';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Lang } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
 import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
@@ -52,6 +52,7 @@ export async function generateMetadata({
     description: t.catalogue.metaDesc,
     alternates: { canonical },
     openGraph: {
+      images: [OG_IMAGE],
       title,
       description: t.catalogue.metaDesc,
       type: 'website',

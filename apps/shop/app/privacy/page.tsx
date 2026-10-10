@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getLang } from '@/lib/lang';
-import { absoluteUrl } from '@/lib/site';
+import { OG_IMAGE, absoluteUrl } from '@/lib/site';
 import type { Lang } from '@/lib/dict';
 import { StaticShell, StaticSection } from '@/components/StaticShell';
 
@@ -59,6 +59,7 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: { canonical: '/privacy' },
     robots: { index: false, follow: true },
     openGraph: {
+      images: [OG_IMAGE],
       title: c.meta,
       description: c.lede,
       type: 'website',

@@ -17,3 +17,13 @@ export const SITE_URL = (process.env.SITE_URL || 'http://localhost:3000').replac
 export function absoluteUrl(path: string): string {
   return `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 }
+
+/** The default share picture (app/opengraph-image.tsx). A page that sets its own
+ *  `openGraph` REPLACES the layout's, and Next then drops the file-based image for
+ *  it — so every page names this explicitly rather than inheriting it. */
+export const OG_IMAGE = {
+  url: '/opengraph-image',
+  width: 1200,
+  height: 630,
+  alt: 'Marutham AgroLink — fresh produce direct from Tamil Nadu farmers',
+};

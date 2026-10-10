@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getPublicFarmers } from '@/lib/api';
-import { absoluteUrl } from '@/lib/site';
+import { OG_IMAGE, absoluteUrl } from '@/lib/site';
 import { getLang } from '@/lib/lang';
 import { DICT, type Lang } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
@@ -43,6 +43,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: c.lede,
     alternates: { canonical: '/farmers' },
     openGraph: {
+      images: [OG_IMAGE],
       title: c.meta,
       description: c.lede,
       type: 'website',
@@ -85,7 +86,11 @@ export default async function FarmersPage() {
                     <div className="flex items-center gap-3">
                       <span className={PORTRAIT} style={PORTRAIT_BG} aria-hidden="true">
                         {f.photo_url ? (
-                          <img src={f.photo_url} alt="" className="h-full w-full object-cover" />
+                          <img
+                            src={f.photo_url}
+                            alt={f.name || ''}
+                            className="h-full w-full object-cover"
+                          />
                         ) : (
                           '🧑‍🌾'
                         )}

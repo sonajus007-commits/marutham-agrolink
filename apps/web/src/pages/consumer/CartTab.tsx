@@ -9,6 +9,7 @@ import {
   fmtMoney,
   FREE_DELIVERY_MIN,
   type Offer,
+  type Order,
 } from '@marutham/lib';
 import { useConsumerData } from './ConsumerDataContext';
 import { useCart } from './CartContext';
@@ -20,7 +21,7 @@ function offerAvailable(offers: Offer[], listingId?: string | null): number {
   return o && o.qty_available != null ? Number(o.qty_available) : Infinity;
 }
 
-export function CartTab({ onOrderPlaced }: { onOrderPlaced: () => void }) {
+export function CartTab({ onOrderPlaced }: { onOrderPlaced: (order: Order) => void }) {
   const { t } = useTranslation();
   const { productById, offersByProduct } = useConsumerData();
   const cart = useCart();

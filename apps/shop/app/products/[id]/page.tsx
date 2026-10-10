@@ -16,7 +16,7 @@ import {
 import { getProduct, getCatalogue } from '@/lib/api';
 import { produceImage } from '@/lib/produceImage';
 import { categorySlug } from '@/lib/categorySlug';
-import { absoluteUrl } from '@/lib/site';
+import { OG_IMAGE, absoluteUrl } from '@/lib/site';
 import { DEFAULT_LANG, DICT, LANG_COOKIE, isLang, type Dict, type Lang } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
 import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
@@ -62,12 +62,16 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const priceText = price ? `${fmtMoney(price.amount)}/${price.unit}` : '';
   const title = `${product.name}${product.regional_name ? ` (${product.regional_name})` : ''} — Marutham AgroLink`;
   const description = t.product.metaDesc(product.name, priceText);
+  const img = produceImage(product.name, product.regional_name);
 
   return {
     title,
     description,
     alternates: { canonical: `/products/${product.id}` },
     openGraph: {
+      // The produce photo when there is one — a tomato link should preview as a
+      // tomato — else the brand card.
+      images: [img ? { url: img, alt: product.name } : OG_IMAGE],
       title,
       description,
       type: 'website',
