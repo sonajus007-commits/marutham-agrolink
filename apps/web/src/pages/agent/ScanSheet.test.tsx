@@ -102,4 +102,15 @@ describe('ScanSheet', () => {
     await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.stringMatching(/type/i), 'er'));
     expect(scanOrder).not.toHaveBeenCalled();
   });
+
+  it('a photo with no readable QR asks to try again closer', async () => {
+    scannerAvailable.mockReturnValue(true);
+    scanQrCode.mockResolvedValue({ kind: 'unreadable' });
+    const user = open();
+    await user.click(screen.getByRole('button', { name: /camera/i }));
+
+    await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.stringMatching(/closer/i), 'er'));
+    expect(scanOrder).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /camera/i })).toBeEnabled();
+  });
 });

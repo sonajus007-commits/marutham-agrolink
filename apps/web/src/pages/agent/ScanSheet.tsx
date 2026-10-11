@@ -52,8 +52,14 @@ export function ScanSheet({
       return;
     }
     setBusy(false);
-    if (r.kind === 'installing') {
-      toast(t('agent.scan.installing', 'Getting the scanner ready. Try again in a minute.'), 'nfo');
+    if (r.kind === 'unreadable') {
+      toast(
+        t(
+          'agent.scan.unreadable',
+          'No QR found in that photo. Hold the phone closer and try again.',
+        ),
+        'er',
+      );
     } else if (r.kind === 'failed') {
       toast(t('agent.scan.cameraFailed', "Couldn't open the camera. Type the code instead."), 'er');
     }
