@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getLang } from '@/lib/lang';
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/components/LocaleLink';
 import { getCategories, getCatalogue } from '@/lib/api';
 import { categorySlug } from '@/lib/categorySlug';
 import { OG_IMAGE, absoluteUrl } from '@/lib/site';

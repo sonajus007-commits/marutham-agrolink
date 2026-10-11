@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/components/LocaleLink';
 import { homepagePrice, productEmoji, fmtMoney, type Product } from '@marutham/lib';
 import type { Dict } from '@/lib/dict';
 import type { LandingCopy } from '@/lib/landing';

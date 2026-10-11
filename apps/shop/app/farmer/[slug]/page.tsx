@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/components/LocaleLink';
 import { getPublicFarmer, type PublicFarmer } from '@/lib/api';
 import { OG_IMAGE, absoluteUrl } from '@/lib/site';
 import { langAlternates, localePath, ogLocale } from '@/lib/locale';

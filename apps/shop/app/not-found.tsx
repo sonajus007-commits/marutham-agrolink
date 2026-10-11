@@ -1,5 +1,5 @@
 import { getLang } from '@/lib/lang';
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/components/LocaleLink';
 import { DICT } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
 import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';

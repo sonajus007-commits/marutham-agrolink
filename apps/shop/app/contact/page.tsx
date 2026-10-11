@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/components/LocaleLink';
 import { getLang } from '@/lib/lang';
 import { OG_IMAGE, absoluteUrl } from '@/lib/site';
 import { langAlternates, localePath, ogLocale } from '@/lib/locale';

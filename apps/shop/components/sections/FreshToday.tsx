@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/components/LocaleLink';
 import type { Product } from '@marutham/lib';
 import type { Dict } from '@/lib/dict';
 import { Section, SectionHeader } from '@/components/ui/Section';

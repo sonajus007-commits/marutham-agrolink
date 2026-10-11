@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/components/LocaleLink';
 import type { Lang } from '@/lib/dict';
 import { recentStories, sampleLabel, farmerFace } from '@/lib/farmerStories';
 

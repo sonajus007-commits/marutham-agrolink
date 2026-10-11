@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/components/LocaleLink';
 import { Sprout } from 'lucide-react';
 import type { Product } from '@marutham/lib';
 import type { Lang } from '@/lib/dict';

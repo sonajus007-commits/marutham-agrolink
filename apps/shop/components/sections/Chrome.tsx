@@ -1,18 +1,20 @@
 import { MapPin, Search } from 'lucide-react';
+import { LocaleA } from '@/components/LocaleLink';
 import { MaruthamLogo } from '@/components/brand/MaruthamLogo';
 import { LangToggle } from '@/components/LangToggle';
 import { LoginButton } from '@/components/auth/LoginButton';
 import { CartLink } from '@/components/CartLink';
 import type { Dict, Lang } from '@/lib/dict';
+import { localeHref } from '@/lib/locale';
 import type { LandingCopy } from '@/lib/landing';
 
 /* A search field, as a plain GET form so it needs no client JS and works from a
  * Server Component: submitting navigates to /products?q=… The catalogue is the
  * honest destination today; the query wiring lands with the P3 search endpoint.
  * `role="search"` + a labelled input keep it accessible. */
-function SearchForm({ t, className = '' }: { t: Dict; className?: string }) {
+function SearchForm({ t, lang, className = '' }: { t: Dict; lang: Lang; className?: string }) {
   return (
-    <form action="/products" role="search" className={`min-w-0 ${className}`}>
+    <form action={localeHref(lang, '/products')} role="search" className={`min-w-0 ${className}`}>
       <label className="border-border bg-bg focus-within:border-forest-500 flex items-center gap-2.5 rounded-full border px-4 py-2.5 transition-colors">
         <Search className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
         <input
@@ -62,9 +64,9 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
         {/* shrink-0, not shrink: a squeezed box does not squeeze the text inside
             it, so the wordmark painted over the toggle. It drops to the mark
             alone below sm instead. */}
-        <a href="/" className="shrink-0 no-underline" aria-label="Marutham AgroLink">
+        <LocaleA href="/" className="shrink-0 no-underline" aria-label="Marutham AgroLink">
           <MaruthamLogo compact />
-        </a>
+        </LocaleA>
 
         {/* Service area. Marutham serves Pudukkottai today, so this states a fact
             rather than asking for a location it cannot yet act on. Hidden on the
@@ -76,18 +78,18 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
 
         {/* Search takes the middle on md+; on small screens it drops to its own
             full-width row below (the reference model's mobile layout). */}
-        <SearchForm t={t} className="hidden flex-1 md:block" />
+        <SearchForm t={t} lang={lang} className="hidden flex-1 md:block" />
 
         <nav aria-label="Primary" className="hidden shrink-0 lg:block">
           <ul className="flex list-none items-center gap-6 p-0">
             {NAV.map((n) => (
               <li key={n.href}>
-                <a
+                <LocaleA
                   href={n.href}
                   className="text-fg-muted hover:text-forest-700 text-caption font-medium no-underline transition-colors"
                 >
                   {n.label}
-                </a>
+                </LocaleA>
               </li>
             ))}
           </ul>
@@ -102,7 +104,7 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
 
       {/* Mobile search row — full width, below the brand bar. */}
       <div className="border-border/60 border-t px-6 py-2.5 md:hidden">
-        <SearchForm t={t} />
+        <SearchForm t={t} lang={lang} />
       </div>
     </header>
   );
@@ -159,12 +161,12 @@ export function SiteFooter({ t, c }: { t: Dict; c: LandingCopy }) {
               <ul className="mt-4 flex list-none flex-col gap-2.5 p-0">
                 {c.links.map((l) => (
                   <li key={l.l}>
-                    <a
+                    <LocaleA
                       href={l.href}
                       className="text-leaf-300 hover:text-surface text-caption no-underline transition-colors"
                     >
                       {l.l}
-                    </a>
+                    </LocaleA>
                   </li>
                 ))}
               </ul>
@@ -184,9 +186,9 @@ export function SiteFooter({ t, c }: { t: Dict; c: LandingCopy }) {
               { href: '/privacy', l: t.htmlLang === 'ta' ? 'தனியுரிமை' : 'Privacy' },
             ].map((x) => (
               <li key={x.href}>
-                <a href={x.href} className="text-leaf-300 hover:text-surface no-underline">
+                <LocaleA href={x.href} className="text-leaf-300 hover:text-surface no-underline">
                   {x.l}
-                </a>
+                </LocaleA>
               </li>
             ))}
           </ul>

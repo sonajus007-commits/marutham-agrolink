@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getLang } from '@/lib/lang';
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/components/LocaleLink';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import {

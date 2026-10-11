@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/components/LocaleLink';
 import { fmtMoney } from '@marutham/lib';
 import { useCart } from '@/components/cart/CartProvider';
 import { useLoginModal } from '@/components/auth/LoginModalProvider';

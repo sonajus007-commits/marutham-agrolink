@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { LocaleA } from '@/components/LocaleLink';
 import { ArrowRight } from 'lucide-react';
 
 /* The button set from the brief: primary (filled), secondary (outline), ghost,
@@ -62,7 +63,7 @@ interface Props {
 
 export function Button({ href, children, variant = 'primary', arrow, className = '' }: Props) {
   return (
-    <a href={href} className={`${BASE} ${VARIANT[variant]} ${className} group`}>
+    <LocaleA href={href} className={`${BASE} ${VARIANT[variant]} ${className} group`}>
       {children}
       {arrow ? (
         <ArrowRight
@@ -70,6 +71,6 @@ export function Button({ href, children, variant = 'primary', arrow, className =
           aria-hidden="true"
         />
       ) : null}
-    </a>
+    </LocaleA>
   );
 }

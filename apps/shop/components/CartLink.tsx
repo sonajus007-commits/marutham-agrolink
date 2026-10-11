@@ -4,7 +4,7 @@
  * ma_cart_v2) and links to the public /cart page, which hands off to the portal
  * checkout. SSR shows no badge (count 0); it fills in on mount. */
 
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/components/LocaleLink';
 import { ShoppingCart } from 'lucide-react';
 import { useCart } from '@/components/cart/CartProvider';
 

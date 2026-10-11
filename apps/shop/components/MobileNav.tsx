@@ -13,6 +13,7 @@
 
 import { usePathname } from 'next/navigation';
 import { stripLocale } from '@/lib/locale';
+import { LocaleA } from '@/components/LocaleLink';
 import { Home, ShoppingBag, LayoutGrid, ShoppingCart, User } from 'lucide-react';
 import { useLoginModal } from '@/components/auth/LoginModalProvider';
 import { useCart } from '@/components/cart/CartProvider';
@@ -39,27 +40,27 @@ export function MobileNav({ nav }: { nav: Dict['nav'] }) {
       aria-label="Primary mobile"
       className="border-border bg-surface/95 fixed inset-x-0 bottom-0 z-50 flex items-stretch border-t px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
     >
-      <a
+      <LocaleA
         href="/"
         aria-current={isHome ? 'page' : undefined}
         className={`${base} ${isHome ? active : idle}`}
       >
         <Home className="h-5 w-5" aria-hidden="true" />
         {nav.home}
-      </a>
-      <a
+      </LocaleA>
+      <LocaleA
         href="/products"
         aria-current={isShop ? 'page' : undefined}
         className={`${base} ${isShop ? active : idle}`}
       >
         <ShoppingBag className="h-5 w-5" aria-hidden="true" />
         {nav.shop}
-      </a>
-      <a href="/#categories" className={`${base} ${idle}`}>
+      </LocaleA>
+      <LocaleA href="/#categories" className={`${base} ${idle}`}>
         <LayoutGrid className="h-5 w-5" aria-hidden="true" />
         {nav.categories}
-      </a>
-      <a href="/cart" className={`${base} ${idle} relative`}>
+      </LocaleA>
+      <LocaleA href="/cart" className={`${base} ${idle} relative`}>
         <span className="relative">
           <ShoppingCart className="h-5 w-5" aria-hidden="true" />
           {ready && count > 0 ? (
@@ -69,17 +70,17 @@ export function MobileNav({ nav }: { nav: Dict['nav'] }) {
           ) : null}
         </span>
         {nav.cart}
-      </a>
+      </LocaleA>
       {modal ? (
         <button type="button" onClick={modal.openLogin} className={`${base} ${idle}`}>
           <User className="h-5 w-5" aria-hidden="true" />
           {nav.account}
         </button>
       ) : (
-        <a href="/app/login" className={`${base} ${idle}`}>
+        <LocaleA href="/app/login" className={`${base} ${idle}`}>
           <User className="h-5 w-5" aria-hidden="true" />
           {nav.account}
-        </a>
+        </LocaleA>
       )}
     </nav>
   );

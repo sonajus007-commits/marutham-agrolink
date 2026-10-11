@@ -5,6 +5,7 @@ import { OG_IMAGE, SITE_URL } from '@/lib/site';
 import { LoginModalProvider } from '@/components/auth/LoginModalProvider';
 import { CartProvider } from '@/components/cart/CartProvider';
 import { MobileNav } from '@/components/MobileNav';
+import { LangProvider } from '@/components/LocaleLink';
 import './globals.css';
 
 /* The metadata a crawler reads. This is the whole reason the shop is server-
@@ -67,12 +68,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       {/* Bottom padding on mobile clears the fixed MobileNav so the footer is
           never hidden behind it; removed at lg where the bar is gone. */}
       <body className="pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
-        <LoginModalProvider lang={lang}>
-          <CartProvider>
-            {children}
-            <MobileNav nav={DICT[lang].nav} />
-          </CartProvider>
-        </LoginModalProvider>
+        <LangProvider lang={lang}>
+          <LoginModalProvider lang={lang}>
+            <CartProvider>
+              {children}
+              <MobileNav nav={DICT[lang].nav} />
+            </CartProvider>
+          </LoginModalProvider>
+        </LangProvider>
       </body>
     </html>
   );

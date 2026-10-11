@@ -31,6 +31,19 @@ export function localePath(lang: Lang, path: string): string {
   return path === '/' ? TA_PREFIX : `${TA_PREFIX}${path}`;
 }
 
+/** An in-site link href in the given language. Unlike localePath it takes a
+ *  full href ("/#categories", "/products?q=x") and leaves alone anything that
+ *  is not a shop page: the portal (/app), the API, Next internals, an href
+ *  already under /ta, and external or relative links. */
+export function localeHref(lang: Lang, href: string): string {
+  if (lang !== 'ta' || !href.startsWith('/') || href.startsWith('//')) return href;
+  const cut = href.search(/[?#]/);
+  const path = cut === -1 ? href : href.slice(0, cut);
+  const rest = cut === -1 ? '' : href.slice(cut);
+  if (isTaPath(path) || /^\/(app|api|_next)(\/|$)/.test(path)) return href;
+  return localePath('ta', path) + rest;
+}
+
 /** Metadata `alternates` for a page: its canonical in THIS language plus the
  *  hreflang pair. x-default is English, the language of a visitor we know
  *  nothing about. `path` is the English path, query string included. */

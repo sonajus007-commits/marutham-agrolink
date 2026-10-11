@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/components/LocaleLink';
 import Image from 'next/image';
 import { homepagePrice, productEmoji, fmtMoney, type Product } from '@marutham/lib';
 import { OrderButton } from '@/components/OrderButton';

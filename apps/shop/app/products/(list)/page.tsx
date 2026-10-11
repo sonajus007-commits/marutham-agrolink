@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getLang } from '@/lib/lang';
-import Link from 'next/link';
+import { LocaleLink as Link } from '@/components/LocaleLink';
 import { Search } from 'lucide-react';
 import { getCatalogue } from '@/lib/api';
 import { OG_IMAGE, absoluteUrl } from '@/lib/site';
@@ -119,7 +119,7 @@ export default async function CataloguePage({ searchParams }: { searchParams: Pr
         {/* Toolbar: search + sort. A GET form needs no JS; hidden inputs keep the
             active category/sort while searching. */}
         <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <form action="/products" role="search" className="w-full max-w-md">
+          <form action={localePath(l, '/products')} role="search" className="w-full max-w-md">
             {category ? <input type="hidden" name="category" value={category} /> : null}
             {sort !== 'name' ? <input type="hidden" name="sort" value={sort} /> : null}
             <label className="border-border bg-bg focus-within:border-forest-500 flex items-center gap-2.5 rounded-full border px-4 py-2.5 transition-colors">
