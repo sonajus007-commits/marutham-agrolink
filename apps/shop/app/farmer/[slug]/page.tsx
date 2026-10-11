@@ -32,10 +32,20 @@ export function generateStaticParams() {
 type Resolved =
   { kind: 'real'; farmer: PublicFarmer } | { kind: 'sample'; story: FarmerStory } | null;
 
+/* A sample story lives in this bundle, so a dead API must not take it down: on
+ * an API error it still renders. Anything else rethrows — a 5xx tells a crawler
+ * to come back, where a 404 would de-list a real farmer (same rule as getProduct). */
 async function resolve(slug: string): Promise<Resolved> {
-  const real = await getPublicFarmer(slug);
-  if (real) return { kind: 'real', farmer: real };
   const story = getStory(slug);
+  let real: PublicFarmer | null;
+  try {
+    real = await getPublicFarmer(slug);
+  } catch (e) {
+    if (!story) throw e;
+    console.error(`[shop] farmer ${slug}: API down, showing the sample story`);
+    real = null;
+  }
+  if (real) return { kind: 'real', farmer: real };
   if (story) return { kind: 'sample', story };
   return null;
 }
