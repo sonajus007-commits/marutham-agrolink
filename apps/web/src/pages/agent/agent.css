@@ -514,6 +514,30 @@
   color: var(--disabled-fg);
   cursor: not-allowed;
 }
+.scan-sheet__camera {
+  width: 100%;
+  min-height: 72px;
+  background: var(--forest);
+  color: var(--white);
+  border: none;
+  border-radius: 14px;
+  padding: 18px 16px;
+  font-size: 17px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+.scan-sheet__camera:disabled {
+  background: var(--disabled-bg);
+  color: var(--disabled-fg);
+  cursor: not-allowed;
+}
+.scan-sheet__or {
+  font-size: 13px;
+  color: var(--gray);
+  text-align: center;
+  margin: 16px 0 10px;
+}
 
 /* Queue sections */
 .q-section {

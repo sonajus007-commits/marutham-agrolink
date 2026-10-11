@@ -4,11 +4,13 @@ import { Sheet } from '@marutham/ui';
 import { api } from '@marutham/api-client';
 import { statusKey } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
+import { scannerAvailable, scanQrCode } from '../../native/scanner';
 
-/* The scan-first entry the field roles reach from anywhere via the ScanFab. A large,
- * auto-focused code field advances whatever order is scanned/typed (a hardware
- * keyboard-wedge scanner types the code + Enter; a phone types it). One code → one
- * step forward (POST /orders/:id/scan), the same action the per-order buttons take.
+/* The scan-first entry the field roles reach from anywhere via the ScanFab. In the
+ * phone app a camera button reads the order QR (native/scanner); everywhere, a large
+ * auto-focused code field takes a typed code or a hardware keyboard-wedge scanner's
+ * code + Enter. One code → one step forward (POST /orders/:id/scan), the same action
+ * the per-order buttons take.
  *
  * Online-only by design: this is the "grab any order and advance it" entry, where the
  * agent is choosing which order — unlike the deliver/verify sheets, which carry a
@@ -27,18 +29,38 @@ export function ScanSheet({
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const camera = scannerAvailable();
 
-  // Fresh field each open; focus it so a wedge scanner's keystrokes land immediately.
+  // Fresh field each open. Focus it so a wedge scanner's keystrokes land immediately —
+  // but not in the phone app, where focusing would throw the keyboard over the
+  // camera button.
   useEffect(() => {
     if (!open) return;
     setCode('');
     setBusy(false);
+    if (camera) return;
     const id = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(id);
-  }, [open]);
+  }, [open, camera]);
 
-  async function go() {
-    const value = code.trim();
+  async function scanWithCamera() {
+    setBusy(true);
+    const r = await scanQrCode();
+    if (r.kind === 'code') {
+      setCode(r.code);
+      await go(r.code);
+      return;
+    }
+    setBusy(false);
+    if (r.kind === 'installing') {
+      toast(t('agent.scan.installing', 'Getting the scanner ready. Try again in a minute.'), 'nfo');
+    } else if (r.kind === 'failed') {
+      toast(t('agent.scan.cameraFailed', "Couldn't open the camera. Type the code instead."), 'er');
+    }
+  }
+
+  async function go(scanned?: string) {
+    const value = (scanned ?? code).trim();
     if (!value) {
       toast(t('agent.scan.enterCode', 'Enter an order code'), 'er');
       inputRef.current?.focus();
@@ -76,9 +98,18 @@ export function ScanSheet({
       backLabel={t('common.back', 'Back')}
     >
       <div className="scan-sheet">
-        <div className="scan-sheet__hint">
-          📷 {t('agent.scan.hint', 'Scan the order QR, or type its code, to advance it.')}
-        </div>
+        {camera ? (
+          <>
+            <button className="scan-sheet__camera" onClick={scanWithCamera} disabled={busy}>
+              📷 {t('agent.scan.camera', 'Scan QR with camera')}
+            </button>
+            <div className="scan-sheet__or">{t('agent.scan.orType', 'or type the order code')}</div>
+          </>
+        ) : (
+          <div className="scan-sheet__hint">
+            {t('agent.scan.hint', 'Type the order code, or use a barcode scanner, to advance it.')}
+          </div>
+        )}
         <input
           ref={inputRef}
           className="scan-sheet__input"
@@ -91,7 +122,7 @@ export function ScanSheet({
           onKeyDown={onKeyDown}
           aria-label={t('agent.scan.label', 'Scan / Enter Order Code')}
         />
-        <button className="scan-sheet__go" onClick={go} disabled={busy}>
+        <button className="scan-sheet__go" onClick={() => go()} disabled={busy}>
           {busy ? `⏳ ${t('agent.scan.busy', 'Scanning…')}` : `→ ${t('agent.scan.go', 'Go')}`}
         </button>
       </div>

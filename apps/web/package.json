@@ -20,6 +20,7 @@
     "cap:assets": "npx --yes @capacitor/assets@3 generate --android --iconBackgroundColor '#2E7D32' --iconBackgroundColorDark '#1B5E20' --splashBackgroundColor '#2E7D32' --splashBackgroundColorDark '#1B5E20'"
   },
   "dependencies": {
+    "@capacitor-mlkit/barcode-scanning": "^7.5.0",
     "@capacitor/android": "^7",
     "@capacitor/app": "^7.1.2",
     "@capacitor/camera": "^7.0.5",

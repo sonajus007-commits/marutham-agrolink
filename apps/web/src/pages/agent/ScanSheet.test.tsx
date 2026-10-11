@@ -11,8 +11,14 @@ const toast = vi.fn();
 const scanOrder = vi.fn();
 const onScanned = vi.fn();
 const onClose = vi.fn();
+const scannerAvailable = vi.fn();
+const scanQrCode = vi.fn();
 
 vi.mock('../../components/Toast', () => ({ useToast: () => toast }));
+vi.mock('../../native/scanner', () => ({
+  scannerAvailable: () => scannerAvailable(),
+  scanQrCode: () => scanQrCode(),
+}));
 vi.mock('@marutham/api-client', () => ({
   api: { scanOrder: (...args: unknown[]) => scanOrder(...args) },
 }));
@@ -20,6 +26,7 @@ vi.mock('@marutham/api-client', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   scanOrder.mockResolvedValue({ newStatus: 'Picked Up' });
+  scannerAvailable.mockReturnValue(false); // browser unless a test says otherwise
 });
 
 function open() {
@@ -55,5 +62,44 @@ describe('ScanSheet', () => {
     await waitFor(() => expect(toast).toHaveBeenCalledWith('Order not found.', 'er'));
     expect(onClose).not.toHaveBeenCalled();
     expect(onScanned).not.toHaveBeenCalled();
+  });
+
+  it('offers no camera button in the browser', () => {
+    open();
+    expect(screen.queryByRole('button', { name: /camera/i })).toBeNull();
+  });
+
+  it('in the phone app, a camera scan advances the scanned order', async () => {
+    scannerAvailable.mockReturnValue(true);
+    scanQrCode.mockResolvedValue({ kind: 'code', code: 'ORDPDK261011000001' });
+    const user = open();
+    await user.click(screen.getByRole('button', { name: /camera/i }));
+
+    await waitFor(() => expect(scanOrder).toHaveBeenCalledWith('ORDPDK261011000001'));
+    expect(onScanned).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('a cancelled camera scan stays open and calls nothing', async () => {
+    scannerAvailable.mockReturnValue(true);
+    scanQrCode.mockResolvedValue({ kind: 'cancelled' });
+    const user = open();
+    await user.click(screen.getByRole('button', { name: /camera/i }));
+
+    await waitFor(() => expect(scanQrCode).toHaveBeenCalled());
+    expect(scanOrder).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /camera/i })).toBeEnabled();
+  });
+
+  it('a camera that will not open points to typing the code', async () => {
+    scannerAvailable.mockReturnValue(true);
+    scanQrCode.mockResolvedValue({ kind: 'failed' });
+    const user = open();
+    await user.click(screen.getByRole('button', { name: /camera/i }));
+
+    await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.stringMatching(/type/i), 'er'));
+    expect(scanOrder).not.toHaveBeenCalled();
   });
 });
