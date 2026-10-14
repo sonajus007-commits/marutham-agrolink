@@ -13,6 +13,7 @@
     "db:snapshot": "node db/check-schema.js --write",
     "db:check-embeds": "node db/check-embeds.js",
     "db:check-reads": "node db/check-reads.js",
+    "db:check-rls": "node db/check-rls.js",
     "db:migrate": "node db/migrate.js",
     "db:seed": "node db/seed.js",
     "db:status": "node db/migrate.js --status",

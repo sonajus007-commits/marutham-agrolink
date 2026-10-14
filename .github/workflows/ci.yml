@@ -100,6 +100,13 @@ jobs:
       - name: Reads — every supabase call reads its error
         run: node backend/db/check-reads.js
 
+      # Supabase serves every public table to the anon key that ships in every
+      # client. A table with RLS off is open to anyone — order_proofs and expenses
+      # were, until 067. Tables made by SQL start with RLS off, so every table must
+      # have a migration that enables it. Static, no database.
+      - name: RLS — every table has row-level security enabled
+        run: node backend/db/check-rls.js
+
       - name: Build the React app
         run: pnpm build
 
