@@ -112,7 +112,7 @@ export default async function CataloguePage({ searchParams }: { searchParams: Pr
     <>
       <SiteHeader t={t} lang={l} />
 
-      <main className="mx-auto max-w-6xl px-5 py-12">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-5 py-12">
         <h1 className="text-forest-900 text-3xl font-bold tracking-tight md:text-4xl">{heading}</h1>
         <p className="text-fg-muted mt-2 text-body">{t.catalogue.sub}</p>
 

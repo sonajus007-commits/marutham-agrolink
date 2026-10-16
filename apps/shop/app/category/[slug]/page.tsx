@@ -119,7 +119,7 @@ export default async function CategoryPage({
     <>
       <SiteHeader t={t} lang={l} />
 
-      <main className="mx-auto max-w-6xl px-5 py-12">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-5 py-12">
         <Link
           href="/products"
           className="text-forest-700 hover:text-forest-900 text-caption font-semibold no-underline"

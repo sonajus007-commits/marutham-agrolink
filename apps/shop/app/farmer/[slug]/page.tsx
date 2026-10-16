@@ -106,7 +106,7 @@ export default async function FarmerPage({ params }: { params: Promise<{ slug: s
     <>
       <SiteHeader t={t} lang={l} />
 
-      <main className="mx-auto max-w-3xl px-5 py-12">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-3xl px-5 py-12">
         <Link
           href="/farmers"
           className="text-forest-700 hover:text-forest-900 text-caption font-semibold no-underline"

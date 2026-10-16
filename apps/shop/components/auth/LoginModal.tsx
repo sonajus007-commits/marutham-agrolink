@@ -18,6 +18,7 @@
  * there rather than reimplementing it. */
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { X } from 'lucide-react';
 import type { Lang } from '@/lib/dict';
 
@@ -33,6 +34,8 @@ const COPY: Record<Lang, Record<string, string>> = {
     idPlaceholder: 'e.g. 9876543210',
     pwLabel: 'Password',
     pwPlaceholder: 'Your password',
+    showPw: 'Show password',
+    hidePw: 'Hide password',
     submit: 'Sign in',
     submitting: 'Signing in…',
     otp: 'Sign in with OTP',
@@ -50,6 +53,8 @@ const COPY: Record<Lang, Record<string, string>> = {
     idPlaceholder: 'எ.கா. 9876543210',
     pwLabel: 'கடவுச்சொல்',
     pwPlaceholder: 'உங்கள் கடவுச்சொல்',
+    showPw: 'கடவுச்சொல்லைக் காட்டு',
+    hidePw: 'கடவுச்சொல்லை மறை',
     submit: 'உள்நுழைய',
     submitting: 'உள்நுழைகிறது…',
     otp: 'OTP மூலம் உள்நுழைய',
@@ -71,6 +76,7 @@ export function LoginModal({ lang, onClose }: Props) {
   const c = COPY[lang] ?? COPY.en;
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [needsPortal, setNeedsPortal] = useState(false);
@@ -202,17 +208,37 @@ export function LoginModal({ lang, onClose }: Props) {
             />
           </label>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-forest-900 text-caption font-semibold">{c.pwLabel}</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              placeholder={c.pwPlaceholder}
-              className="border-border focus:border-forest-700 focus:ring-forest-700/20 w-full rounded-xl border px-4 py-3 text-body outline-none transition focus:ring-4"
-            />
-          </label>
+          {/* Not a wrapping <label>: the reveal button must not sit inside the label. */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="login-password" className="text-forest-900 text-caption font-semibold">
+              {c.pwLabel}
+            </label>
+            <div className="relative">
+              <input
+                id="login-password"
+                type={showPw ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                placeholder={c.pwPlaceholder}
+                className="border-border focus:border-forest-700 focus:ring-forest-700/20 w-full rounded-xl border py-3 pl-4 pr-12 text-body outline-none transition focus:ring-4"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                aria-label={showPw ? c.hidePw : c.showPw}
+                aria-pressed={showPw}
+                aria-controls="login-password"
+                className="text-fg-muted hover:text-forest-900 focus-visible:ring-forest-700/30 absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full outline-none transition focus-visible:ring-4"
+              >
+                {showPw ? (
+                  <EyeOff className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <Eye className="h-5 w-5" aria-hidden="true" />
+                )}
+              </button>
+            </div>
+          </div>
 
           <button
             type="submit"

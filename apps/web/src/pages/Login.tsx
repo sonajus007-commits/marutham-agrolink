@@ -186,7 +186,7 @@ export function Login() {
         };
 
   return (
-    <main className="login-wrap">
+    <main className="login-wrap" id="main" tabIndex={-1}>
       <div className="login-card">
         <h1>{title}</h1>
         <p className="sub">{t('brand')}</p>

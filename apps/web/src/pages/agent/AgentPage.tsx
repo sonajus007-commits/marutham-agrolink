@@ -282,7 +282,7 @@ function AgentPageInner() {
           </button>
         </nav>
 
-        <div className="agent-main">
+        <main className="agent-main" id="main" tabIndex={-1}>
           {/* Connectivity truth for field work — offline notice + pending-sync count.
               Renders nothing when online with a drained queue. */}
           <OfflineBar />
@@ -320,7 +320,7 @@ function AgentPageInner() {
               <ProfileContent isVCO={isVCO} />
             )}
           </div>
-        </div>
+        </main>
       </div>
 
       {/* Fixed bottom navigation (phone) — the same native-app pattern as the

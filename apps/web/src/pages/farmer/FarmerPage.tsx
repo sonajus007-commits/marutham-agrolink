@@ -222,7 +222,7 @@ function FarmerInner() {
           </button>
         </nav>
 
-        <div className="fm-main">
+        <main className="fm-main" id="main" tabIndex={-1}>
           <div className="fm-hero">
             <div className="fm-hero__icon" aria-hidden="true">
               <WheatIcon size={24} />
@@ -261,7 +261,7 @@ function FarmerInner() {
               <FarmerProfileTab onRenew={() => setRenewing(true)} />
             )}
           </div>
-        </div>
+        </main>
       </div>
 
       {/* Fixed bottom navigation (phone) — the same native-app pattern as the

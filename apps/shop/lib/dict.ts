@@ -29,6 +29,8 @@ export interface Dict {
     faq: string;
     contact: string;
     search: string;
+    /** Keyboard skip link — first Tab stop on every page. */
+    skip: string;
     location: string;
     cart: string;
     home: string;
@@ -127,6 +129,7 @@ const en: Dict = {
     faq: 'FAQ',
     contact: 'Contact',
     search: 'Search fresh produce, farmers…',
+    skip: 'Skip to main content',
     location: 'Pudukkottai, Tamil Nadu',
     cart: 'Cart',
     home: 'Home',
@@ -257,6 +260,7 @@ const ta: Dict = {
     faq: 'கேள்விகள்',
     contact: 'தொடர்பு',
     search: 'புதிய காய்கறிகள், விவசாயிகளைத் தேடுங்கள்…',
+    skip: 'முதன்மை உள்ளடக்கத்திற்குச் செல்',
     location: 'புதுக்கோட்டை, தமிழ்நாடு',
     cart: 'கூடை',
     home: 'முகப்பு',

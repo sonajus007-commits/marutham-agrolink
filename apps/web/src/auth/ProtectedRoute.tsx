@@ -59,7 +59,7 @@ export function NoAccess({ user }: { user: User }) {
   const canGoHome = home !== pathname;
 
   return (
-    <main className="no-access" role="alert">
+    <main className="no-access" id="main" tabIndex={-1} role="alert">
       <div className="no-access__icon" aria-hidden="true">
         🔒
       </div>

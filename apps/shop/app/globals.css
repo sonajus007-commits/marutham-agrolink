@@ -363,3 +363,8 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* The skip-link target takes focus programmatically only — no ring on the page body. */
+#main:focus {
+  outline: none;
+}

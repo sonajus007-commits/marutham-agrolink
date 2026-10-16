@@ -15,7 +15,7 @@ export async function LoadingGrid() {
   const t = DICT[await getLang()];
 
   return (
-    <main className="mx-auto max-w-6xl px-5 py-12" aria-busy="true">
+    <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-5 py-12" aria-busy="true">
       <p role="status" className="text-sm font-semibold text-fg-muted">
         {t.status.loading}
       </p>

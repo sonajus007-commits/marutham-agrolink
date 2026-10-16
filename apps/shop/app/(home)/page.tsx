@@ -73,7 +73,7 @@ export default async function HomePage() {
   return (
     <>
       <SiteHeader t={t} lang={lang} />
-      <main>
+      <main id="main" tabIndex={-1}>
         <Hero c={c} lang={lang} />
         <CategoryRail products={products} t={t} />
         <FreshToday products={products} t={t} />

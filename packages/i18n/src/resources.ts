@@ -596,6 +596,7 @@ export const resources = {
         'You’re offline. This list will refresh automatically when the connection returns.',
       // App-wide UI states: session expiry, slow network, errors, access, permissions
       'state.sessionExpired': 'Your session has expired. Please sign in again.',
+      'a11y.skipToContent': 'Skip to main content',
       'state.slow': 'Slow connection — this is taking longer than usual…',
       'state.retry': 'Try again',
       'state.error.title': 'Couldn’t load this',
@@ -3088,6 +3089,7 @@ export const resources = {
         'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள். இணைப்பு திரும்பியதும் இந்தப் பட்டியல் தானாகப் புதுப்பிக்கப்படும்.',
       // App-wide UI states: session expiry, slow network, errors, access, permissions
       'state.sessionExpired': 'உங்கள் அமர்வு காலாவதியாகிவிட்டது. மீண்டும் உள்நுழையவும்.',
+      'a11y.skipToContent': 'முதன்மை உள்ளடக்கத்திற்குச் செல்',
       'state.slow': 'இணைப்பு மெதுவாக உள்ளது — வழக்கத்தை விட நேரம் ஆகிறது…',
       'state.retry': 'மீண்டும் முயற்சிக்கவும்',
       'state.error.title': 'இதை ஏற்ற முடியவில்லை',

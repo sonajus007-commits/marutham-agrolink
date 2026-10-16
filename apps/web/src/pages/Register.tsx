@@ -179,7 +179,7 @@ export function Register() {
   };
 
   return (
-    <main className="login-wrap">
+    <main className="login-wrap" id="main" tabIndex={-1}>
       <div className="login-card login-card--wide">
         <h1>{t('reg.title')}</h1>
         <p className="sub">{t('brand')}</p>
@@ -577,7 +577,7 @@ function RoleButton({
 function PendingPanel({ loginId }: { loginId: string }) {
   const { t } = useTranslation();
   return (
-    <main className="login-wrap">
+    <main className="login-wrap" id="main" tabIndex={-1}>
       <div className="login-card">
         <div className="reg-done-icon" aria-hidden="true">
           🎉

@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { PermissionNotice } from './components/PermissionNotice';
+import { SkipLink } from './components/SkipLink';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { changeLanguage, type AppLanguage } from '@marutham/i18n';
@@ -79,6 +80,7 @@ export function App() {
           Capacitor build sets Vite base to '/', so BASE_URL is '/' and the app
           mounts at the root instead. */}
       <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/+$/, '') || '/'}>
+        <SkipLink />
         <PermissionNotice />
         <Suspense fallback={<Loading />}>
           <Routes>

@@ -7,6 +7,10 @@ import { StaticShell, StaticSection } from '@/components/StaticShell';
 
 export const revalidate = 3600;
 
+/** The day this page's TEXT last changed (YYYY-MM-DD). Bump it with every wording
+ *  change — it is shown to readers as "Last updated". */
+const LAST_UPDATED = '2026-08-29';
+
 /* A placeholder Terms page. Real terms are a legal document the company must
  * author and have reviewed — this page does NOT invent binding terms; it states
  * that they are being finalised and outlines what they will cover. It is
@@ -75,7 +79,13 @@ export default async function TermsPage() {
   const lang = await getLang();
   const c = C[lang];
   return (
-    <StaticShell lang={lang} eyebrow={c.eyebrow} title={c.title} lede={c.lede}>
+    <StaticShell
+      lang={lang}
+      eyebrow={c.eyebrow}
+      title={c.title}
+      lede={c.lede}
+      updated={LAST_UPDATED}
+    >
       <StaticSection heading={c.coversH}>
         <ul className="text-fg-muted flex list-disc flex-col gap-2 pl-5">
           {c.covers.map((x) => (

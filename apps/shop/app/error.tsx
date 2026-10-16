@@ -35,7 +35,11 @@ export default function ShopError({
   const t = DICT[lang].status;
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col items-center px-5 py-28 text-center">
+    <main
+      id="main"
+      tabIndex={-1}
+      className="mx-auto flex max-w-2xl flex-col items-center px-5 py-28 text-center"
+    >
       <div className="text-7xl" aria-hidden="true">
         🌧️
       </div>

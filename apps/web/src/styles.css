@@ -600,3 +600,34 @@ h6 {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   border-radius: 12px;
 }
+
+/* ── Skip to main content ── off-screen until keyboard focus lands on it. */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1000;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--fg);
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transform: translateY(-150%);
+  transition: transform 0.15s ease;
+}
+.skip-link:focus {
+  transform: translateY(0);
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skip-link {
+    transition: none;
+  }
+}
+/* The skip target takes focus programmatically only — no ring on the whole pane. */
+#main:focus {
+  outline: none;
+}

@@ -257,7 +257,7 @@ function ConsumerInner() {
           </button>
         </nav>
 
-        <div className="cons-main">
+        <main className="cons-main" id="main" tabIndex={-1}>
           {/* The storefront Home carries its own hero; the greeting card only
               shows on the other tabs, where it isn't competing with it. */}
           {tab !== 'home' ? (
@@ -302,7 +302,7 @@ function ConsumerInner() {
               <OrdersTab onOpenOrder={setOpenOrderId} />
             )}
           </div>
-        </div>
+        </main>
       </div>
 
       {/* Fixed bottom navigation (phone), like a native shopping app. Hidden at

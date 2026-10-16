@@ -144,7 +144,7 @@ export default async function ProductPage({ params }: Params) {
         />
       ) : null}
 
-      <main className="mx-auto max-w-5xl px-5 py-8">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-5xl px-5 py-8">
         <Breadcrumb t={t} name={product.name} />
 
         {/* ── The product ────────────────────────────────────────────────── */}

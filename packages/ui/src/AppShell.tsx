@@ -78,7 +78,7 @@ export function AppShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         {headerNode}
-        <main className="flex-1 overflow-auto">
+        <main id="main" tabIndex={-1} className="flex-1 overflow-auto outline-none">
           {children}
           {/* Below lg the fixed role-hub bar overlays the bottom; this phone-only
               spacer lets the last content scroll clear of it (plus gesture inset). */}

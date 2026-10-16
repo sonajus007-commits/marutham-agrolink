@@ -68,6 +68,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       {/* Bottom padding on mobile clears the fixed MobileNav so the footer is
           never hidden behind it; removed at lg where the bar is gone. */}
       <body className="pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+        {/* First Tab stop: jump past the header to the page's <main id="main">.
+            Invisible until focused by keyboard. */}
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-full focus:bg-forest-700 focus:px-5 focus:py-3 focus:font-semibold focus:text-surface focus:no-underline"
+        >
+          {DICT[lang].nav.skip}
+        </a>
         <LangProvider lang={lang}>
           <LoginModalProvider lang={lang}>
             <CartProvider>

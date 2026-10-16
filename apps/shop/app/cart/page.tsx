@@ -49,7 +49,7 @@ export default async function CartPage() {
   return (
     <>
       <SiteHeader t={t} lang={lang} />
-      <main className="mx-auto max-w-5xl px-5 py-12">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-5xl px-5 py-12">
         <h1 className="text-forest-900 text-3xl font-bold tracking-tight md:text-4xl">
           {c.heading}
         </h1>
