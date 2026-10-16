@@ -18,10 +18,15 @@ vi.mock('../native', () => ({
     return Promise.resolve(unsubNetwork);
   },
 }));
+let slowCb: ((slow: boolean) => void) | undefined;
 vi.mock('@marutham/api-client', () => ({
   subscribeOffline: (cb: (count: number) => void) => {
     offlineCb = cb;
     return unsubOffline;
+  },
+  subscribeSlowNetwork: (cb: (slow: boolean) => void) => {
+    slowCb = cb;
+    return () => {};
   },
 }));
 
@@ -67,5 +72,21 @@ describe('OfflineBar', () => {
     const bar = screen.getByRole('status');
     expect(bar.className).toContain('is-syncing');
     expect(bar.textContent).toMatch(/2/);
+  });
+});
+
+describe('OfflineBar slow-network notice', () => {
+  it('says the connection is slow while a request drags, then clears', async () => {
+    await seed(true, 0);
+    act(() => slowCb?.(true));
+    expect(screen.getByRole('status')).toHaveTextContent(/slow connection/i);
+    act(() => slowCb?.(false));
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('prefers the offline notice over the slow one', async () => {
+    await seed(false, 0);
+    act(() => slowCb?.(true));
+    expect(screen.getByRole('status')).toHaveTextContent(/offline/i);
   });
 });

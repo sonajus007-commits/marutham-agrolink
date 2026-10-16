@@ -27,6 +27,7 @@ import { FarmerProfileTab } from './FarmerProfileTab';
 import { SubscriptionGate } from './SubscriptionGate';
 import { NotificationBell } from '../../components/NotificationBell';
 import { usePushTarget } from '../../native/pushTarget';
+import { OfflineBar } from '../../components/OfflineBar';
 import './farmer.css';
 
 type Tab = 'home' | 'earnings' | 'products' | 'orders' | 'profile';
@@ -187,6 +188,8 @@ function FarmerInner() {
           </IconButton>
         </div>
       </header>
+      {/* Connectivity: offline, pending sync, or a slow connection. Silent when healthy. */}
+      <OfflineBar />
 
       <div className="fm-body">
         <nav className="fm-side" aria-label={t('farmer.nav.label', 'Seller sections')}>

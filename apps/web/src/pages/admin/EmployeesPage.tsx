@@ -9,6 +9,7 @@ import { EmployeeFormSheet } from './EmployeeFormSheet';
 import { useAdminGeo } from './AdminGeoContext';
 import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
+import { ErrorState } from '../../components/ErrorState';
 
 const approvalOf = (e: Employee) => String(e.approval_status || 'pending');
 const empName = (e: Employee) => `${e.fname || ''} ${e.lname || ''}`.trim();
@@ -197,7 +198,7 @@ export function EmployeesPage() {
   );
 
   if (loading && employees.length === 0) return <Spinner />;
-  if (error) return <EmptyState icon="🔒">{error}</EmptyState>;
+  if (error) return <ErrorState className="m-4" error={error} onRetry={() => void load()} />;
 
   return (
     <>

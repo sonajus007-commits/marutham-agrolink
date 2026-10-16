@@ -43,6 +43,7 @@ import { ProfilePage } from './ProfilePage';
 import { HubQueuePage } from './HubQueuePage';
 import { HubsPage } from './HubsPage';
 import { HubDashboardPage } from './HubDashboardPage';
+import { OfflineBar } from '../../components/OfflineBar';
 
 /**
  * The Admin / management console. Wires the Phase-3 shell (AppShell + Sidebar +
@@ -198,6 +199,7 @@ export function AdminPage() {
           header={({ openNav }) => <Header onMenuClick={openNav} brand={brand} actions={actions} />}
           bottomNav={bottomNav}
         >
+          <OfflineBar />
           <div className="mx-auto w-full max-w-[1100px] p-4 sm:p-6">
             <Routes>
               <Route index element={<OverviewPage />} />

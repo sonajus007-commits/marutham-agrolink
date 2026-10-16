@@ -14,6 +14,7 @@ import { ListingReviewSheet, LISTING_STATUS_TONE } from './ListingReviewSheet';
 import { useAdminGeo } from './AdminGeoContext';
 import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
+import { ErrorState } from '../../components/ErrorState';
 
 /**
  * Listing approvals — a seller's request to sell a product.
@@ -214,7 +215,7 @@ export function ListingsPage() {
   );
 
   if (loading && listings.length === 0) return <Spinner />;
-  if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
+  if (error) return <ErrorState className="m-4" error={error} onRetry={() => void load()} />;
 
   return (
     <>

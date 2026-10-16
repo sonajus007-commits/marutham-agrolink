@@ -1,6 +1,50 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, getToken, getUser, setSession, clearSession, type User } from '@marutham/api-client';
+import {
+  api,
+  ApiError,
+  getToken,
+  getUser,
+  setSession,
+  clearSession,
+  onSessionExpired,
+  flushQueue,
+  clearOfflineQueue,
+  type User,
+} from '@marutham/api-client';
 import { enablePushForSession, disablePushForSession } from '../native/push';
+
+/* Session-expired hand-off to the login screen. Set when an authenticated request
+ * comes back 401; Login reads it once to explain why the user is there. */
+const EXPIRED_KEY = 'ma_session_expired';
+export function hasSessionExpiredNotice(): boolean {
+  try {
+    return sessionStorage.getItem(EXPIRED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+export function clearSessionExpiredNotice(): void {
+  try {
+    sessionStorage.removeItem(EXPIRED_KEY);
+  } catch {
+    /* best-effort */
+  }
+}
+
+/* Whose parked offline writes are in the queue. Parked work survives a session
+ * expiry (the same agent signs back in and it syncs), but must never replay under
+ * a DIFFERENT user's token — so a sign-in by someone else discards it. */
+const QUEUE_OWNER_KEY = 'ma_queue_owner';
+async function claimOfflineQueue(user: User): Promise<void> {
+  try {
+    const owner = localStorage.getItem(QUEUE_OWNER_KEY);
+    if (owner && owner !== String(user.id)) await clearOfflineQueue();
+    localStorage.setItem(QUEUE_OWNER_KEY, String(user.id));
+  } catch {
+    /* storage blocked — nothing parked can be trusted to an owner either */
+  }
+  void flushQueue();
+}
 
 interface AuthState {
   user: User | null;
@@ -32,20 +76,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((res) => {
         if (!active) return;
         setUser(res.user);
+        void claimOfflineQueue(res.user);
         // Session restored from a stored token (e.g. app relaunch) — re-register this
         // device for push. No-op in the browser.
         void enablePushForSession();
       })
-      .catch(() => {
+      .catch((err) => {
         if (!active) return;
-        clearSession();
-        setUser(null);
+        // Only a server that REJECTS the token ends the session. A network failure
+        // or timeout (field agent opening the app with no signal) keeps the cached
+        // user so the offline-capable screens still work.
+        if (err instanceof ApiError && err.status === 401) {
+          clearSession();
+          setUser(null);
+        }
       })
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
   }, []);
+
+  // Any authenticated request that comes back 401 (the API client has already
+  // cleared the stored session) drops the user to the login screen with a notice.
+  useEffect(
+    () =>
+      onSessionExpired(() => {
+        try {
+          sessionStorage.setItem(EXPIRED_KEY, '1');
+        } catch {
+          /* notice is best-effort */
+        }
+        setUser(null);
+      }),
+    [],
+  );
 
   const value = useMemo<AuthState>(
     () => ({
@@ -55,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await api.login(phone, password);
         setSession(res.token, res.user);
         setUser(res.user);
+        void claimOfflineQueue(res.user);
         void enablePushForSession(); // register this device for push (no-op in browser)
         return res.user;
       },
@@ -62,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await api.verifyOtp(phone, otp);
         setSession(res.token, res.user);
         setUser(res.user);
+        void claimOfflineQueue(res.user);
         void enablePushForSession();
         return res.user;
       },

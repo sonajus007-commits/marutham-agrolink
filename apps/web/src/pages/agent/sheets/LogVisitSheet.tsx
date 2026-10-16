@@ -8,6 +8,7 @@ import {
   type FarmerVisitPurpose,
 } from '@marutham/api-client';
 import { useToast } from '../../../components/Toast';
+import { ErrorState } from '../../../components/ErrorState';
 
 /* Log a field visit to a farmer (migration 061). A VCO opens this from the overview,
  * picks a farmer they manage, states the purpose and an optional note. It feeds the
@@ -28,6 +29,8 @@ export function LogVisitSheet({
 
   const [farmers, setFarmers] = useState<FarmerLite[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0); // bumped by Retry to re-run the load
   const [farmerId, setFarmerId] = useState('');
   const [purpose, setPurpose] = useState<FarmerVisitPurpose>('collection');
   const [notes, setNotes] = useState('');
@@ -44,13 +47,19 @@ export function LogVisitSheet({
     }
     let live = true;
     setLoading(true);
+    setLoadError(null);
     api
       .getFarmers()
       .then((r) => {
         if (live) setFarmers(r.farmers || []);
       })
-      .catch(() => {
-        if (live) toast(t('agent.visit.loadFailed', 'Could not load your farmers.'), 'er');
+      .catch((e) => {
+        if (live)
+          setLoadError(
+            e instanceof Error
+              ? e.message
+              : t('agent.visit.loadFailed', 'Could not load your farmers.'),
+          );
       })
       .finally(() => {
         if (live) setLoading(false);
@@ -58,7 +67,7 @@ export function LogVisitSheet({
     return () => {
       live = false;
     };
-  }, [open, t, toast]);
+  }, [open, t, attempt]);
 
   const farmerName = (f: FarmerLite) =>
     `${f.fname || ''}${f.lname ? ' ' + f.lname : ''}`.trim() ||
@@ -94,6 +103,8 @@ export function LogVisitSheet({
     >
       {loading ? (
         <Spinner />
+      ) : loadError ? (
+        <ErrorState error={loadError} onRetry={() => setAttempt((n) => n + 1)} />
       ) : (
         <div className="flex flex-col gap-4">
           <div>

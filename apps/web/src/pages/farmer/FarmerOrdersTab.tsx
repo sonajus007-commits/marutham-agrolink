@@ -6,6 +6,7 @@ import { FarmerOrderRow } from './FarmerOrderRow';
 import { FarmerOrderSheet } from './FarmerOrderSheet';
 import { matchesOrder } from '../../native/pushTarget';
 import { useSellerOrderNotes } from './sellerOrderNotes';
+import { ErrorState } from '../../components/ErrorState';
 
 type TabKey = 'accept' | 'pack' | 'rejected' | 'progress';
 
@@ -50,7 +51,7 @@ export function FarmerOrdersTab({
   }, [focusOrderId, loading, orders, onFocusDone]);
 
   if (loading && orders.length === 0) return <Spinner />;
-  if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
+  if (error) return <ErrorState className="m-4" error={error} onRetry={reload} />;
   if (orders.length === 0) return <EmptyState icon="📦">{t('farmer.orders.empty')}</EmptyState>;
 
   const g = groupSellerOrders(orders);

@@ -22,6 +22,8 @@ interface ConsumerData {
   setDistrict: (d: string) => void;
   loading: boolean;
   error: string | null;
+  /** Re-fetch the current district's catalogue (the error state's Retry). */
+  reload: () => void;
   /** Saved-product ids for the heart toggle; toggleSaved flips one (optimistic). */
   savedIds: Set<string>;
   isSaved: (productId: string) => boolean;
@@ -143,11 +145,13 @@ export function ConsumerDataProvider({ children }: { children: ReactNode }) {
       setDistrict,
       loading,
       error,
+      reload: () => void load(district),
       savedIds,
       isSaved,
       toggleSaved,
     }),
     [
+      load,
       products,
       productById,
       offersByProduct,

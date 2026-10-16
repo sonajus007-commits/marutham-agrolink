@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState, Spinner } from '@marutham/ui';
 import type { OrderQueues } from '@marutham/lib';
 import { QueueSection } from './QueueSection';
+import { ErrorState } from '../../components/ErrorState';
 
 /* Delivery Tracking (Delivery Agent) / Collections (VCO) — the operational page.
  * The scan bar plus every live work queue, built from `queues` and the role.
@@ -12,6 +13,7 @@ export function AgentTracking({
   queues,
   loading,
   error,
+  onRetry,
   isVCO,
   canDeliver = false,
   onOpenView,
@@ -22,6 +24,8 @@ export function AgentTracking({
   queues: OrderQueues | null;
   loading: boolean;
   error: string | null;
+  /** Reload the queue now (the error state's Retry). */
+  onRetry?: () => void;
   isVCO: boolean;
   /** A VCO who also works last-mile deliveries — shows the hub-collect lane too. */
   canDeliver?: boolean;
@@ -121,15 +125,15 @@ export function AgentTracking({
     <>
       {loading ? (
         <Spinner label={t('agent.loadingOrders')} />
-      ) : error ? (
-        <EmptyState icon={typeof navigator !== 'undefined' && !navigator.onLine ? '📴' : undefined}>
-          {typeof navigator !== 'undefined' && !navigator.onLine
-            ? t(
-                'agent.offline.errorOffline',
-                'You’re offline. This list will refresh automatically when the connection returns.',
-              )
-            : error}
+      ) : error && typeof navigator !== 'undefined' && !navigator.onLine ? (
+        <EmptyState icon="📴">
+          {t(
+            'agent.offline.errorOffline',
+            'You’re offline. This list will refresh automatically when the connection returns.',
+          )}
         </EmptyState>
+      ) : error ? (
+        <ErrorState error={error} onRetry={onRetry} />
       ) : sections.length === 0 ? (
         <EmptyState icon="🎉">{t('agent.allClear')}</EmptyState>
       ) : (

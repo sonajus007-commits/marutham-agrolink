@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { subscribeOffline } from '@marutham/api-client';
+import { subscribeOffline, subscribeSlowNetwork } from '@marutham/api-client';
 import { onNetworkChange } from '../native';
 
-/* A slim, always-honest connectivity bar for the field portals.
+/* A slim, always-honest connectivity bar, mounted in every portal shell.
  *
  * Field roles (VCO, Delivery) work where signal dies, so the offline write queue
  * (commit 70fede8) is load-bearing here. This surfaces its two states the plan's
@@ -14,6 +14,8 @@ import { onNetworkChange } from '../native';
  * State comes from two live sources, no polling:
  *   • onNetworkChange — Capacitor Network on device, navigator.onLine in the browser.
  *   • subscribeOffline — the queue's own pending-write count (fires on enqueue/flush).
+ *   • subscribeSlowNetwork — true while any API request has run past SLOW_AFTER_MS,
+ *     so a weak signal reads as "slow connection", not a frozen screen.
  */
 export function OfflineBar() {
   const { t } = useTranslation();
@@ -34,7 +36,22 @@ export function OfflineBar() {
     };
   }, []);
 
+  const [slow, setSlow] = useState(false);
+
   useEffect(() => subscribeOffline(setPending), []);
+  useEffect(() => subscribeSlowNetwork(setSlow), []);
+
+  // Online, queue drained, but a request is dragging — say so.
+  if (online && pending === 0 && slow) {
+    return (
+      <div className="offline-bar is-slow" role="status" aria-live="polite">
+        <span className="offline-bar__dot" aria-hidden="true" />
+        <span className="offline-bar__msg">
+          {t('state.slow', 'Slow connection — this is taking longer than usual…')}
+        </span>
+      </div>
+    );
+  }
 
   // Nothing to say when the device is online and the queue has drained.
   if (online && pending === 0) return null;

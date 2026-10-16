@@ -29,6 +29,7 @@ import { usePushTarget } from '../../native/pushTarget';
 import { ProfileTab } from './ProfileTab';
 import { AddressBook } from './AddressBook';
 import { NotificationBell } from '../../components/NotificationBell';
+import { OfflineBar } from '../../components/OfflineBar';
 import './consumer.css';
 
 /* 'profile' is reachable from the header 👤 button, not the nav bar — a fifth
@@ -222,6 +223,8 @@ function ConsumerInner() {
           </IconButton>
         </div>
       </header>
+      {/* Connectivity: offline, pending sync, or a slow connection. Silent when healthy. */}
+      <OfflineBar />
 
       <div className="cons-body">
         <nav className="cons-side" aria-label={t('consumer.nav.label', 'Consumer sections')}>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { INPUT_CLASS, Modal, Spinner } from '@marutham/ui';
 import { api, type Employee } from '@marutham/api-client';
+import { ErrorState } from '../../components/ErrorState';
 
 /** Picks a Reporting Manager, scoped by the org unit (Work District + Department). */
 export function ManagerPickerModal({
@@ -23,6 +24,7 @@ export function ManagerPickerModal({
   const [managers, setManagers] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0); // bumped by Retry to re-run the load
   const [q, setQ] = useState('');
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export function ManagerPickerModal({
       .then((res) => setManagers(res.managers || []))
       .catch((e) => setError(e instanceof Error ? e.message : 'Could not load managers'))
       .finally(() => setLoading(false));
-  }, [open, workDistrict, department, excludeId]);
+  }, [open, workDistrict, department, excludeId, attempt]);
 
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -73,7 +75,7 @@ export function ManagerPickerModal({
           {loading ? (
             <Spinner />
           ) : error ? (
-            <p className="text-sm text-danger">{error}</p>
+            <ErrorState error={error} onRetry={() => setAttempt((n) => n + 1)} />
           ) : rows.length === 0 ? (
             <p className="py-3 text-center text-sm text-fg-muted">{t('admin.emp.mgrNone')}</p>
           ) : (

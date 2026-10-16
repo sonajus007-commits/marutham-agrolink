@@ -5,6 +5,7 @@ import { api, type AttendanceRow } from '@marutham/api-client';
 import { fmtDate } from '@marutham/lib';
 import { useAdminGeo } from './AdminGeoContext';
 import { AdminGeoFilter } from './AdminGeoFilter';
+import { ErrorState } from '../../components/ErrorState';
 
 /* Field-team attendance (A5, migration 057). Who is on duty today — the roster the
  * dashboards' vco_attendance / agents_online placeholders stood in for. Gated on
@@ -81,7 +82,7 @@ export function AttendancePage() {
       {loading ? (
         <Spinner />
       ) : error ? (
-        <EmptyState icon="⚠️">{error}</EmptyState>
+        <ErrorState error={error} onRetry={() => void load()} />
       ) : scoped.length === 0 ? (
         <EmptyState icon="🧑‍🌾">
           {t('admin.att.empty', 'No field staff checked in for this date.')}

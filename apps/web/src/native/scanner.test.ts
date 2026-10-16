@@ -10,12 +10,21 @@ const installModule = vi.fn();
 const scan = vi.fn();
 const readBarcodesFromImage = vi.fn();
 const getPhoto = vi.fn();
+const checkPermissions = vi.fn();
+const reportPermissionDenied = vi.fn();
+vi.mock('./permissions', () => ({
+  isDeniedState: (s: string) => s === 'denied',
+  reportPermissionDenied: (f: string) => reportPermissionDenied(f),
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: () => isNativePlatform(), getPlatform: () => getPlatform() },
 }));
 vi.mock('@capacitor/camera', () => ({
-  Camera: { getPhoto: (o: unknown) => getPhoto(o) },
+  Camera: {
+    getPhoto: (o: unknown) => getPhoto(o),
+    checkPermissions: () => checkPermissions(),
+  },
   CameraResultType: { Uri: 'uri' },
   CameraSource: { Camera: 'CAMERA' },
 }));
@@ -37,6 +46,7 @@ beforeEach(() => {
   getPlatform.mockReturnValue('android');
   installModule.mockResolvedValue(undefined);
   getPhoto.mockResolvedValue({ path: 'file:///photo.jpg' });
+  checkPermissions.mockResolvedValue({ camera: 'granted' });
 });
 
 describe('scanQrCode', () => {
@@ -96,5 +106,22 @@ describe('scanQrCode', () => {
 
     await expect(scanQrCode()).resolves.toEqual({ kind: 'failed' });
     expect(isModuleAvailable).not.toHaveBeenCalled();
+  });
+});
+
+describe('scanQrCode — camera permission', () => {
+  it('reports a blocked camera instead of a generic failure', async () => {
+    isModuleAvailable.mockResolvedValue({ available: false });
+    getPhoto.mockRejectedValue(new Error('User denied access to camera'));
+    checkPermissions.mockResolvedValue({ camera: 'denied' });
+    await expect(scanQrCode()).resolves.toEqual({ kind: 'denied' });
+    expect(reportPermissionDenied).toHaveBeenCalledWith('camera');
+  });
+
+  it('stays a plain failure when the camera is allowed', async () => {
+    isModuleAvailable.mockResolvedValue({ available: false });
+    getPhoto.mockRejectedValue(new Error('boom'));
+    await expect(scanQrCode()).resolves.toEqual({ kind: 'failed' });
+    expect(reportPermissionDenied).not.toHaveBeenCalled();
   });
 });

@@ -24,6 +24,7 @@ import {
   type QueueMethod,
 } from '@marutham/lib';
 import { apiFetch, ApiError } from './client';
+import { getToken } from './session';
 import { storeAdd, storeAll, storeReplace, storeClear } from './offlineStore';
 
 /** Thrown by apiFetchOffline when a write could not be sent and was parked
@@ -110,6 +111,10 @@ export async function queueWrite(req: {
 // A server response (even an error) yields its status; a network failure yields
 // null, which the rules read as "still offline".
 async function sendOnce(entry: QueuedRequest): Promise<number | null> {
+  // No session (expired, mid re-login): hold the queue rather than replaying into
+  // a 401 that would drop the user's parked work. The next flush after sign-in
+  // picks it up.
+  if (!getToken()) return null;
   try {
     await apiFetch(entry.method, entry.path, entry.body);
     return 200;

@@ -60,6 +60,9 @@ export function ScanSheet({
         ),
         'er',
       );
+    } else if (r.kind === 'denied') {
+      // <PermissionNotice> already explains how to re-allow the camera.
+      inputRef.current?.focus();
     } else if (r.kind === 'failed') {
       toast(t('agent.scan.cameraFailed', "Couldn't open the camera. Type the code instead."), 'er');
     }

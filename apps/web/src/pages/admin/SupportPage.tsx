@@ -12,6 +12,7 @@ import {
 import { api, type SupportTicket, type SupportStatus } from '@marutham/api-client';
 import { fmtDateShort } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
+import { ErrorState } from '../../components/ErrorState';
 
 /* Staff queue for support tickets (migration 055). Gated on customer_complaints:view
  * in the nav; the PATCH is re-checked server-side for :edit. Working a ticket — a
@@ -69,7 +70,7 @@ export function SupportPage() {
   const shown = tickets.filter((tk) => tk.status === status);
 
   if (loading && tickets.length === 0) return <Spinner />;
-  if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
+  if (error) return <ErrorState className="m-4" error={error} onRetry={() => void load()} />;
 
   return (
     <>

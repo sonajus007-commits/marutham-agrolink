@@ -166,7 +166,19 @@ export default async function CataloguePage({ searchParams }: { searchParams: Pr
           </div>
         ) : null}
 
-        {products.length === 0 ? (
+        {products.length === 0 && (q || category) ? (
+          // Filtered to nothing — say THAT, not "the store is empty", and offer the way out.
+          <div className="py-24 text-center" role="status">
+            <p className="text-fg text-lg font-semibold">🔍 {t.catalogue.noMatch(q || category)}</p>
+            <p className="text-fg-muted mt-2">{t.catalogue.noMatchHint}</p>
+            <Link
+              href={href({ q: undefined, category: undefined, page: undefined })}
+              className="border-border text-forest-700 hover:border-forest-500 mt-5 inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-caption font-semibold no-underline"
+            >
+              {t.catalogue.clearFilters}
+            </Link>
+          </div>
+        ) : products.length === 0 ? (
           <p className="text-fg-muted py-24 text-center">{t.catalogue.empty}</p>
         ) : (
           <>

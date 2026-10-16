@@ -20,6 +20,7 @@ import {
 import { semantic } from '@marutham/tokens';
 import { fmtMoney } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
+import { ErrorState } from '../../components/ErrorState';
 
 /**
  * Profit & loss + the operating-expense ledger (migration 062), for the Finance home.
@@ -43,6 +44,7 @@ export function ExpensesPanel({
   const toast = useToast();
   const [list, setList] = useState<ExpenseListResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [toDelete, setToDelete] = useState<Expense | null>(null);
   const [busy, setBusy] = useState(false);
@@ -56,10 +58,16 @@ export function ExpensesPanel({
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       setList(await api.getExpenses());
-    } catch {
-      toast(t('admin.finance.exp.loadFailed', 'Could not load expenses.'), 'er');
+    } catch (e) {
+      // Inline, not a toast: an empty ledger must never pass for "no expenses".
+      setLoadError(
+        e instanceof Error
+          ? e.message
+          : t('admin.finance.exp.loadFailed', 'Could not load expenses.'),
+      );
     } finally {
       setLoading(false);
     }
@@ -192,8 +200,9 @@ export function ExpensesPanel({
         title={t('admin.finance.exp.title', 'Expenses this month')}
         loading={loading && !list}
         height="auto"
+        error={loadError ? <ErrorState error={loadError} onRetry={() => void load()} /> : undefined}
         empty={
-          !loading && (list?.expenses.length ?? 0) === 0
+          !loading && !loadError && (list?.expenses.length ?? 0) === 0
             ? t('admin.finance.exp.none', 'No expenses recorded this month.')
             : false
         }

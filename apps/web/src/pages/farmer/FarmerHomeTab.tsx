@@ -41,6 +41,7 @@ import { FarmerOrderRow } from './FarmerOrderRow';
 import { FarmerOrderSheet } from './FarmerOrderSheet';
 import { TodaysSupplyCard } from './TodaysSupplyCard';
 import { useSellerOrderNotes } from './sellerOrderNotes';
+import { ErrorState } from '../../components/ErrorState';
 
 const FarmerInsights = lazy(() => import('./FarmerInsights'));
 
@@ -81,15 +82,26 @@ export function FarmerHomeTab({
   // Which order's detail sheet is open (opened from a popup row).
   const [openOrder, setOpenOrder] = useState<Order | null>(null);
 
+  const [sideError, setSideError] = useState<string | null>(null);
   const loadSide = useCallback(async () => {
     // Payouts + listings are secondary to the orders the parent already loads —
-    // a failure here must not blank the dashboard, so each is swallowed to empty.
+    // a failure here must not blank the dashboard, so each falls back to empty.
+    // But it is FLAGGED: ₹0 earnings from a failed read must not pass for real.
+    setSideError(null);
+    let failed: unknown = null;
     const [p, l] = await Promise.all([
-      api.getPayouts().catch(() => ({ payouts: [] as Payout[] })),
-      api.getMyListings().catch(() => ({ listings: [] as FarmerListing[] })),
+      api.getPayouts().catch((e) => {
+        failed = e;
+        return { payouts: [] as Payout[] };
+      }),
+      api.getMyListings().catch((e) => {
+        failed = e;
+        return { listings: [] as FarmerListing[] };
+      }),
     ]);
     setPayouts(p.payouts || []);
     setListings(l.listings || []);
+    if (failed) setSideError(failed instanceof Error ? failed.message : String(failed));
   }, []);
 
   useEffect(() => {
@@ -126,7 +138,7 @@ export function FarmerHomeTab({
   }, []);
 
   if (ordersLoading && orders.length === 0) return <Spinner />;
-  if (ordersError) return <EmptyState icon="⚠️">{ordersError}</EmptyState>;
+  if (ordersError) return <ErrorState className="m-4" error={ordersError} onRetry={reload} />;
 
   return (
     <>
@@ -150,6 +162,10 @@ export function FarmerHomeTab({
             </div>
           </section>
         </FadeIn>
+      ) : null}
+
+      {sideError ? (
+        <ErrorState className="mb-3" error={sideError} onRetry={() => void loadSide()} />
       ) : null}
 
       <FadeIn>

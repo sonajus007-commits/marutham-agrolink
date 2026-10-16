@@ -18,6 +18,7 @@ import { PayoutDetailSheet, PAYOUT_STATUS_TONE } from './PayoutDetailSheet';
 import { useAdminGeo } from './AdminGeoContext';
 import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
+import { ErrorState } from '../../components/ErrorState';
 
 const farmerName = (p: AdminPayout) => `${p.farmer?.fname || ''} ${p.farmer?.lname || ''}`.trim();
 const sumAmount = (list: AdminPayout[]) =>
@@ -149,7 +150,7 @@ export function PayoutsPage() {
   }
 
   if (loading && payouts.length === 0) return <Spinner />;
-  if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
+  if (error) return <ErrorState className="m-4" error={error} onRetry={() => void load()} />;
 
   return (
     <>

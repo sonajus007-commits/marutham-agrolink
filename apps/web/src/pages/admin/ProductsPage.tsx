@@ -6,6 +6,7 @@ import { fmtMoney, can, type Product } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { ProductEditSheet } from './ProductEditSheet';
 import { useTableLabels } from './useTableLabels';
+import { ErrorState } from '../../components/ErrorState';
 
 /** First district price (rupees) for the summary column, or null. */
 function firstPrice(p: Product): AdminDistrictPrice | null {
@@ -161,7 +162,7 @@ export function ProductsPage() {
   );
 
   if (loading && products.length === 0) return <Spinner />;
-  if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
+  if (error) return <ErrorState className="m-4" error={error} onRetry={() => void load()} />;
 
   return (
     <>

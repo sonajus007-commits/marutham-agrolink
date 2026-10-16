@@ -19,6 +19,7 @@ import { AddressFields } from '../../components/AddressFields';
 import { useAdminGeo } from './AdminGeoContext';
 import { useTableLabels } from './useTableLabels';
 import { HubDetailSheet } from './HubDetailSheet';
+import { ErrorState } from '../../components/ErrorState';
 
 /* Hub network management. Lists a district's main hub and its taluk hubs and lets a
  * manager (hub_management 'edit') set each hub's name, geo, active flag and
@@ -289,7 +290,7 @@ export function HubsPage() {
       ) : loading ? (
         <Spinner />
       ) : error ? (
-        <EmptyState icon="⚠️">{error}</EmptyState>
+        <ErrorState error={error} onRetry={() => void load()} />
       ) : (
         <Table
           labels={tableLabels}

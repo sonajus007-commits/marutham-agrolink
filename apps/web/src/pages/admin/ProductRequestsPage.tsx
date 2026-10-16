@@ -12,6 +12,7 @@ import {
 import { api, type ProductRequest, type ProductRequestStatus } from '@marutham/api-client';
 import { fmtDateShort } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
+import { ErrorState } from '../../components/ErrorState';
 
 /* The reviewer's queue for seller product requests (migration 054). Approving one
  * creates the catalogue product (the admin assigns its code); rejecting records a
@@ -64,7 +65,7 @@ export function ProductRequestsPage() {
   const shown = requests.filter((r) => r.status === status);
 
   if (loading && requests.length === 0) return <Spinner />;
-  if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
+  if (error) return <ErrorState className="m-4" error={error} onRetry={() => void load()} />;
 
   return (
     <>

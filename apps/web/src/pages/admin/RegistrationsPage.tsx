@@ -7,6 +7,7 @@ import { RegistrationDetailSheet, REG_STATUS_TONE } from './RegistrationDetailSh
 import { useAdminGeo } from './AdminGeoContext';
 import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
+import { ErrorState } from '../../components/ErrorState';
 
 const statusOf = (r: Registration) => String(r.approval_status || 'pending_review');
 
@@ -132,7 +133,7 @@ export function RegistrationsPage() {
   );
 
   if (loading && regs.length === 0) return <Spinner />;
-  if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
+  if (error) return <ErrorState className="m-4" error={error} onRetry={() => void load()} />;
 
   return (
     <>

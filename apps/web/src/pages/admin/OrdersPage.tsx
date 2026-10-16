@@ -15,6 +15,7 @@ import { AdminOrderSheet } from './AdminOrderSheet';
 import { useAdminGeo } from './AdminGeoContext';
 import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
+import { ErrorState } from '../../components/ErrorState';
 
 const statusOf = (o: Order) => displayStatus(o);
 
@@ -131,7 +132,7 @@ export function OrdersPage() {
   );
 
   if (loading && orders.length === 0) return <Spinner />;
-  if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
+  if (error) return <ErrorState className="m-4" error={error} onRetry={() => void load()} />;
 
   return (
     <>

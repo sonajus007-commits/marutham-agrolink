@@ -594,6 +594,27 @@ export const resources = {
         'You’re offline. Your work is saved and will sync when you reconnect.',
       'agent.offline.errorOffline':
         'You’re offline. This list will refresh automatically when the connection returns.',
+      // App-wide UI states: session expiry, slow network, errors, access, permissions
+      'state.sessionExpired': 'Your session has expired. Please sign in again.',
+      'state.slow': 'Slow connection — this is taking longer than usual…',
+      'state.retry': 'Try again',
+      'state.error.title': 'Couldn’t load this',
+      'state.error.body': 'Something went wrong. Please try again.',
+      'state.error.offlineTitle': 'You’re offline',
+      'state.error.offlineBody': 'Check your connection, then try again.',
+      'state.error.slowTitle': 'The connection is too slow',
+      'state.error.slowBody': 'It took too long to respond. Please try again.',
+      'state.noAccess.title': 'No access',
+      'state.noAccess.body':
+        'Your account doesn’t have permission to open this page. If you need it, ask your administrator.',
+      'state.noAccess.home': 'Go to my home',
+      'state.noAccess.signOut': 'Sign in as someone else',
+      'state.perm.cameraTitle': 'Camera access is blocked',
+      'state.perm.locationTitle': 'Location access is blocked',
+      'state.perm.howDevice':
+        'Open your phone’s Settings → Apps → Marutham AgroLink → Permissions, allow it, then try again.',
+      'state.perm.howBrowser':
+        'Click the icon left of the address bar, allow it for this site, then try again.',
       // Agent: order view sheet
       'agent.view.qr': 'Order QR — scan to advance',
       'agent.view.item': 'Item',
@@ -3065,6 +3086,27 @@ export const resources = {
         'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள். உங்கள் வேலை சேமிக்கப்பட்டு, மீண்டும் இணையும்போது ஒத்திசைக்கப்படும்.',
       'agent.offline.errorOffline':
         'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள். இணைப்பு திரும்பியதும் இந்தப் பட்டியல் தானாகப் புதுப்பிக்கப்படும்.',
+      // App-wide UI states: session expiry, slow network, errors, access, permissions
+      'state.sessionExpired': 'உங்கள் அமர்வு காலாவதியாகிவிட்டது. மீண்டும் உள்நுழையவும்.',
+      'state.slow': 'இணைப்பு மெதுவாக உள்ளது — வழக்கத்தை விட நேரம் ஆகிறது…',
+      'state.retry': 'மீண்டும் முயற்சிக்கவும்',
+      'state.error.title': 'இதை ஏற்ற முடியவில்லை',
+      'state.error.body': 'ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.',
+      'state.error.offlineTitle': 'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள்',
+      'state.error.offlineBody': 'உங்கள் இணைப்பைச் சரிபார்த்து, மீண்டும் முயற்சிக்கவும்.',
+      'state.error.slowTitle': 'இணைப்பு மிகவும் மெதுவாக உள்ளது',
+      'state.error.slowBody': 'பதில் வர அதிக நேரம் ஆனது. மீண்டும் முயற்சிக்கவும்.',
+      'state.noAccess.title': 'அணுகல் இல்லை',
+      'state.noAccess.body':
+        'இந்தப் பக்கத்தைத் திறக்க உங்கள் கணக்கிற்கு அனுமதி இல்லை. தேவைப்பட்டால், உங்கள் நிர்வாகியிடம் கேளுங்கள்.',
+      'state.noAccess.home': 'என் முகப்புக்குச் செல்',
+      'state.noAccess.signOut': 'வேறொருவராக உள்நுழை',
+      'state.perm.cameraTitle': 'கேமரா அணுகல் தடுக்கப்பட்டுள்ளது',
+      'state.perm.locationTitle': 'இருப்பிட அணுகல் தடுக்கப்பட்டுள்ளது',
+      'state.perm.howDevice':
+        'உங்கள் தொலைபேசியின் Settings → Apps → Marutham AgroLink → Permissions திறந்து, அனுமதித்து, மீண்டும் முயற்சிக்கவும்.',
+      'state.perm.howBrowser':
+        'முகவரிப் பட்டிக்கு இடதுபுறம் உள்ள ஐகானைக் கிளிக் செய்து, இந்தத் தளத்திற்கு அனுமதித்து, மீண்டும் முயற்சிக்கவும்.',
       // Agent: order view sheet
       'agent.view.qr': 'ஆர்டர் QR — முன்னேற ஸ்கேன் செய்',
       'agent.view.item': 'பொருள்',

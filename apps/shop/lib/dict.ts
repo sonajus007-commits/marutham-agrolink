@@ -82,6 +82,10 @@ export interface Dict {
     prev: string;
     next: string;
     resultsFor: (q: string) => string;
+    /** A search or category filter that matched nothing — distinct from an empty store. */
+    noMatch: (q: string) => string;
+    noMatchHint: string;
+    clearFilters: string;
     showing: (from: number, to: number, total: number) => string;
   };
   product: {
@@ -208,6 +212,9 @@ const en: Dict = {
     prev: 'Previous',
     next: 'Next',
     resultsFor: (q) => `Results for “${q}”`,
+    noMatch: (q) => `No produce matches “${q}”`,
+    noMatchHint: 'Check the spelling, try a shorter word, or browse all produce.',
+    clearFilters: 'Browse all produce',
     showing: (from, to, total) => `Showing ${from}–${to} of ${total}`,
   },
   product: {
@@ -335,6 +342,10 @@ const ta: Dict = {
     prev: 'முந்தையது',
     next: 'அடுத்தது',
     resultsFor: (q) => `“${q}” க்கான முடிவுகள்`,
+    noMatch: (q) => `“${q}” உடன் பொருந்தும் விளைபொருள் இல்லை`,
+    noMatchHint:
+      'எழுத்துப்பிழையைச் சரிபார்க்கவும், சிறிய சொல்லை முயற்சிக்கவும், அல்லது எல்லா விளைபொருட்களையும் பார்க்கவும்.',
+    clearFilters: 'எல்லா விளைபொருட்களையும் பார்க்க',
     showing: (from, to, total) => `${total} இல் ${from}–${to} காட்டப்படுகிறது`,
   },
   product: {

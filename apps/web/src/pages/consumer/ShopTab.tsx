@@ -15,6 +15,7 @@ import { useLocations } from '../../hooks/useLocations';
 import { ProductCard } from './ProductCard';
 import { ProductDetailSheet } from './ProductDetailSheet';
 import { useToast } from '../../components/Toast';
+import { ErrorState } from '../../components/ErrorState';
 
 export function ShopTab({
   onGoToCart,
@@ -38,6 +39,7 @@ export function ShopTab({
     setDistrict,
     loading,
     error,
+    reload,
   } = useConsumerData();
   const cart = useCart();
   const toast = useToast();
@@ -265,7 +267,7 @@ export function ShopTab({
       {loading ? (
         <Spinner />
       ) : error ? (
-        <EmptyState>{error}</EmptyState>
+        <ErrorState error={error} onRetry={reload} />
       ) : filtered.length === 0 ? (
         <EmptyState icon="🔍">
           {search

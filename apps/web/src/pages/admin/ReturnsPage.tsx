@@ -7,6 +7,7 @@ import { ReturnDetailSheet, RETURN_STATUS_TONE, returnStatus } from './ReturnDet
 import { useAdminGeo } from './AdminGeoContext';
 import { AdminGeoFilter } from './AdminGeoFilter';
 import { useTableLabels } from './useTableLabels';
+import { ErrorState } from '../../components/ErrorState';
 
 export function ReturnsPage() {
   const { t, i18n } = useTranslation();
@@ -127,7 +128,7 @@ export function ReturnsPage() {
   );
 
   if (loading && returns.length === 0) return <Spinner />;
-  if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
+  if (error) return <ErrorState className="m-4" error={error} onRetry={() => void load()} />;
 
   return (
     <>

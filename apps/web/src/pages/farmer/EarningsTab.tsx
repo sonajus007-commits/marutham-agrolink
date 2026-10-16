@@ -24,6 +24,7 @@ import { chartPalette, colors } from '@marutham/tokens';
 import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
 import { useAuth } from '../../auth/AuthContext';
+import { ErrorState } from '../../components/ErrorState';
 
 export function EarningsTab({ onRenew }: { onRenew: () => void }) {
   const { t, i18n } = useTranslation();
@@ -136,7 +137,7 @@ export function EarningsTab({ onRenew }: { onRenew: () => void }) {
   );
 
   if (loading && orders.length === 0 && payouts.length === 0) return <Spinner />;
-  if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
+  if (error) return <ErrorState className="m-4" error={error} onRetry={() => void load()} />;
 
   return (
     <>

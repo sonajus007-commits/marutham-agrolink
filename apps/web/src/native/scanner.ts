@@ -15,6 +15,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { BarcodeScanner, BarcodeFormat } from '@capacitor-mlkit/barcode-scanning';
+import { reportIfCameraDenied } from './camera';
 
 /** True only on a device, where the camera scanner can open. */
 export const scannerAvailable = (): boolean => Capacitor.isNativePlatform();
@@ -24,6 +25,8 @@ export type ScanOutcome =
   | { kind: 'cancelled' }
   /** A photo was taken but held no readable QR. */
   | { kind: 'unreadable' }
+  /** The camera permission is blocked — already explained by <PermissionNotice>. */
+  | { kind: 'denied' }
   | { kind: 'failed' };
 
 const QR = [BarcodeFormat.QrCode];
@@ -59,7 +62,8 @@ async function scanFromPhoto(): Promise<ScanOutcome> {
     return code ? { kind: 'code', code } : { kind: 'unreadable' };
   } catch (e) {
     // getPhoto rejects on cancel and on a denied camera permission alike.
-    return isCancel(e) ? { kind: 'cancelled' } : { kind: 'failed' };
+    if (isCancel(e)) return { kind: 'cancelled' };
+    return (await reportIfCameraDenied()) ? { kind: 'denied' } : { kind: 'failed' };
   }
 }
 

@@ -303,6 +303,7 @@ function AgentPageInner() {
                 queues={queues}
                 loading={loading}
                 error={error}
+                onRetry={() => void reload()}
                 isVCO={isVCO}
                 canDeliver={canDeliver}
                 onOpenView={(id) => setSheet({ kind: 'view', orderId: id })}

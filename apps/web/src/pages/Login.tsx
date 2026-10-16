@@ -1,9 +1,9 @@
-import { useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@marutham/ui';
 import { api, ApiError } from '@marutham/api-client';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth, hasSessionExpiredNotice, clearSessionExpiredNotice } from '../auth/AuthContext';
 
 type Mode = 'password' | 'otp' | 'forgot';
 
@@ -20,7 +20,12 @@ export function Login() {
   const [confirm, setConfirm] = useState('');
   const [sent, setSent] = useState(false);
   const [devOtp, setDevOtp] = useState<string | null>(null);
-  const [error, setError] = useState('');
+  // Arriving here because the session ran out → say so instead of a bare form.
+  const [error, setError] = useState(() =>
+    hasSessionExpiredNotice() ? t('state.sessionExpired') : '',
+  );
+  // Read once (above), then cleared so a reload doesn't repeat it.
+  useEffect(() => clearSessionExpiredNotice(), []);
   const [ok, setOk] = useState('');
   const [busy, setBusy] = useState(false);
 

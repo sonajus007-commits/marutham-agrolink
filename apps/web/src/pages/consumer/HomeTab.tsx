@@ -46,6 +46,7 @@ import { ComingSoon } from './ComingSoon';
 import { BuyAgainModal } from './BuyAgainModal';
 import { TrackPickerModal } from './TrackPickerModal';
 import { FadeIn } from '../../components/FadeIn';
+import { ErrorState } from '../../components/ErrorState';
 
 // Lazy so the ~1 MB ECharts bundle stays off the dashboard's first paint — it
 // only loads once a buyer with order history scrolls the insights into being.
@@ -97,7 +98,7 @@ export function HomeTab({
   onPickCategory: (group: string) => void;
 }) {
   const { t, i18n } = useTranslation();
-  const { orders, groups, loading, error } = useOrders();
+  const { orders, groups, loading, error, refresh } = useOrders();
   const { products, offersByProduct, savedIds, productById, district } = useConsumerData();
   // Saved products that are in the current catalogue (available in the buyer's area).
   const saved = [...savedIds].map((id) => productById[id]).filter((p): p is Product => !!p);
@@ -212,7 +213,7 @@ export function HomeTab({
   ];
 
   if (loading && orders.length === 0) return <Spinner />;
-  if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
+  if (error) return <ErrorState className="m-4" error={error} onRetry={() => void refresh()} />;
 
   const submitSearch = () => {
     const query = q.trim();

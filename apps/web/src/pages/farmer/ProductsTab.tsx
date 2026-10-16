@@ -13,6 +13,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
 import { ListingCard } from './ListingCard';
 import { ListingFormSheet } from './ListingFormSheet';
+import { ErrorState } from '../../components/ErrorState';
 
 /** A product request is a listing with no price, not yet listed. */
 const REQUEST_CUTOFF = DEFAULT_CUTOFF;
@@ -130,7 +131,7 @@ export function ProductsTab() {
   const openRequests = myRequests.filter((r) => r.status !== 'approved');
 
   if (loading && listings.length === 0) return <Spinner />;
-  if (error) return <EmptyState icon="⚠️">{error}</EmptyState>;
+  if (error) return <ErrorState className="m-4" error={error} onRetry={() => void load()} />;
 
   return (
     <>

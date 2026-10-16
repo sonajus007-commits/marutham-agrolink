@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Spinner, EmptyState } from '@marutham/ui';
+import { Button, Spinner } from '@marutham/ui';
 import { api, type RolesResponse } from '@marutham/api-client';
 import { can } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/Toast';
+import { ErrorState } from '../../components/ErrorState';
 
 type Draft = Record<string, { actions: string[]; scope: string }>;
 
@@ -22,8 +23,10 @@ export function RolesPage() {
   const [roleId, setRoleId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Draft>({});
   const [saving, setSaving] = useState(false);
+  const [attempt, setAttempt] = useState(0); // bumped by Retry to re-run the load
 
   useEffect(() => {
+    setError(null);
     api
       .getRoles()
       .then((res) => {
@@ -31,7 +34,7 @@ export function RolesPage() {
         if (res.roles.length) setRoleId(res.roles[0].id);
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Could not load roles'));
-  }, []);
+  }, [attempt]);
 
   // Reset the working draft whenever the selected role changes.
   useEffect(() => {
@@ -60,7 +63,8 @@ export function RolesPage() {
     });
   }, [data, roleId, draft]);
 
-  if (error) return <EmptyState>{error}</EmptyState>;
+  if (error)
+    return <ErrorState className="m-4" error={error} onRetry={() => setAttempt((n) => n + 1)} />;
   if (!data) return <Spinner />;
 
   const toggle = (moduleKey: string, action: string) => {

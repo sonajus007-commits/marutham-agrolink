@@ -8,6 +8,7 @@
  * its action (delivering an order, saving a profile) without it. */
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
+import { isDeniedState, reportPermissionDenied } from './permissions';
 
 export interface Coords {
   lat: number;
@@ -22,11 +23,26 @@ export interface Coords {
 export async function getCurrentPosition(timeoutMs = 10_000): Promise<Coords | null> {
   try {
     if (Capacitor.isNativePlatform()) {
-      const pos = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: timeoutMs,
-      });
-      return { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+      try {
+        const pos = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: timeoutMs,
+        });
+        return {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+        };
+      } catch (e) {
+        // Still "no fix" to the caller, but a blocked permission gets explained.
+        try {
+          const perm = await Geolocation.checkPermissions();
+          if (isDeniedState(perm.location)) reportPermissionDenied('location');
+        } catch {
+          /* can't tell — stay quiet */
+        }
+        throw e;
+      }
     }
 
     if (typeof navigator === 'undefined' || !navigator.geolocation) return null;
@@ -38,7 +54,11 @@ export async function getCurrentPosition(timeoutMs = 10_000): Promise<Coords | n
             lng: pos.coords.longitude,
             accuracy: pos.coords.accuracy,
           }),
-        () => resolve(null), // denied / unavailable / timed out — all mean "no fix"
+        (err) => {
+          // denied / unavailable / timed out — all mean "no fix"; a denial is explained.
+          if (err.code === 1 /* PERMISSION_DENIED */) reportPermissionDenied('location');
+          resolve(null);
+        },
         { enableHighAccuracy: true, timeout: timeoutMs },
       );
     });

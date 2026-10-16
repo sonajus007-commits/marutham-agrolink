@@ -4,6 +4,7 @@
  * shape whichever path a photo came in through. */
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { isDeniedState, reportPermissionDenied } from './permissions';
 
 /** True only on a device, where the native camera prompt is available. */
 export const cameraAvailable = (): boolean => Capacitor.isNativePlatform();
@@ -21,8 +22,24 @@ export async function capturePhoto(): Promise<string | null> {
     });
     return photo.dataUrl ?? null;
   } catch {
-    // getPhoto rejects on cancel and on a denied permission alike; both mean
-    // "no photo this time", so there is nothing to surface — the farmer can retry.
+    // getPhoto rejects on cancel and on a denied permission alike. A cancel needs
+    // no message; a denial does, because retrying can never work until the user
+    // re-allows the camera.
+    await reportIfCameraDenied();
     return null;
   }
+}
+
+/** After a failed capture: if the camera permission is blocked, say so. */
+export async function reportIfCameraDenied(): Promise<boolean> {
+  try {
+    const perm = await Camera.checkPermissions();
+    if (isDeniedState(perm.camera)) {
+      reportPermissionDenied('camera');
+      return true;
+    }
+  } catch {
+    /* can't tell — stay quiet */
+  }
+  return false;
 }
