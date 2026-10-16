@@ -195,7 +195,7 @@ export default async function ProductPage({ params }: Params) {
                 {availLabel}
               </span>
               {product.avg_rating ? (
-                <span className="bg-gold text-fg inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-caption font-bold">
+                <span className="bg-gold-500 text-fg inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-caption font-bold">
                   <span aria-hidden="true">★</span>
                   {product.avg_rating}
                 </span>
@@ -203,7 +203,7 @@ export default async function ProductPage({ params }: Params) {
               {product.category ? (
                 <Link
                   href={`/category/${categorySlug(product.category)}`}
-                  className="bg-muted text-forest hover:bg-mist rounded-full px-3 py-1 text-caption font-bold no-underline"
+                  className="bg-mist text-forest-700 hover:bg-mist rounded-full px-3 py-1 text-caption font-bold no-underline"
                 >
                   {product.category}
                 </Link>
@@ -254,7 +254,7 @@ export default async function ProductPage({ params }: Params) {
 
 function Tag({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-forest">
+    <span className="rounded-full bg-mist px-3 py-1 text-xs font-bold text-forest-700">
       {children}
     </span>
   );
@@ -265,18 +265,18 @@ function Breadcrumb({ t, name }: { t: Dict; name: string }) {
     <nav aria-label="Breadcrumb">
       <ol className="flex list-none flex-wrap items-center gap-2 p-0 text-xs font-semibold text-fg-muted">
         <li>
-          <Link href="/" className="no-underline hover:text-forest hover:underline">
+          <Link href="/" className="no-underline hover:text-forest-700 hover:underline">
             {t.product.home}
           </Link>
         </li>
         <li aria-hidden="true">/</li>
         <li>
-          <Link href="/products" className="no-underline hover:text-forest hover:underline">
+          <Link href="/products" className="no-underline hover:text-forest-700 hover:underline">
             {t.product.all}
           </Link>
         </li>
         <li aria-hidden="true">/</li>
-        <li aria-current="page" className="text-forest">
+        <li aria-current="page" className="text-forest-700">
           {name}
         </li>
       </ol>
@@ -293,7 +293,7 @@ function Breadcrumb({ t, name }: { t: Dict; name: string }) {
 function Offers({ t, offers, unit }: { t: Dict; offers: PublicListing[]; unit: string }) {
   return (
     <section className="mt-14">
-      <h2 className="font-display text-2xl font-bold text-forest">{t.product.offers}</h2>
+      <h2 className="text-2xl font-bold text-forest-700">{t.product.offers}</h2>
       <p className="mt-1 text-sm text-fg-muted">
         {offers.length ? t.product.offersSub : t.product.privacy}
       </p>
@@ -317,7 +317,7 @@ function Offers({ t, offers, unit }: { t: Dict; offers: PublicListing[]; unit: s
                 {/* bg-gold + dark ink (6.90:1). `text-gold` is 2.21:1 on white. */}
                 {o.farmer_avg_rating ? (
                   <p className="mt-1">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-gold px-2 py-0.5 text-[11px] font-bold text-fg">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gold-500 px-2 py-0.5 text-[11px] font-bold text-fg">
                       <span aria-hidden="true">★</span>
                       {o.farmer_avg_rating}
                     </span>
@@ -329,7 +329,7 @@ function Offers({ t, offers, unit }: { t: Dict; offers: PublicListing[]; unit: s
                 </p>
               </div>
               <div className="shrink-0 text-right">
-                <span className="text-xl font-extrabold text-forest">
+                <span className="text-xl font-extrabold text-forest-700">
                   {fmtMoney(o.farmer_price)}
                 </span>
                 {unit ? <span className="block text-[11px] text-fg-muted">/{unit}</span> : null}
@@ -355,7 +355,7 @@ function DistrictPrices({
 
   return (
     <section className="mt-14 pb-8">
-      <h2 className="font-display text-2xl font-bold text-forest">{t.product.prices}</h2>
+      <h2 className="text-2xl font-bold text-forest-700">{t.product.prices}</h2>
       <p className="mt-1 text-sm text-fg-muted">{t.product.pricesSub}</p>
 
       <div className="mt-6 overflow-x-auto">
@@ -370,7 +370,7 @@ function DistrictPrices({
             {rows.map((r) => (
               <tr key={r.district} className="border-b border-border">
                 <td className="py-2 pr-4 text-fg-muted">{r.district}</td>
-                <td className="py-2 text-right font-bold text-forest">
+                <td className="py-2 text-right font-bold text-forest-700">
                   {fmtMoney(r.amount)}
                   {unit ? <span className="font-normal text-fg-muted">/{unit}</span> : null}
                 </td>

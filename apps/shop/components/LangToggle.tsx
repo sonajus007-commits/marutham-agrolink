@@ -30,8 +30,8 @@ export function LangToggle({ current }: { current: Lang }) {
           aria-pressed={current === lang}
           className={`cursor-pointer rounded-full border-0 px-3 py-1 text-xs font-bold transition-colors ${
             current === lang
-              ? 'bg-forest text-white'
-              : 'bg-transparent text-fg-muted hover:text-forest'
+              ? 'bg-forest-700 text-surface'
+              : 'bg-transparent text-fg-muted hover:text-forest-700'
           } ${lang === 'ta' ? 'font-[Noto_Serif_Tamil]' : ''}`}
         >
           {lang === 'en' ? 'EN' : 'த'}

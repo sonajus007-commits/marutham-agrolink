@@ -55,15 +55,15 @@ export function ProductCard({
             {productEmoji(product.name)}
           </span>
         )}
-        <span className="mt-2 inline-block rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-forest">
+        <span className="mt-2 inline-block rounded-full bg-mist px-2 py-0.5 text-[10px] font-bold text-forest-700">
           {t.fresh.badge}
         </span>
-        <h3 className="mt-2 text-sm font-bold text-fg hover:text-forest hover:underline">
+        <h3 className="mt-2 text-sm font-bold text-fg hover:text-forest-700 hover:underline">
           {product.name}
         </h3>
       </Link>
 
-      <p className="mt-1 text-lg font-extrabold text-forest">
+      <p className="mt-1 text-lg font-extrabold text-forest-700">
         {price ? (
           <>
             {fmtMoney(price.amount)}
@@ -79,7 +79,7 @@ export function ProductCard({
           products on the homepage happen to carry a rating. */}
       {product.avg_rating ? (
         <p className="mt-1">
-          <span className="inline-flex items-center gap-1 rounded-full bg-gold px-2 py-0.5 text-[11px] font-bold text-fg">
+          <span className="inline-flex items-center gap-1 rounded-full bg-gold-500 px-2 py-0.5 text-[11px] font-bold text-fg">
             <span aria-hidden="true">★</span>
             {product.avg_rating}
           </span>

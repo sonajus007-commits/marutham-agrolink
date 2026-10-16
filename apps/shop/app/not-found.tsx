@@ -25,11 +25,11 @@ export default async function NotFound() {
         <div className="text-7xl" aria-hidden="true">
           🌾
         </div>
-        <h1 className="mt-6 font-display text-3xl font-bold text-forest">{t.product.notFound}</h1>
+        <h1 className="mt-6 text-3xl font-bold text-forest-700">{t.product.notFound}</h1>
         <p className="mt-2 text-sm text-fg-muted">{t.product.notFoundSub}</p>
         <Link
           href="/products"
-          className="mt-8 rounded-full bg-primary px-7 py-3 text-sm font-bold text-primary-on no-underline hover:bg-primary-hover"
+          className="mt-8 rounded-full bg-forest-700 px-7 py-3 text-sm font-bold text-surface no-underline hover:bg-forest-900"
         >
           {t.product.back}
         </Link>

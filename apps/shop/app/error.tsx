@@ -43,19 +43,19 @@ export default function ShopError({
       <div className="text-7xl" aria-hidden="true">
         🌧️
       </div>
-      <h1 className="mt-6 font-display text-3xl font-bold text-forest">{t.errorTitle}</h1>
+      <h1 className="mt-6 text-3xl font-bold text-forest-700">{t.errorTitle}</h1>
       <p className="mt-2 text-sm text-fg-muted">{t.errorSub}</p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <button
           type="button"
           onClick={reset}
-          className="cursor-pointer rounded-full border-0 bg-primary px-7 py-3 text-sm font-bold text-primary-on hover:bg-primary-hover"
+          className="cursor-pointer rounded-full border-0 bg-forest-700 px-7 py-3 text-sm font-bold text-surface hover:bg-forest-900"
         >
           {t.retry}
         </button>
         <Link
           href="/"
-          className="rounded-full border border-forest px-7 py-3 text-sm font-bold text-forest no-underline"
+          className="rounded-full border border-forest-700 px-7 py-3 text-sm font-bold text-forest-700 no-underline"
         >
           {t.home}
         </Link>

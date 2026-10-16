@@ -38,7 +38,7 @@ export function OrderButton({ productId, label }: { productId: string; label: st
     <button
       type="button"
       onClick={go}
-      className="mt-3 w-full cursor-pointer rounded-full border-0 bg-primary px-4 py-2.5 text-sm font-bold text-primary-on transition-colors hover:bg-primary-hover"
+      className="mt-3 w-full cursor-pointer rounded-full border-0 bg-forest-700 px-4 py-2.5 text-sm font-bold text-surface transition-colors hover:bg-forest-900"
     >
       {label}
     </button>
