@@ -69,6 +69,31 @@ router.get('/', async (req, res) => {
     return res.status(500).json({ error: 'Could not fetch products.' });
   }
 
+  // Where each product on this page is grown: the DISTRICTS of its live listings,
+  // deduped, plus how many listings there are. District only — the public-shape
+  // policy (utils/publicShape.js) lets an anonymous caller see a district and
+  // nothing else, so no name, village or farmer id is read here at all. One query
+  // for the page, not one per product.
+  const ids = data.map(p => p.id);
+  const growersByProduct = new Map();
+  if (ids.length) {
+    const { data: listings, error: le } = await supabase
+      .from('farmer_listings')
+      .select('product_id, farmer:users ( district )')
+      .in('product_id', ids)
+      .eq('listed', true);
+    if (le) {
+      console.error('GET /products listings error:', le);
+      return res.status(500).json({ error: 'Could not fetch products.' });
+    }
+    for (const l of listings || []) {
+      const g = growersByProduct.get(l.product_id) || { count: 0, districts: new Set() };
+      g.count += 1;
+      if (l.farmer?.district) g.districts.add(l.farmer.district);
+      growersByProduct.set(l.product_id, g);
+    }
+  }
+
   // If ?district= is given, attach only that district's price to each product
   const products = data.map(p => {
     const distPrices = p.product_district_prices || [];
@@ -89,6 +114,8 @@ router.get('/', async (req, res) => {
       product_district_prices:  district ? undefined : distPrices,
       avg_rating,
       product_ratings:          undefined,
+      grower_count:             growersByProduct.get(p.id)?.count ?? 0,
+      grower_districts:         [...(growersByProduct.get(p.id)?.districts ?? [])].sort(),
     };
   });
 

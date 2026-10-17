@@ -43,10 +43,11 @@ const VARIANT: Record<Variant, string> = {
   /* White outline for a dark ground (the green hero's secondary CTA). White on
      forest-700/900 is 9.7:1, so both border and label clear AA at any size. */
   onDarkOutline: 'border-2 border-surface/60 text-surface px-7 py-3 hover:bg-surface/12',
-  /* The Marutham-pink CTA. blossom-500 is a FILL: white on it is 3.5:1, which
-     clears the AA-large bar (3:1) but not the normal one — so, exactly like
-     `water`, the label is held at 18px/600 (text-body) and never smaller. */
-  blossom: 'bg-blossom-500 text-surface px-7 py-3.5 text-body hover:brightness-105',
+  /* The Marutham-pink CTA. White on blossom-500 is only 3.5:1, which needs
+     "large" text (18.66px bold / 24px) — and this label is text-body at 600,
+     which never qualifies. So the fill is the deeper blossom-ink (white on it
+     6.37:1, AA at any size). */
+  blossom: 'bg-blossom-ink text-surface px-7 py-3.5 text-body hover:brightness-110',
   /* 18px/600 keeps this at the AA-large bar white-on-water requires. */
   water: 'bg-water-500 text-surface px-7 py-3.5 text-body hover:brightness-95',
   earth: 'bg-earth-500 text-surface px-7 py-3.5 hover:brightness-95',

@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import {
   homepagePrice,
-  productEmoji,
   sortedOffers,
   districtPriceRows,
   productJsonLd,
@@ -15,6 +14,7 @@ import {
 } from '@marutham/lib';
 import { getProduct, getCatalogue } from '@/lib/api';
 import { produceImage } from '@/lib/produceImage';
+import { ProduceIcon } from '@/components/ui/ProduceIcon';
 import { categorySlug } from '@/lib/categorySlug';
 import { OG_IMAGE, absoluteUrl } from '@/lib/site';
 import { langAlternates, localePath, ogLocale } from '@/lib/locale';
@@ -165,11 +165,12 @@ export default async function ProductPage({ params }: Params) {
                 />
               </span>
             ) : (
-              <div
-                className="bg-mist flex aspect-square w-full items-center justify-center rounded-2xl text-8xl"
-                aria-hidden="true"
-              >
-                {productEmoji(product.name)}
+              <div className="bg-mist flex aspect-square w-full items-center justify-center rounded-2xl">
+                <ProduceIcon
+                  name={product.name}
+                  category={product.category}
+                  className="text-forest-500 h-24 w-24"
+                />
               </div>
             )}
           </div>

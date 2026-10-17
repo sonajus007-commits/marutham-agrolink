@@ -75,6 +75,46 @@ test('GET /products — ?district= attaches only that district and drops the arr
   assert.equal(p.product_district_prices, undefined, 'the full array is hidden from the district view');
 });
 
+test('GET /products — attaches grower districts from live listings, never a name', async () => {
+  const db = fakeSupabase({
+    'products:select': {
+      data: [
+        { id: 'p1', name: 'Tomato', product_district_prices: [], product_ratings: [] },
+        { id: 'p2', name: 'Okra', product_district_prices: [], product_ratings: [] },
+      ],
+    },
+    'farmer_listings:select': {
+      data: [
+        { product_id: 'p1', farmer: { district: 'Pudukkottai' } },
+        { product_id: 'p1', farmer: { district: 'Pudukkottai' } },
+        { product_id: 'p1', farmer: { district: 'Madurai' } },
+      ],
+    },
+  });
+  app = await mountRoute('products', { supabase: db, user: null });
+  const res = await app.get('/');
+  assert.equal(res.status, 200);
+  const [tomato, okra] = res.body.products;
+  assert.equal(tomato.grower_count, 3);
+  assert.deepEqual(tomato.grower_districts, ['Madurai', 'Pudukkottai']); // deduped, sorted
+  assert.equal(okra.grower_count, 0);
+  assert.deepEqual(okra.grower_districts, []);
+
+  const [lq] = find(db.calls, 'farmer_listings', 'select');
+  assert.ok(hasFilter(lq, ['eq', 'listed', true]), 'only listed offers count');
+  assert.ok(!/fname|lname|village|phone/.test(JSON.stringify(lq)), 'no identifying column is even read');
+});
+
+test('GET /products — a listings query error is a 500, not a silent zero', async () => {
+  const db = fakeSupabase({
+    'products:select': { data: [{ id: 'p1', name: 'Tomato', product_district_prices: [], product_ratings: [] }] },
+    'farmer_listings:select': { error: { message: 'boom' } },
+  });
+  app = await mountRoute('products', { supabase: db, user: null });
+  const res = await app.get('/');
+  assert.equal(res.status, 500);
+});
+
 test('GET /products — no ratings yields a null avg_rating', async () => {
   const db = fakeSupabase({ 'products:select': { data: [{ id: 'p1', name: 'Okra', product_district_prices: [], product_ratings: [] }] } });
   app = await mountRoute('products', { supabase: db, user: null });

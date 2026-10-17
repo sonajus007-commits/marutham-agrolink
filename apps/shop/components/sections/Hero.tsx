@@ -3,6 +3,7 @@ import { PORTAL_REGISTER } from '@/lib/portal';
 import type { Lang } from '@/lib/dict';
 import type { LandingCopy } from '@/lib/landing';
 import { Button } from '@/components/ui/Button';
+import { LocaleA } from '@/components/LocaleLink';
 import { HeroStories } from '@/components/sections/HeroStories';
 
 /* Hero — the front door, rebuilt to the approved "premium farm-to-home" model:
@@ -18,7 +19,7 @@ export function Hero({ c, lang }: { c: LandingCopy; lang: Lang }) {
 
   return (
     <section
-      className="relative overflow-hidden px-6 pt-16 pb-20 md:px-10 md:pt-20 lg:pb-28"
+      className="relative overflow-hidden px-6 pt-8 pb-8 md:px-10 md:pt-20 md:pb-20 lg:pb-28"
       style={{ backgroundColor: '#388004' }}
     >
       {/* Grass-green ground (#388004). A soft light glow top-right and a slightly
@@ -35,8 +36,8 @@ export function Hero({ c, lang }: { c: LandingCopy; lang: Lang }) {
       />
 
       <div className="relative mx-auto grid w-full max-w-[1440px] items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
-        <div className="flex min-w-0 flex-col gap-7">
-          <span className="inline-flex max-w-full items-center gap-2 self-start rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-caption font-semibold text-white backdrop-blur-sm">
+        <div className="flex min-w-0 flex-col gap-5 md:gap-7">
+          <span className="hidden max-w-full items-center gap-2 self-start rounded-full sm:inline-flex border border-white/20 bg-white/10 px-4 py-1.5 text-caption font-semibold text-white backdrop-blur-sm">
             <Leaf className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             {c.hero.badge}
           </span>
@@ -53,12 +54,23 @@ export function Hero({ c, lang }: { c: LandingCopy; lang: Lang }) {
             <Button href="/products" variant="blossom" arrow>
               {c.hero.ctaShop}
             </Button>
-            <Button href={PORTAL_REGISTER} variant="onDarkOutline">
-              {c.hero.ctaSell}
-            </Button>
+            {/* Two pill buttons don't fit one row on a phone, and stacked they
+                pushed the shop below the fold — so on mobile "Sell" drops to a
+                text link and shopping keeps the only button. */}
+            <span className="hidden sm:contents">
+              <Button href={PORTAL_REGISTER} variant="onDarkOutline">
+                {c.hero.ctaSell}
+              </Button>
+            </span>
+            <LocaleA
+              href={PORTAL_REGISTER}
+              className="inline-flex min-h-11 items-center text-caption font-semibold text-white underline underline-offset-4 sm:hidden"
+            >
+              {c.hero.ctaSell} →
+            </LocaleA>
           </div>
 
-          <ul className="flex list-none flex-wrap gap-x-7 gap-y-2 p-0 text-caption text-white/80">
+          <ul className="flex list-none flex-wrap gap-x-5 gap-y-2 p-0 text-caption text-white/80 md:gap-x-7">
             {c.hero.trust.map((label, i) => {
               const Icon = icons[i];
               return (
@@ -71,9 +83,13 @@ export function Hero({ c, lang }: { c: LandingCopy; lang: Lang }) {
           </ul>
         </div>
 
-        {/* Recent farmer stories, auto-scrolling. Always visible (not wrapped in
-            a scroll reveal: it is above the fold and part of the hero). */}
-        <HeroStories lang={lang} />
+        {/* Recent farmer stories, auto-scrolling. Not wrapped in a scroll reveal:
+            it is above the fold and part of the hero. Desktop only — below lg the
+            grid is one column and this card sat between the shopper and the
+            produce; the same stories render further down in FarmerStories. */}
+        <div className="hidden min-w-0 lg:block">
+          <HeroStories lang={lang} />
+        </div>
       </div>
     </section>
   );

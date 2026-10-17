@@ -104,7 +104,7 @@ export default async function CategoryPage({
       <Link
         href={href({ sort: key === 'name' ? undefined : key, page: undefined })}
         aria-current={active || undefined}
-        className={`rounded-full border px-3 py-1.5 text-caption font-semibold no-underline transition-colors ${
+        className={`inline-flex min-h-11 items-center rounded-full border px-4 py-1.5 text-caption font-semibold no-underline transition-colors ${
           active
             ? 'border-forest-700 bg-forest-700 text-surface'
             : 'border-border text-fg-muted hover:border-forest-500 hover:text-forest-700'

@@ -1,9 +1,11 @@
 import { LocaleLink as Link } from '@/components/LocaleLink';
 import Image from 'next/image';
-import { homepagePrice, productEmoji, fmtMoney, type Product } from '@marutham/lib';
+import { MapPin } from 'lucide-react';
+import { homepagePrice, fmtMoney, type Product } from '@marutham/lib';
 import { OrderButton } from '@/components/OrderButton';
 import { AddToCartButton } from '@/components/cart/AddToCartButton';
 import { produceImage } from '@/lib/produceImage';
+import { ProduceIcon } from '@/components/ui/ProduceIcon';
 import type { Dict } from '@/lib/dict';
 
 /* One product in a grid — used by the homepage and the /products catalogue.
@@ -26,14 +28,16 @@ export function ProductCard({
   const price = homepagePrice(product);
   const href = `/products/${product.id}`;
   const img = produceImage(product.name, product.regional_name);
+  const districts = product.grower_districts ?? [];
 
   return (
     <li
-      className={`rounded-2xl border border-border bg-surface p-4 text-center transition-shadow hover:shadow-lg ${className}`}
+      className={`rounded-2xl border border-border bg-surface p-3 text-center sm:p-4 transition-shadow hover:shadow-lg ${className}`}
     >
       {/* One link wrapping picture + name: two adjacent links to the same place
           are a known screen-reader annoyance, and the picture is decorative. A
-          real photo where we have one (public/produce), the emoji otherwise. */}
+          real photo where we have one (public/produce), otherwise a category line-icon
+          on the same tinted tile — never an emoji (see ui/ProduceIcon). */}
       <Link href={href} className="group block no-underline">
         {img ? (
           <span className="relative block aspect-[4/3] w-full overflow-hidden rounded-xl bg-mist">
@@ -48,20 +52,34 @@ export function ProductCard({
             />
           </span>
         ) : (
-          <span
-            className="flex aspect-[4/3] w-full items-center justify-center rounded-xl bg-mist text-6xl"
-            aria-hidden="true"
-          >
-            {productEmoji(product.name)}
+          <span className="flex aspect-[4/3] w-full items-center justify-center rounded-xl bg-mist">
+            <ProduceIcon
+              name={product.name}
+              category={product.category}
+              className="h-12 w-12 text-forest-500"
+            />
           </span>
         )}
-        <span className="mt-2 inline-block rounded-full bg-mist px-2 py-0.5 text-[10px] font-bold text-forest-700">
-          {t.fresh.badge}
-        </span>
-        <h3 className="mt-2 text-sm font-bold text-fg hover:text-forest-700 hover:underline">
+        <h3 className="mt-3 text-sm font-bold text-fg hover:text-forest-700 hover:underline">
           {product.name}
         </h3>
       </Link>
+
+      {/* Where today's growers are — the district and nothing finer, which is all
+          the public-shape policy lets an anonymous visitor see. Replaces a "Farm
+          Fresh" badge that sat on every card (milk and mutton included) and so
+          said nothing. Absent when no grower has listed it today. */}
+      {districts.length ? (
+        /* Wraps rather than truncates: the Tamil label is longer, and an ellipsis
+           would cut off the district — the one word that matters here. */
+        <p className="mt-1 text-xs text-fg-muted">
+          <MapPin
+            className="mr-1 inline h-3.5 w-3.5 align-[-2px] text-blossom-ink"
+            aria-hidden="true"
+          />
+          {t.fresh.grownIn(districts[0], districts.length - 1)}
+        </p>
+      ) : null}
 
       <p className="mt-1 text-lg font-extrabold text-forest-700">
         {price ? (

@@ -58,7 +58,7 @@ export function MeetFarmers({ products, lang }: { products: Product[]; lang: Lan
         />
         <Link
           href="/products"
-          className="text-forest-700 hover:text-forest-900 shrink-0 text-caption font-semibold no-underline"
+          className="text-forest-700 hover:text-forest-900 inline-flex min-h-11 shrink-0 items-center text-caption font-semibold no-underline"
         >
           {copy.cta}
         </Link>

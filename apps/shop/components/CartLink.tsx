@@ -16,7 +16,7 @@ export function CartLink({ label }: { label: string }) {
     <Link
       href="/cart"
       aria-label={showBadge ? `${label} (${count})` : label}
-      className="text-forest-700 hover:text-forest-900 hover:bg-mist relative inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors"
+      className="text-forest-700 hover:text-forest-900 hover:bg-mist relative inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors"
     >
       <ShoppingCart className="h-[1.15rem] w-[1.15rem]" aria-hidden="true" />
       {showBadge ? (

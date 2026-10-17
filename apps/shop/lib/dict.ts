@@ -48,6 +48,9 @@ export interface Dict {
     add: string;
     viewAll: string;
     unavailable: string;
+    /** Where today's growers are, e.g. "From Pudukkottai +1". District is data
+     *  (shown as stored); only the label around it is translated. */
+    grownIn: (district: string, more: number) => string;
   };
   stats: { sellers: string; customers: string; districts: string; states: string };
   /* The mockup's trust strip. Static claims, not metrics — each one has to be
@@ -153,6 +156,7 @@ const en: Dict = {
     add: 'Add',
     viewAll: 'View All Products →',
     unavailable: 'Price on request',
+    grownIn: (d, more) => `From ${d}${more ? ` +${more}` : ''}`,
   },
   stats: {
     sellers: 'Active Sellers',
@@ -284,6 +288,7 @@ const ta: Dict = {
     add: 'சேர்',
     viewAll: 'அனைத்தையும் பார்க்க →',
     unavailable: 'விலை கோரிக்கையின் பேரில்',
+    grownIn: (d, more) => `விளைந்த இடம்: ${d}${more ? ` +${more}` : ''}`,
   },
   stats: {
     sellers: 'செயலில் உள்ள விற்பனையாளர்கள்',

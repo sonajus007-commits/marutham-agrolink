@@ -34,7 +34,7 @@ export function AddToCartButton({
           add({ product_id: productId, product_name: name, unit, price, qty: 1, farmer_id: null })
         }
         className={`bg-blossom-500/12 text-blossom-ink hover:bg-blossom-500 inline-flex items-center justify-center gap-1.5 rounded-full font-bold no-underline transition-colors hover:text-white ${
-          full ? 'w-full px-6 py-3 text-body' : 'px-3 py-1.5 text-caption'
+          full ? 'min-h-12 w-full px-6 py-3 text-body' : 'min-h-11 px-4 py-1.5 text-caption'
         }`}
       >
         + {label}
@@ -46,14 +46,14 @@ export function AddToCartButton({
   return (
     <div
       className={`border-blossom-500/40 inline-flex items-center justify-between gap-1 rounded-full border ${
-        full ? 'w-full px-2 py-1.5' : 'px-1.5 py-1'
+        full ? 'w-full px-2 py-1' : 'p-0'
       }`}
     >
       <button
         type="button"
         onClick={() => step(-1)}
         aria-label="Decrease quantity"
-        className="text-blossom-ink hover:bg-blossom-500/12 grid h-7 w-7 place-items-center rounded-full text-lg leading-none"
+        className={`text-blossom-ink hover:bg-blossom-500/12 grid h-11 place-items-center rounded-full text-lg leading-none ${full ? 'w-11' : 'w-10'}`}
       >
         −
       </button>
@@ -64,7 +64,7 @@ export function AddToCartButton({
         type="button"
         onClick={() => step(1)}
         aria-label="Increase quantity"
-        className="text-blossom-ink hover:bg-blossom-500/12 grid h-7 w-7 place-items-center rounded-full text-lg leading-none"
+        className={`text-blossom-ink hover:bg-blossom-500/12 grid h-11 place-items-center rounded-full text-lg leading-none ${full ? 'w-11' : 'w-10'}`}
       >
         +
       </button>

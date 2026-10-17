@@ -21,14 +21,14 @@ export function LangToggle({ current }: { current: Lang }) {
   }
 
   return (
-    <div className="flex items-center gap-1 rounded-full border border-border p-0.5">
+    <div className="flex items-center rounded-full border border-border">
       {(['en', 'ta'] as const).map((lang) => (
         <button
           key={lang}
           type="button"
           onClick={() => pick(lang)}
           aria-pressed={current === lang}
-          className={`cursor-pointer rounded-full border-0 px-3 py-1 text-xs font-bold transition-colors ${
+          className={`inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-full border-0 px-3 text-xs font-bold transition-colors ${
             current === lang
               ? 'bg-forest-700 text-surface'
               : 'bg-transparent text-fg-muted hover:text-forest-700'

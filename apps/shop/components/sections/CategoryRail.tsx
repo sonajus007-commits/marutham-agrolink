@@ -4,6 +4,7 @@ import { categorySlug } from '@/lib/categorySlug';
 import type { Dict } from '@/lib/dict';
 import { Section, SectionHeader } from '@/components/ui/Section';
 import { Reveal } from '@/components/ui/Reveal';
+import { ProduceIcon } from '@/components/ui/ProduceIcon';
 
 /* Shop by Category — the circular rail from the reference model, but every chip
  * is a category the catalogue ACTUALLY carries right now. We read the distinct
@@ -12,35 +13,6 @@ import { Reveal } from '@/components/ui/Reveal';
  * across restocks rather than jumping around with inventory. A category with no
  * products simply never appears — nothing here is invented. Each chip deep-links
  * to the filtered catalogue (`/products?category=`), which the shop page reads. */
-
-/* Keyword → emoji, matched anywhere in the lower-cased category name, so
- * "Grains, Rice & Pasta" and "Red Meat" both resolve without an exact map. */
-const EMOJI: [string, string][] = [
-  ['veget', '🥬'],
-  ['fruit', '🍎'],
-  ['poultry', '🍗'],
-  ['seafood', '🐟'],
-  ['fish', '🐟'],
-  ['egg', '🥚'],
-  ['milk', '🥛'],
-  ['cream', '🥛'],
-  ['dairy', '🥛'],
-  ['meat', '🥩'],
-  ['grain', '🌾'],
-  ['rice', '🌾'],
-  ['cereal', '🌾'],
-  ['can', '🥫'],
-  ['packag', '🥫'],
-  ['organic', '🌱'],
-  ['season', '🥭'],
-  ['grocer', '🛒'],
-];
-
-function categoryEmoji(name: string): string {
-  const hay = name.toLowerCase();
-  for (const [k, e] of EMOJI) if (hay.includes(k)) return e;
-  return '🧺';
-}
 
 /* Canonical retail order; anything not listed falls to the end, alphabetical. */
 const ORDER = [
@@ -75,7 +47,7 @@ export function CategoryRail({ products, t }: { products: Product[]; t: Dict }) 
   if (cats.length === 0) return null;
 
   return (
-    <Section id="categories" tone="surface" aria-labelledby="cat-h">
+    <Section id="categories" tone="surface" aria-labelledby="cat-h" className="pt-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <SectionHeader
           id="cat-h"
@@ -86,7 +58,7 @@ export function CategoryRail({ products, t }: { products: Product[]; t: Dict }) 
         />
         <Link
           href="/products"
-          className="text-forest-700 hover:text-forest-900 shrink-0 text-caption font-semibold no-underline"
+          className="text-forest-700 hover:text-forest-900 inline-flex min-h-11 shrink-0 items-center text-caption font-semibold no-underline"
         >
           {t.categories.all} →
         </Link>
@@ -101,10 +73,10 @@ export function CategoryRail({ products, t }: { products: Product[]; t: Dict }) 
               aria-label={`${cat.name} — ${t.categories.count(cat.count)}`}
             >
               <span
-                className={`${i % 2 === 0 ? 'bg-blossom-500/12' : 'bg-mist'} border-border/60 grid h-16 w-16 place-items-center rounded-full border text-3xl transition-transform duration-200 group-hover:-translate-y-1 group-hover:shadow-[0_12px_28px_rgba(22,61,47,0.14)]`}
+                className={`${i % 2 === 0 ? 'bg-blossom-500/12 text-blossom-ink' : 'bg-mist text-forest-700'} border-border/60 grid h-16 w-16 place-items-center rounded-full border transition-transform duration-200 group-hover:-translate-y-1 group-hover:shadow-[0_12px_28px_rgba(22,61,47,0.14)]`}
                 aria-hidden="true"
               >
-                {categoryEmoji(cat.name)}
+                <ProduceIcon category={cat.name} className="h-7 w-7" />
               </span>
               <span className="text-forest-900 text-caption leading-tight font-semibold">
                 {cat.name}

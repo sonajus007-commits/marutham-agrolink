@@ -15,7 +15,7 @@ import type { LandingCopy } from '@/lib/landing';
 function SearchForm({ t, lang, className = '' }: { t: Dict; lang: Lang; className?: string }) {
   return (
     <form action={localeHref(lang, '/products')} role="search" className={`min-w-0 ${className}`}>
-      <label className="border-border bg-bg focus-within:border-forest-500 flex items-center gap-2.5 rounded-full border px-4 py-2.5 transition-colors">
+      <label className="border-border bg-bg focus-within:border-forest-500 flex min-h-11 items-center gap-2.5 rounded-full border px-4 py-2.5 transition-colors">
         <Search className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
         <input
           type="search"
@@ -86,7 +86,7 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
               <li key={n.href}>
                 <LocaleA
                   href={n.href}
-                  className="text-fg-muted hover:text-forest-700 text-caption font-medium no-underline transition-colors"
+                  className="text-fg-muted hover:text-forest-700 inline-flex min-h-11 items-center text-caption font-medium no-underline transition-colors"
                 >
                   {n.label}
                 </LocaleA>
@@ -158,12 +158,12 @@ export function SiteFooter({ t, c }: { t: Dict; c: LandingCopy }) {
               <h3 className="text-gold-500 text-[0.7rem] font-semibold tracking-[0.14em] uppercase">
                 {c.h}
               </h3>
-              <ul className="mt-4 flex list-none flex-col gap-2.5 p-0">
+              <ul className="mt-2 flex list-none flex-col p-0">
                 {c.links.map((l) => (
                   <li key={l.l}>
                     <LocaleA
                       href={l.href}
-                      className="text-leaf-300 hover:text-surface text-caption no-underline transition-colors"
+                      className="text-leaf-300 hover:text-surface inline-flex min-h-11 items-center text-caption no-underline transition-colors"
                     >
                       {l.l}
                     </LocaleA>
@@ -178,7 +178,7 @@ export function SiteFooter({ t, c }: { t: Dict; c: LandingCopy }) {
           <p className="text-leaf-300 text-[0.75rem]">
             © {new Date().getFullYear()} {t.footer.rights}
           </p>
-          <ul className="flex list-none flex-wrap gap-x-5 gap-y-2 p-0 text-[0.75rem]">
+          <ul className="flex list-none flex-wrap gap-x-5 p-0 text-[0.75rem]">
             {[
               { href: '/about', l: t.htmlLang === 'ta' ? 'எங்களைப் பற்றி' : 'About' },
               { href: '/contact', l: t.htmlLang === 'ta' ? 'தொடர்பு' : 'Contact' },
@@ -186,7 +186,10 @@ export function SiteFooter({ t, c }: { t: Dict; c: LandingCopy }) {
               { href: '/privacy', l: t.htmlLang === 'ta' ? 'தனியுரிமை' : 'Privacy' },
             ].map((x) => (
               <li key={x.href}>
-                <LocaleA href={x.href} className="text-leaf-300 hover:text-surface no-underline">
+                <LocaleA
+                  href={x.href}
+                  className="text-leaf-300 hover:text-surface inline-flex min-h-11 items-center no-underline"
+                >
                   {x.l}
                 </LocaleA>
               </li>

@@ -1,3 +1,4 @@
+import { Tag } from 'lucide-react';
 import { LocaleLink as Link } from '@/components/LocaleLink';
 import type { Lang } from '@/lib/dict';
 import { recentStories, sampleLabel, farmerFace } from '@/lib/farmerStories';
@@ -41,7 +42,7 @@ export function FarmerStories({ lang }: { lang: Lang }) {
         />
         <Link
           href="/farmers"
-          className="text-forest-700 hover:text-forest-900 shrink-0 text-caption font-semibold no-underline"
+          className="text-forest-700 hover:text-forest-900 inline-flex min-h-11 shrink-0 items-center text-caption font-semibold no-underline"
         >
           {copy.all}
         </Link>
@@ -71,7 +72,7 @@ export function FarmerStories({ lang }: { lang: Lang }) {
                     <span className="text-fg-muted block text-[0.7rem]">{s.village}</span>
                   </span>
                   <span className="bg-blossom-500/12 text-blossom-ink ml-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.7rem] font-bold">
-                    <span aria-hidden="true">🏷</span>
+                    <Tag className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                     {s.benefit[lang]}
                   </span>
                 </figcaption>

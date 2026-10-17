@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
+import { Tag } from 'lucide-react';
 import { LocaleLink as Link } from '@/components/LocaleLink';
 import type { Lang } from '@/lib/dict';
 import { recentStories, sampleLabel, farmerFace } from '@/lib/farmerStories';
@@ -44,7 +45,7 @@ export function HeroStories({ lang }: { lang: Lang }) {
         </span>
         <Link
           href="/farmers"
-          className="shrink-0 text-caption font-semibold text-white/85 no-underline hover:text-white"
+          className="inline-flex min-h-11 shrink-0 items-center text-caption font-semibold text-white/85 no-underline hover:text-white"
         >
           {seeAll}
         </Link>
@@ -86,7 +87,7 @@ export function HeroStories({ lang }: { lang: Lang }) {
               <p className="text-fg text-body leading-relaxed">“{s.quote[lang]}”</p>
 
               <span className="bg-blossom-500/12 text-blossom-ink mt-auto inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1.5 text-caption font-bold">
-                <span aria-hidden="true">🏷</span>
+                <Tag className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 {s.benefit[lang]}
               </span>
             </article>
@@ -95,7 +96,8 @@ export function HeroStories({ lang }: { lang: Lang }) {
       </div>
 
       {/* Dots — jump to a story; the active one is wider. */}
-      <div className="mt-4 flex justify-center gap-2">
+      {/* The dot is drawn small; the button around it is a 44px tap target. */}
+      <div className="mt-2 flex justify-center">
         {stories.map((s, i) => (
           <button
             key={s.id}
@@ -103,10 +105,14 @@ export function HeroStories({ lang }: { lang: Lang }) {
             onClick={() => setIndex(i)}
             aria-label={`${s.name}, ${s.village}`}
             aria-current={i === index || undefined}
-            className={`h-2 rounded-full transition-all ${
-              i === index ? 'w-6 bg-white' : 'w-2 bg-white/45 hover:bg-white/70'
-            }`}
-          />
+            className="group grid h-11 min-w-11 place-items-center px-1"
+          >
+            <span
+              className={`block h-2 rounded-full transition-all ${
+                i === index ? 'w-6 bg-white' : 'w-2 bg-white/45 group-hover:bg-white/70'
+              }`}
+            />
+          </button>
         ))}
       </div>
     </div>

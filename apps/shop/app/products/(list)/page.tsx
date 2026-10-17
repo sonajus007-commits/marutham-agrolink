@@ -97,7 +97,7 @@ export default async function CataloguePage({ searchParams }: { searchParams: Pr
       <Link
         href={href({ sort: key === 'name' ? undefined : key, page: undefined })}
         aria-current={active || undefined}
-        className={`rounded-full border px-3 py-1.5 text-caption font-semibold no-underline transition-colors ${
+        className={`inline-flex min-h-11 items-center rounded-full border px-4 py-1.5 text-caption font-semibold no-underline transition-colors ${
           active
             ? 'border-forest-700 bg-forest-700 text-surface'
             : 'border-border text-fg-muted hover:border-forest-500 hover:text-forest-700'
@@ -150,7 +150,7 @@ export default async function CataloguePage({ searchParams }: { searchParams: Pr
             {category ? (
               <Link
                 href={href({ category: undefined, page: undefined })}
-                className="border-border text-forest-700 hover:border-forest-500 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-caption font-semibold no-underline"
+                className="border-border text-forest-700 hover:border-forest-500 inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 py-1 text-caption font-semibold no-underline"
               >
                 {category} ✕
               </Link>
@@ -158,7 +158,7 @@ export default async function CataloguePage({ searchParams }: { searchParams: Pr
             {q ? (
               <Link
                 href={href({ q: undefined, page: undefined })}
-                className="border-border text-forest-700 hover:border-forest-500 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-caption font-semibold no-underline"
+                className="border-border text-forest-700 hover:border-forest-500 inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 py-1 text-caption font-semibold no-underline"
               >
                 “{q}” ✕
               </Link>
@@ -173,7 +173,7 @@ export default async function CataloguePage({ searchParams }: { searchParams: Pr
             <p className="text-fg-muted mt-2">{t.catalogue.noMatchHint}</p>
             <Link
               href={href({ q: undefined, category: undefined, page: undefined })}
-              className="border-border text-forest-700 hover:border-forest-500 mt-5 inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-caption font-semibold no-underline"
+              className="border-border text-forest-700 hover:border-forest-500 mt-5 inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 py-2 text-caption font-semibold no-underline"
             >
               {t.catalogue.clearFilters}
             </Link>

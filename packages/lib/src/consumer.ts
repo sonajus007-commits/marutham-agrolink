@@ -42,6 +42,10 @@ export interface Product {
     handling?: string | number | null;
   }> | null;
   avg_rating?: string | number;
+  /** Live listings under this product today (GET /products). */
+  grower_count?: number;
+  /** Their districts, deduped + sorted — district only, never a name (publicShape). */
+  grower_districts?: string[];
   [key: string]: unknown;
 }
 
