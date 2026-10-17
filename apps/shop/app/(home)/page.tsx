@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getLang } from '@/lib/lang';
 import { langAlternates, localePath, ogLocale } from '@/lib/locale';
 import { OG_IMAGE, absoluteUrl } from '@/lib/site';
-import { getAvailableProducts } from '@/lib/api';
+import { getAvailableProducts, getPublicFarmers } from '@/lib/api';
 import { DICT } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
 import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
@@ -68,18 +68,18 @@ export default async function HomePage() {
   const lang = await getLang();
   const t = DICT[lang];
   const c = LANDING[lang];
-  const products = await getAvailableProducts();
+  const [products, farmers] = await Promise.all([getAvailableProducts(), getPublicFarmers()]);
 
   return (
     <>
       <SiteHeader t={t} lang={lang} />
       <main id="main" tabIndex={-1}>
-        <Hero c={c} lang={lang} />
+        <Hero c={c} t={t} lang={lang} products={products} />
         <CategoryRail products={products} t={t} />
         <FreshToday products={products} t={t} />
         <FarmToHome lang={lang} />
         <FarmerStories lang={lang} />
-        <MeetFarmers products={products} lang={lang} />
+        <MeetFarmers farmers={farmers} products={products} lang={lang} />
       </main>
       <SiteFooter t={t} c={c} />
     </>

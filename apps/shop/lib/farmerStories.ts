@@ -116,13 +116,23 @@ export const FARMER_STORIES: FarmerStory[] = [
   },
 ];
 
-/** Newest first — the order the hero strip shows. */
+/* Pre-launch the samples stay OFF: a shopper should not meet invented farmers on
+ * a live storefront, however clearly labelled. Every surface reads the stories
+ * through recentStories()/getStory(), so with the flag off they all go quiet —
+ * the hero falls back to the produce basket, the home section and the sample
+ * /farmer pages disappear, and /farmers shows only real consented growers. Set
+ * NEXT_PUBLIC_SHOW_SAMPLE_STORIES=1 to bring them back (demos, design review). */
+export const SHOW_SAMPLE_STORIES = process.env.NEXT_PUBLIC_SHOW_SAMPLE_STORIES === '1';
+
+/** Newest first — the order the hero strip shows. Empty while samples are off. */
 export function recentStories(limit = FARMER_STORIES.length): FarmerStory[] {
+  if (!SHOW_SAMPLE_STORIES) return [];
   return [...FARMER_STORIES].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, limit);
 }
 
 /** One story by its slug (the `id`), for the /farmer/[slug] page. */
 export function getStory(slug: string): FarmerStory | undefined {
+  if (!SHOW_SAMPLE_STORIES) return undefined;
   return FARMER_STORIES.find((s) => s.id === slug);
 }
 

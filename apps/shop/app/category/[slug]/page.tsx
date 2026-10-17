@@ -81,6 +81,7 @@ export default async function CategoryPage({
     sort,
     page,
     limit: PAGE_SIZE,
+    available: true,
   });
 
   const href = (over: SP) => {

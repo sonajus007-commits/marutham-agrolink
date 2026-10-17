@@ -6,16 +6,18 @@ import { langAlternates, localePath, ogLocale } from '@/lib/locale';
 import { getLang } from '@/lib/lang';
 import { DICT, type Lang } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
-import { recentStories, sampleLabel, farmerFace } from '@/lib/farmerStories';
+import { recentStories, sampleLabel, farmerFace, SHOW_SAMPLE_STORIES } from '@/lib/farmerStories';
 import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
 
 /* /farmers — the public farmer directory.
  *
  * It prefers REAL, consented farmers (getPublicFarmers → the consent-gated
- * /farmers/public endpoint). Until any farmer opts in, it falls back to the
- * ILLUSTRATIVE sample stories, clearly marked "Sample". The moment a farmer
- * consents (public_profile = true), their real card replaces the samples — no
- * code change needed. Real growers are never shown without consent. */
+ * /farmers/public endpoint). Until any farmer opts in it falls back to the
+ * ILLUSTRATIVE sample stories, clearly marked "Sample" — but only when those are
+ * switched on (SHOW_SAMPLE_STORIES; off pre-launch). With neither, it says
+ * plainly that profiles appear as growers opt in. The moment a farmer consents
+ * (public_profile = true), their real card shows — no code change needed. Real
+ * growers are never shown without consent. */
 export const revalidate = 300;
 
 function copyFor(l: Lang, sample: boolean) {
@@ -33,13 +35,17 @@ function copyFor(l: Lang, sample: boolean) {
         ? 'மருதம் அக்ரோலிங்க் மூலம் நேரடியாக விற்கும், பொதுவில் தோன்ற சம்மதித்த விவசாயிகள்.'
         : 'Growers who sell direct through Marutham AgroLink and chose to appear here.',
     read: ta ? 'கதையைப் படியுங்கள் →' : 'Read the story →',
+    empty: ta
+      ? 'எங்கள் முதல் விவசாயிகள் இப்போது இணைகிறார்கள். அவர்கள் பகிர விரும்பும்போது அவர்களின் விவரங்கள் இங்கே தோன்றும்.'
+      : 'Our first growers are joining now. Their profiles appear here once they choose to share them.',
+    shop: ta ? 'இன்றைய விளைபொருட்களை வாங்குங்கள் →' : 'Shop today’s produce →',
     meta: ta ? 'எங்கள் விவசாயிகள் — மருதம் அக்ரோலிங்க்' : 'Our Farmers — Marutham AgroLink',
   };
 }
 
 export async function generateMetadata(): Promise<Metadata> {
   const lang = await getLang();
-  const c = copyFor(lang, true);
+  const c = copyFor(lang, SHOW_SAMPLE_STORIES);
   return {
     title: c.meta,
     description: c.lede,
@@ -66,7 +72,8 @@ export default async function FarmersPage() {
   const t = DICT[l];
   const real = await getPublicFarmers();
   const useReal = real.length > 0;
-  const c = copyFor(l, !useReal);
+  const samples = useReal ? [] : recentStories();
+  const c = copyFor(l, samples.length > 0);
 
   return (
     <>
@@ -118,7 +125,7 @@ export default async function FarmersPage() {
                   </Link>
                 </li>
               ))
-            : recentStories().map((s) => (
+            : samples.map((s) => (
                 <li key={s.id}>
                   <Link href={`/farmer/${s.id}`} className={CARD}>
                     <div className="flex items-center gap-3">
@@ -140,6 +147,18 @@ export default async function FarmersPage() {
                 </li>
               ))}
         </ul>
+
+        {!useReal && samples.length === 0 ? (
+          <div className="border-border mt-2 rounded-2xl border border-dashed px-6 py-10 text-center">
+            <p className="text-fg-muted mx-auto max-w-[48ch] text-body">{c.empty}</p>
+            <Link
+              href="/products"
+              className="text-forest-700 hover:text-forest-900 mt-4 inline-flex min-h-11 items-center text-body font-semibold no-underline"
+            >
+              {c.shop}
+            </Link>
+          </div>
+        ) : null}
       </main>
 
       <SiteFooter t={t} c={LANDING[l]} />

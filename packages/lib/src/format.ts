@@ -20,6 +20,27 @@ export function fmtMoney(val: unknown): string {
   return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+/**
+ * A shelf price, as a shopper reads it: "₹28", "₹52.50", "₹1,240".
+ *
+ * Paise only when there are any. A product tile is not a money column, so the
+ * alignment argument for fmtMoney does not apply, and "₹28.00" on every card is
+ * noise the big grocery apps never print. Bills, totals and anything stacked in
+ * a column keep fmtMoney.
+ */
+export function fmtPrice(val: unknown): string {
+  const n = parseFloat(String(val));
+  if (isNaN(n)) return '—';
+  const whole = Math.round(n * 100) % 100 === 0;
+  return (
+    '₹' +
+    n.toLocaleString('en-IN', {
+      minimumFractionDigits: whole ? 0 : 2,
+      maximumFractionDigits: whole ? 0 : 2,
+    })
+  );
+}
+
 /** Money rounded to whole rupees, for tiles where the paise are noise: "₹1,240". */
 export function fmtMoneyInt(val: unknown): string {
   return '₹' + Number(val || 0).toLocaleString('en-IN');

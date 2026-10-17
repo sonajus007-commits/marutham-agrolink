@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fmtMoney, fmtMoneyInt } from './format';
+import { fmtMoney, fmtMoneyInt, fmtPrice } from './format';
 
 describe('fmtMoney', () => {
   it('groups with Indian lakh/crore separators (2-2-3), not 3-3-3', () => {
@@ -38,5 +38,23 @@ describe('fmtMoneyInt', () => {
   it('rounds to whole rupees for tiles where paise are noise', () => {
     expect(fmtMoneyInt(1240)).toBe('₹1,240');
     expect(fmtMoneyInt(128560)).toBe('₹1,28,560');
+  });
+});
+
+describe('fmtPrice', () => {
+  it('drops .00 on a whole-rupee shelf price', () => {
+    expect(fmtPrice(28)).toBe('₹28');
+    expect(fmtPrice('28.00')).toBe('₹28');
+    expect(fmtPrice(1240)).toBe('₹1,240');
+  });
+
+  it('keeps both paise digits when there are any', () => {
+    expect(fmtPrice('52.5')).toBe('₹52.50');
+    expect(fmtPrice(33.05)).toBe('₹33.05');
+  });
+
+  it('degrades to an em-dash on a missing value', () => {
+    expect(fmtPrice('')).toBe('—');
+    expect(fmtPrice(undefined)).toBe('—');
   });
 });

@@ -70,6 +70,7 @@ export default async function CataloguePage({ searchParams }: { searchParams: Pr
     sort,
     page,
     limit: PAGE_SIZE,
+    available: true,
   });
 
   // Build an href that keeps the current filters and overrides some of them.

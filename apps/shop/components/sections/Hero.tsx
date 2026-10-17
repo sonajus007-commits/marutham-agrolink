@@ -1,10 +1,13 @@
 import { Leaf, ShieldCheck, Truck } from 'lucide-react';
 import { PORTAL_REGISTER } from '@/lib/portal';
-import type { Lang } from '@/lib/dict';
+import type { Product } from '@marutham/lib';
+import type { Dict, Lang } from '@/lib/dict';
 import type { LandingCopy } from '@/lib/landing';
 import { Button } from '@/components/ui/Button';
 import { LocaleA } from '@/components/LocaleLink';
 import { HeroStories } from '@/components/sections/HeroStories';
+import { ProduceBasket } from '@/components/sections/ProduceBasket';
+import { recentStories } from '@/lib/farmerStories';
 
 /* Hero — the front door, rebuilt to the approved "premium farm-to-home" model:
  * a bold forest-green panel, white headline with a pink second line, a pink
@@ -14,8 +17,19 @@ import { HeroStories } from '@/components/sections/HeroStories';
  *
  * The headline is NOT wrapped in a scroll reveal: it is the LCP element and the
  * page's whole message, so it must paint immediately, never wait on an observer. */
-export function Hero({ c, lang }: { c: LandingCopy; lang: Lang }) {
+export function Hero({
+  c,
+  t,
+  lang,
+  products,
+}: {
+  c: LandingCopy;
+  t: Dict;
+  lang: Lang;
+  products: Product[];
+}) {
   const icons = [ShieldCheck, Truck, Leaf];
+  const hasStories = recentStories(1).length > 0;
 
   return (
     <section
@@ -83,12 +97,13 @@ export function Hero({ c, lang }: { c: LandingCopy; lang: Lang }) {
           </ul>
         </div>
 
-        {/* Recent farmer stories, auto-scrolling. Not wrapped in a scroll reveal:
-            it is above the fold and part of the hero. Desktop only — below lg the
-            grid is one column and this card sat between the shopper and the
-            produce; the same stories render further down in FarmerStories. */}
+        {/* Recent farmer stories, auto-scrolling — or, while the sample stories
+            are switched off pre-launch, the basket of real produce photos with a
+            live price. Not wrapped in a scroll reveal: it is above the fold and
+            part of the hero. Desktop only — below lg the grid is one column and
+            this card sat between the shopper and the produce. */}
         <div className="hidden min-w-0 lg:block">
-          <HeroStories lang={lang} />
+          {hasStories ? <HeroStories lang={lang} /> : <ProduceBasket products={products} t={t} />}
         </div>
       </div>
     </section>

@@ -1,7 +1,7 @@
 import { LocaleLink as Link } from '@/components/LocaleLink';
 import Image from 'next/image';
 import { MapPin } from 'lucide-react';
-import { homepagePrice, fmtMoney, type Product } from '@marutham/lib';
+import { homepagePrice, fmtPrice, type Product } from '@marutham/lib';
 import { OrderButton } from '@/components/OrderButton';
 import { AddToCartButton } from '@/components/cart/AddToCartButton';
 import { produceImage } from '@/lib/produceImage';
@@ -84,7 +84,7 @@ export function ProductCard({
       <p className="mt-1 text-lg font-extrabold text-forest-700">
         {price ? (
           <>
-            {fmtMoney(price.amount)}
+            {fmtPrice(price.amount)}
             <span className="text-xs font-semibold text-fg-muted">/{price.unit}</span>
           </>
         ) : (

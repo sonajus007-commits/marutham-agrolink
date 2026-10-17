@@ -1,4 +1,4 @@
-import { homepagePrice, fmtMoney, type Product } from '@marutham/lib';
+import { homepagePrice, fmtPrice, type Product } from '@marutham/lib';
 import type { Dict } from '@/lib/dict';
 import { produceImage } from '@/lib/produceImage';
 
@@ -47,7 +47,7 @@ export function ProduceBasket({ products, t }: { products: Product[]; t: Dict })
             <img src={img} alt={p.name} className="h-full w-full object-cover" />
             {price ? (
               <span className="absolute right-2 bottom-2 rounded-full bg-white/95 px-2.5 py-1 text-caption font-bold text-forest-900 shadow-md">
-                {fmtMoney(price.amount)}
+                {fmtPrice(price.amount)}
                 <span className="text-fg-muted font-medium">/{price.unit}</span>
               </span>
             ) : null}

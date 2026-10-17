@@ -8,7 +8,7 @@ import { getLang } from '@/lib/lang';
 import { DICT } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
 import {
-  FARMER_STORIES,
+  recentStories,
   getStory,
   sampleLabel,
   farmerFace,
@@ -24,9 +24,9 @@ import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
  * consent (public_profile = true). */
 export const revalidate = 300;
 
-// Pre-render the sample slugs; real farmer ids (uuids) render on demand.
+// Pre-render the sample slugs (none while samples are off); real farmer ids (uuids) render on demand.
 export function generateStaticParams() {
-  return FARMER_STORIES.map((s) => ({ slug: s.id }));
+  return recentStories().map((s) => ({ slug: s.id }));
 }
 
 type Resolved =

@@ -1,5 +1,5 @@
 import { LocaleLink as Link } from '@/components/LocaleLink';
-import { homepagePrice, productEmoji, fmtMoney, type Product } from '@marutham/lib';
+import { homepagePrice, productEmoji, fmtPrice, type Product } from '@marutham/lib';
 import type { Dict } from '@/lib/dict';
 import type { LandingCopy } from '@/lib/landing';
 import { produceImage } from '@/lib/produceImage';
@@ -81,7 +81,7 @@ export function FreshPicks({ products, t, c }: { products: Product[]; t: Dict; c
                     <p className="text-blossom-ink mt-0.5 text-caption font-bold">
                       {price ? (
                         <>
-                          {fmtMoney(price.amount)}
+                          {fmtPrice(price.amount)}
                           <span className="text-fg-muted font-medium">/{price.unit}</span>
                         </>
                       ) : (

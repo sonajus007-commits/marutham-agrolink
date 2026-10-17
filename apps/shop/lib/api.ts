@@ -116,6 +116,8 @@ export interface CatalogueParams {
   sort?: string;
   page?: number;
   limit?: number;
+  /** Only products a shopper can add to the cart right now. */
+  available?: boolean;
 }
 
 export interface CataloguePage {
@@ -139,6 +141,7 @@ export async function getCatalogue(params: CatalogueParams = {}): Promise<Catalo
   if (params.q?.trim()) qs.set('q', params.q.trim());
   if (params.category?.trim()) qs.set('category', params.category.trim());
   if (params.sort) qs.set('sort', params.sort);
+  if (params.available) qs.set('available', 'true');
 
   const data = await getJson<{ products?: Product[]; count?: number }>(`/products?${qs}`, {});
   const products = data.products || [];

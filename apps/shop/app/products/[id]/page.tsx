@@ -9,6 +9,7 @@ import {
   districtPriceRows,
   productJsonLd,
   fmtMoney,
+  fmtPrice,
   HOME_DISTRICT,
   type PublicListing,
 } from '@marutham/lib';
@@ -56,7 +57,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   const { product } = detail;
   const price = homepagePrice(product);
-  const priceText = price ? `${fmtMoney(price.amount)}/${price.unit}` : '';
+  const priceText = price ? `${fmtPrice(price.amount)}/${price.unit}` : '';
   // Lead with the name the reader searches in: "வாழைப்பழம் (Banana)" on the
   // Tamil page, "Banana (வாழைப்பழம்)" on the English one.
   const [first, second] =
@@ -103,7 +104,7 @@ export default async function ProductPage({ params }: Params) {
 
   // A few more products from the same category, minus this one. One bounded call.
   const related = product.category
-    ? (await getCatalogue({ category: product.category, limit: 6 })).products
+    ? (await getCatalogue({ category: product.category, limit: 6, available: true })).products
         .filter((p) => String(p.id) !== String(product.id))
         .slice(0, 5)
     : [];
@@ -216,7 +217,7 @@ export default async function ProductPage({ params }: Params) {
               {price ? (
                 <>
                   <span className="text-forest-900 text-4xl font-extrabold tracking-tight">
-                    {fmtMoney(price.amount)}
+                    {fmtPrice(price.amount)}
                   </span>
                   <span className="text-fg-muted ml-1 text-sm font-semibold">
                     {t.product.perUnit} {price.unit} · {HOME_DISTRICT}
@@ -331,7 +332,7 @@ function Offers({ t, offers, unit }: { t: Dict; offers: PublicListing[]; unit: s
               </div>
               <div className="shrink-0 text-right">
                 <span className="text-xl font-extrabold text-forest-700">
-                  {fmtMoney(o.farmer_price)}
+                  {fmtPrice(o.farmer_price)}
                 </span>
                 {unit ? <span className="block text-[11px] text-fg-muted">/{unit}</span> : null}
               </div>
