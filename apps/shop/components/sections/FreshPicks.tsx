@@ -107,10 +107,10 @@ export function FreshPicks({ products, t, c }: { products: Product[]; t: Dict; c
             key={s.t}
             className="border-border/70 flex flex-col items-center gap-1.5 rounded-xl border border-dashed px-2 py-3 text-center"
           >
-            <span className="bg-bg text-forest-700 inline-grid h-6 w-6 place-items-center rounded-full text-[0.7rem] font-bold">
+            <span className="bg-bg text-forest-700 inline-grid h-6 w-6 place-items-center rounded-full text-meta font-bold">
               {i + 1}
             </span>
-            <span className="text-fg-muted text-[0.7rem] leading-tight">{s.t}</span>
+            <span className="text-fg-muted text-meta leading-tight">{s.t}</span>
           </li>
         ))}
       </ol>

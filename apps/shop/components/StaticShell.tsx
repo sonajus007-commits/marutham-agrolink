@@ -44,7 +44,7 @@ export function StaticShell({
       <SiteHeader t={t} lang={lang} />
       <main id="main" tabIndex={-1} className="mx-auto max-w-3xl px-5 py-14">
         {eyebrow ? (
-          <span className="text-blossom-ink text-[0.7rem] font-semibold tracking-[0.16em] uppercase">
+          <span className="text-blossom-ink text-meta font-semibold tracking-[0.16em] uppercase">
             {eyebrow}
           </span>
         ) : null}

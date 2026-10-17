@@ -115,7 +115,7 @@ export function MeetFarmers({
                       </span>
                     </span>
                     <span className="text-forest-900 text-caption font-bold">{name}</span>
-                    {place ? <span className="text-fg-muted text-[0.7rem]">{place}</span> : null}
+                    {place ? <span className="text-fg-muted text-meta">{place}</span> : null}
                   </Link>
                 </li>
               );
@@ -132,7 +132,7 @@ export function MeetFarmers({
                   <MapPin className="h-7 w-7" />
                 </span>
                 <span className="text-forest-900 text-caption font-bold">{d}</span>
-                <span className="text-fg-muted text-[0.7rem]">{copy.role}</span>
+                <span className="text-fg-muted text-meta">{copy.role}</span>
               </li>
             ))}
       </ul>

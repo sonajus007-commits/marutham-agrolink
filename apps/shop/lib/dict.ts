@@ -32,6 +32,8 @@ export interface Dict {
     /** Keyboard skip link — first Tab stop on every page. */
     skip: string;
     location: string;
+    /** Lead-in before the service area on the mobile header. */
+    deliveringTo: string;
     cart: string;
     home: string;
     categories: string;
@@ -75,6 +77,10 @@ export interface Dict {
   status: { loading: string; errorTitle: string; errorSub: string; retry: string; home: string };
   catalogue: {
     title: string;
+    /** The first category chip on /products — clears the category filter. */
+    allChip: string;
+    /** aria-label for the category chip row. */
+    categoriesLabel: string;
     sub: string;
     metaTitle: string;
     metaDesc: string;
@@ -134,6 +140,7 @@ const en: Dict = {
     search: 'Search fresh produce, farmers…',
     skip: 'Skip to main content',
     location: 'Pudukkottai, Tamil Nadu',
+    deliveringTo: 'Delivering in',
     cart: 'Cart',
     home: 'Home',
     categories: 'Categories',
@@ -205,6 +212,8 @@ const en: Dict = {
   },
   catalogue: {
     title: 'All Produce',
+    allChip: 'All',
+    categoriesLabel: 'Categories',
     sub: 'Everything our farmers are growing — browse freely, no account needed.',
     metaTitle: 'All Produce — Marutham AgroLink',
     metaDesc:
@@ -266,6 +275,7 @@ const ta: Dict = {
     search: 'புதிய காய்கறிகள், விவசாயிகளைத் தேடுங்கள்…',
     skip: 'முதன்மை உள்ளடக்கத்திற்குச் செல்',
     location: 'புதுக்கோட்டை, தமிழ்நாடு',
+    deliveringTo: 'டெலிவரி:',
     cart: 'கூடை',
     home: 'முகப்பு',
     categories: 'வகைகள்',
@@ -337,6 +347,8 @@ const ta: Dict = {
   },
   catalogue: {
     title: 'அனைத்து பொருட்கள்',
+    allChip: 'அனைத்தும்',
+    categoriesLabel: 'வகைகள்',
     sub: 'எங்கள் விவசாயிகள் விளைவிக்கும் அனைத்தும் — கணக்கு தேவையில்லை, சுதந்திரமாகப் பாருங்கள்.',
     metaTitle: 'அனைத்து பொருட்கள் — மருதம் அக்ரோலிங்க்',
     metaDesc:

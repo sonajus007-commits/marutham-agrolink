@@ -3,7 +3,6 @@ import type { Product } from '@marutham/lib';
 import { categorySlug } from '@/lib/categorySlug';
 import type { Dict } from '@/lib/dict';
 import { Section, SectionHeader } from '@/components/ui/Section';
-import { Reveal } from '@/components/ui/Reveal';
 import { ProduceIcon } from '@/components/ui/ProduceIcon';
 
 /* Shop by Category — the circular rail from the reference model, but every chip
@@ -66,7 +65,10 @@ export function CategoryRail({ products, t }: { products: Product[]; t: Dict }) 
 
       <ul className="mt-10 grid list-none grid-cols-3 gap-x-4 gap-y-7 p-0 sm:grid-cols-5 lg:grid-cols-9">
         {cats.map((cat, i) => (
-          <Reveal as="li" key={cat.name} kind="fade-up" delay={i * 0.04}>
+          /* A plain li, not a per-item Reveal: staggered fades left the whole rail
+             blank mid-scroll in real Chrome. Shopping content paints at once; only
+             the section header keeps its entrance. */
+          <li key={cat.name}>
             <Link
               href={`/category/${categorySlug(cat.name)}`}
               className="group flex flex-col items-center gap-2 text-center no-underline"
@@ -81,9 +83,9 @@ export function CategoryRail({ products, t }: { products: Product[]; t: Dict }) 
               <span className="text-forest-900 text-caption leading-tight font-semibold">
                 {cat.name}
               </span>
-              <span className="text-fg-muted text-[0.7rem]">{t.categories.count(cat.count)}</span>
+              <span className="text-fg-muted text-meta">{t.categories.count(cat.count)}</span>
             </Link>
-          </Reveal>
+          </li>
         ))}
       </ul>
     </Section>

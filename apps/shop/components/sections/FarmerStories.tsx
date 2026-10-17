@@ -3,7 +3,6 @@ import { LocaleLink as Link } from '@/components/LocaleLink';
 import type { Lang } from '@/lib/dict';
 import { recentStories, sampleLabel, farmerFace } from '@/lib/farmerStories';
 import { Section, SectionHeader } from '@/components/ui/Section';
-import { Reveal } from '@/components/ui/Reveal';
 
 /* Farmer Stories — the dedicated section holding ALL the stories, richer than the
  * hero strip (full quote, no clamp). Clearly marked illustrative: the eyebrow
@@ -49,8 +48,8 @@ export function FarmerStories({ lang }: { lang: Lang }) {
       </div>
 
       <ul className="mt-12 grid list-none grid-cols-1 gap-5 p-0 sm:grid-cols-2 lg:grid-cols-3">
-        {stories.map((s, i) => (
-          <Reveal as="li" key={s.id} kind="fade-up" delay={i * 0.06}>
+        {stories.map((s) => (
+          <li key={s.id}>
             <Link href={`/farmer/${s.id}`} className="block h-full no-underline">
               <figure className="border-border bg-surface-raised flex h-full flex-col gap-4 rounded-2xl border p-6 transition-shadow hover:shadow-[0_16px_40px_-20px_rgba(22,61,47,0.35)]">
                 <blockquote className="text-fg text-body leading-relaxed">
@@ -69,16 +68,16 @@ export function FarmerStories({ lang }: { lang: Lang }) {
                   </span>
                   <span className="leading-tight">
                     <span className="text-forest-900 block text-caption font-bold">{s.name}</span>
-                    <span className="text-fg-muted block text-[0.7rem]">{s.village}</span>
+                    <span className="text-fg-muted block text-meta">{s.village}</span>
                   </span>
-                  <span className="bg-blossom-500/12 text-blossom-ink ml-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.7rem] font-bold">
+                  <span className="bg-blossom-500/12 text-blossom-ink ml-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-meta font-bold">
                     <Tag className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                     {s.benefit[lang]}
                   </span>
                 </figcaption>
               </figure>
             </Link>
-          </Reveal>
+          </li>
         ))}
       </ul>
     </Section>

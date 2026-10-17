@@ -31,7 +31,7 @@ export function MobileNav({ nav }: { nav: Dict['nav'] }) {
   const isHome = pathname === '/';
   const isShop = pathname.startsWith('/products');
   const base =
-    'flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium no-underline transition-colors';
+    'flex flex-1 flex-col items-center gap-1 py-2 text-meta font-medium no-underline transition-colors';
   const active = 'text-blossom-ink';
   const idle = 'text-fg-muted';
 

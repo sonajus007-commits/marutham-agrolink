@@ -172,7 +172,7 @@ export function SectionHeader({
     <Reveal className={`flex max-w-[60ch] flex-col gap-4 ${alignment}`}>
       {eyebrow ? (
         <span
-          className={`min-w-0 text-[0.7rem] font-semibold tracking-[0.16em] uppercase ${eyebrowTone}`}
+          className={`min-w-0 text-meta font-semibold tracking-[0.16em] uppercase ${eyebrowTone}`}
         >
           {eyebrow}
         </span>

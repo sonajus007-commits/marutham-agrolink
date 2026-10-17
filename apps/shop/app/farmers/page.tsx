@@ -80,7 +80,7 @@ export default async function FarmersPage() {
       <SiteHeader t={t} lang={l} />
 
       <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-5 py-12">
-        <span className="text-blossom-ink text-[0.7rem] font-semibold tracking-[0.16em] uppercase">
+        <span className="text-blossom-ink text-meta font-semibold tracking-[0.16em] uppercase">
           {c.eyebrow}
         </span>
         <h1 className="text-forest-900 mt-3 text-3xl font-bold tracking-tight md:text-4xl">

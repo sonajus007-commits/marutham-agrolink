@@ -107,6 +107,8 @@
   --text-body--line-height: 1.65;
   --text-caption: 0.875rem; /* 14 */
   --text-caption--line-height: 1.5;
+  --text-meta: 0.75rem; /* 12 — eyebrows, counts, villages; the floor for meta text */
+  --text-meta--line-height: 1.4;
 }
 
 body {

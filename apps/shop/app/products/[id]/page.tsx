@@ -319,7 +319,7 @@ function Offers({ t, offers, unit }: { t: Dict; offers: PublicListing[]; unit: s
                 {/* bg-gold + dark ink (6.90:1). `text-gold` is 2.21:1 on white. */}
                 {o.farmer_avg_rating ? (
                   <p className="mt-1">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-gold-500 px-2 py-0.5 text-[11px] font-bold text-fg">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gold-500 px-2 py-0.5 text-meta font-bold text-fg">
                       <span aria-hidden="true">★</span>
                       {o.farmer_avg_rating}
                     </span>
@@ -334,7 +334,7 @@ function Offers({ t, offers, unit }: { t: Dict; offers: PublicListing[]; unit: s
                 <span className="text-xl font-extrabold text-forest-700">
                   {fmtPrice(o.farmer_price)}
                 </span>
-                {unit ? <span className="block text-[11px] text-fg-muted">/{unit}</span> : null}
+                {unit ? <span className="block text-meta text-fg-muted">/{unit}</span> : null}
               </div>
             </li>
           ))}

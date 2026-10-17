@@ -132,7 +132,7 @@ export default async function FarmerPage({ params }: { params: Promise<{ slug: s
           </span>
           <div>
             {isReal ? null : (
-              <span className="bg-blossom-500/12 text-blossom-ink inline-flex rounded-full px-2.5 py-1 text-[0.7rem] font-bold">
+              <span className="bg-blossom-500/12 text-blossom-ink inline-flex rounded-full px-2.5 py-1 text-meta font-bold">
                 {sampleLabel(l)}
               </span>
             )}

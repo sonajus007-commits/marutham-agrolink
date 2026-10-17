@@ -102,9 +102,15 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
         </div>
       </div>
 
-      {/* Mobile search row — full width, below the brand bar. */}
+      {/* Mobile search row — full width, below the brand bar — with the service
+          area under it, since the desktop location chip has no room up top. A
+          plain statement, not a picker: there is one service area today. */}
       <div className="border-border/60 border-t px-6 py-2.5 md:hidden">
         <SearchForm t={t} lang={lang} />
+        <p className="text-fg-muted mt-1.5 flex items-center gap-1.5 text-meta font-medium">
+          <MapPin className="text-blossom-ink h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          {t.nav.deliveringTo} {t.nav.location}
+        </p>
       </div>
     </header>
   );
@@ -153,9 +159,9 @@ export function SiteFooter({ t, c }: { t: Dict; c: LandingCopy }) {
 
           {cols.map((c) => (
             <div key={c.h}>
-              {/* gold as a small heading would be 2.19:1 on light, but this
-                  ground is forest-900 — gold on it clears AA comfortably. */}
-              <h3 className="text-gold-500 text-[0.7rem] font-semibold tracking-[0.14em] uppercase">
+              {/* Cream, not gold: the brand rule is that gold #D9A441 is never
+                  text, even where it would pass contrast on forest-900. */}
+              <h3 className="text-surface text-meta font-semibold tracking-[0.14em] uppercase">
                 {c.h}
               </h3>
               <ul className="mt-2 flex list-none flex-col p-0">
@@ -175,10 +181,10 @@ export function SiteFooter({ t, c }: { t: Dict; c: LandingCopy }) {
         </div>
 
         <div className="border-forest-500/30 mt-12 flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-leaf-300 text-[0.75rem]">
+          <p className="text-leaf-300 text-meta">
             © {new Date().getFullYear()} {t.footer.rights}
           </p>
-          <ul className="flex list-none flex-wrap gap-x-5 p-0 text-[0.75rem]">
+          <ul className="flex list-none flex-wrap gap-x-5 p-0 text-meta">
             {[
               { href: '/about', l: t.htmlLang === 'ta' ? 'எங்களைப் பற்றி' : 'About' },
               { href: '/contact', l: t.htmlLang === 'ta' ? 'தொடர்பு' : 'Contact' },

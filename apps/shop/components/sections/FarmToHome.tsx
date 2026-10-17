@@ -78,7 +78,7 @@ export function FarmToHome({ lang }: { lang: Lang }) {
   return (
     <Section id="how-it-works" tone="mist" aria-labelledby="how-h">
       <div className="mx-auto max-w-[60ch] text-center">
-        <span className="text-leaf-ink text-[0.7rem] font-semibold tracking-[0.16em] uppercase">
+        <span className="text-leaf-ink text-meta font-semibold tracking-[0.16em] uppercase">
           {lang === 'ta' ? 'எப்படி வேலை செய்கிறது' : 'How it works'}
         </span>
         <h2

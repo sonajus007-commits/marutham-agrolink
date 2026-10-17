@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getLang } from '@/lib/lang';
 import { LocaleLink as Link } from '@/components/LocaleLink';
 import { Search } from 'lucide-react';
-import { getCatalogue } from '@/lib/api';
+import { getCatalogue, getCategories } from '@/lib/api';
 import { OG_IMAGE, absoluteUrl } from '@/lib/site';
 import { langAlternates, localePath, ogLocale } from '@/lib/locale';
 import { DICT } from '@/lib/dict';
@@ -64,14 +64,10 @@ export default async function CataloguePage({ searchParams }: { searchParams: Pr
   const sort = sp.sort === 'newest' ? 'newest' : 'name';
   const page = Math.max(parseInt(sp.page || '1', 10) || 1, 1);
 
-  const { products, count, pageCount } = await getCatalogue({
-    q,
-    category,
-    sort,
-    page,
-    limit: PAGE_SIZE,
-    available: true,
-  });
+  const [{ products, count, pageCount }, categories] = await Promise.all([
+    getCatalogue({ q, category, sort, page, limit: PAGE_SIZE, available: true }),
+    getCategories(true),
+  ]);
 
   // Build an href that keeps the current filters and overrides some of them.
   const href = (over: Partial<SP>) => {
@@ -145,25 +141,51 @@ export default async function CataloguePage({ searchParams }: { searchParams: Pr
           </div>
         </div>
 
-        {/* Active-filter chips: clear a category / clear a search. */}
-        {category || q ? (
+        {/* Category chips — one tap to narrow the catalogue, as on the grocery
+            apps. Plain links, so every filter is a crawlable URL; the row scrolls
+            sideways on a phone rather than wrapping into a wall. Only categories
+            with something buyable right now are offered. */}
+        {categories.length > 1 ? (
+          <nav aria-label={t.catalogue.categoriesLabel} className="-mx-5 mt-5 overflow-x-auto px-5">
+            <ul className="flex w-max list-none gap-2 p-0">
+              {[{ name: '', count: 0 }, ...categories].map((c) => {
+                const active = c.name === category;
+                return (
+                  <li key={c.name || 'all'}>
+                    <Link
+                      href={href({ category: c.name || undefined, page: undefined })}
+                      aria-current={active || undefined}
+                      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 py-1.5 text-caption font-semibold whitespace-nowrap no-underline transition-colors ${
+                        active
+                          ? 'border-forest-700 bg-forest-700 text-surface'
+                          : 'border-border text-fg-muted hover:border-forest-500 hover:text-forest-700'
+                      }`}
+                    >
+                      {c.name || t.catalogue.allChip}
+                      {c.name ? (
+                        <span
+                          className={`text-meta ${active ? 'text-surface/80' : 'text-fg-muted'}`}
+                        >
+                          {c.count}
+                        </span>
+                      ) : null}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        ) : null}
+
+        {/* Clear a search. (A category clears from its chip row above.) */}
+        {q ? (
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            {category ? (
-              <Link
-                href={href({ category: undefined, page: undefined })}
-                className="border-border text-forest-700 hover:border-forest-500 inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 py-1 text-caption font-semibold no-underline"
-              >
-                {category} ✕
-              </Link>
-            ) : null}
-            {q ? (
-              <Link
-                href={href({ q: undefined, page: undefined })}
-                className="border-border text-forest-700 hover:border-forest-500 inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 py-1 text-caption font-semibold no-underline"
-              >
-                “{q}” ✕
-              </Link>
-            ) : null}
+            <Link
+              href={href({ q: undefined, page: undefined })}
+              className="border-border text-forest-700 hover:border-forest-500 inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 py-1 text-caption font-semibold no-underline"
+            >
+              “{q}” ✕
+            </Link>
           </div>
         ) : null}
 

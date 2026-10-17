@@ -58,7 +58,7 @@ export function PlatformStatistics({
                 aria-hidden="true"
               />
               <span className="text-forest-900 text-caption font-semibold">{s.label}</span>
-              <span className="text-fg-muted text-[0.75rem]">{s.hint}</span>
+              <span className="text-fg-muted text-meta">{s.hint}</span>
             </div>
           </Reveal>
         ))}

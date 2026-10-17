@@ -97,7 +97,7 @@ export function ProductCard({
           products on the homepage happen to carry a rating. */}
       {product.avg_rating ? (
         <p className="mt-1">
-          <span className="inline-flex items-center gap-1 rounded-full bg-gold-500 px-2 py-0.5 text-[11px] font-bold text-fg">
+          <span className="inline-flex items-center gap-1 rounded-full bg-gold-500 px-2 py-0.5 text-meta font-bold text-fg">
             <span aria-hidden="true">★</span>
             {product.avg_rating}
           </span>
