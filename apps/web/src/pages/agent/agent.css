@@ -63,7 +63,7 @@
   color: var(--accent);
 }
 .agent-hdr__tag {
-  font-size: 9px;
+  font-size: var(--fs-2xs);
   color: var(--forest-soft);
   letter-spacing: 1.8px;
   text-transform: uppercase;
@@ -114,7 +114,7 @@
     gap: 4px;
   }
   .agent-pill__text {
-    font-size: 10px;
+    font-size: var(--fs-2xs);
   }
   .agent-pill .agent-pill__text--full {
     display: none;
@@ -410,7 +410,7 @@
   border-radius: 8px;
   background: var(--accent);
   color: var(--white);
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 800;
   display: inline-flex;
   align-items: center;
@@ -418,7 +418,7 @@
   border: 2px solid var(--surface);
 }
 .agent-bnav__label {
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: 0.1px;
   max-width: 100%;
@@ -460,7 +460,7 @@
   font-variant-numeric: tabular-nums;
 }
 .agent-clock__tz {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--gray);
   margin-top: 3px;
   text-align: right;
@@ -1077,7 +1077,7 @@
   white-space: nowrap;
 }
 .verify-packing__label small {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: var(--gray);
 }

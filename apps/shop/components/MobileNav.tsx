@@ -31,7 +31,7 @@ export function MobileNav({ nav }: { nav: Dict['nav'] }) {
   const isHome = pathname === '/';
   const isShop = pathname.startsWith('/products');
   const base =
-    'flex flex-1 flex-col items-center gap-1 py-2 text-[0.65rem] font-medium no-underline transition-colors';
+    'flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium no-underline transition-colors';
   const active = 'text-blossom-ink';
   const idle = 'text-fg-muted';
 
@@ -64,7 +64,7 @@ export function MobileNav({ nav }: { nav: Dict['nav'] }) {
         <span className="relative">
           <ShoppingCart className="h-5 w-5" aria-hidden="true" />
           {ready && count > 0 ? (
-            <span className="bg-blossom-500 absolute -top-1.5 -right-2 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[0.6rem] font-bold text-white tabular-nums">
+            <span className="bg-blossom-500 absolute -top-1.5 -right-2 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[11px] font-bold text-white tabular-nums">
               {count > 99 ? '99+' : count}
             </span>
           ) : null}

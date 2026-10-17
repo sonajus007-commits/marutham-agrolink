@@ -163,7 +163,7 @@ export function ProfileContent({ isVCO }: { isVCO: boolean }) {
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)' }}>
             🧑‍💼 {t('agent.profile.employee', 'Employee Details')}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--gray)', marginBottom: 10 }}>
+          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)', marginBottom: 10 }}>
             {t('agent.profile.employeeNote', 'Maintained by Head Office · read-only')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -187,7 +187,7 @@ export function ProfileContent({ isVCO }: { isVCO: boolean }) {
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)' }}>
           📍 {t('address.registered', 'Registered address')}
         </div>
-        <div style={{ fontSize: 10, color: 'var(--gray)', marginBottom: 10 }}>
+        <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)', marginBottom: 10 }}>
           {t('agent.profile.employeeNote', 'Maintained by Head Office · read-only')}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

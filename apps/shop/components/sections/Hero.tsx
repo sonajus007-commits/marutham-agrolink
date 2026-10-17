@@ -42,7 +42,7 @@ export function Hero({ c, lang }: { c: LandingCopy; lang: Lang }) {
             {c.hero.badge}
           </span>
 
-          <h1 className="text-[2.5rem] leading-[1.05] font-bold tracking-tight text-balance text-white sm:text-[3.25rem] lg:text-hero">
+          <h1 className="text-hero font-bold tracking-tight text-balance text-white">
             {c.hero.titleA}
             <br />
             <span className="text-[#FCC9DD]">{c.hero.titleB}</span>

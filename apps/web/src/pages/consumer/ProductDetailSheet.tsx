@@ -351,13 +351,13 @@ function OfferRow({
               {f.fname || t('consumer.detail.seller', 'Seller')}
               {f.lname ? ` ${f.lname}` : ''}
             </span>
-            <div style={{ fontSize: 10, color: 'var(--gray)' }}>
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)' }}>
               {f.village_town || f.district || ''}
             </div>
             {photoCount > 0 ? (
               <div
                 style={{
-                  fontSize: 10,
+                  fontSize: 'var(--fs-2xs)',
                   fontWeight: 700,
                   color: selected ? 'var(--success)' : 'var(--leaf)',
                   marginTop: 2,
@@ -379,14 +379,20 @@ function OfferRow({
         </button>
         <div style={{ textAlign: 'right' }}>
           {mktPrice > 0 && custPrice < mktPrice ? (
-            <div style={{ fontSize: 10, color: 'var(--gray)', textDecoration: 'line-through' }}>
+            <div
+              style={{
+                fontSize: 'var(--fs-2xs)',
+                color: 'var(--gray)',
+                textDecoration: 'line-through',
+              }}
+            >
               {fmtMoney(mktPrice)}
             </div>
           ) : null}
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--leaf)' }}>
             {fmtMoney(custPrice)}
           </div>
-          <div style={{ fontSize: 9, color: 'var(--gray)' }}>
+          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)' }}>
             {t('consumer.detail.per', 'per {{unit}}', { unit })}
           </div>
         </div>

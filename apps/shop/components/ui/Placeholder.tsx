@@ -53,7 +53,7 @@ export function ImageSlot({
         <path d="m3 16 5-4 4 3 3-2 6 5" stroke="currentColor" strokeWidth="1.5" fill="none" />
       </svg>
       <p className="text-caption max-w-[34ch] font-medium">{description}</p>
-      <p className="text-[0.65rem] tracking-[0.14em] uppercase opacity-60">{slotLabel}</p>
+      <p className="text-[11px] tracking-[0.14em] uppercase opacity-60">{slotLabel}</p>
     </div>
   );
 }

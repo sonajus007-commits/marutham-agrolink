@@ -264,7 +264,7 @@ export const typography = {
   // shared 1fr grid rows don't overflow on narrow phones; per-role screens push
   // individual numbers larger in later phases.
   fontSize: {
-    '2xs': '10px',
+    '2xs': '11px', // floor: nothing renders below 11px (Amazon/Blinkit benchmark, Tamil legibility)
     xs: '11px',
     sm: '12px',
     base: '14px',

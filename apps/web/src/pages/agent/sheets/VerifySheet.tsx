@@ -378,7 +378,7 @@ export function VerifySheet({
             >
               🛵 {t('agent.route.direct', 'Direct Delivery')}
               <br />
-              <span style={{ fontSize: 9, fontWeight: 400 }}>
+              <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 400 }}>
                 {t('agent.route.directSub', 'to consumer')}
               </span>
             </button>
@@ -388,7 +388,7 @@ export function VerifySheet({
             >
               🏭 {t('agent.route.hub', 'Transit to Hub')}
               <br />
-              <span style={{ fontSize: 9, fontWeight: 400 }}>
+              <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 400 }}>
                 {t('agent.route.hubSub', 'via hub')}
               </span>
             </button>

@@ -78,25 +78,33 @@
   --color-error: #d32f2f;
 
   /* ── Type ──────────────────────────────────────────────────────────────────
-   * Outfit is the PRIMARY face: headings, display, numbers, buttons.
+   * Poppins is the PRIMARY face: headings, display, numbers, buttons — the same
+   * face as the portal/app (packages/tokens). It used to be Outfit here, but the
+   * tokens.css import re-declares --font-sans as Poppins and wins, so the shop
+   * asked for Poppins without loading it and rendered in the device fallback.
    * Cormorant Garamond is SECONDARY — the wordmark and pull quotes only.
    * packages/tokens/src/tokens.ts:250 is explicit that the serif is "wordmark
    * only (part of the logo)"; the shop previously set it as --font-display and
    * so rendered every h1/h2 in it, which is why this page read as a different
    * design from the brand spec. */
-  --font-sans: 'Outfit', system-ui, sans-serif;
+  --font-sans: 'Poppins', system-ui, sans-serif;
   --font-serif: 'Cormorant Garamond', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* Type scale, from the brief. */
-  --text-hero: 4rem; /* 64 */
-  --text-hero--line-height: 1.05;
-  --text-section: 2.5rem; /* 40 */
-  --text-section--line-height: 1.15;
-  --text-card: 1.5rem; /* 24 */
+  /* Type scale — fluid, phone → desktop. Benchmarked against Amazon.in and
+   * Blinkit (h1 ~32px, body 14px, nothing under 11px) and kept a step roomier
+   * for Tamil and first-time farmer/elder buyers. clamp(min, fluid, max): the
+   * min is the 390px-phone size, the max lands around a 1280–1440px desktop. */
+  --text-hero: clamp(2rem, 1.5rem + 2vw, 3rem); /* 32 → 48 */
+  --text-hero--line-height: 1.08;
+  --text-section: clamp(1.5rem, 1.2rem + 1.2vw, 2rem); /* 24 → 32 */
+  --text-section--line-height: 1.2;
+  --text-4xl: clamp(1.75rem, 1.4rem + 1.2vw, 2.25rem); /* page titles 28 → 36 */
+  --text-4xl--line-height: 1.15;
+  --text-card: clamp(1.125rem, 1rem + 0.4vw, 1.25rem); /* 18 → 20 */
   --text-card--line-height: 1.3;
-  --text-body: 1.125rem; /* 18 */
-  --text-body--line-height: 1.7;
+  --text-body: clamp(1rem, 0.95rem + 0.2vw, 1.0625rem); /* 16 → 17 */
+  --text-body--line-height: 1.65;
   --text-caption: 0.875rem; /* 14 */
   --text-caption--line-height: 1.5;
 }

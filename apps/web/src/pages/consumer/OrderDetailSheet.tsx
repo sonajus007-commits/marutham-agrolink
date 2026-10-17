@@ -465,7 +465,7 @@ function OrderDetailBody({
           >
             {o.code || ''}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 2 }}>
+          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)', marginTop: 2 }}>
             {t('consumer.order.qrHint', 'Show this to your delivery agent')}
           </div>
         </div>
@@ -641,7 +641,9 @@ function OrderDetailBody({
           onClick={() => setShowReturn(true)}
         >
           ↩ {t('consumer.return.title', 'Request return / refund')}
-          <span style={{ display: 'block', fontWeight: 400, fontSize: 10, marginTop: 2 }}>
+          <span
+            style={{ display: 'block', fontWeight: 400, fontSize: 'var(--fs-2xs)', marginTop: 2 }}
+          >
             {t('consumer.order.returnWindow', '{{hours}}h left in the return window', {
               hours: hoursLeft,
             })}
@@ -894,7 +896,7 @@ function ItemRow({
         </span>
         <span style={{ fontSize: 13, fontWeight: 700 }}>{fmtMoney(itemLineTotal(item))}</span>
       </div>
-      <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 2 }}>
+      <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)', marginTop: 2 }}>
         {item.qty} {item.unit} × {fmtMoney(item.price)}
         {item.farmer_name
           ? ` · ${t('consumer.cart.fromSeller', 'from {{name}}', { name: item.farmer_name })}`
@@ -904,7 +906,7 @@ function ItemRow({
         <div style={{ marginTop: 6, display: 'flex', gap: 6, alignItems: 'center' }}>
           {item.rated ? (
             <>
-              <span style={{ fontSize: 10, color: 'var(--gray)' }}>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)' }}>
                 {t('consumer.order.rated', 'Rated:')}
               </span>
               <StarRating
@@ -917,7 +919,7 @@ function ItemRow({
             </>
           ) : (
             <>
-              <span style={{ fontSize: 10, color: 'var(--gray)' }}>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)' }}>
                 {t('consumer.order.rate', 'Rate:')}
               </span>
               <StarRating

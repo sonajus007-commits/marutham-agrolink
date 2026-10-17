@@ -99,7 +99,7 @@ export function PaymentSheet({
         <div className="irow">
           <span className="ilbl">
             {t('consumer.order.marketFee', 'Market fee')}{' '}
-            <span style={{ fontSize: 10, color: 'var(--gray)' }}>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)' }}>
               ({t('consumer.order.multipleFarmers', 'multiple farmers')})
             </span>
           </span>
@@ -139,7 +139,7 @@ export function PaymentSheet({
             <div style={{ fontSize: 22 }}>{m.icon}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--forest)' }}>{m.label}</div>
-              <div style={{ fontSize: 10, color: 'var(--gray)' }}>{m.desc}</div>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)' }}>{m.desc}</div>
             </div>
             <div
               style={{

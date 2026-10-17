@@ -49,7 +49,7 @@ export function PlatformStatistics({
             <div className="border-border bg-surface-raised flex h-full flex-col items-center gap-1 rounded-2xl border px-5 py-9 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(22,61,47,0.12)]">
               {/* Display-size numerals: the only place an accent this light is
                   allowed to be type at all. */}
-              <span className="text-forest-700 text-[2.75rem] leading-none font-bold">
+              <span className="text-forest-700 text-4xl leading-none font-bold">
                 <StatCounter to={s.value} />
               </span>
               {/* A colour per tile — raw -500 accents used as a FILL only. */}

@@ -190,7 +190,7 @@
   color: var(--accent);
 }
 .cons-hdr__tag {
-  font-size: 9px;
+  font-size: var(--fs-2xs);
   color: var(--forest-soft);
   letter-spacing: 1.8px;
   text-transform: uppercase;
@@ -284,7 +284,7 @@
   color: var(--white);
 }
 .cons-lochero__label {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--border-subtle);
@@ -302,7 +302,7 @@
 
 /* Filters */
 .filt-label {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -378,7 +378,7 @@
   align-items: center;
 }
 .prod-chip {
-  font-size: 9px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   background: var(--success-bg);
   color: var(--forest);
@@ -410,7 +410,7 @@
   color: var(--leaf);
 }
 .prod-unit {
-  font-size: 9px;
+  font-size: var(--fs-2xs);
   color: var(--gray);
 }
 .prod-meta-row {
@@ -569,7 +569,7 @@
    on the app background, where it measures 4.41:1 and axe flags it. Same swap the
    sidebar made for its inactive items. */
 .cons-section-title {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.2px;
@@ -639,7 +639,7 @@
 }
 .ord-item__pay {
   display: block;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--gray);
 }
 .ord-id {
@@ -650,7 +650,7 @@
 }
 .ord-loc {
   display: block;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--gray);
   margin-top: 1px;
 }
@@ -723,7 +723,7 @@
   background: var(--warning-bg);
 }
 .track-box__k {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: var(--gray);
 }
@@ -740,7 +740,7 @@
   color: var(--warning-fg);
 }
 .track-box__sub {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--gray);
 }
 
@@ -787,7 +787,7 @@
   right: 0;
   bottom: 0;
   padding: 3px 6px;
-  font-size: 9px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: var(--white);
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.66));
@@ -869,7 +869,7 @@
   text-align: center;
 }
 .lid-lbl {
-  font-size: 9px;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--gray);
@@ -882,7 +882,7 @@
   margin: 3px 0;
 }
 .lid-note {
-  font-size: 9px;
+  font-size: var(--fs-2xs);
   color: var(--gray);
 }
 
@@ -951,7 +951,7 @@
   padding-top: 14px;
 }
 .prof-form__title {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -994,7 +994,7 @@
   color: var(--forest);
 }
 .addr-item__badge {
-  font-size: 9px;
+  font-size: var(--fs-2xs);
   background: var(--success-bg);
   color: var(--success);
   padding: 1px 6px;
@@ -1014,7 +1014,7 @@
   flex-shrink: 0;
 }
 .addr-btn {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   padding: 4px 8px;
   border: 1px solid var(--neutral-300);
   background: var(--surface);
@@ -1099,7 +1099,7 @@
   overflow: hidden;
 }
 .cons-recent__table th {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -1218,7 +1218,7 @@
 }
 .cons-market__lbl {
   display: block;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--muted);
@@ -1461,7 +1461,7 @@
   border-radius: 999px;
   background: var(--forest);
   color: var(--white);
-  font-size: 9px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: 0.3px;
 }
@@ -1488,7 +1488,7 @@
   margin-top: 2px;
 }
 .cons-fresh__new {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   color: var(--leaf);
 }
@@ -1547,7 +1547,7 @@
   color: var(--fg-muted);
 }
 .cons-cs__note {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-style: italic;
   color: var(--fg-muted);
 }
@@ -1583,7 +1583,7 @@
   flex-shrink: 0;
 }
 .cons-loc__lbl {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -1669,7 +1669,7 @@
   min-width: 0;
 }
 .cons-farmhero__eyebrow {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 800;
   letter-spacing: 1.4px;
   text-transform: uppercase;
@@ -1879,7 +1879,7 @@
   white-space: nowrap;
 }
 .cons-best__unit {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--fg-muted);
   margin-top: 1px;
 }
@@ -1892,7 +1892,7 @@
 }
 .cons-best__from {
   display: block;
-  font-size: 9px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: var(--fg-muted);
 }
@@ -1946,7 +1946,7 @@
   border-radius: 50px;
   background: var(--forest);
   color: var(--white);
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 800;
   letter-spacing: 0.5px;
   box-shadow: 0 2px 8px rgba(26, 61, 43, 0.25);
@@ -2036,7 +2036,7 @@
 }
 .live-track__slabel {
   margin-top: 6px;
-  font-size: 9px;
+  font-size: var(--fs-2xs);
   line-height: 1.25;
   color: var(--gray);
 }
@@ -2161,7 +2161,7 @@
   border-radius: 8px;
   background: var(--accent);
   color: var(--accent-on);
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 800;
   display: inline-flex;
   align-items: center;
@@ -2169,7 +2169,7 @@
   border: 2px solid var(--surface);
 }
 .cons-bnav__label {
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: 0.1px;
 }
@@ -2215,7 +2215,7 @@
   flex-shrink: 0;
 }
 .cons-checkoutbar__total .k {
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;

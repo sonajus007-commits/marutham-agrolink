@@ -93,7 +93,7 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: (order: Order) => vo
                   {item.product_name}
                 </div>
                 {item.farmer_name ? (
-                  <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 2 }}>
+                  <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)', marginTop: 2 }}>
                     {t('consumer.cart.fromSeller', 'from {{name}}', { name: item.farmer_name })}
                   </div>
                 ) : null}
@@ -102,7 +102,12 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: (order: Order) => vo
                 </div>
                 {mkt > 0 && unitPrice < mkt ? (
                   <div
-                    style={{ fontSize: 9, color: 'var(--success)', fontWeight: 700, marginTop: 2 }}
+                    style={{
+                      fontSize: 'var(--fs-2xs)',
+                      color: 'var(--success)',
+                      fontWeight: 700,
+                      marginTop: 2,
+                    }}
                   >
                     {t('consumer.cart.saveVsMarket', 'Save {{amount}} vs market', {
                       amount: fmtMoney((mkt - unitPrice) * item.qty),
@@ -131,7 +136,7 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: (order: Order) => vo
                 <button
                   onClick={() => cart.removeAt(idx)}
                   style={{
-                    fontSize: 10,
+                    fontSize: 'var(--fs-2xs)',
                     color: 'var(--red)',
                     fontWeight: 700,
                     background: 'none',
@@ -188,7 +193,7 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: (order: Order) => vo
           </span>
         </div>
         {bill.itemSubtotal > 0 && bill.itemSubtotal < FREE_DELIVERY_MIN ? (
-          <div style={{ fontSize: 10, color: 'var(--warning-fg)', marginTop: 2 }}>
+          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--warning-fg)', marginTop: 2 }}>
             {t('consumer.cart.freeDeliveryNudge', 'Add {{amount}} more for FREE delivery', {
               amount: fmtMoney(FREE_DELIVERY_MIN - bill.itemSubtotal),
             })}

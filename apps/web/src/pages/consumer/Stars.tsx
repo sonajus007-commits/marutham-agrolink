@@ -6,7 +6,7 @@ export function Stars({ value, count }: { value: number; count?: number }) {
       <span className="stars" aria-hidden="true">
         {str}
       </span>
-      <span style={{ fontSize: 10, color: 'var(--gray)' }}>
+      <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)' }}>
         {value.toFixed(1)}
         {count != null ? ` (${count})` : ''}
       </span>

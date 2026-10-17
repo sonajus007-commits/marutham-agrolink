@@ -70,7 +70,9 @@ export function ProductCard({
               </span>
             ) : null}
             {product.sub_type ? (
-              <span style={{ fontSize: 9, color: 'var(--gray)' }}>{product.sub_type}</span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)' }}>
+                {product.sub_type}
+              </span>
             ) : null}
           </div>
           {rating ? (
@@ -88,7 +90,7 @@ export function ProductCard({
                 flexWrap: 'wrap',
               }}
             >
-              <span style={{ fontSize: 10, color: 'var(--gray)' }}>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)' }}>
                 {f.fname}
                 {f.lname ? ` ${f.lname}` : ''}
                 {f.village_town ? `, ${f.village_town}` : ''}
@@ -127,7 +129,7 @@ export function ProductCard({
               <div className="prod-price" style={{ fontSize: 12, color: 'var(--gray)' }}>
                 {t('consumer.card.mkt', 'Mkt')} {fmtMoney(dp.market_price)}
               </div>
-              <div style={{ fontSize: 9, color: 'var(--red)' }}>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--red)' }}>
                 {t('consumer.card.noOffers', 'No offers')}
               </div>
             </>
@@ -150,12 +152,17 @@ export function ProductCard({
           </span>
         ) : null}
         {best?.time_available ? (
-          <span style={{ fontSize: 10, color: 'var(--schedule)' }}>
+          <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--schedule)' }}>
             {t('consumer.card.orderBy', 'Order by {{time}}', { time: best.time_available })}
           </span>
         ) : null}
         {availLeft != null ? (
-          <span style={{ fontSize: 10, color: availLeft <= 0 ? 'var(--red)' : 'var(--gray)' }}>
+          <span
+            style={{
+              fontSize: 'var(--fs-2xs)',
+              color: availLeft <= 0 ? 'var(--red)' : 'var(--gray)',
+            }}
+          >
             {t('consumer.card.avail', '{{qty}} {{unit}} avail', {
               qty: availLeft,
               unit: product.unit || '',
@@ -166,7 +173,7 @@ export function ProductCard({
           </span>
         ) : null}
         {best?.bulk_qty && best?.bulk_disc_pct ? (
-          <span style={{ fontSize: 10, color: 'var(--leaf)', fontWeight: 700 }}>
+          <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--leaf)', fontWeight: 700 }}>
             {t('consumer.card.bulk', 'Bulk {{qty}}+ → {{pct}}% off', {
               qty: best.bulk_qty,
               pct: best.bulk_disc_pct,
@@ -176,16 +183,16 @@ export function ProductCard({
 
         <div className="prod-actions">
           {custPrice == null && !dp ? (
-            <span style={{ fontSize: 10, color: 'var(--gray)' }}>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)' }}>
               {t('consumer.card.notInArea', 'Not in your area')}
             </span>
           ) : !best || !hasStock ? (
-            <span style={{ fontSize: 10, color: 'var(--red)' }}>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--red)' }}>
               {t('consumer.card.noOffersToday', 'No offers today')}
             </span>
           ) : !ws.open ? (
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--red)' }}>
+              <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--red)' }}>
                 🔒 {t('consumer.card.closed', 'Closed')}
               </div>
             </div>
@@ -219,7 +226,7 @@ function SellerBadge({ type }: { type?: string }) {
   return (
     <span
       style={{
-        fontSize: 9,
+        fontSize: 'var(--fs-2xs)',
         fontWeight: 700,
         borderRadius: 4,
         padding: '2px 6px',
