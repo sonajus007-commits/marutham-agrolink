@@ -62,10 +62,11 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
           longer than the English one and pushed the header past 390px. */}
       <div className="mx-auto flex w-full max-w-[1440px] min-w-0 items-center gap-3 px-6 py-3.5 md:gap-5 md:px-10">
         {/* shrink-0, not shrink: a squeezed box does not squeeze the text inside
-            it, so the wordmark painted over the toggle. It drops to the mark
-            alone below sm instead. */}
+            it, so the wordmark painted over the toggle. The full wordmark fits on
+            a phone because Cart and Sign in leave the header below sm (see the
+            controls group) — the bottom tab bar already carries both. */}
         <LocaleA href="/" className="shrink-0 no-underline" aria-label="Marutham AgroLink">
-          <MaruthamLogo compact />
+          <MaruthamLogo />
         </LocaleA>
 
         {/* Service area. Marutham serves Pudukkottai today, so this states a fact
@@ -97,8 +98,13 @@ export function SiteHeader({ t, lang }: { t: Dict; lang: Lang }) {
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5 md:gap-2.5 lg:ml-0">
           <LangToggle current={lang} />
-          <CartLink label={t.nav.cart} />
-          <LoginButton label={t.nav.login} />
+          {/* Below sm these duplicate MobileNav's Cart and Account tabs, and
+              dropping them is what makes room for the wordmark (Tamil "Sign in"
+              alone is ~115px). */}
+          <span className="hidden sm:contents">
+            <CartLink label={t.nav.cart} />
+            <LoginButton label={t.nav.login} />
+          </span>
         </div>
       </div>
 
