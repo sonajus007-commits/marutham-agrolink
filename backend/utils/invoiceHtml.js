@@ -4,6 +4,8 @@
 // page for the delivery / handling / multi-seller charges. Mirrors the approved
 // design; every field is data-driven and blanks itself when data is absent.
 // ─────────────────────────────────────────────────────────────────────────────
+const fs = require('fs');
+const path = require('path');
 const {
   computeParty,
   invoiceNumber,
@@ -11,12 +13,25 @@ const {
   DOC_TITLE,
 } = require('./invoiceModel');
 
+// The official MALOGO badge, inlined as a data URI. The invoice is opened from a
+// blob: URL (and saved as a standalone .html), so a relative <img src> would not
+// resolve — the image has to travel inside the document. Read once at load.
+let LOGO_SRC = '';
+try {
+  const buf = fs.readFileSync(path.join(__dirname, '..', 'assets', 'malogo-invoice.jpg'));
+  LOGO_SRC = `data:image/jpeg;base64,${buf.toString('base64')}`;
+} catch {
+  // Asset missing → the header falls back to the platform emoji tile.
+}
+
 const esc = (s) =>
   String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const line = (label, val) => (val ? `<dt>${esc(label)}</dt><dd>${esc(val)}</dd>` : '');
+// A dt/dd pair in its own wrapper, so a grid can lay pairs out side by side.
+const pair = (label, val) => (val ? `<div>${line(label, val)}</div>` : '');
 const rowAlways = (label, val) => `<dt>${esc(label)}</dt><dd>${val ? esc(val) : '&nbsp;'}</dd>`;
 
 // ── Amount → words (Indian system) ───────────────────────────────────────────
@@ -57,10 +72,13 @@ function InvoiceHeader(ctx, party) {
   return `
   <div class="ihead">
     <div class="logo">
-      <div class="logomark">${p.emoji}</div>
+      ${LOGO_SRC
+        ? `<img class="logoimg" src="${LOGO_SRC}" alt="${esc(p.short)} logo" width="66" height="64">`
+        : `<div class="logomark">${p.emoji}</div>`}
       <div>
-        <div class="wordmark">${esc(p.short)}</div>
+        <div class="wordmark"><span class="wm-m">Marutham</span><span class="wm-a">AgroLink</span></div>
         <div class="legalname">${esc(p.name)}</div>
+        <div class="tagline">Linking Farmers. Empowering Markets.</div>
       </div>
     </div>
     <div class="titlebox">
@@ -122,11 +140,13 @@ function InvoiceInfoCard(ctx, party) {
     <dl class="kv stack">
       ${line(sellerLabel, invoiceNumber(party, ctx.ymd, ctx.seq))}
       ${line('Platform Invoice Ref.', ctx.platformRef)}
-      ${line('Invoice Date', ctx.order.invoiceDate)}
       ${line('Order No.', ctx.order.code)}
-      ${line('Order Date', ctx.order.date)}
-      ${line('Place of supply', party.address.state)}
-      ${line('Place of delivery', (ctx.consumer.address || {}).state)}
+    </dl>
+    <dl class="kv stack two">
+      ${pair('Invoice Date', ctx.order.invoiceDate)}
+      ${pair('Order Date', ctx.order.date)}
+      ${pair('Place of supply', party.address.state)}
+      ${pair('Place of delivery', (ctx.consumer.address || {}).state)}
     </dl>
   </div>`;
 }
@@ -196,9 +216,9 @@ function OrderSummary(ctx, party, comp) {
     ${row('Charges (' + comp.lines.length + ' ' + unit + ', incl. GST)', inr(comp.subTotal))}
     ${isP && ctx.order.deliveryWaived ? row('Delivery', 'WAIVED · order ≥ ₹400', 'free') : ''}
     <div class="srow" style="border-bottom:0;padding-bottom:0"><span class="lbl" style="font-size:10px;color:var(--faint)">GST included in the above</span><span class="val"></span></div>
-    ${row('&nbsp;&nbsp;Taxable value', inr(comp.taxable))}
+    ${row('Taxable value', inr(comp.taxable), 'sub')}
     ${taxRows}
-    ${optRow('&nbsp;&nbsp;CESS', comp.cess)}
+    ${optRow('CESS', comp.cess, 'sub')}
     ${party.roundOff ? row('Round off', (party.roundOff < 0 ? '–' : '+') + inr(Math.abs(party.roundOff))) : ''}
     ${row('Grand total', inr(grand), 'grand')}
   ` : `
@@ -303,8 +323,7 @@ function PartyInvoiceSheet(ctx, party, pageNo, pageCount) {
     </div>
     ${InfoStrip(ctx)}
     ${ItemTable(party, comp)}
-    <div class="lower">${OrderSummary(ctx, party, comp)}</div>
-    ${Verify(ctx)}
+    <div class="lower">${Verify(ctx)}${OrderSummary(ctx, party, comp)}</div>
     ${Terms(ctx)}
     ${Footer(ctx, party, comp, pageNo, pageCount)}
   </section>`;
@@ -319,6 +338,9 @@ function renderInvoiceHtml(ctx) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Invoice ${esc(ctx.order.code)} — ${esc(ctx.platform.short)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Poppins:wght@400;500;600;700;800&display=swap">
 <style>${STYLE}</style>
 </head><body>
 <div class="actionbar">
@@ -336,15 +358,16 @@ const STYLE = `
     --rule:#e6eae1; --rule-strong:#d0d7cb; --wash:#f5f8f2; --wash2:#eef3ea;
     --forest:#1b5e20; --forest-mid:#2e7d32; --leaf:#43a047; --leaf-soft:#e4f2e4;
     --amber-ink:#8a6d00; --amber-soft:#fbf3d6;
+    --blossom:#d81b60; --blossom-ink:#ad1457;
     --paid:#1b7a3e; --paid-soft:#e2f2e6; --due:#9a6a00; --due-soft:#fbf1d4;
     --cancel:#b3261e; --cancel-soft:#fbe6e4; --refund:#3a5a8a; --refund-soft:#e6edf6;
     --shadow:0 1px 2px rgba(20,40,25,.08), 0 12px 34px rgba(20,40,25,.14);
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
-    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Times New Roman",serif;
+    --sans:"Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+    --serif:"Cormorant Garamond","Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
   }
   @media (prefers-color-scheme: dark){ :root{ --canvas:#0e1512; } }
   *{ box-sizing:border-box; } html,body{ margin:0; }
-  body{ background:var(--canvas); color:var(--ink); font-family:var(--sans); font-size:14px; line-height:1.5;
+  body{ background:var(--canvas); color:var(--ink); font-family:var(--sans); font-size:13px; line-height:1.5;
     -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
   .tabular{ font-variant-numeric:tabular-nums lining-nums; }
   .actionbar{ position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between;
@@ -354,30 +377,34 @@ const STYLE = `
   .btn:hover{ background:#eef3ea; } .btn:focus-visible{ outline:2px solid #7fd694; outline-offset:2px; }
   .canvas{ padding:28px 16px 60px; }
   .sheet{ background:var(--paper); color:var(--ink); width:210mm; min-height:297mm; margin:0 auto 26px;
-    padding:13mm 13mm 12mm; position:relative; box-shadow:var(--shadow); border-radius:2px;
+    padding:11mm 12mm 10mm; position:relative; box-shadow:var(--shadow); border-radius:2px;
     display:flex; flex-direction:column; }
   .ihead{ display:flex; justify-content:space-between; gap:20px; align-items:flex-start; }
-  .logo{ display:flex; gap:11px; align-items:center; }
+  .logo{ display:flex; gap:12px; align-items:center; }
+  .logoimg{ width:66px; height:64px; object-fit:contain; flex:none; display:block; }
   .logomark{ width:46px; height:46px; border-radius:12px; flex:none;
     background:linear-gradient(150deg,var(--forest-mid),var(--forest)); display:grid; place-items:center;
     color:#fff; font-size:24px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.15); }
-  .wordmark{ font-family:var(--serif); font-size:22px; font-weight:600; color:var(--forest); line-height:1.05; }
-  .legalname{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .wordmark{ display:flex; flex-direction:column; line-height:1; }
+  .wm-m{ font-family:var(--serif); font-size:26px; font-weight:700; color:var(--blossom-ink); letter-spacing:-.2px; }
+  .wm-a{ font-size:10px; font-weight:700; letter-spacing:2.4px; text-transform:uppercase; color:var(--forest); margin-top:3px; }
+  .legalname{ font-size:10px; color:var(--muted); margin-top:5px; font-weight:500; }
+  .tagline{ font-size:9px; color:var(--faint); margin-top:1px; font-style:italic; }
   .titlebox{ text-align:right; min-width:180px; }
   .doctype{ font-size:9px; letter-spacing:1.6px; color:var(--muted); font-weight:700; }
-  .doctitle{ font-family:var(--serif); font-size:23px; font-weight:700; color:var(--ink); line-height:1; margin-top:2px; }
-  .doctitle.combo{ font-size:15px; line-height:1.2; letter-spacing:.2px; text-wrap:balance; max-width:220px; margin-left:auto; }
+  .doctitle{ font-family:var(--serif); font-size:23px; font-weight:700; color:var(--forest); line-height:1; margin-top:2px; }
+  .doctitle.combo{ font-size:17px; line-height:1.15; letter-spacing:.2px; text-wrap:balance; max-width:330px; margin-left:auto; }
   .dotorig{ font-size:9px; letter-spacing:1.4px; color:var(--faint); margin-top:3px; }
-  .status{ display:inline-flex; align-items:center; gap:6px; margin-top:9px; font-size:11.5px; font-weight:700;
+  .status{ display:inline-flex; align-items:center; gap:6px; margin-top:6px; font-size:11.5px; font-weight:700;
     letter-spacing:.4px; padding:5px 12px; border-radius:999px; border:1px solid transparent; }
   .status .dot{ width:7px; height:7px; border-radius:50%; background:currentColor; }
   .st-paid{ color:var(--paid); background:var(--paid-soft); border-color:#bfe3c9; }
   .st-unpaid,.st-partial{ color:var(--due); background:var(--due-soft); border-color:#ecdca0; }
   .st-cancel{ color:var(--cancel); background:var(--cancel-soft); border-color:#f0c5c1; }
   .st-refund{ color:var(--refund); background:var(--refund-soft); border-color:#c7d4e8; }
-  .brandbar{ height:3px; border-radius:2px; margin:11px 0 0; background:linear-gradient(90deg,var(--forest),var(--leaf) 60%,var(--amber-ink)); }
-  .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:11px; margin-top:13px; }
-  .card{ background:var(--wash); border:1px solid var(--rule); border-radius:10px; padding:11px 13px; }
+  .brandbar{ height:3px; border-radius:2px; margin:9px 0 0; background:linear-gradient(90deg,var(--forest),var(--leaf) 62%,var(--blossom)); }
+  .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:11px; }
+  .card{ background:var(--wash); border:1px solid var(--rule); border-radius:10px; padding:9px 12px; }
   .card h4{ margin:0 0 7px; font-size:9px; letter-spacing:1.3px; text-transform:uppercase; color:var(--forest);
     font-weight:700; display:flex; align-items:center; gap:6px; }
   .card h4 .ic{ font-size:11px; }
@@ -390,70 +417,75 @@ const STYLE = `
      below it, so long invoice / reference numbers stay on one line without
      squeezing the label into a wrapped, gappy column. */
   .kv.stack{ display:block; }
-  .kv.stack dt{ margin-top:5px; font-size:9px; }
+  .kv.stack dt{ margin-top:3px; font-size:9px; line-height:1.35; }
   .kv.stack dt:first-child{ margin-top:0; }
-  .kv.stack dd{ text-align:left; margin-top:0; font-size:10px; font-variant-numeric:tabular-nums; }
+  /* Short values (dates, states) pair up two per row; long numbers stay full width. */
+  .kv.stack.two{ display:grid; grid-template-columns:1fr 1fr; gap:0 10px; margin-top:3px; }
+  .kv.stack.two dt, .kv.stack.two dt:first-child{ margin-top:3px; }
+  .kv.stack dd{ text-align:left; margin-top:0; font-size:10px; line-height:1.35; font-variant-numeric:tabular-nums; }
   .taglet{ display:inline-block; font-size:9px; font-weight:700; letter-spacing:.4px; padding:2px 7px;
     border-radius:5px; background:var(--leaf-soft); color:var(--forest); margin-top:6px; }
   .taglet.retail{ background:var(--amber-soft); color:var(--amber-ink); }
-  .infostrip{ margin-top:12px; display:grid; grid-template-columns:repeat(5,1fr); border:1px solid var(--rule);
+  .infostrip{ margin-top:10px; display:grid; grid-template-columns:repeat(5,1fr); border:1px solid var(--rule);
     border-radius:10px; overflow:hidden; background:var(--wash); }
-  .infostrip .cell{ padding:8px 11px; border-right:1px solid var(--rule); }
+  .infostrip .cell{ padding:6px 10px; border-right:1px solid var(--rule); }
   .infostrip .cell:nth-child(5n){ border-right:0; }
-  .infostrip .cell .l{ font-size:8.5px; letter-spacing:.7px; text-transform:uppercase; color:var(--faint); }
-  .infostrip .cell .v{ font-size:11.5px; font-weight:600; color:var(--ink); margin-top:2px; }
-  .sectlabel{ font-size:9px; letter-spacing:1.3px; text-transform:uppercase; color:var(--forest); font-weight:700; margin:16px 0 7px; }
+  .infostrip .cell .l{ font-size:9px; letter-spacing:.7px; text-transform:uppercase; color:var(--faint); }
+  .infostrip .cell .v{ font-size:10.5px; font-weight:600; color:var(--ink); margin-top:1px; white-space:nowrap; }
+  .sectlabel{ font-size:9px; letter-spacing:1.3px; text-transform:uppercase; color:var(--forest); font-weight:700; margin:12px 0 6px; }
   .tablewrap{ overflow-x:auto; }
-  table.items{ width:100%; border-collapse:collapse; font-size:10.5px; }
+  table.items{ width:100%; border-collapse:collapse; font-size:10px; }
   table.items thead th{ background:var(--forest); color:#fff; font-weight:600; text-align:right; padding:7px 8px;
     font-size:9px; letter-spacing:.4px; white-space:nowrap; }
   table.items thead th:first-child, table.items thead th.l{ text-align:left; }
   table.items tbody td{ padding:8px; border-bottom:1px solid var(--rule); vertical-align:top; text-align:right; }
   table.items tbody td.l{ text-align:left; }
   table.items tbody tr:nth-child(even){ background:var(--wash); }
-  .pname{ font-weight:700; color:var(--ink); font-size:11px; }
+  .pname{ font-weight:600; color:var(--ink); font-size:10.5px; }
   .pmeta{ color:var(--muted); font-size:9.5px; line-height:1.5; margin-top:2px; }
   .pmeta .chip{ display:inline-block; background:var(--wash2); border:1px solid var(--rule); border-radius:4px;
     padding:0 5px; margin:2px 4px 0 0; color:var(--muted); font-size:9px; }
   .hsn{ font-variant-numeric:tabular-nums; font-weight:600; color:var(--ink); }
   .gstpct{ font-weight:700; } .gst-exempt{ color:var(--leaf); }
   td.amt{ font-weight:700; }
-  .lower{ display:flex; justify-content:flex-end; margin-top:14px; }
-  .lower .summary{ width:min(410px,100%); }
+  /* QR sits beside the totals: the left half was dead space, and stacking it
+     below pushed every seller's invoice onto a second A4 page. */
+  .lower{ display:grid; grid-template-columns:1fr minmax(0,390px); gap:14px; margin-top:12px; align-items:start; }
   .summary{ border:1px solid var(--rule); border-radius:10px; padding:5px 14px; align-self:start; }
-  .srow{ display:flex; justify-content:space-between; align-items:baseline; padding:6px 0; font-size:11.5px; border-bottom:1px dashed var(--rule); }
+  .srow{ display:flex; justify-content:space-between; align-items:baseline; padding:3px 0; font-size:11px; border-bottom:1px dashed var(--rule); }
   .srow:last-child{ border-bottom:0; }
   .srow .lbl{ color:var(--muted); }
+  .srow.sub .lbl{ padding-left:10px; }
   .srow .val{ font-variant-numeric:tabular-nums; font-weight:600; color:var(--ink); }
   .srow.free .val{ color:var(--leaf); font-weight:700; } .srow.disc .val{ color:var(--leaf); }
-  .srow.grand{ margin-top:2px; padding:11px 0 9px; border-top:2px solid var(--forest); border-bottom:0; }
+  .srow.grand{ margin-top:2px; padding:8px 0 6px; border-top:2px solid var(--forest); border-bottom:0; }
   .srow.grand .lbl{ font-size:13px; font-weight:700; color:var(--ink); }
-  .srow.grand .val{ font-size:18px; font-weight:800; color:var(--forest); }
+  .srow.grand .val{ font-size:18px; font-weight:700; color:var(--forest); }
   .srow.paidrow .val{ color:var(--paid); } .srow.duerow .val{ color:var(--due); }
   .amount-words{ font-size:10px; color:var(--muted); margin-top:8px; padding-top:8px; border-top:1px solid var(--rule); }
   .amount-words b{ color:var(--ink); }
-  .verify{ display:grid; grid-template-columns:auto 1fr; gap:14px; align-items:center; margin-top:14px;
-    padding:12px 14px; border:1px dashed var(--rule-strong); border-radius:10px; background:var(--wash); }
+  .verify{ display:grid; grid-template-columns:auto 1fr; gap:14px; align-items:center;
+    padding:10px 14px; border:1px dashed var(--rule-strong); border-radius:10px; background:var(--wash); }
   .qr{ width:78px; height:78px; border-radius:8px; background:#fff; border:1px solid var(--rule); display:grid; place-items:center; }
-  .qcap{ font-size:8.5px; letter-spacing:.4px; text-transform:uppercase; color:var(--faint); text-align:center; margin-top:4px; }
+  .qcap{ font-size:9px; letter-spacing:.4px; text-transform:uppercase; color:var(--faint); text-align:center; margin-top:4px; }
   .verify .note{ font-size:10px; color:var(--muted); line-height:1.5; } .verify .note b{ color:var(--ink); }
-  .terms{ margin-top:16px; border-top:1px solid var(--rule-strong); padding-top:11px; }
+  .terms{ margin-top:11px; border-top:1px solid var(--rule-strong); padding-top:9px; }
   .terms h3{ font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--forest); margin:0 0 8px; }
-  .termgrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .termgrid{ display:grid; grid-template-columns:1fr 1.3fr 1fr 1fr; gap:10px; }
   .termgrid h5{ margin:0 0 5px; font-size:10px; color:var(--ink); font-weight:700; }
-  .termgrid ul{ margin:0; padding-left:14px; } .termgrid li{ font-size:9px; color:var(--muted); line-height:1.5; margin-bottom:2px; }
-  .roleline{ font-size:9.5px; color:var(--muted); line-height:1.55; margin-bottom:9px; } .roleline b{ color:var(--ink); }
-  .foot{ margin-top:auto; padding-top:12px; }
+  .termgrid ul{ margin:0; padding-left:14px; } .termgrid li{ font-size:9px; color:var(--muted); line-height:1.35; margin-bottom:0; }
+  .roleline{ font-size:9px; color:var(--muted); line-height:1.45; margin-bottom:7px; } .roleline b{ color:var(--ink); }
+  .foot{ margin-top:auto; padding-top:9px; }
   .footbar{ display:flex; justify-content:space-between; align-items:center; gap:12px; border-top:2px solid var(--forest); padding-top:9px; flex-wrap:wrap; }
-  .thanks{ font-family:var(--serif); font-size:13px; color:var(--forest); font-weight:600; }
+  .thanks{ font-family:var(--serif); font-size:15px; color:var(--blossom-ink); font-weight:700; }
   .footmeta{ font-size:9.5px; color:var(--muted); text-align:right; line-height:1.5; }
-  .genline{ text-align:center; font-size:9px; color:var(--faint); margin-top:8px; }
+  .genline{ text-align:center; font-size:9px; color:var(--faint); margin-top:5px; }
   .pageno{ position:absolute; bottom:6mm; right:13mm; font-size:9px; color:var(--faint); font-variant-numeric:tabular-nums; }
   .pageno b{ color:var(--muted); }
-  @media (max-width:900px){
+  @media screen and (max-width:900px){
     .sheet{ width:100%; min-height:0; padding:20px 16px 40px; }
     .grid3{ grid-template-columns:1fr; } .infostrip{ grid-template-columns:1fr 1fr; }
-    .infostrip .cell:nth-child(2n){ border-right:0; } .lower{ justify-content:stretch; }
+    .infostrip .cell:nth-child(2n){ border-right:0; } .lower{ grid-template-columns:1fr; }
     .termgrid{ grid-template-columns:1fr 1fr; } .ihead{ flex-direction:column; } .titlebox{ text-align:left; }
     .doctitle.combo{ margin-left:0; }
   }
