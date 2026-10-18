@@ -9,8 +9,25 @@ import {
   type ReactNode,
 } from 'react';
 import { api } from '@marutham/api-client';
-import type { Product, Offer, Rating } from '@marutham/lib';
+import { defaultAddressIndex } from '@marutham/lib';
+import type { Product, Offer, Rating, SavedAddress } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
+import { getCurrentPosition } from '../../native/geolocation';
+
+/** Radius choices around the buyer in their home district; null = whole district. */
+export const RADIUS_OPTIONS = [10, 25, 50, null] as const;
+export type RadiusKm = (typeof RADIUS_OPTIONS)[number];
+const DEFAULT_RADIUS: RadiusKm = 25;
+
+export interface BuyerPin {
+  lat: number;
+  lng: number;
+  /** Where the pin came from — the default saved address, or a one-off GPS fix. */
+  source: 'address' | 'gps';
+}
+
+const sameDistrict = (a?: string | null, b?: string | null) =>
+  !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
 
 interface ConsumerData {
   products: Product[];
@@ -20,6 +37,14 @@ interface ConsumerData {
   ratingsByFP: Record<string, Rating>;
   district: string;
   setDistrict: (d: string) => void;
+  /** The buyer's own district (default address, else profile) — where the radius applies. */
+  homeDistrict: string;
+  /** Distances are measured from here; null until located (or location refused). */
+  buyerPin: BuyerPin | null;
+  radiusKm: RadiusKm;
+  setRadiusKm: (r: RadiusKm) => void;
+  /** True when the radius is actually narrowing the offers (home district + a pin). */
+  radiusApplies: boolean;
   loading: boolean;
   error: string | null;
   /** Re-fetch the current district's catalogue (the error state's Retry). */
@@ -35,9 +60,38 @@ const Ctx = createContext<ConsumerData | null>(null);
 export function ConsumerDataProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [district, setDistrict] = useState<string>((user?.district as string) || 'Pudukkottai');
+  // The buyer's pin: the default saved address's map pin, else ask the device once.
+  const addrs = (user?.delivery_addresses as SavedAddress[]) || [];
+  const defIdx = defaultAddressIndex(addrs);
+  const defAddr = defIdx === null ? null : addrs[defIdx];
+  const homeDistrict = (defAddr?.district as string) || (user?.district as string) || 'Pudukkottai';
+  const addrLat = typeof defAddr?.lat === 'number' ? defAddr.lat : null;
+  const addrLng = typeof defAddr?.lng === 'number' ? defAddr.lng : null;
+  const [gpsPin, setGpsPin] = useState<BuyerPin | null>(null);
+  const hasAddrPin = addrLat !== null && addrLng !== null;
+  useEffect(() => {
+    if (hasAddrPin) return;
+    let active = true;
+    // Best-effort and never blocking: a refusal just means no km labels.
+    getCurrentPosition().then((c) => {
+      if (active && c) setGpsPin({ lat: c.lat, lng: c.lng, source: 'gps' });
+    });
+    return () => {
+      active = false;
+    };
+  }, [hasAddrPin]);
+  const buyerPin = useMemo<BuyerPin | null>(
+    () =>
+      addrLat !== null && addrLng !== null
+        ? { lat: addrLat, lng: addrLng, source: 'address' }
+        : gpsPin,
+    [addrLat, addrLng, gpsPin],
+  );
+
+  const [district, setDistrict] = useState<string>(homeDistrict);
+  const [radiusKm, setRadiusKm] = useState<RadiusKm>(DEFAULT_RADIUS);
   const [products, setProducts] = useState<Product[]>([]);
-  const [offersByProduct, setOffers] = useState<Record<string, Offer[]>>({});
+  const [rawOffers, setOffers] = useState<Record<string, Offer[]>>({});
   const [ratingsMap, setRatingsMap] = useState<Record<string, Rating>>({});
   const [ratingsByFP, setRatingsByFP] = useState<Record<string, Rating>>({});
   const [loading, setLoading] = useState(true);
@@ -84,13 +138,13 @@ export function ConsumerDataProvider({ children }: { children: ReactNode }) {
   );
 
   const load = useCallback(
-    async (dist: string) => {
+    async (dist: string, pin: BuyerPin | null) => {
       setLoading(true);
       setError(null);
       try {
         const [prodRes, offerRes, ratingRes] = await Promise.all([
           api.getProducts({ available: 'true', district: dist }),
-          api.getDistrictListings(dist),
+          api.getDistrictListings(dist, pin),
           api.getTopRatings().catch(() => ({ top_ratings: [] })),
         ]);
         setProducts(prodRes.products || []);
@@ -123,8 +177,23 @@ export function ConsumerDataProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    load(district);
-  }, [district, load]);
+    load(district, buyerPin);
+  }, [district, buyerPin, load]);
+
+  // In the buyer's own district the radius narrows what they see; another district
+  // (e.g. Trichy) shows all of it, nearest first. Offers with no seller pin have
+  // no distance — they stay visible rather than vanish for want of a map pin.
+  const radiusApplies = !!buyerPin && radiusKm !== null && sameDistrict(district, homeDistrict);
+  const offersByProduct = useMemo(() => {
+    const out: Record<string, Offer[]> = {};
+    for (const [pid, list] of Object.entries(rawOffers)) {
+      const kept = radiusApplies
+        ? list.filter((o) => o.distance_km == null || o.distance_km <= (radiusKm as number))
+        : list;
+      if (kept.length) out[pid] = kept;
+    }
+    return out;
+  }, [rawOffers, radiusApplies, radiusKm]);
 
   const productById = useMemo(() => {
     const m: Record<string, Product> = {};
@@ -143,9 +212,14 @@ export function ConsumerDataProvider({ children }: { children: ReactNode }) {
       ratingsByFP,
       district,
       setDistrict,
+      homeDistrict,
+      buyerPin,
+      radiusKm,
+      setRadiusKm,
+      radiusApplies,
       loading,
       error,
-      reload: () => void load(district),
+      reload: () => void load(district, buyerPin),
       savedIds,
       isSaved,
       toggleSaved,
@@ -158,6 +232,10 @@ export function ConsumerDataProvider({ children }: { children: ReactNode }) {
       ratingsMap,
       ratingsByFP,
       district,
+      homeDistrict,
+      buyerPin,
+      radiusKm,
+      radiusApplies,
       loading,
       error,
       savedIds,

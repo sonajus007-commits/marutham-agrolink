@@ -31,5 +31,22 @@ module.exports = {
     fyStartMonth: 4,                // Indian financial year starts April (month 4)
   },
 
+  // Delivery charge by seller→buyer distance (straight-line km). All money in PAISE.
+  // The first slab is the LOCAL rule: ONE flat charge per order for every seller
+  // within `localMaxKm`, waived when those local items reach `freeLocalMin`. Every
+  // seller beyond it adds their own slab fee per parcel, never free. A distance we
+  // can't measure (a missing pin) counts as local when the seller is in the
+  // delivery district, else as the farthest slab. See utils/deliveryFee.js.
+  delivery: {
+    localMaxKm: 10,
+    localFlat: 2500,                // ₹25
+    freeLocalMin: 40000,            // ₹400 of local items → local delivery free
+    slabs: [                        // beyond localMaxKm, first slab whose maxKm ≥ distance
+      { maxKm: 30, fee: 4000 },     // ₹40
+      { maxKm: 60, fee: 7000 },     // ₹70
+      { maxKm: null, fee: 10000 },  // ₹100 — 60 km+ (null = no upper bound)
+    ],
+  },
+
   placeholder: true,                // flips the "illustrative" note in the header
 };

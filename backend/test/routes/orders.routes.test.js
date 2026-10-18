@@ -90,6 +90,46 @@ describe('POST /orders', () => {
     assert.deepEqual(leaked, [], `internal fields leaked into order_items: ${leaked}`);
   });
 
+  // Distance-priced delivery: the SERVER prices it from the seller's farm pin and
+  // the delivery address pin — the client's delivery_fee is ignored.
+  const PINNED_SELLER = (lat, lng) => ({ 'users|select': { data: [{
+    id: FARMER_ID, fname: 'Ravi', lname: 'K', village_town: 'Hosur', state: 'Tamil Nadu',
+    district: 'Krishnagiri', taluk: 'Hosur', seller_type: 'Farmer', farm_lat: lat, farm_lng: lng,
+  }] } });
+
+  test('a seller ~45 km from the delivery pin pays the 30–60 km slab (₹70)', async () => {
+    // 0.405° of latitude ≈ 45 km
+    const supa = healthyCheckout(PINNED_SELLER(10.785, 78.82));
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+
+    const res = await app.post('/', { ...CART, delivery_fee: 0,
+      delivery_address: { district: 'Chennai', lat: 10.38, lng: 78.82 } });
+
+    assert.equal(res.status, 201);
+    assert.equal(supa.callsTo('orders', 'insert')[0].payload.delivery, 7000);
+  });
+
+  test('a nearby seller keeps the flat local ₹25', async () => {
+    const supa = healthyCheckout(PINNED_SELLER(10.40, 78.82)); // ~2 km
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+
+    const res = await app.post('/', { ...CART,
+      delivery_address: { district: 'Chennai', lat: 10.38, lng: 78.82 } });
+
+    assert.equal(res.status, 201);
+    assert.equal(supa.callsTo('orders', 'insert')[0].payload.delivery, 2500);
+  });
+
+  test('no pins: a seller outside the delivery district pays the farthest slab', async () => {
+    const supa = healthyCheckout(); // Krishnagiri seller, Chennai buyer, no pins
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+
+    const res = await app.post('/', CART);
+
+    assert.equal(res.status, 201);
+    assert.equal(supa.callsTo('orders', 'insert')[0].payload.delivery, 10000);
+  });
+
   test('a missing hub leaves attribution NULL but still places the order', async () => {
     // No taluk hub exists for either side — the lookup returns 0 rows.
     const supa = healthyCheckout({ 'hubs|select': { data: [] } });
@@ -597,5 +637,37 @@ describe('POST /orders/:id/decline — seller declines an order', () => {
 
     assert.equal(res.status, 409);
     assert.equal(supa.callsTo('orders', 'update').length, 0);
+  });
+});
+
+describe('POST /orders/delivery-quote', () => {
+  let app, mute;
+  beforeEach(() => { mute = muteConsoleError(); });
+  afterEach(async () => { mute.restore(); if (app) await app.close(); });
+
+  test('returns each seller\'s km + district match, never their coordinates', async () => {
+    const supa = fakeSupabase({
+      'users:select': { data: [{ id: 'f1', district: 'chennai', farm_lat: 10.40, farm_lng: 78.82 }] },
+    });
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+
+    const res = await app.post('/delivery-quote', {
+      farmer_ids: ['f1'], delivery_address: { district: 'Chennai', lat: 10.38, lng: 78.82 },
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.has_pin, true);
+    const [s] = res.body.sellers;
+    assert.equal(s.farmer_id, 'f1');
+    assert.equal(s.same_district, true);
+    assert.ok(s.distance_km > 1 && s.distance_km < 3, `got ${s.distance_km}`);
+    assert.equal(s.farm_lat, undefined);
+  });
+
+  test('a failed seller read is a 500, not a free quote', async () => {
+    const supa = fakeSupabase({ 'users:select': { error: { message: 'boom' } } });
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+    const res = await app.post('/delivery-quote', { farmer_ids: ['f1'] });
+    assert.equal(res.status, 500);
   });
 });

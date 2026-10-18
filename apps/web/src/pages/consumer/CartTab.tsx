@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QtyStepper, EmptyState } from '@marutham/ui';
 import {
@@ -7,10 +8,15 @@ import {
   unitStep,
   unitAllowsDecimal,
   fmtMoney,
+  fmtKm,
+  defaultAddressIndex,
   FREE_DELIVERY_MIN,
   type Offer,
   type Order,
+  type SavedAddress,
 } from '@marutham/lib';
+import { useAuth } from '../../auth/AuthContext';
+import { useDeliveryQuote } from './useDeliveryQuote';
 import { useConsumerData } from './ConsumerDataContext';
 import { useCart } from './CartContext';
 import { useToast } from '../../components/Toast';
@@ -26,6 +32,19 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: (order: Order) => vo
   const { productById, offersByProduct } = useConsumerData();
   const cart = useCart();
   const toast = useToast();
+  const { user } = useAuth();
+
+  // The address delivery is priced to — Checkout reports the buyer's pick; until
+  // then, the default saved address (else the profile, which carries no pin).
+  const addrs = (user?.delivery_addresses as SavedAddress[]) || [];
+  const defIdx = defaultAddressIndex(addrs);
+  const [quoteAddress, setQuoteAddress] = useState<Record<string, unknown> | null>(
+    defIdx === null ? null : (addrs[defIdx] as Record<string, unknown>),
+  );
+  const sellerGeo = useDeliveryQuote(
+    cart.items.map((i) => i.farmer_id || '').filter(Boolean),
+    quoteAddress,
+  );
 
   if (cart.items.length === 0) {
     return (
@@ -37,7 +56,14 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: (order: Order) => vo
     );
   }
 
-  const bill = cartBill(cart.items, productById);
+  const bill = cartBill(cart.items, productById, sellerGeo ?? undefined);
+  const dq = bill.deliveryQuote;
+  const sellerName = (farmerId: string) =>
+    cart.items.find((i) => i.farmer_id === farmerId)?.farmer_name || '';
+  // The free-delivery nudge counts LOCAL items only — far sellers are never free.
+  const localTotal = dq ? dq.localItemTotal : bill.itemSubtotal;
+  const showFreeNudge =
+    (dq ? dq.hasLocal : true) && localTotal > 0 && localTotal < FREE_DELIVERY_MIN;
 
   function setQty(index: number, next: number) {
     const item = cart.items[index];
@@ -192,11 +218,44 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: (order: Order) => vo
             )}
           </span>
         </div>
-        {bill.itemSubtotal > 0 && bill.itemSubtotal < FREE_DELIVERY_MIN ? (
+        {/* Distance-priced delivery, itemised: nearby sellers share one charge,
+            each farther seller adds their own (see @marutham/lib delivery). */}
+        {dq && dq.far.length ? (
+          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)', marginTop: 2 }}>
+            {dq.hasLocal ? (
+              <div>
+                {t('consumer.cart.deliveryNearby', 'Nearby sellers: {{fee}}', {
+                  fee: dq.localFee === 0 ? t('consumer.cart.free', 'FREE') : fmtMoney(dq.localFee),
+                })}
+              </div>
+            ) : null}
+            {dq.far.map((f) => (
+              <div key={f.farmerId}>
+                {t('consumer.cart.deliveryFrom', '{{name}} {{km}}: {{fee}}', {
+                  name: sellerName(f.farmerId) || t('consumer.detail.seller', 'Seller'),
+                  km:
+                    f.distanceKm != null
+                      ? `(${fmtKm(f.distanceKm)})`
+                      : `(${t('consumer.cart.otherDistrict', 'other district')})`,
+                  fee: fmtMoney(f.fee),
+                })}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {showFreeNudge ? (
           <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--warning-fg)', marginTop: 2 }}>
-            {t('consumer.cart.freeDeliveryNudge', 'Add {{amount}} more for FREE delivery', {
-              amount: fmtMoney(FREE_DELIVERY_MIN - bill.itemSubtotal),
-            })}
+            {dq && dq.far.length
+              ? t(
+                  'consumer.cart.freeNearbyNudge',
+                  'Add {{amount}} more from nearby sellers for FREE local delivery',
+                  {
+                    amount: fmtMoney(FREE_DELIVERY_MIN - localTotal),
+                  },
+                )
+              : t('consumer.cart.freeDeliveryNudge', 'Add {{amount}} more for FREE delivery', {
+                  amount: fmtMoney(FREE_DELIVERY_MIN - localTotal),
+                })}
           </div>
         ) : null}
         {bill.savings > 0 ? (
@@ -220,7 +279,7 @@ export function CartTab({ onOrderPlaced }: { onOrderPlaced: (order: Order) => vo
         </div>
       </div>
 
-      <Checkout bill={bill} onOrderPlaced={onOrderPlaced} />
+      <Checkout bill={bill} onOrderPlaced={onOrderPlaced} onAddressChange={setQuoteAddress} />
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, type PlaceOrderItem } from '@marutham/api-client';
 import {
@@ -28,9 +28,12 @@ function addrLine(a: SavedAddress, i: number): string {
 export function Checkout({
   bill,
   onOrderPlaced,
+  onAddressChange,
 }: {
   bill: CartBill;
   onOrderPlaced: (order: Order) => void;
+  /** The address delivery is priced to, whenever the pick changes (null = profile). */
+  onAddressChange?: (address: Record<string, unknown> | null) => void;
 }) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -47,6 +50,16 @@ export function Checkout({
     phone: (user?.phone as string) || '',
   });
   const [naError, setNaError] = useState<string | null>(null);
+
+  // Delivery is priced by distance to the chosen address, so the bill follows the pick.
+  useEffect(() => {
+    if (!onAddressChange) return;
+    if (choice === 'profile') onAddressChange(null);
+    else if (choice === 'new') onAddressChange(na as Record<string, unknown>);
+    else onAddressChange((addrs[parseInt(choice)] as Record<string, unknown>) || null);
+    // `addrs` is re-derived each render from the user; its content is what matters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [choice, na, onAddressChange]);
 
   const [pending, setPending] = useState<{
     items: PlaceOrderItem[];

@@ -4,6 +4,7 @@
 import { sellerFeePct } from './fees';
 import { isOrderCancelled, type Order } from './orders';
 import { dateLocale } from './format';
+import { deliveryCharge, type DeliveryQuote, type SellerGeo } from './delivery';
 
 export interface DistrictPrice {
   handling?: string | number;
@@ -64,6 +65,8 @@ export interface Offer {
   farmer?: SellerRef;
   farmer_id?: string;
   listed?: boolean;
+  /** Straight-line km from the buyer's pin (GET /listings?district&lat&lng); null = no seller pin. */
+  distance_km?: number | null;
   [key: string]: unknown;
 }
 
@@ -239,6 +242,8 @@ export interface CartBill {
   delivery: number;
   savings: number;
   total: number;
+  /** How delivery was priced — present only when a seller distance quote was given. */
+  deliveryQuote?: DeliveryQuote;
 }
 
 /**
@@ -250,7 +255,13 @@ export interface CartBill {
  * given had handling baked into it; the two together meant the visible line totals
  * did not sum to the Item Total printed underneath them.
  */
-export function cartBill(cart: CartItem[], productById: Record<string, Product>): CartBill {
+export function cartBill(
+  cart: CartItem[],
+  productById: Record<string, Product>,
+  /** Per-seller distance facts (POST /orders/delivery-quote). Omitted → the flat
+   *  local rule, i.e. every seller treated as nearby, until the quote arrives. */
+  sellerGeo?: SellerGeo[],
+): CartBill {
   const prodOf = (i: CartItem) => productById[i.product_id] || ({} as Product);
   const hdlOf = (i: CartItem) => {
     const dp = prodOf(i).district_price;
@@ -266,7 +277,34 @@ export function cartBill(cart: CartItem[], productById: Record<string, Product>)
     if (i.farmer_id) farmers[i.farmer_id] = 1;
   });
   const marketFee = Object.keys(farmers).length >= 2 ? 10 : 0;
-  const delivery = itemSubtotal <= 0 ? 0 : itemSubtotal >= FREE_DELIVERY_MIN ? 0 : DELIVERY_FLAT;
+  // Delivery by seller distance — mirrors POST /orders (see ./delivery). A seller
+  // missing from the quote is priced as local, the same as having no quote.
+  let deliveryQuote: DeliveryQuote | undefined;
+  let delivery: number;
+  if (sellerGeo) {
+    const geoOf = new Map(sellerGeo.map((g) => [g.farmer_id, g]));
+    const totals = new Map<string, number>();
+    cart.forEach((i) => {
+      const k = i.farmer_id || '';
+      totals.set(k, (totals.get(k) || 0) + parseFloat(String(i.price || 0)) * i.qty);
+    });
+    deliveryQuote = deliveryCharge(
+      [...totals].map(([farmerId, itemTotal]) => {
+        const g = geoOf.get(farmerId);
+        return {
+          farmerId,
+          itemTotal,
+          distanceKm: g ? g.distance_km : null,
+          sameDistrict: g ? g.same_district : true,
+        };
+      }),
+      FREE_DELIVERY_MIN,
+      DELIVERY_FLAT,
+    );
+    delivery = deliveryQuote.total;
+  } else {
+    delivery = itemSubtotal <= 0 ? 0 : itemSubtotal >= FREE_DELIVERY_MIN ? 0 : DELIVERY_FLAT;
+  }
   // Savings compare like with like: the market rate for the goods against what the
   // customer pays for the goods. Handling is a service charge on the order, not part
   // of what the produce costs, so it does not belong on either side.
@@ -283,6 +321,7 @@ export function cartBill(cart: CartItem[], productById: Record<string, Product>)
     delivery,
     savings,
     total: itemSubtotal + handling + marketFee + delivery,
+    deliveryQuote,
   };
 }
 

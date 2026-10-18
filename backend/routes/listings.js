@@ -8,6 +8,7 @@ const { reliabilityScore } = require('../utils/reliability');
 const { validateImages, confirmProblem } = require('../utils/listings');
 const { priceBandCheck, priceBandMessage } = require('../utils/priceGuard');
 const notify = require('../utils/notify');
+const { distanceKm } = require('../utils/deliveryFee');
 
 const router = express.Router();
 
@@ -153,8 +154,12 @@ router.get('/', async (req, res) => {
     return res.json({ listings: enriched });
   }
 
-  // Consumer browsing: ?district=X returns all active listings from farmers in that district
+  // Consumer browsing: ?district=X returns all active listings from farmers in that district.
+  // Optional ?lat=&lng= (the buyer's pin) adds `distance_km` to each listing —
+  // straight-line, null when the seller has no farm pin. The seller's coordinates
+  // themselves are read for the maths and never sent: a km figure, not a location.
   const { district } = req.query;
+  const buyerPin = { lat: req.query.lat, lng: req.query.lng };
   if (district) {
     // Step 1: find only active (non-blocked) farmer IDs in this district
     const { data: farmerRows, error: farmerRowsErr } = await supabase
@@ -182,7 +187,7 @@ router.get('/', async (req, res) => {
       .select(`
         id, product_id, farmer_price, qty_available,
         time_available, cutoff_ts, bulk_qty, bulk_disc_pct, qty_type, qty_value, images,
-        farmer:users ( id, fname, lname, village_town, district, seller_type, orders_fulfilled, orders_cancelled )
+        farmer:users ( id, fname, lname, village_town, district, seller_type, orders_fulfilled, orders_cancelled, farm_lat, farm_lng )
       `)
       .eq('listed', true)
       .eq('listing_status', 'active')
@@ -202,11 +207,14 @@ router.get('/', async (req, res) => {
         const feePct        = getFeeForSeller(l.farmer?.seller_type);
         const consumerPrice = Math.round(l.farmer_price * (1 + feePct / 100));
         const reliability   = reliabilityScore(l.farmer?.orders_fulfilled, l.farmer?.orders_cancelled);
+        const km = distanceKm(buyerPin, { lat: l.farmer?.farm_lat, lng: l.farmer?.farm_lng });
         if (l.farmer) {
           delete l.farmer.orders_fulfilled;
           delete l.farmer.orders_cancelled;
+          delete l.farmer.farm_lat;
+          delete l.farmer.farm_lng;
         }
-        return { ...l, fee_pct: feePct, consumer_price: consumerPrice, seller_reliability: reliability };
+        return { ...l, fee_pct: feePct, consumer_price: consumerPrice, seller_reliability: reliability, distance_km: km };
       })
       .sort((a, b) => b.seller_reliability - a.seller_reliability);
 

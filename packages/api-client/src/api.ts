@@ -89,6 +89,7 @@ import type {
   OrderDetail,
   Product,
   Offer,
+  SellerGeo,
   Payout,
   FarmerListing,
   ListingReviewStatus,
@@ -522,8 +523,27 @@ export const api = {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
     return apiFetch<{ products: Product[] }>('GET', '/products' + qs);
   },
-  getDistrictListings(district: string): Promise<{ by_product: Record<string, Offer[]> }> {
-    return apiFetch('GET', '/listings?district=' + encodeURIComponent(district));
+  /** A district's live offers. With the buyer's pin, each carries `distance_km`. */
+  getDistrictListings(
+    district: string,
+    pin?: { lat: number; lng: number } | null,
+  ): Promise<{ by_product: Record<string, Offer[]> }> {
+    const qs = new URLSearchParams({ district });
+    if (pin) {
+      qs.set('lat', String(pin.lat));
+      qs.set('lng', String(pin.lng));
+    }
+    return apiFetch('GET', '/listings?' + qs.toString());
+  },
+  /** Per-seller distance facts for pricing the cart's delivery like POST /orders does. */
+  getDeliveryQuote(
+    farmerIds: string[],
+    deliveryAddress: Record<string, unknown> | null,
+  ): Promise<{ sellers: SellerGeo[]; has_pin: boolean }> {
+    return apiFetch('POST', '/orders/delivery-quote', {
+      farmer_ids: farmerIds,
+      delivery_address: deliveryAddress,
+    });
   },
   getListings(params?: Record<string, string>): Promise<{ listings: Offer[] }> {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';

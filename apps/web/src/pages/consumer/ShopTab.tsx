@@ -9,7 +9,7 @@ import {
   type Product,
   type SellerFilter,
 } from '@marutham/lib';
-import { useConsumerData } from './ConsumerDataContext';
+import { useConsumerData, RADIUS_OPTIONS, type RadiusKm } from './ConsumerDataContext';
 import { useCart } from './CartContext';
 import { useLocations } from '../../hooks/useLocations';
 import { ProductCard } from './ProductCard';
@@ -37,10 +37,16 @@ export function ShopTab({
     ratingsByFP,
     district,
     setDistrict,
+    homeDistrict,
+    buyerPin,
+    radiusKm,
+    setRadiusKm,
+    radiusApplies,
     loading,
     error,
     reload,
   } = useConsumerData();
+  const inHomeDistrict = district.trim().toLowerCase() === homeDistrict.trim().toLowerCase();
   const cart = useCart();
   const toast = useToast();
   const locations = useLocations();
@@ -53,6 +59,19 @@ export function ShopTab({
   const [city, setCity] = useState('');
   const [state, setState] = useState('Tamil Nadu');
   const [detailId, setDetailId] = useState<string | null>(null);
+
+  // ChipOption values are strings; 'all' stands for the whole district (null).
+  const radiusOptions = useMemo<ChipOption[]>(
+    () =>
+      RADIUS_OPTIONS.map((r) => ({
+        value: r === null ? 'all' : String(r),
+        label:
+          r === null
+            ? t('consumer.shop.radiusAll', 'Whole district')
+            : t('consumer.shop.radiusKm', '{{km}} km', { km: r }),
+      })),
+    [t],
+  );
 
   const sellerOptions = useMemo<ChipOption[]>(
     () => [
@@ -142,7 +161,17 @@ export function ShopTab({
           {district}, {state}
         </div>
         <div className="cons-lochero__sub">
-          {t('consumer.shop.heroSub', 'Same-morning harvest · delivered to your door')}
+          {radiusApplies
+            ? t('consumer.shop.heroWithin', 'Sellers within {{km}} km of you', { km: radiusKm })
+            : buyerPin && !inHomeDistrict
+              ? t(
+                  'consumer.shop.heroOtherDistrict',
+                  'Sellers in {{district}}, nearest first · distance-based delivery',
+                  {
+                    district,
+                  },
+                )
+              : t('consumer.shop.heroSub', 'Same-morning harvest · delivered to your door')}
         </div>
       </div>
 
@@ -253,6 +282,19 @@ export function ShopTab({
             )}
           </select>
         </div>
+        {inHomeDistrict && buyerPin ? (
+          <>
+            <div className="filt-label">
+              {t('consumer.shop.filter.radius', 'Distance from you')}
+            </div>
+            <FilterChips
+              options={radiusOptions}
+              value={radiusKm === null ? 'all' : String(radiusKm)}
+              onChange={(v) => setRadiusKm((v === 'all' ? null : Number(v)) as RadiusKm)}
+              aria-label={t('consumer.shop.filter.radiusAria', 'Distance from you')}
+            />
+          </>
+        ) : null}
         <input
           className="cons-input"
           style={{ fontSize: 12, padding: '8px 10px' }}
@@ -272,7 +314,15 @@ export function ShopTab({
         <EmptyState icon="🔍">
           {search
             ? t('consumer.shop.noMatch', 'No products match "{{query}}".', { query: search })
-            : t('consumer.shop.noProducts', 'No products in this category.')}
+            : radiusApplies
+              ? t(
+                  'consumer.shop.noneInRadius',
+                  'Nothing within {{km}} km — try a wider distance.',
+                  {
+                    km: radiusKm,
+                  },
+                )
+              : t('consumer.shop.noProducts', 'No products in this category.')}
         </EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -294,6 +344,8 @@ export function ShopTab({
       <ProductDetailSheet
         product={detailProduct}
         offers={detailOffers}
+        buyerDistrict={homeDistrict}
+        hasPin={!!buyerPin}
         rating={detailId ? ratingsMap[detailId] : undefined}
         ratingsByFP={ratingsByFP}
         open={!!detailId}

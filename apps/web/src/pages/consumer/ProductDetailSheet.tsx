@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sheet, QtyStepper, StatusPill } from '@marutham/ui';
+import { Sheet, QtyStepper, StatusPill, FilterChips } from '@marutham/ui';
 import {
   offerConsumerPrice,
   offersByRating,
@@ -8,6 +8,10 @@ import {
   unitStep,
   unitAllowsDecimal,
   fmtMoney,
+  fmtKm,
+  deliveryTier,
+  FREE_DELIVERY_MIN,
+  DELIVERY_FLAT,
   type Product,
   type Offer,
   type Rating,
@@ -24,9 +28,15 @@ export function ProductDetailSheet({
   open,
   onClose,
   onAdd,
+  buyerDistrict = '',
+  hasPin = false,
 }: {
   product: Product | null;
   offers: Offer[];
+  /** The buyer's delivery district — prices an offer's delivery when its km is unknown. */
+  buyerDistrict?: string;
+  /** The offers carry distance_km (the buyer is located) — enables "Nearest". */
+  hasPin?: boolean;
   rating?: Rating;
   ratingsByFP: Record<string, Rating>;
   open: boolean;
@@ -37,14 +47,21 @@ export function ProductDetailSheet({
   // Which vendor's photos the top gallery shows. null = default to the first
   // (highest-rated) offer. Reset whenever the sheet switches to another product.
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'nearest' | 'rated'>('nearest');
   const productId = product?.id ?? null;
   useEffect(() => setSelectedId(null), [productId]);
   if (!product) return null;
   const dp = product.district_price;
   const mktPrice = dp ? parseFloat(String(dp.market_price)) : 0;
-  // Offers ordered by rating (highest first) — the same order the rows render in, so
-  // the gallery and the list agree on which vendor is "first".
-  const sortedOffers = offersByRating(offers, ratingsByFP, product.id);
+  // Offers ordered by rating (highest first), or nearest first once the buyer is
+  // located — the same order the rows render in, so the gallery and the list agree
+  // on which vendor is "first". Unknown distances sink below every measured one.
+  const byRating = offersByRating(offers, ratingsByFP, product.id);
+  const canSortNearest = hasPin && offers.some((o) => o.distance_km != null);
+  const sortedOffers =
+    canSortNearest && sortBy === 'nearest'
+      ? [...byRating].sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
+      : byRating;
   const selectedOffer =
     sortedOffers.find((o) => (o.id ?? '') === selectedId) ?? sortedOffers[0] ?? null;
   const selectedSeller = selectedOffer?.farmer;
@@ -165,6 +182,19 @@ export function ProductDetailSheet({
           >
             {t('consumer.detail.offerCount', { count: offers.length })}
           </div>
+          {canSortNearest ? (
+            <div style={{ marginBottom: 10 }}>
+              <FilterChips
+                options={[
+                  { value: 'nearest', label: t('consumer.detail.sortNearest', 'Nearest') },
+                  { value: 'rated', label: t('consumer.detail.sortRated', 'Top rated') },
+                ]}
+                value={sortBy}
+                onChange={(v) => setSortBy(v as 'nearest' | 'rated')}
+                aria-label={t('consumer.detail.sortAria', 'Sort sellers')}
+              />
+            </div>
+          ) : null}
           {sortedOffers.map((o, k) => (
             <OfferRow
               key={o.id || k}
@@ -172,6 +202,7 @@ export function ProductDetailSheet({
               offer={o}
               mktPrice={mktPrice}
               ratingsByFP={ratingsByFP}
+              buyerDistrict={buyerDistrict}
               selected={(o.id ?? '') === (selectedOffer?.id ?? '')}
               onSelect={() => setSelectedId(o.id ?? null)}
               onAdd={onAdd}
@@ -189,6 +220,7 @@ function OfferRow({
   offer,
   mktPrice,
   ratingsByFP,
+  buyerDistrict,
   selected,
   onSelect,
   onAdd,
@@ -198,6 +230,7 @@ function OfferRow({
   offer: Offer;
   mktPrice: number;
   ratingsByFP: Record<string, Rating>;
+  buyerDistrict: string;
   /** This vendor's photos are the ones shown in the top gallery. */
   selected: boolean;
   /** Make this vendor the selected one (swaps the top gallery to their photos). */
@@ -223,6 +256,18 @@ function OfferRow({
   const fpKey = `${f.id || ''}_${product.id}`;
   const farmerRating = ratingsByFP[fpKey];
   const photoCount = (offer.images ?? []).filter(Boolean).length;
+  const km = fmtKm(offer.distance_km);
+  // What delivery from THIS seller costs — the same slab POST /orders charges.
+  const tier = deliveryTier(
+    offer.distance_km,
+    !!f.district && f.district.trim().toLowerCase() === buyerDistrict.trim().toLowerCase(),
+  );
+  const deliveryLabel = tier.local
+    ? t('consumer.detail.deliveryLocal', 'Delivery {{fee}} · free over {{min}}', {
+        fee: fmtMoney(DELIVERY_FLAT),
+        min: fmtMoney(FREE_DELIVERY_MIN),
+      })
+    : t('consumer.detail.deliveryFar', 'Delivery {{fee}}', { fee: fmtMoney(tier.fee) });
 
   const qtyRule =
     offer.qty_type === 'MOQ'
@@ -352,7 +397,9 @@ function OfferRow({
               {f.lname ? ` ${f.lname}` : ''}
             </span>
             <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)' }}>
+              {km ? `📍 ${km} · ` : ''}
               {f.village_town || f.district || ''}
+              {f.village_town && f.district ? `, ${f.district}` : ''}
             </div>
             {photoCount > 0 ? (
               <div
@@ -411,6 +458,9 @@ function OfferRow({
             })}
           </StatusPill>
         ) : null}
+        <StatusPill tone={tier.local ? 'neutral' : 'warning'} size="sm">
+          🚚 {deliveryLabel}
+        </StatusPill>
         {qtyRule ? (
           <StatusPill tone="warning" size="sm">
             {qtyRule}

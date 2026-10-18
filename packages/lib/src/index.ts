@@ -6,6 +6,7 @@ export * from './pipeline';
 export * from './orders';
 export * from './employee';
 export * from './consumer';
+export * from './delivery';
 export * from './farmer';
 export * from './table';
 export * from './calendar';

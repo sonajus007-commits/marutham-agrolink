@@ -8,6 +8,7 @@ import {
   unitAllowsDecimal,
   orderingWindowStatus,
   fmtMoney,
+  fmtKm,
   type Product,
   type Offer,
   type Rating,
@@ -41,6 +42,11 @@ export function ProductCard({
   const custPrice = best ? offerConsumerPrice(best) : null;
   const hasStock = !!(best && (best.qty_available ?? 0) > 0);
   const f = best?.farmer;
+  // The nearest seller's distance, and how many sellers in all — "4 sellers · nearest ~3.2 km".
+  const nearestKm = offers.reduce<number | null>(
+    (m, o) => (o.distance_km != null && (m === null || o.distance_km < m) ? o.distance_km : m),
+    null,
+  );
   const availLeft =
     best?.qty_available != null ? Math.max(0, Number(best.qty_available) - cartQty) : null;
   const ws = orderingWindowStatus();
@@ -94,8 +100,26 @@ export function ProductCard({
                 {f.fname}
                 {f.lname ? ` ${f.lname}` : ''}
                 {f.village_town ? `, ${f.village_town}` : ''}
+                {best?.distance_km != null ? ` · ${fmtKm(best.distance_km)}` : ''}
               </span>
               <SellerBadge type={f.seller_type} />
+            </div>
+          ) : null}
+          {offers.length > 1 ? (
+            <div
+              style={{
+                fontSize: 'var(--fs-2xs)',
+                color: 'var(--leaf)',
+                fontWeight: 700,
+                marginTop: 3,
+              }}
+            >
+              {nearestKm != null
+                ? t('consumer.card.sellersNearest', '{{count}} sellers · nearest {{km}}', {
+                    count: offers.length,
+                    km: fmtKm(nearestKm),
+                  })
+                : t('consumer.card.sellers', '{{count}} sellers', { count: offers.length })}
             </div>
           ) : null}
         </div>

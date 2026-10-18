@@ -24,6 +24,7 @@ const { rollupToParent } = require('../utils/orderRollup');
 const { resolveTalukHubId } = require('../utils/hubResolver');
 const { computeAcceptDeadline } = require('../utils/acceptWindow');
 const { declineWholeParcel } = require('../utils/declineOrder');
+const { distanceKm, deliveryCharge, addressPin, sameText } = require('../utils/deliveryFee');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -65,6 +66,48 @@ const createOrderSchema = z
 // (they precede the route split at VCO Verified=4), so the index test is route-safe.
 // Not once VCO-verified / on the road.
 const CANCELLABLE_STAGES = [0, 1, 2, 3];
+
+// The delivery destination for pricing: the chosen address's pin + district, else
+// the profile (district only — a profile address carries no pin).
+function deliveryTarget(user, deliveryAddress) {
+  return {
+    pin: addressPin(deliveryAddress),
+    district: (deliveryAddress && deliveryAddress.district) || user.district || null,
+  };
+}
+
+// Each seller's distance to the destination and whether they share its district —
+// the inputs utils/deliveryFee prices from. Sellers: [{ id, district, farm_lat, farm_lng }].
+function sellerGeo(sellers, target) {
+  return sellers.map((s) => ({
+    farmer_id: s.id,
+    distance_km: target.pin ? distanceKm(target.pin, { lat: s.farm_lat, lng: s.farm_lng }) : null,
+    same_district: sameText(s.district, target.district),
+  }));
+}
+
+// ── POST /orders/delivery-quote  (consumer only) ─────────────────────────────
+// Body: { farmer_ids: [...], delivery_address? }. The cart's per-seller distance
+// facts, so the bill shown before checkout prices delivery exactly as POST /orders
+// will. Money is not computed here — item totals change with every stepper tap, so
+// the client prices with the same rule (packages/lib/src/delivery.ts).
+const quoteSchema = z
+  .object({ farmer_ids: z.array(z.string().min(1)).min(1).max(50) })
+  .passthrough();
+
+router.post('/delivery-quote', consumersOnly, validateBody(quoteSchema), async (req, res) => {
+  const ids = [...new Set(req.body.farmer_ids)];
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, district, farm_lat, farm_lng')
+    .in('id', ids);
+  if (error) {
+    console.error('POST /orders/delivery-quote seller lookup failed:', error.message);
+    return res.status(500).json({ error: 'Could not price delivery. Please try again.' });
+  }
+  const target = deliveryTarget(req.user, req.body.delivery_address);
+  res.json({ sellers: sellerGeo(data || [], target), has_pin: !!target.pin });
+});
 
 // ── POST /orders  (consumer only) ────────────────────────────────────────────
 // Body: { items: [{product_id, farmer_id, qty}], pay_method, address? }
@@ -137,7 +180,7 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
     // Fetch seller info (name + village for fulfilment + seller_type for fee)
     const { data: farmer, error: farmerErr } = await supabase
       .from('users')
-      .select('id, fname, lname, village_town, district, state, taluk, seller_type, shop_close_hour')
+      .select('id, fname, lname, village_town, district, state, taluk, seller_type, shop_close_hour, farm_lat, farm_lng')
       .eq('id', farmer_id)
       .maybeSingle();
 
@@ -216,6 +259,9 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
       // Seller taluk/state — resolves the pickup hub this parcel enters through.
       _sellerState: farmer.state,
       _sellerTaluk: farmer.taluk,
+      // Seller pin — distance-priced delivery (utils/deliveryFee).
+      _sellerLat: farmer.farm_lat,
+      _sellerLng: farmer.farm_lng,
       // Acceptance-window inputs (see utils/acceptWindow): the seller's kind + their
       // ordering cutoff (farmer = this listing's cutoff_ts; retailer = shop close).
       _sellerType: farmer.seller_type,
@@ -242,9 +288,19 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
   const distinctFarmers  = new Set(resolvedItems.map(i => i.farmer_id)).size;
   const multiFarmerFee   = distinctFarmers >= 2 ? 1000 : 0;
 
-  // Delivery: computed on the SERVER (client value ignored) — flat ₹25 below ₹400,
-  // FREE at ₹400 and above.
-  const delivery = item_total === 0 ? 0 : (item_total >= 40000 ? 0 : 2500);
+  // Delivery: computed on the SERVER (client value ignored) from each seller's
+  // distance to the delivery pin — local sellers share one ₹25 (free at ₹400 of
+  // local items), farther sellers add a slab each. See utils/deliveryFee.
+  const target = deliveryTarget(req.user, delivery_address);
+  const sellerRows = [...new Map(resolvedItems.map((i) => [i.farmer_id, {
+    id: i.farmer_id, district: i._sellerDistrict, farm_lat: i._sellerLat, farm_lng: i._sellerLng,
+  }])).values()];
+  const delivery = deliveryCharge(sellerGeo(sellerRows, target).map((g) => ({
+    farmerId: g.farmer_id,
+    distanceKm: g.distance_km,
+    sameDistrict: g.same_district,
+    itemTotal: resolvedItems.filter((i) => i.farmer_id === g.farmer_id).reduce((s, i) => s + i._lineTotal, 0),
+  }))).total;
 
   const saved = resolvedItems.reduce((s, i) => s + i._saved, 0);
   const total = item_total + handling + delivery + multiFarmerFee;
@@ -468,7 +524,7 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
   // farmer payouts group order_items by order_id, so a line copied onto the parent
   // as well would pay its seller twice.
   const childIdBySeller = new Map(children.map(c => [c.seller_id, c.id]));
-  const itemRows = resolvedItems.map(({ _lineTotal, _lineFarmerTotal, _handling, _exotic, _saved, _sellerVillage, _sellerDistrict, _sellerState, _sellerTaluk, _sellerType, _shopCloseHour, _listingCutoff, ...rest }) => ({
+  const itemRows = resolvedItems.map(({ _lineTotal, _lineFarmerTotal, _handling, _exotic, _saved, _sellerVillage, _sellerDistrict, _sellerState, _sellerTaluk, _sellerLat, _sellerLng, _sellerType, _shopCloseHour, _listingCutoff, ...rest }) => ({
     ...rest,
     order_id: isSplit ? childIdBySeller.get(rest.farmer_id) : order.id,
   }));
