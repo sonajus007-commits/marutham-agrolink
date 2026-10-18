@@ -14,6 +14,8 @@ import { useToast } from '../../../components/Toast';
 import { PhotoCapture } from '../../../components/PhotoCapture';
 import { useAuth } from '../../../auth/AuthContext';
 import { getCurrentPosition } from '../../../native/geolocation';
+import { AgentPicker } from '../AgentPicker';
+import { defaultAgentId } from '../agentPick';
 
 /** The verified quantity per line, keyed by order_items.id. Pre-filled with the
  *  ordered quantity so the VCO only overwrites a line the scale disagrees with;
@@ -43,11 +45,22 @@ export function VerifySheet({
   // (they need not have this village in their service_areas to hand-carry it).
   const iCanDeliver = me?.role === 'admin' && me?.admin_role === 'VCO' && !!me?.can_deliver;
   const [order, setOrder] = useState<Order | null>(null);
-  const [matched, setMatched] = useState<EligibleAgent[]>([]);
-  const [all, setAll] = useState<EligibleAgent[]>([]);
+  // Two candidate lists, one per route: the DIRECT delivery agent (matched on the
+  // consumer's village) and the HUB collection agent (matched on the fulfilment
+  // village). Both are ranked by distance from the pickup point.
+  const [direct, setDirect] = useState<{ matched: Set<string>; all: EligibleAgent[] }>({
+    matched: new Set(),
+    all: [],
+  });
+  const [collect, setCollect] = useState<{ matched: Set<string>; all: EligibleAgent[] }>({
+    matched: new Set(),
+    all: [],
+  });
+  const [radiusKm, setRadiusKm] = useState(10);
   const [error, setError] = useState<string | null>(null);
   const [route, setRoute] = useState('direct');
   const [agentId, setAgentId] = useState('');
+  const [collectionAgentId, setCollectionAgentId] = useState('');
   // Destination hub for a via-hub order — candidates + the deterministic suggestion.
   const [deliveryHubs, setDeliveryHubs] = useState<DeliveryHubCandidate[]>([]);
   const [suggestedHubId, setSuggestedHubId] = useState<string | null>(null);
@@ -67,6 +80,9 @@ export function VerifySheet({
     setError(null);
     setRoute('direct');
     setAgentId('');
+    setCollectionAgentId('');
+    setDirect({ matched: new Set(), all: [] });
+    setCollect({ matched: new Set(), all: [] });
     setDeliveryHubs([]);
     setSuggestedHubId(null);
     setDeliveryHubId('');
@@ -81,12 +97,19 @@ export function VerifySheet({
     // the door. Agents opt into villages via service_villages in their own profile.
     // The destination-hub candidates ride along so the "Transit to Hub" toggle is
     // instant (best-effort: a failure leaves an empty list, never blocks verify).
-    Promise.all([
-      api.getOrder(orderId),
-      api.getEligibleAgents(orderId, 'delivery'),
-      api.getDeliveryHubs(orderId).catch(() => null),
-    ])
-      .then(([ord, elig, hubs]) => {
+    // Distances are measured from where the VCO is standing (a quick fix, best-effort;
+    // the server falls back to the farm pin), so agents nearest the parcel lead.
+    getCurrentPosition(5_000)
+      .catch(() => null)
+      .then((here) =>
+        Promise.all([
+          api.getOrder(orderId),
+          api.getEligibleAgents(orderId, 'delivery', here),
+          api.getEligibleAgents(orderId, 'collection', here).catch(() => null),
+          api.getDeliveryHubs(orderId).catch(() => null),
+        ]),
+      )
+      .then(([ord, elig, coll, hubs]) => {
         if (!active) return;
         setOrder(ord.order);
         // Every line starts at the ordered quantity — the VCO overwrites only a
@@ -101,14 +124,20 @@ export function VerifySheet({
             }),
           ),
         );
-        setMatched(elig.matched || []);
-        setAll(elig.all || []);
-        // Only an agent who is available for duty today can be pre-selected — an
-        // off-duty agent is not offered at all (see the ready-only lists below). If
-        // none is on duty, leave the picker on "assign later"; a can_deliver VCO can
-        // still choose to run it themselves.
-        const best = (elig.matched || []).find((a) => a.ready_today);
-        if (best) setAgentId(best.id);
+        // Only an agent on duty today can be pre-selected — the nearest within the
+        // radius, else one covering the village. None on duty → "assign later".
+        const d = { matched: new Set((elig.matched || []).map((a) => a.id)), all: elig.all || [] };
+        setDirect(d);
+        setAgentId(defaultAgentId(d.all, d.matched, me?.id));
+        if (elig.radius_km) setRadiusKm(elig.radius_km);
+        if (coll) {
+          const c = {
+            matched: new Set((coll.matched || []).map((a) => a.id)),
+            all: coll.all || [],
+          };
+          setCollect(c);
+          setCollectionAgentId(defaultAgentId(c.all, c.matched, me?.id));
+        }
         if (hubs) {
           setDeliveryHubs(hubs.hubs || []);
           setSuggestedHubId(hubs.suggested_hub_id);
@@ -158,10 +187,10 @@ export function VerifySheet({
       // discarding the route and agent they chose.
       await api.verifyOrderOffline(orderId, stage, {
         route,
-        // Never send an agent on a hub order: the picker is hidden for hub, but
-        // agentId is auto-seeded from the village match on load, so switching the
-        // toggle to hub would otherwise silently submit a stale pre-selection.
+        // One agent per route — never both: each picker is pre-seeded on load, so the
+        // hidden one's selection must not ride along when the toggle changes.
         agent_id: route === 'hub' ? undefined : agentId || undefined,
+        collection_agent_id: route === 'hub' ? collectionAgentId || undefined : undefined,
         // The destination hub only applies to a via-hub order (ignored for direct).
         delivery_hub_id: route === 'hub' ? deliveryHubId || undefined : undefined,
         coords,
@@ -187,29 +216,6 @@ export function VerifySheet({
       setBusy(false);
     }
   }
-
-  // Only agents available for duty today are offered (Part 4): a Delivery Agent must
-  // be on duty to be assignable. The verifying VCO themselves is offered separately
-  // (Part 5) and is never in these lists.
-  const matchedReady = matched.filter((a) => a.ready_today && a.id !== me?.id);
-  const others = all.filter((a) => !matched.some((m) => m.id === a.id));
-  const othersReady = others.filter((a) => a.ready_today && a.id !== me?.id);
-  const noneOnDuty = matchedReady.length === 0 && othersReady.length === 0;
-
-  // Option text carries the availability signal a <select> can't badge: whether
-  // the agent is ready today, and how far their last GPS is from the drop.
-  const agentLabel = (a: EligibleAgent) => {
-    let s = a.name;
-    if (a.same_hub) s += ` · 🏭 ${t('agent.verify.sameHub', 'Same hub')}`;
-    if (a.vehicle) s += ` · ${a.vehicle}`;
-    s += a.ready_today
-      ? ` · ✅ ${t('agent.assign.readyToday', 'Ready today')}`
-      : ` · ⏸ ${t('agent.assign.away', 'Off duty')}`;
-    if (a.distance_m != null) {
-      s += ` · ${t('agent.assign.km', { km: (a.distance_m / 1000).toFixed(1) })}`;
-    }
-    return s;
-  };
 
   const unweighedCount = items.filter((it) => weighed[it.id as string] == null).length;
 
@@ -394,9 +400,8 @@ export function VerifySheet({
             </button>
           </div>
 
-          {/* A hub order gets its agent from the Hub Incharge once it has ARRIVED —
-              until then nobody knows who will run the last mile, so asking the VCO
-              to guess now would only produce an assignment the hub has to redo. */}
+          {/* A hub order: the VCO names who CARRIES it to the hub; the last-mile agent
+              is the Hub Incharge's call once it has arrived. */}
           {route === 'hub' ? (
             <>
               {/* Destination hub — where the parcel transits to. Auto-suggested from
@@ -451,6 +456,35 @@ export function VerifySheet({
                   )}
                 </div>
               )}
+              {/* Who carries it to the hub — they collect it here and hand it to the
+                  Hub Incharge. The last-mile agent is still the hub's call. */}
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: 'var(--forest)',
+                  margin: '6px 0 8px',
+                }}
+              >
+                {t('agent.verify.collectionAgent', 'Agent to carry it to the hub')}
+              </div>
+              <AgentPicker
+                agents={collect.all}
+                matchedIds={collect.matched}
+                radiusKm={radiusKm}
+                value={collectionAgentId}
+                onChange={setCollectionAgentId}
+                excludeId={me?.id}
+                selfOption={
+                  me?.id
+                    ? {
+                        id: me.id,
+                        label: `🏭 ${t('agent.verify.carryMyself', 'Take it to the hub myself')}`,
+                      }
+                    : undefined
+                }
+                ariaLabel={t('agent.verify.collectionAgent', 'Agent to carry it to the hub')}
+              />
               <div
                 style={{
                   fontSize: 11,
@@ -458,12 +492,12 @@ export function VerifySheet({
                   background: 'var(--surface-muted)',
                   borderRadius: 8,
                   padding: '10px 12px',
-                  margin: '6px 0 14px',
+                  margin: '10px 0 14px',
                 }}
               >
                 {t(
-                  'agent.verify.hubAgentNote',
-                  'This order travels to the hub first. The Hub Incharge assigns the delivery agent when it arrives.',
+                  'agent.verify.hubAgentNote2',
+                  'The agent hands it to the Hub Incharge. The hub assigns the last-mile delivery agent when it arrives.',
                 )}
               </div>
             </>
@@ -479,80 +513,23 @@ export function VerifySheet({
               >
                 {t('agent.verify.deliveryAgent', 'Delivery agent')}
               </div>
-              {matchedReady.length ? (
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: 'var(--success-fg)',
-                    background: 'var(--success-bg)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 8,
-                    padding: '8px 10px',
-                    marginBottom: 8,
-                  }}
-                >
-                  ✓ {t('agent.verify.matched', { count: matchedReady.length })}
-                </div>
-              ) : (
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: 'var(--warning-fg)',
-                    background: 'var(--warning-bg)',
-                    border: '1px solid var(--gold2)',
-                    borderRadius: 8,
-                    padding: '8px 10px',
-                    marginBottom: 8,
-                  }}
-                >
-                  {noneOnDuty
-                    ? iCanDeliver
-                      ? t(
-                          'agent.verify.noneOnDutySelf',
-                          'No delivery agent is on duty. Deliver it yourself, or assign later.',
-                        )
-                      : t(
-                          'agent.verify.noneOnDuty',
-                          'No delivery agent is on duty right now. Assign later.',
-                        )
-                    : t(
-                        'agent.verify.noMatch',
-                        'No on-duty agent covers this village. Pick one below.',
-                      )}
-                </div>
-              )}
-              <select
-                className="a-select"
+              <AgentPicker
+                agents={direct.all}
+                matchedIds={direct.matched}
+                radiusKm={radiusKm}
                 value={agentId}
-                onChange={(e) => setAgentId(e.target.value)}
-                aria-label={t('agent.verify.deliveryAgent', 'Delivery agent')}
-              >
-                <option value="">— {t('agent.verify.assignLater', 'Assign later')} —</option>
-                {/* Part 5: the verifying VCO can hand-carry it to the consumer. */}
-                {iCanDeliver && me?.id ? (
-                  <option value={me.id}>
-                    🛵 {t('agent.verify.deliverMyself', 'Deliver it myself')}
-                  </option>
-                ) : null}
-                {matchedReady.length ? (
-                  <optgroup label={t('agent.verify.covers', 'Covers this village · on duty')}>
-                    {matchedReady.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {agentLabel(a)}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null}
-                {othersReady.length ? (
-                  <optgroup label={t('agent.verify.others', 'Other agents on duty in district')}>
-                    {othersReady.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {agentLabel(a)}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null}
-              </select>
+                onChange={setAgentId}
+                excludeId={me?.id}
+                selfOption={
+                  iCanDeliver && me?.id
+                    ? {
+                        id: me.id,
+                        label: `🛵 ${t('agent.verify.deliverMyself', 'Deliver it myself')}`,
+                      }
+                    : undefined
+                }
+                ariaLabel={t('agent.verify.deliveryAgent', 'Delivery agent')}
+              />
             </>
           )}
 
@@ -586,7 +563,7 @@ export function VerifySheet({
             >
               {busy
                 ? `⏳ ${t('agent.verify.busy', 'Verifying…')}`
-                : /* nothing is assigned on the hub route — the hub does that later */
+                : /* the hub route names a carrier; the hub assigns the last mile */
                   `✓ ${
                     route === 'hub'
                       ? t('agent.verify.ctaHub', 'Verify & Send to Hub')

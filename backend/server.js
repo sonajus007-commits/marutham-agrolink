@@ -377,6 +377,7 @@ app.listen(PORT, () => {
   scheduleAcceptDeadlineSweep();
   scheduleAcceptReminders();
   scheduleDutyPrompts();
+  scheduleAgentAcceptSweep();
 });
 
 // ── Daily inactivity lock — no login for 90+ days → login_locked_at ────────────
@@ -672,4 +673,28 @@ function scheduleDutyPrompts() {
   run();
   setInterval(run, INTERVAL);
   console.log('[DUTY PROMPT] Scheduler started (every 15 min, 07:00–12:00 IST)');
+}
+
+// ── Agent accept window — un-assign agents who did not answer in time ─────────
+// A named delivery / collection agent has dispatch.acceptWindowMin (15 min) to
+// accept. Past it, utils/agentAssignment clears the leg and tells the assigner so
+// they can pick someone else. Every minute: the window is short, the query is an
+// indexed scan of pending deadlines only.
+function scheduleAgentAcceptSweep() {
+  const INTERVAL = 60 * 1000;
+  const { sweepExpiredAssignments } = require('./utils/agentAssignment');
+  const { notify } = require('./utils/notifications');
+
+  async function run() {
+    try {
+      const { expired } = await sweepExpiredAssignments({ db: supabase, notify });
+      if (expired) console.log(`[AGENT SWEEP] Un-assigned ${expired} job(s) not accepted in time.`);
+    } catch (err) {
+      console.error('[AGENT SWEEP] Error:', err.message);
+    }
+  }
+
+  run();
+  setInterval(run, INTERVAL);
+  console.log('[AGENT SWEEP] Scheduler started (every 1 min)');
 }

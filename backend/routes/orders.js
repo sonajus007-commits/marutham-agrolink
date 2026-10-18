@@ -674,7 +674,9 @@ router.get('/', async (req, res) => {
   /** Farmers only: { order_id → paise this farmer is owed }. Attached below. */
   let farmerPayouts = null;
 
-  const COLUMNS = 'id, code, consumer_name, district, village, delivery_village, total, status, stage, route, pay_method, pay_status, created_at, agent_name, dest_lat, dest_lng, delivery_attempts, cancel_reason, accept_deadline, partially_accepted';
+  // agent_id … delivery_hub_id: agent accept/decline + the hub-route collection agent
+  // (migration 070). One literal on purpose — db:check-embeds resolves it statically.
+  const COLUMNS = 'id, code, consumer_name, district, village, delivery_village, total, status, stage, route, pay_method, pay_status, created_at, agent_name, dest_lat, dest_lng, delivery_attempts, cancel_reason, accept_deadline, partially_accepted, agent_id, agent_assign_status, agent_accept_deadline, collection_agent_id, collection_agent_name, collection_assign_status, collection_accept_deadline, delivery_hub_id';
 
   /* Consumers also get a line-item count, for the dashboard's Recent Orders table.
    * It is an EMBEDDED AGGREGATE rather than a second fetch-and-group (the shape the
@@ -770,8 +772,16 @@ router.get('/', async (req, res) => {
       if (village) query = query.eq('village', village);
 
     } else if (role === 'Delivery Agent') {
-      // Agent sees their assigned orders + pickup queue (stage 2 = VCO Verified, ready for pickup)
-      query = query.or(`agent_id.eq.${u.id},stage.eq.2`);
+      // The agent's jobs: parcels named to them as delivery agent or as the hub-route
+      // collection agent (pending offers included — they accept/decline from here),
+      // plus the open pickup pool: VCO-verified parcels in their district nobody has
+      // been named for. (This was `stage.eq.2`, which went stale when the seller
+      // accept states renumbered the map — it listed every Order Accepted parcel.)
+      const dist = String(u.district || '').replace(/"/g, '');
+      query = query.or(
+        `agent_id.eq.${u.id},collection_agent_id.eq.${u.id},` +
+          `and(status.eq."VCO Verified",agent_id.is.null,collection_agent_id.is.null,district.eq."${dist}")`,
+      );
 
     } else {
       // Head Office / State Head / Regional Manager — all orders

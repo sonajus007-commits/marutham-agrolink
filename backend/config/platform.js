@@ -48,5 +48,12 @@ module.exports = {
     ],
   },
 
+  // Field dispatch: who is alerted / offered, and how long an agent has to accept.
+  dispatch: {
+    acceptWindowMin: 15,            // a named agent must accept within this, or is un-assigned
+    vcoAlertRadiusKm: 10,           // packed-order alert: nearest VCOs within this when no service area matches
+    agentRadiusKm: 10,              // agent picker: agents within this of the pickup point shown first
+  },
+
   placeholder: true,                // flips the "illustrative" note in the header
 };

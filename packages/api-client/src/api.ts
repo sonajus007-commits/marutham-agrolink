@@ -376,7 +376,10 @@ export const api = {
     fromStage: number,
     data: {
       route?: string;
+      /** Direct route: the delivery agent (must accept within the window). */
       agent_id?: string;
+      /** Hub route: the agent carrying it VCO → hub (must accept within the window). */
+      collection_agent_id?: string;
       /** Destination hub for a via-hub order (from getDeliveryHubs); ignored direct. */
       delivery_hub_id?: string;
       coords?: { lat: number; lng: number };
@@ -411,8 +414,16 @@ export const api = {
     id: string,
     agentId: string,
     force = false,
-  ): Promise<{ message?: string; override?: boolean }> {
+  ): Promise<{ message?: string; override?: boolean; leg?: 'agent' | 'collection' }> {
     return apiFetch('POST', '/orders/' + id + '/assign', { agent_id: agentId, force });
+  },
+  /** The named agent accepts or declines a pending job (15-min window). */
+  respondToJob(
+    id: string,
+    accept: boolean,
+    reason?: string,
+  ): Promise<{ message?: string; leg?: 'agent' | 'collection' }> {
+    return apiFetch('POST', '/orders/' + id + '/agent-response', { accept, reason });
   },
   /** Proof-of-delivery scan, offline-capable: the agent is at a doorstep, which is
    *  exactly where signal dies. `coords` is the delivery fix (geofenced server-side). */
@@ -454,9 +465,23 @@ export const api = {
       { key: `fail-${id}-${fromStage}` },
     );
   },
-  getEligibleAgents(id: string, leg?: string): Promise<EligibleAgentsResponse> {
-    const qs = leg ? '?leg=' + encodeURIComponent(leg) : '';
-    return apiFetch<EligibleAgentsResponse>('GET', '/orders/' + id + '/eligible-agents' + qs);
+  /** `from` = the caller's own fix (the VCO at verify) to measure distance from. */
+  getEligibleAgents(
+    id: string,
+    leg?: string,
+    from?: { lat: number; lng: number } | null,
+  ): Promise<EligibleAgentsResponse> {
+    const qs = new URLSearchParams();
+    if (leg) qs.set('leg', leg);
+    if (from) {
+      qs.set('lat', String(from.lat));
+      qs.set('lng', String(from.lng));
+    }
+    const q = qs.toString();
+    return apiFetch<EligibleAgentsResponse>(
+      'GET',
+      '/orders/' + id + '/eligible-agents' + (q ? '?' + q : ''),
+    );
   },
   /** Candidate destination hubs for a via-hub order, with a deterministic suggestion
    *  (the consumer's taluk hub, else nearest). The VCO picks one at verify. */

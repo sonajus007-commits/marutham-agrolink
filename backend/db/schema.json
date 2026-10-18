@@ -865,6 +865,19 @@
           "type": "timestamp with time zone",
           "notNull": false
         },
+        "agent_accept_deadline": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "agent_assign_status": {
+          "type": "text",
+          "notNull": false
+        },
+        "agent_assigned_by": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
         "agent_id": {
           "type": "uuid",
           "notNull": false,
@@ -898,6 +911,32 @@
         "code": {
           "type": "text",
           "notNull": true
+        },
+        "collection_accept_deadline": {
+          "type": "timestamp with time zone",
+          "notNull": false
+        },
+        "collection_agent_id": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
+        },
+        "collection_agent_name": {
+          "type": "text",
+          "notNull": false
+        },
+        "collection_agent_phone": {
+          "type": "text",
+          "notNull": false
+        },
+        "collection_assign_status": {
+          "type": "text",
+          "notNull": false
+        },
+        "collection_assigned_by": {
+          "type": "uuid",
+          "notNull": false,
+          "references": "users.id"
         },
         "consumer_id": {
           "type": "uuid",

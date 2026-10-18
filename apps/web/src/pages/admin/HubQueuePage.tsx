@@ -198,7 +198,18 @@ function HubCard({
           </div>
           <div className="mt-0.5 text-2xs text-fg-muted">
             {fmtDate(order.created_at, i18n.language)}
-            {order.agent_name ? ` · 🛵 ${order.agent_name}` : ''}
+            {/* Arriving: who is bringing it in (the VCO → hub carrier). At the hub:
+                the last-mile agent, and whether they have accepted the job yet. */}
+            {tone === 'arriving' && order.collection_agent_name
+              ? ` · 🚚 ${t('admin.hub.bringing', 'Bringing: {{name}}', { name: order.collection_agent_name })}`
+              : ''}
+            {tone !== 'arriving' && order.agent_name
+              ? ` · 🛵 ${order.agent_name}${
+                  order.agent_assign_status === 'pending'
+                    ? ` (${t('admin.hub.awaitingAccept', 'waiting to accept')})`
+                    : ''
+                }`
+              : ''}
           </div>
         </div>
         <div className="shrink-0 text-right">

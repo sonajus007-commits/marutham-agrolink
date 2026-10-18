@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { EmptyState, Spinner } from '@marutham/ui';
-import type { OrderQueues } from '@marutham/lib';
+import { pendingJobsFor, type Order, type OrderQueues } from '@marutham/lib';
 import { QueueSection } from './QueueSection';
+import { JobOffers } from './JobOffers';
 import { ErrorState } from '../../components/ErrorState';
 
 /* Delivery Tracking (Delivery Agent) / Collections (VCO) — the operational page.
@@ -20,6 +21,9 @@ export function AgentTracking({
   onOpenDeliver,
   onOpenVerify,
   onQuickScan,
+  userId,
+  onAssign,
+  onJobsChanged,
 }: {
   queues: OrderQueues | null;
   loading: boolean;
@@ -33,11 +37,37 @@ export function AgentTracking({
   onOpenDeliver: (id: string) => void;
   onOpenVerify: (id: string) => void;
   onQuickScan: (id: string) => Promise<void>;
+  /** The signed-in user — whose pending job offers lead the page. */
+  userId?: string;
+  /** VCO: (re)pick the pickup agent of a verified parcel. */
+  onAssign?: (order: Order) => void;
+  /** An offer was accepted / declined — reload the queue. */
+  onJobsChanged?: () => void;
 }) {
   const { t } = useTranslation();
 
-  const pickUpDirect = queues ? queues.toPickUp.filter((o) => o.route !== 'hub') : [];
-  const pickUpHub = queues ? queues.toPickUp.filter((o) => o.route === 'hub') : [];
+  // Jobs waiting for MY answer lead the page and are held out of the action lanes
+  // below until accepted (the pickup scan would accept them too, but a parcel the
+  // agent has not agreed to should not read as already theirs).
+  const jobs = queues
+    ? pendingJobsFor(
+        [
+          ...new Map(
+            Object.values(queues)
+              .flat()
+              .map((o) => [o.id, o]),
+          ).values(),
+        ],
+        userId,
+      )
+    : [];
+  const offered = new Set(jobs.map((j) => j.order.id));
+  const notOffered = (o: Order) => !offered.has(o.id);
+  const pickUpDirect = queues
+    ? queues.toPickUp.filter((o) => o.route !== 'hub' && notOffered(o))
+    : [];
+  const pickUpHub = queues ? queues.toPickUp.filter((o) => o.route === 'hub' && notOffered(o)) : [];
+  const toCollect = queues ? queues.toCollect.filter(notOffered) : [];
 
   const sections = queues
     ? [
@@ -63,6 +93,7 @@ export function AgentTracking({
               action: 'pickup' as const,
               cls: 'q-section--pickup',
               btn: `⬆ ${t('agent.btn.pickup')}`,
+              assignment: true,
             }
           : null,
         pickUpHub.length
@@ -73,16 +104,17 @@ export function AgentTracking({
               action: 'pickup' as const,
               cls: 'q-section--transit',
               btn: `🚚 ${t('agent.btn.toHub', 'Send to Hub')}`,
+              assignment: true,
             }
           : null,
         /* Hub lane: the Incharge has named this agent, and collecting it is their
            scan. A plain VCO never sees it — but a delivery-capable VCO assigned a
            last-mile drop does, so they can collect it from the hub. */
-        (!isVCO || canDeliver) && queues.toCollect.length
+        (!isVCO || canDeliver) && toCollect.length
           ? {
               key: 'collect',
               title: `🏭 ${t('agent.queue.collect', 'Collect from Hub')}`,
-              orders: queues.toCollect,
+              orders: toCollect,
               action: 'pickup' as const,
               cls: 'q-section--pickup',
               btn: `⬆ ${t('agent.btn.collect', 'Collect')}`,
@@ -134,23 +166,28 @@ export function AgentTracking({
         </EmptyState>
       ) : error ? (
         <ErrorState error={error} onRetry={onRetry} />
-      ) : sections.length === 0 ? (
+      ) : sections.length === 0 && jobs.length === 0 ? (
         <EmptyState icon="🎉">{t('agent.allClear')}</EmptyState>
       ) : (
-        sections.map((s) => (
-          <QueueSection
-            key={s!.key}
-            title={s!.title}
-            orders={s!.orders}
-            action={s!.action}
-            sectionClass={s!.cls}
-            btnLabel={s!.btn}
-            onOpenView={onOpenView}
-            onOpenDeliver={onOpenDeliver}
-            onOpenVerify={onOpenVerify}
-            onQuickScan={onQuickScan}
-          />
-        ))
+        <>
+          <JobOffers jobs={jobs} onChanged={() => onJobsChanged?.()} />
+          {sections.map((s) => (
+            <QueueSection
+              key={s!.key}
+              title={s!.title}
+              orders={s!.orders}
+              action={s!.action}
+              sectionClass={s!.cls}
+              btnLabel={s!.btn}
+              onOpenView={onOpenView}
+              onOpenDeliver={onOpenDeliver}
+              onOpenVerify={onOpenVerify}
+              onQuickScan={onQuickScan}
+              showAssignment={'assignment' in s! && !!s!.assignment}
+              onAssign={isVCO ? onAssign : undefined}
+            />
+          ))}
+        </>
       )}
     </>
   );

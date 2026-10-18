@@ -8,11 +8,22 @@ const { rollupToParent } = require('../utils/orderRollup');
 const { geocodeAddress, geocodingEnabled } = require('../utils/geocode');
 const { suggestDeliveryHubs } = require('../utils/hubSuggest');
 const { agentServesOrder, coverageBlockMessage } = require('../utils/agentCoverage');
-const { notify } = require('../utils/notifications');
+const { notify, notifyMany } = require('../utils/notifications');
 const { bumpFulfilled } = require('../utils/reliability');
 const { notifyCollectionParties } = require('../utils/collectionNotify');
 const { lineSums, moneyAfterDecline } = require('../utils/partialDecline');
 const { restockLines } = require('../utils/cancelOrder');
+const {
+  LEG_COLS,
+  legForOrder,
+  assignFields,
+  clearFields,
+  acceptFields,
+  pendingLegFor,
+  assignedCopy,
+  fullName,
+} = require('../utils/agentAssignment');
+const platform = require('../config/platform');
 const {
   declineWholeParcel, moveLinesOut, restoreLines, refundDeclinedLines,
 } = require('../utils/declineOrder');
@@ -693,6 +704,104 @@ router.post('/:id/confirm-received', async (req, res) => {
 
 // ── POST /orders/:id/scan  ⭐ role-scoped scan ────────────────────────────────
 // Body: { order_code } (from QR scan or manual entry)
+// ── Pickup point of a leg (agent proximity + the job alert) ──────────────────
+// Where the named agent goes to collect: the destination hub for a last-mile pickup
+// at the hub; otherwise the VCO's verify fix, else the seller's farm pin. Best-effort:
+// a failed read just means no pin (no km), never a failed assignment.
+async function pickupPoint(order, leg) {
+  if (leg === 'agent' && order.route === 'hub' && ['In Transit', 'At Hub'].includes(order.status)) {
+    if (!order.delivery_hub_id) return { pin: null, where: 'the hub', hubName: null };
+    const { data: hub, error } = await supabase
+      .from('hubs').select('name, lat, lng').eq('id', order.delivery_hub_id).maybeSingle();
+    if (error) console.error('pickupPoint hub lookup failed:', error.message);
+    const pin = hub && hub.lat != null && hub.lng != null ? { lat: toCoord(hub.lat), lng: toCoord(hub.lng) } : null;
+    return { pin, where: hub?.name || 'the hub', hubName: hub?.name || null };
+  }
+  let pin = null;
+  if (order.verified_lat != null && order.verified_lng != null) {
+    pin = { lat: toCoord(order.verified_lat), lng: toCoord(order.verified_lng) };
+  } else {
+    const { data: line, error: le } = await supabase
+      .from('order_items').select('farmer_id').eq('order_id', order.id).limit(1).maybeSingle();
+    if (le) console.error('pickupPoint seller lookup failed:', le.message);
+    if (line?.farmer_id) {
+      const { data: seller, error: se } = await supabase
+        .from('users').select('farm_lat, farm_lng').eq('id', line.farmer_id).maybeSingle();
+      if (se) console.error('pickupPoint farm pin lookup failed:', se.message);
+      if (seller && seller.farm_lat != null && seller.farm_lng != null) {
+        pin = { lat: toCoord(seller.farm_lat), lng: toCoord(seller.farm_lng) };
+      }
+    }
+  }
+  let hubName = null;
+  if (leg === 'collection' && order.delivery_hub_id) {
+    const { data: hub, error: he } = await supabase
+      .from('hubs').select('name').eq('id', order.delivery_hub_id).maybeSingle();
+    if (he) console.error('pickupPoint destination hub lookup failed:', he.message);
+    hubName = hub?.name || null;
+  }
+  return { pin, where: `the VCO in ${order.village || 'the village'}`, hubName };
+}
+
+// Tell a newly named agent about the job (push + bell). Never throws.
+async function alertAssignedAgent(order, leg, agentId, assignerName) {
+  try {
+    const [{ pin, where, hubName }, agentRow, items] = await Promise.all([
+      pickupPoint(order, leg),
+      supabase.from('users').select('agent_lat, agent_lng').eq('id', agentId).maybeSingle(),
+      supabase.from('order_items').select('id', { count: 'exact', head: true }).eq('order_id', order.id),
+    ]);
+    if (agentRow.error) console.error('alertAssignedAgent agent lookup failed:', agentRow.error.message);
+    if (items.error) console.error('alertAssignedAgent item count failed:', items.error.message);
+    const a = agentRow.data;
+    const m = pin && a ? distanceMeters(pin.lat, pin.lng, toCoord(a.agent_lat), toCoord(a.agent_lng)) : null;
+    await notify(agentId, assignedCopy(order, leg, {
+      assignerName, where, hubName, km: m == null ? null : m / 1000, itemCount: items.count || 0,
+    }));
+  } catch (e) {
+    console.error('alertAssignedAgent failed:', e && e.message);
+  }
+}
+
+// The receiving hub's Incharge(s) — destination hub, else the pickup hub.
+async function hubInchargeIdsFor(order) {
+  const hubId = order.delivery_hub_id || order.pickup_hub_id;
+  if (!hubId) return [];
+  const { data, error } = await supabase
+    .from('users').select('id')
+    .eq('role', 'admin').eq('admin_role', 'Hub Incharge').eq('status', 'active').eq('hub_id', hubId);
+  if (error) {
+    console.error('hubInchargeIdsFor lookup failed:', error.message);
+    return [];
+  }
+  return (data || []).map((r) => r.id);
+}
+
+// Load + validate an agent for `leg`. Returns { agent } or { status, body } to send.
+async function loadAssignableAgent(agentId, order, leg, assigner) {
+  const { data: agent, error } = await supabase
+    .from('users')
+    .select(
+      'id, fname, lname, phone, agent_vehicle, role, admin_role, can_deliver, ' +
+        'district, service_areas, service_villages',
+    )
+    .eq('id', agentId)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (error) {
+    console.error('Delivery agent lookup failed:', error.message);
+    return { status: 500, body: { error: 'Could not look up that agent. Please try again.' } };
+  }
+  if (!agent) return { status: 404, body: { error: 'Agent not found.' } };
+  // A VCO carrying a parcel to the hub themselves needs no delivery flag — it is
+  // their own collection run.
+  if (leg === 'collection' && agent.id === assigner.id && assigner.admin_role === 'VCO') return { agent };
+  if (leg === 'collection' && agent.admin_role !== 'Delivery Agent') {
+    return { status: 400, body: { error: `${fullName(agent)} is not a Delivery Agent.`, reason: 'role' } };
+  }
+  return { agent, serves: agentServesOrder(agent, order) };
+}
+
 router.post('/:id/scan', async (req, res) => {
   const u = req.user;
 
@@ -752,7 +861,7 @@ router.post('/:id/scan', async (req, res) => {
       return res.status(403).json({ error: 'Only VCO or senior admins can verify packaged orders.' });
     }
 
-    const { agent_id, route } = req.body;
+    const { agent_id, collection_agent_id, route } = req.body;
     const extra = {};
 
     // The VCO must weigh every line: each one needs a verified quantity. This is the
@@ -825,50 +934,39 @@ router.post('/:id/scan', async (req, res) => {
       extra.delivery_hub_id = req.body.delivery_hub_id;
     }
 
-    let assignedName = null;
-    if (agent_id) {
-      // maybeSingle + a read error check: unread, a database fault made `agent` null
-      // and the caller was told the person they picked "is not a Delivery Agent" —
-      // a wrong answer about someone who is one.
-      const { data: agent, error: agentErr } = await supabase
-        .from('users')
-        .select(
-          'id, fname, lname, phone, agent_vehicle, role, admin_role, can_deliver, ' +
-            'district, service_areas, service_villages',
-        )
-        .eq('id', agent_id)
-        .is('deleted_at', null)          // a removed agent cannot take a delivery
-        .maybeSingle();
-      if (agentErr) {
-        console.error('Delivery agent lookup failed:', agentErr.message);
-        return res.status(500).json({ error: 'Could not look up that agent. Please try again.' });
+    // The agent the VCO names — accept/decline (utils/agentAssignment). DIRECT: the
+    // delivery agent (agent leg). HUB: the collection agent who carries it to the hub
+    // (collection leg); the hub names the last-mile agent later. A Delivery Agent, a
+    // can_deliver VCO (direct), or the verifying VCO themselves (accepted at once).
+    // The agent must SERVE the order's region; out-of-region is a senior-admin call
+    // via POST /assign, not here.
+    const effectiveRoute = route || order.route || 'direct';
+    const assignLeg = effectiveRoute === 'hub' ? 'collection' : 'agent';
+    const pickedId = assignLeg === 'collection' ? collection_agent_id : agent_id;
+    let assigned = null;
+    if (pickedId) {
+      const r = await loadAssignableAgent(pickedId, order, assignLeg, req.user);
+      if (r.status) return res.status(r.status).json(r.body);
+      if (r.serves && !r.serves.ok) {
+        return res.status(400).json({ error: coverageBlockMessage(fullName(r.agent), r.serves), reason: r.serves.reason });
       }
-      // A last-mile delivery may be taken by a Delivery Agent, or by a VCO who is
-      // flagged can_deliver (they run the goods from the farmer to the consumer
-      // themselves — including the verifying VCO assigning it to their own id).
-      // The agent must also SERVE the order's region — the VCO picks from their own
-      // district; an out-of-region agent is a senior-admin call via POST /assign, not
-      // here. (A VCO self-assigning to their own order passes: same district.)
-      assignedName = agent ? agent.fname + (agent.lname ? ' ' + agent.lname : '') : null;
-      const serves = agentServesOrder(agent || {}, order);
-      if (!serves.ok) {
-        return res.status(400).json({ error: coverageBlockMessage(assignedName, serves), reason: serves.reason });
-      }
-      extra.agent_id      = agent.id;
-      extra.agent_name    = assignedName;
-      extra.agent_phone   = agent.phone;
-      extra.agent_vehicle = agent.agent_vehicle || null;
+      assigned = r.agent;
+      Object.assign(extra, assignFields(assignLeg, r.agent, req.user.id));
     }
 
     result = await advanceStage(order, `VCO ${req.user.fname}`, extra);
 
-    if (!result.error && assignedName) {
+    if (!result.error && !result.conflict && assigned) {
+      const self = assigned.id === req.user.id;
       const { error: histErr } = await supabase.from('order_history').insert({
         order_id: order.id,
-        label:    'Agent Assigned',
-        note:     `${assignedName} assigned by VCO ${req.user.fname}.`,
+        label:    assignLeg === 'collection' ? 'Collection Agent Assigned' : 'Agent Assigned',
+        note:     self
+          ? `VCO ${req.user.fname} is taking it ${assignLeg === 'collection' ? 'to the hub' : 'to the customer'} themselves.`
+          : `${fullName(assigned)} assigned by VCO ${req.user.fname} — waiting for them to accept (${platform.dispatch.acceptWindowMin} min).`,
       });
       if (histErr) console.error(`Order ${order.id}: agent-assigned history entry failed:`, histErr.message);
+      if (!self) await alertAssignedAgent(result.updated, assignLeg, assigned.id, `VCO ${req.user.fname}`);
     }
 
     // Per-line verification the VCO recorded (weighed qty, checked above). Only after
@@ -901,16 +999,27 @@ router.post('/:id/scan', async (req, res) => {
   // both land on index 3, they just spell it differently.
   } else if (status === 'VCO Verified') {
     const keepRoute = order.route || 'direct';
-    // A hub-bound parcel is a bulk movement; no individual agent takes custody of it
-    // until the hub assigns one, so it must not inherit the scanner as its agent.
-    const claimAgent = keepRoute === 'hub' ? {} : {
-      agent_id:      order.agent_id    || u.id,
-      agent_name:    order.agent_name  || `${u.fname}${u.lname ? ' ' + u.lname : ''}`,
-      agent_phone:   order.agent_phone || u.phone,
-      agent_vehicle: order.agent_vehicle || u.agent_vehicle || null,
-    };
+    // The pickup leaves the village with the agent named for it: the delivery agent
+    // (direct) or the collection agent carrying it to the hub (hub). Another Delivery
+    // Agent cannot take a parcel named for someone else. The named agent scanning it
+    // — or the VCO handing it over in person — counts as acceptance. An unnamed
+    // parcel is claimed by the Delivery Agent who scans it (accepted outright); the
+    // hub last-mile agent is still named later, at the hub.
+    const leg = keepRoute === 'hub' ? 'collection' : 'agent';
+    const c = LEG_COLS[leg];
+    if (isAgent && order[c.id] && order[c.id] !== u.id) {
+      return res.status(403).json({ error: `This order is assigned to ${order[c.name] || 'another Delivery Agent'}.` });
+    }
+    let claim = {};
+    if (order[c.id]) {
+      if (order[c.status] === 'pending') claim = acceptFields(leg);
+    } else if (isAgent || leg === 'agent') {
+      // Direct: whoever scans takes custody (the old behaviour). Hub: only a Delivery
+      // Agent becomes the carrier — a VCO dispatching a bulk load names nobody.
+      claim = assignFields(leg, u, u.id);
+    }
     result = await advanceStage(order, `Agent ${req.user.fname}`, {
-      ...claimAgent,
+      ...claim,
       route:      keepRoute,
       route_auto: order.route_auto || keepRoute,
     });
@@ -923,6 +1032,15 @@ router.post('/:id/scan', async (req, res) => {
       return res.status(403).json({ error: 'Only the Hub Incharge or senior admins can receive orders at the hub.' });
     }
     result = await advanceStage(order, `Hub ${req.user.fname}`);
+    // The custody handover, on the record: who brought it in, who received it.
+    if (!result.error && !result.conflict && order.collection_agent_name) {
+      const { error: hoErr } = await supabase.from('order_history').insert({
+        order_id: order.id,
+        label: 'Handed over at hub',
+        note: `${order.collection_agent_name} handed the parcel to Hub ${req.user.fname}.`,
+      });
+      if (hoErr) console.error(`Order ${order.id}: hub handover history failed:`, hoErr.message);
+    }
 
   // Last-mile pickup: At Hub → Picked Up. The Hub Incharge has already named the
   // agent via POST /assign (which does not move the status); this is that agent
@@ -938,12 +1056,11 @@ router.post('/:id/scan', async (req, res) => {
       return res.status(403).json({ error: 'This order is assigned to another Delivery Agent.' });
     }
 
-    const extra = {
-      agent_id:      order.agent_id    || u.id,
-      agent_name:    order.agent_name  || `${u.fname}${u.lname ? ' ' + u.lname : ''}`,
-      agent_phone:   order.agent_phone || u.phone,
-      agent_vehicle: order.agent_vehicle || u.agent_vehicle || null,
-    };
+    // Taking it from the hub accepts a pending assignment; an unnamed parcel is
+    // claimed by the scanner, accepted outright.
+    const extra = order.agent_id
+      ? order.agent_assign_status === 'pending' ? acceptFields('agent') : {}
+      : assignFields('agent', u, u.id);
     // Where the parcel left the hub. This branch only ever produces 'Picked Up',
     // so it is stored unconditionally (like the VCO verify branch).
     if (coords.coords) {
@@ -1333,10 +1450,6 @@ router.post('/:id/status', async (req, res) => {
 
 // ── POST /orders/:id/assign  (Admin only — assign / reassign delivery agent) ──
 router.post('/:id/assign', async (req, res) => {
-  if (!can(req.user, 'delivery_assignment', 'assign')) {
-    return res.status(403).json({ error: 'Delivery assignment permission required to assign agents.' });
-  }
-
   const { agent_id, force } = req.body;
   if (!agent_id) return res.status(400).json({ error: 'agent_id is required.' });
 
@@ -1344,7 +1457,11 @@ router.post('/:id/assign', async (req, res) => {
   // path updated blind (one round trip) and so could stamp a wrong-region agent.
   const { data: order, error: oe } = await supabase
     .from('orders')
-    .select('id, district, village, delivery_village, delivery_address, route')
+    .select(
+      'id, code, status, consumer_name, district, village, delivery_village, delivery_address, route, ' +
+        'verified_lat, verified_lng, delivery_hub_id, pickup_hub_id, ' +
+        'agent_id, agent_name, agent_assign_status, collection_agent_id, collection_agent_name, collection_assign_status',
+    )
     .eq('id', req.params.id)
     .maybeSingle();
   if (oe) return res.status(500).json({ error: 'Could not load order.' });
@@ -1355,25 +1472,25 @@ router.post('/:id/assign', async (req, res) => {
     });
   }
 
-  const { data: agent, error: ae } = await supabase
-    .from('users')
-    .select(
-      'id, fname, lname, phone, agent_vehicle, role, admin_role, can_deliver, ' +
-        'district, service_areas, service_villages',
-    )
-    .eq('id', agent_id)
-    .is('deleted_at', null)          // a removed agent cannot take a delivery
-    .single();
+  // Who may (re)assign: the assignment permission (Hub Incharge, senior admins), or
+  // a VCO re-picking the pickup agent of a verified order still waiting in their
+  // village (e.g. after a decline or a timeout) — the same choice they made at verify.
+  const leg = legForOrder(order);
+  const vcoRepick = req.user.admin_role === 'VCO' && order.status === 'VCO Verified';
+  if (!vcoRepick && !can(req.user, 'delivery_assignment', 'assign')) {
+    return res.status(403).json({ error: 'Delivery assignment permission required to assign agents.' });
+  }
 
-  if (ae || !agent) return res.status(404).json({ error: 'Agent not found.' });
-
-  const agentName = agent.fname + (agent.lname ? ' ' + agent.lname : '');
+  const r = await loadAssignableAgent(agent_id, order, leg, req.user);
+  if (r.status) return res.status(r.status).json(r.body);
+  const agent = r.agent;
+  const agentName = fullName(agent);
 
   // Region accountability. `agentServesOrder` also folds in the role check
   // (reason:'role'), so this replaces the old delivery-capable-role gate. A
   // false result is a hard 400 unless a senior admin explicitly overrides it —
   // that override is logged, so an out-of-region assignment is never silent.
-  const serves = agentServesOrder(agent, order);
+  const serves = r.serves || { ok: true };
   const override = force === true && isSeniorAdmin(req.user.admin_role);
   if (!serves.ok && serves.reason === 'role') {
     return res.status(400).json({ error: coverageBlockMessage(agentName, serves) });
@@ -1389,13 +1506,7 @@ router.post('/:id/assign', async (req, res) => {
 
   const { data: updated, error: ue } = await supabase
     .from('orders')
-    .update({
-      agent_id,
-      agent_name:    agentName,
-      agent_phone:   agent.phone,
-      agent_vehicle: agent.agent_vehicle || '',
-      updated_at:    new Date().toISOString(),
-    })
+    .update({ ...assignFields(leg, agent, req.user.id), updated_at: new Date().toISOString() })
     .eq('id', req.params.id)
     // No agent carries a container. Each parcel of a split order gets its own
     // agent — often a different one, since they start in different villages.
@@ -1417,19 +1528,99 @@ router.post('/:id/assign', async (req, res) => {
   const overrideNote = overrode
     ? ` — OUT-OF-REGION OVERRIDE (${serves.reason}): agent serves ${serves.agentRegion || 'another area'}`
     : '';
+  const c = LEG_COLS[leg];
+  const replaced = order[c.id] && order[c.id] !== agent.id ? ` (replacing ${order[c.name] || 'the previous agent'})` : '';
   const { error: histErr } = await supabase.from('order_history').insert({
     order_id: req.params.id,
-    label:    overrode ? 'Agent Assigned (override)' : 'Agent Assigned',
-    note:     `${agentName} assigned by ${req.user.fname} (${req.user.admin_role})${overrideNote}`,
+    label:    overrode ? 'Agent Assigned (override)' : leg === 'collection' ? 'Collection Agent Assigned' : 'Agent Assigned',
+    note:     `${agentName} assigned by ${req.user.fname} (${req.user.admin_role})${replaced}${overrideNote}`,
     ts:       new Date().toISOString(),
   });
   if (histErr) console.error(`Order ${req.params.id}: agent-assigned history entry failed:`, histErr.message);
+  if (agent.id !== req.user.id) {
+    await alertAssignedAgent(updated, leg, agent.id, `${req.user.admin_role} ${req.user.fname}`);
+  }
 
   res.json({
     message: `Agent ${agentName} assigned.${overrode ? ' (out-of-region override logged)' : ''}`,
     order: updated,
+    leg,
     ...(overrode ? { override: true } : {}),
   });
+});
+
+// ── POST /orders/:id/agent-response  (the named agent — accept / decline) ────
+// Body: { accept: boolean, reason? }. Only the agent holding a PENDING assignment
+// on this order may answer. Accept locks it in; decline clears the leg so the
+// assigner (told either way) can pick someone else. On the hub route an accepted
+// collection also tells the receiving Hub Incharge who is bringing it.
+router.post('/:id/agent-response', async (req, res) => {
+  const { accept, reason } = req.body || {};
+  if (typeof accept !== 'boolean') return res.status(400).json({ error: 'accept must be true or false.' });
+
+  const order = await fetchActiveOrder(req.params.id, res);
+  if (!order) return;
+  const leg = pendingLegFor(order, req.user.id);
+  if (!leg) {
+    return res.status(409).json({ error: 'This job is no longer waiting for you — it may have expired or been reassigned.' });
+  }
+  const c = LEG_COLS[leg];
+  const now = new Date().toISOString();
+
+  // CAS on "still pending for me": a sweep expiry or a reassignment that landed
+  // first wins, and this answer is refused rather than resurrecting the job.
+  const { data: updated, error: ue } = await supabase
+    .from('orders')
+    .update({ ...(accept ? acceptFields(leg) : clearFields(leg)), updated_at: now })
+    .eq('id', order.id)
+    .eq(c.id, req.user.id)
+    .eq(c.status, 'pending')
+    .select()
+    .maybeSingle();
+  if (ue) return res.status(500).json({ error: 'Could not record your answer. Please try again.' });
+  if (!updated) {
+    return res.status(409).json({ error: 'This job is no longer waiting for you — it may have expired or been reassigned.' });
+  }
+
+  const me = fullName(req.user);
+  const why = !accept && typeof reason === 'string' && reason.trim() ? ` — "${reason.trim().slice(0, 200)}"` : '';
+  const { error: he } = await supabase.from('order_history').insert({
+    order_id: order.id,
+    label: accept ? 'Agent Accepted' : 'Agent Declined',
+    note: accept
+      ? `${me} accepted the ${leg === 'collection' ? 'collection to the hub' : 'delivery'}.`
+      : `${me} declined the ${leg === 'collection' ? 'collection to the hub' : 'delivery'}${why}.`,
+  });
+  if (he) console.error(`Order ${order.id}: agent-response history failed:`, he.message);
+
+  if (order[c.by]) {
+    await notify(order[c.by], accept
+      ? {
+          type: 'agent_job_accepted',
+          title: 'Agent accepted',
+          body: `${me} accepted order ${order.code}.`,
+          data: { order_id: order.id, code: order.code, leg },
+        }
+      : {
+          type: 'agent_job_declined',
+          title: 'Agent declined — assign another',
+          body: `${me} declined order ${order.code}${why}. Please assign another agent.`,
+          data: { order_id: order.id, code: order.code, leg },
+        });
+  }
+  if (accept && leg === 'collection') {
+    const ids = await hubInchargeIdsFor(order);
+    if (ids.length) {
+      await notifyMany(ids, {
+        type: 'inbound_order',
+        title: 'Parcel on its way to your hub',
+        body: `${me} is bringing order ${order.code} from the VCO in ${order.village || 'the village'}.`,
+        data: { order_id: order.id, code: order.code },
+      });
+    }
+  }
+
+  res.json({ message: accept ? 'Job accepted.' : 'Job declined.', order: updated, leg });
 });
 
 // ── GET /orders/:id/eligible-agents  (VCO/admin — agents to assign) ───────────
@@ -1448,12 +1639,26 @@ router.get('/:id/eligible-agents', async (req, res) => {
   const { data: order, error: oe } = await supabase
     .from('orders')
     .select(
-      'id, village, delivery_village, district, delivery_address, delivered_lat, ' +
-        'delivered_lng, pickup_hub_id, delivery_hub_id',
+      'id, status, route, village, delivery_village, district, delivery_address, delivered_lat, ' +
+        'delivered_lng, verified_lat, verified_lng, pickup_hub_id, delivery_hub_id',
     )
     .eq('id', req.params.id)
     .single();
   if (oe || !order) return res.status(404).json({ error: 'Order not found.' });
+
+  // Distance is measured from where the agent COLLECTS: the hub for a last-mile
+  // pickup there, else the VCO's verify fix / the seller's farm pin. A caller may
+  // send its own fix (?lat=&lng= — the VCO's device at verify, before verified_lat
+  // exists). It used to be the customer's address, which ranked agents by how near
+  // they lived to the drop, not to the parcel.
+  const pickup = await pickupPoint(order, 'agent');
+  const qLat = toCoord(req.query.lat);
+  const qLng = toCoord(req.query.lng);
+  const origin =
+    qLat !== null && qLng !== null && !(order.route === 'hub' && ['In Transit', 'At Hub'].includes(order.status))
+      ? { lat: qLat, lng: qLng }
+      : pickup.pin;
+  const radiusM = platform.dispatch.agentRadiusKm * 1000;
 
   // collection leg → farmer-side fulfilment village (VCO assigns pickup agent).
   // delivery leg → consumer-side delivery village (Hub Incharge assigns last-mile
@@ -1493,8 +1698,8 @@ router.get('/:id/eligible-agents', async (req, res) => {
   const today = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
   const vlc = (village || '').toLowerCase();
   const tlc = (taluk || '').toLowerCase();
-  const oLat = order.delivered_lat ?? (typeof da.lat === 'number' ? da.lat : null);
-  const oLng = order.delivered_lng ?? (typeof da.lng === 'number' ? da.lng : null);
+  const oLat = origin ? origin.lat : null;
+  const oLng = origin ? origin.lng : null;
 
   // Coverage from users.service_areas ([{taluk, villages[]}]); the legacy flat
   // service_villages[] still counts as a village match so nothing regresses.
@@ -1548,15 +1753,19 @@ router.get('/:id/eligible-agents', async (req, res) => {
       covers_village: cv,
       covers_taluk: ct,
       distance_m,
+      // Within the pickup radius — the picker's default list. Unknown distance is
+      // never "within": it is offered under "show all".
+      within_radius: distance_m != null && distance_m <= radiusM,
     };
   };
 
   // Same hub first (a direct pickup should go to an agent of the seller's own hub),
-  // then ready-first, then better coverage (village > taluk > none), then nearest,
+  // then ready-first, then within the pickup radius, then better coverage (village > taluk > none), then nearest,
   // then name — the order the picker defaults to and displays in.
   const rankKey = (s) => [
     s.same_hub ? 0 : 1,
     s.ready_today ? 0 : 1,
+    s.within_radius ? 0 : 1,
     s.covers_village ? 0 : s.covers_taluk ? 1 : 2,
     s.distance_m ?? Infinity,
   ];
@@ -1584,7 +1793,15 @@ router.get('/:id/eligible-agents', async (req, res) => {
   const matched = shaped.filter((s) => s.covers_village || s.covers_taluk).sort(bySort);
   const allSorted = [...shaped].sort(bySort);
 
-  res.json({ leg, village: village || null, taluk: taluk || null, matched, all: allSorted });
+  res.json({
+    leg,
+    village: village || null,
+    taluk: taluk || null,
+    origin: origin ? 'pickup' : null,
+    radius_km: platform.dispatch.agentRadiusKm,
+    matched,
+    all: allSorted,
+  });
 });
 
 // ── GET /orders/:id/delivery-hubs  (VCO/admin — destination hub for a hub order) ─

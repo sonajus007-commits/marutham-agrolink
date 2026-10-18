@@ -23,6 +23,7 @@ import { ProfileContent } from './ProfileContent';
 import { OrderViewSheet } from './sheets/OrderViewSheet';
 import { DeliverSheet } from './sheets/DeliverSheet';
 import { VerifySheet } from './sheets/VerifySheet';
+import { AssignAgentSheet } from './sheets/AssignAgentSheet';
 import { ScanSheet } from './ScanSheet';
 import { LogVisitSheet } from './sheets/LogVisitSheet';
 import { usePushTarget, matchesOrder, type PushTarget } from '../../native/pushTarget';
@@ -45,7 +46,7 @@ function ScanGlyph() {
   );
 }
 
-type SheetKind = 'view' | 'deliver' | 'verify' | null;
+type SheetKind = 'view' | 'deliver' | 'verify' | 'assign' | null;
 interface SheetState {
   kind: SheetKind;
   orderId: string | null;
@@ -103,8 +104,9 @@ function AgentPageInner() {
 
   /* A tapped phone notification about an order opens that order on the work tab.
    * "Ready to collect" opens straight into Verify when the parcel is still waiting
-   * in this VCO's verify queue; anything else (or a parcel already moved on) opens
-   * the read-only view. Resolved once the queues have loaded. */
+   * in this VCO's verify queue; a job offer lands on the work tab's Accept/Decline;
+   * anything else (or a parcel already moved on) opens the read-only view. Resolved
+   * once the queues have loaded. */
   const [pushTarget, setPushTarget] = useState<PushTarget | null>(null);
   usePushTarget((target) => {
     if (target.type === 'duty_checkin_prompt') {
@@ -113,6 +115,9 @@ function AgentPageInner() {
     }
     if (!target.orderId) return;
     setTab('work');
+    // A job offer is answered on the work tab itself (Accept / Decline lead it) —
+    // no sheet over the top of the buttons the agent came to press.
+    if (target.type === 'agent_job_offer') return;
     setPushTarget(target);
   });
   useEffect(() => {
@@ -310,6 +315,9 @@ function AgentPageInner() {
                 onOpenDeliver={(id) => setSheet({ kind: 'deliver', orderId: id })}
                 onOpenVerify={(id) => setSheet({ kind: 'verify', orderId: id })}
                 onQuickScan={quickScan}
+                userId={user.id as string}
+                onAssign={(o) => setSheet({ kind: 'assign', orderId: o.id })}
+                onJobsChanged={onScanned}
               />
             ) : tab === 'done' ? (
               <AgentDelivered
@@ -371,6 +379,16 @@ function AgentPageInner() {
       <VerifySheet
         open={sheet.kind === 'verify'}
         orderId={sheet.orderId}
+        onClose={close}
+        onChanged={afterChange}
+      />
+      <AssignAgentSheet
+        open={sheet.kind === 'assign'}
+        order={
+          sheet.kind === 'assign' && queues
+            ? queues.toPickUp.find((o) => o.id === sheet.orderId) || null
+            : null
+        }
         onClose={close}
         onChanged={afterChange}
       />

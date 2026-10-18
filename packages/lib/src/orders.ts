@@ -78,6 +78,15 @@ export interface Order {
   route?: string | null;
   eta_ts?: string | null;
   agent_name?: string;
+  agent_id?: string | null;
+  /** Agent accept/decline (migration 070): 'pending' until they accept; null = legacy/none. */
+  agent_assign_status?: 'pending' | 'accepted' | null;
+  agent_accept_deadline?: string | null;
+  /** Hub route: the agent carrying it VCO → hub (separate from the last-mile agent). */
+  collection_agent_id?: string | null;
+  collection_agent_name?: string | null;
+  collection_assign_status?: 'pending' | 'accepted' | null;
+  collection_accept_deadline?: string | null;
   agent_vehicle?: string;
   village?: string;
   /** Delivery district — returned by the admin orders list; used to geo-filter. */
@@ -437,4 +446,64 @@ export function deriveOrderCharges(o: Order): OrderCharges {
 /** Line total for an item, coercing the numeric-as-string price. */
 export function itemLineTotal(item: OrderItem): number {
   return (parseFloat(String(item.price ?? 0)) || 0) * item.qty;
+}
+
+/* ── Agent jobs: accept / decline (migration 070) ─────────────────────────────
+ * Two legs: 'agent' (direct delivery / hub last-mile) and 'collection' (hub route,
+ * VCO → hub). A named agent is 'pending' until they accept; null status with a name
+ * set is a legacy assignment, read as accepted. Mirrors backend utils/agentAssignment. */
+export type JobLeg = 'agent' | 'collection';
+
+export interface JobOffer {
+  order: Order;
+  leg: JobLeg;
+  deadline: string | null;
+}
+
+/** Pending job offers for `userId`, soonest deadline first. */
+export function pendingJobsFor(orders: Order[], userId: string | null | undefined): JobOffer[] {
+  if (!userId) return [];
+  const out: JobOffer[] = [];
+  for (const o of orders) {
+    if (o.cancelled) continue;
+    if (o.collection_agent_id === userId && o.collection_assign_status === 'pending') {
+      out.push({ order: o, leg: 'collection', deadline: o.collection_accept_deadline ?? null });
+    } else if (o.agent_id === userId && o.agent_assign_status === 'pending') {
+      out.push({ order: o, leg: 'agent', deadline: o.agent_accept_deadline ?? null });
+    }
+  }
+  const t = (j: JobOffer) => (j.deadline ? new Date(j.deadline).getTime() : Infinity);
+  return out.sort((a, b) => t(a) - t(b));
+}
+
+/** Whole minutes left on a deadline (0 once passed), or null without one. */
+export function minutesUntil(
+  deadline: string | null | undefined,
+  now: number = Date.now(),
+): number | null {
+  if (!deadline) return null;
+  return Math.max(0, Math.ceil((new Date(deadline).getTime() - now) / 60000));
+}
+
+export interface PickupAssignment {
+  leg: JobLeg;
+  name: string | null;
+  state: 'none' | 'pending' | 'accepted';
+  minutesLeft: number | null;
+}
+
+/** Who is collecting a VCO-verified parcel, and whether they have accepted. */
+export function pickupAssignment(o: Order, now: number = Date.now()): PickupAssignment {
+  const hub = o.route === 'hub';
+  const name = (hub ? o.collection_agent_name : o.agent_name) || null;
+  const id = hub ? o.collection_agent_id : o.agent_id;
+  const status = hub ? o.collection_assign_status : o.agent_assign_status;
+  const deadline = hub ? o.collection_accept_deadline : o.agent_accept_deadline;
+  const named = !!(id || name);
+  return {
+    leg: hub ? 'collection' : 'agent',
+    name,
+    state: !named ? 'none' : status === 'pending' ? 'pending' : 'accepted',
+    minutesLeft: status === 'pending' ? minutesUntil(deadline, now) : null,
+  };
 }

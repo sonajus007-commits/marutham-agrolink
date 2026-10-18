@@ -218,8 +218,10 @@ export interface EligibleAgent {
   /** Does the agent's coverage include the order's delivery village / taluk? */
   covers_village?: boolean;
   covers_taluk?: boolean;
-  /** Metres from the order's delivery point to the agent's last GPS, when both exist. */
+  /** Metres from the PICKUP point (hub, VCO fix or farm pin) to the agent's last GPS. */
   distance_m?: number | null;
+  /** Within the pickup radius (radius_km) — the picker's default list. */
+  within_radius?: boolean;
 }
 
 export interface EligibleAgentsResponse {
@@ -230,6 +232,10 @@ export interface EligibleAgentsResponse {
   /** The delivery taluk, when the address carried one. */
   taluk?: string | null;
   leg?: string;
+  /** 'pickup' when distances are measured from the pickup point; null = no pin. */
+  origin?: 'pickup' | null;
+  /** The pickup radius (km) behind `within_radius`. */
+  radius_km?: number;
 }
 
 /** One destination-hub candidate for a via-hub order (GET /orders/:id/delivery-hubs). */
