@@ -90,17 +90,18 @@ export function TodaysSupplyCard({
     setRows((r) => ({ ...r, [id]: { ...r[id], ...part } }));
 
   const selected = pending.filter((l) => rows[l.id]?.checked);
-  // A row can be confirmed only once it has today's quantity, a real selling price,
-  // a cut-off and today's photo. The overnight reset clears stock and photos (the
-  // price carries over), and the server refuses a confirm without them too.
+  // A row can be confirmed once it has today's quantity, a real selling price and a
+  // cut-off. Today's photo is OPTIONAL (a farmer cannot always take one) — but a
+  // product without it is shown to customers as the last preference, so the row
+  // warns and the confirm toast repeats it. The server enforces the same rule.
   const rowReady = (l: FarmerListing) => {
     const r = rows[l.id];
-    return (
-      !!r && Number(r.qty) > 0 && Number(r.price) > 0 && !!r.cutoff && (l.images?.length ?? 0) > 0
-    );
+    return !!r && Number(r.qty) > 0 && Number(r.price) > 0 && !!r.cutoff;
   };
+  const hasPhoto = (l: FarmerListing) => (l.images?.length ?? 0) > 0;
   const readyCount = selected.filter(rowReady).length;
   const notReadyCount = selected.length - readyCount;
+  const noPhotoCount = selected.filter((l) => rowReady(l) && !hasPhoto(l)).length;
 
   function openPhotos(l: FarmerListing) {
     setPhotoFor(l);
@@ -125,11 +126,12 @@ export function TodaysSupplyCard({
 
   async function confirmAll() {
     const targets = selected.filter(rowReady);
+    const photoless = targets.filter((l) => !hasPhoto(l)).length;
     if (targets.length === 0) {
       toast(
         t(
           'farmer.supply.needQtyPrice',
-          'Enter today’s quantity, price and photo for at least one product.',
+          'Enter today’s quantity and price for at least one product.',
         ),
         'er',
       );
@@ -175,6 +177,16 @@ export function TodaysSupplyCard({
         'ok',
       );
     }
+    if (ok > 0 && photoless > 0) {
+      toast(
+        t(
+          'farmer.supply.noPhotoToast',
+          '{{count}} product(s) have no photo — they will be shown to customers as the last preference on today’s list. Add a photo any time to move up.',
+          { count: photoless },
+        ),
+        'er',
+      );
+    }
     if (failed > 0) {
       toast(
         t('farmer.supply.someFailed', '{{count}} could not be confirmed — please try again.', {
@@ -208,7 +220,7 @@ export function TodaysSupplyCard({
           <p className="fm-supply__sub">
             {t(
               'farmer.supply.sub',
-              'Each market day, enter today’s stock and take a fresh photo. Your price carries over from yesterday — change it only if it moved. Then confirm and customers can order right away.',
+              'Each market day, enter today’s stock and, if you can, take a fresh photo. Your price carries over from yesterday — change it only if it moved. Then confirm and customers can order right away.',
             )}{' '}
             {t(
               'farmer.supply.cutoffHint',
@@ -363,8 +375,17 @@ export function TodaysSupplyCard({
                           📷{' '}
                           {photoCount > 0
                             ? `${t('farmer.supply.photosBtn', 'Photos')} (${photoCount})`
-                            : t('farmer.supply.photoNeeded', 'Take today’s photo')}
+                            : t('farmer.supply.photoOptional', 'Add photo (optional)')}
                         </button>
+                        {photoCount === 0 ? (
+                          <p className="fm-supply__nophoto" role="note">
+                            ⚠️{' '}
+                            {t(
+                              'farmer.supply.noPhotoWarn',
+                              'Without a photo, your product is shown to customers as the last preference on today’s list — buyers are less confident purchasing what they cannot see.',
+                            )}
+                          </p>
+                        ) : null}
                       </td>
                     </tr>
                   );
@@ -376,9 +397,19 @@ export function TodaysSupplyCard({
           <div className="fm-supply__actions">
             {notReadyCount > 0 ? (
               <p className="fm-supply__need">
-                {t('farmer.supply.needToday', '{{count}} still need today’s quantity and photo.', {
+                {t('farmer.supply.needToday', '{{count}} still need today’s quantity and price.', {
                   count: notReadyCount,
                 })}
+              </p>
+            ) : null}
+            {noPhotoCount > 0 ? (
+              <p className="fm-supply__nophoto">
+                ⚠️{' '}
+                {t(
+                  'farmer.supply.noPhotoSummary',
+                  '{{count}} selected product(s) have no photo and will be listed last for customers.',
+                  { count: noPhotoCount },
+                )}
               </p>
             ) : null}
             <Button onClick={confirmAll} disabled={busy || readyCount === 0}>

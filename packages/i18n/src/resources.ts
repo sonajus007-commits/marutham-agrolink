@@ -1241,7 +1241,7 @@ export const resources = {
       'farmer.home.listings.empty': 'No live listings yet — add your first product.',
       'farmer.supply.title': 'Confirm today’s supply',
       'farmer.supply.sub':
-        'Each market day, enter today’s stock and take a fresh photo. Your price carries over from yesterday — change it only if it moved. Then confirm and customers can order right away.',
+        'Each market day, enter today’s stock and, if you can, take a fresh photo. Your price carries over from yesterday — change it only if it moved. Then confirm and customers can order right away.',
       'farmer.supply.doneCount': '{{count}} confirmed',
       'farmer.supply.allDone': 'All your products are confirmed for today’s market. 🎉',
       'farmer.supply.stale': 'price from yesterday',
@@ -1264,10 +1264,15 @@ export const resources = {
       'farmer.supply.confirming': 'Confirming…',
       'farmer.supply.confirmed': '{{count}} product(s) confirmed for today’s market.',
       'farmer.supply.someFailed': '{{count}} could not be confirmed — please try again.',
-      'farmer.supply.needQtyPrice':
-        'Enter today’s quantity, price and photo for at least one product.',
-      'farmer.supply.photoNeeded': 'Take today’s photo',
-      'farmer.supply.needToday': '{{count}} still need today’s quantity and photo.',
+      'farmer.supply.needQtyPrice': 'Enter today’s quantity and price for at least one product.',
+      'farmer.supply.photoOptional': 'Add photo (optional)',
+      'farmer.supply.needToday': '{{count}} still need today’s quantity and price.',
+      'farmer.supply.noPhotoWarn':
+        'Without a photo, your product is shown to customers as the last preference on today’s list — buyers are less confident purchasing what they cannot see.',
+      'farmer.supply.noPhotoSummary':
+        '{{count}} selected product(s) have no photo and will be listed last for customers.',
+      'farmer.supply.noPhotoToast':
+        '{{count}} product(s) have no photo — they will be shown to customers as the last preference on today’s list. Add a photo any time to move up.',
       'farmer.supply.cutoffHint': 'Pick when orders close — any hour from now up to 8 AM.',
       'farmer.supply.clockErr': 'Your device clock looks wrong — cannot set today’s cutoff.',
       'farmer.home.pop.pack': 'Ready to pack',
@@ -3804,7 +3809,7 @@ export const resources = {
         'இன்னும் செயலில் பட்டியல்கள் இல்லை — முதல் பொருளைச் சேர்க்கவும்.',
       'farmer.supply.title': 'இன்றைய விநியோகத்தை உறுதி செய்',
       'farmer.supply.sub':
-        'ஒவ்வொரு சந்தை நாளும் இன்றைய இருப்பை உள்ளிட்டு புதிய புகைப்படம் எடுக்கவும். உங்கள் விலை நேற்றிலிருந்து தொடரும் — மாறியிருந்தால் மட்டும் திருத்தவும். பின்னர் உறுதி செய்தால் வாடிக்கையாளர்கள் உடனே ஆர்டர் செய்யலாம்.',
+        'ஒவ்வொரு சந்தை நாளும் இன்றைய இருப்பை உள்ளிட்டு, முடிந்தால் புதிய புகைப்படம் எடுக்கவும். உங்கள் விலை நேற்றிலிருந்து தொடரும் — மாறியிருந்தால் மட்டும் திருத்தவும். பின்னர் உறுதி செய்தால் வாடிக்கையாளர்கள் உடனே ஆர்டர் செய்யலாம்.',
       'farmer.supply.doneCount': '{{count}} உறுதி செய்யப்பட்டது',
       'farmer.supply.allDone': 'உங்கள் அனைத்து பொருட்களும் இன்றைய சந்தைக்கு உறுதி செய்யப்பட்டன. 🎉',
       'farmer.supply.stale': 'நேற்றைய விலை',
@@ -3828,9 +3833,15 @@ export const resources = {
       'farmer.supply.confirmed': '{{count}} பொருள் இன்றைய சந்தைக்கு உறுதி செய்யப்பட்டது.',
       'farmer.supply.someFailed': '{{count}} உறுதி செய்ய முடியவில்லை — மீண்டும் முயற்சிக்கவும்.',
       'farmer.supply.needQtyPrice':
-        'குறைந்தது ஒரு பொருளுக்காவது இன்றைய அளவு, விலை மற்றும் புகைப்படத்தை உள்ளிடவும்.',
-      'farmer.supply.photoNeeded': 'இன்றைய புகைப்படம் எடு',
-      'farmer.supply.needToday': '{{count}} பொருட்களுக்கு இன்றைய அளவும் புகைப்படமும் தேவை.',
+        'குறைந்தது ஒரு பொருளுக்காவது இன்றைய அளவு மற்றும் விலையை உள்ளிடவும்.',
+      'farmer.supply.photoOptional': 'புகைப்படம் சேர் (விருப்பம்)',
+      'farmer.supply.needToday': '{{count}} பொருட்களுக்கு இன்றைய அளவும் விலையும் தேவை.',
+      'farmer.supply.noPhotoWarn':
+        'புகைப்படம் இல்லையெனில், இன்றைய பட்டியலில் உங்கள் பொருள் வாடிக்கையாளர்களுக்குக் கடைசி விருப்பமாகக் காட்டப்படும் — பார்க்க முடியாததை வாங்க வாடிக்கையாளர்களுக்கு நம்பிக்கை குறைவு.',
+      'farmer.supply.noPhotoSummary':
+        'தேர்ந்தெடுத்த {{count}} பொருட்களுக்குப் புகைப்படம் இல்லை; அவை வாடிக்கையாளர்களுக்குக் கடைசியாகப் பட்டியலிடப்படும்.',
+      'farmer.supply.noPhotoToast':
+        '{{count}} பொருட்களுக்குப் புகைப்படம் இல்லை — இன்றைய பட்டியலில் அவை வாடிக்கையாளர்களுக்குக் கடைசி விருப்பமாகக் காட்டப்படும். மேலே வர எப்போது வேண்டுமானாலும் புகைப்படம் சேர்க்கலாம்.',
       'farmer.supply.cutoffHint':
         'ஆர்டர்கள் முடியும் நேரத்தைத் தேர்ந்தெடுக்கவும் — இப்போதிலிருந்து காலை 8 மணி வரை எந்த நேரமும்.',
       'farmer.supply.clockErr':

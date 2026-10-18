@@ -158,6 +158,18 @@ function offerRank(o: Offer): number {
   return o.consumer_price != null ? o.consumer_price : parseFloat(String(o.farmer_price));
 }
 
+/** Does the offer carry today's photo? A photo is optional for the seller, but an
+ *  offer without one is the LAST preference: buyers are less confident purchasing
+ *  produce they cannot see. Mirrors backend utils/listings hasPhoto. */
+export function offerHasPhoto(o: Offer): boolean {
+  return Array.isArray(o.images) && o.images.some(Boolean);
+}
+
+/** Comparator prefix: photo offers first; 0 within a group (stable sort keeps order). */
+export function photoFirst(a: Offer, b: Offer): number {
+  return (offerHasPhoto(b) ? 1 : 0) - (offerHasPhoto(a) ? 1 : 0);
+}
+
 export type SellerFilter = 'All' | 'Farmer' | 'Retailer';
 
 /** Offers narrowed to the active seller-type filter. */
@@ -167,11 +179,14 @@ export function offersForSeller(offers: Offer[], seller: SellerFilter): Offer[] 
   return offers;
 }
 
-/** Cheapest offer among the (seller-filtered) list, or null. */
+/** Cheapest offer among the (seller-filtered) list, or null — preferring an offer
+ *  with today's photo: a photo-less one is chosen only when no seller has a photo. */
 export function bestOffer(offers: Offer[], seller: SellerFilter = 'All'): Offer | null {
   const relevant = offersForSeller(offers, seller);
   if (relevant.length === 0) return null;
-  return relevant.reduce((best, o) => (offerRank(o) < offerRank(best) ? o : best));
+  const withPhoto = relevant.filter(offerHasPhoto);
+  const pool = withPhoto.length ? withPhoto : relevant;
+  return pool.reduce((best, o) => (offerRank(o) < offerRank(best) ? o : best));
 }
 
 /**
@@ -190,7 +205,10 @@ export function offersByRating(
     const r = ratingsByFP[`${o.farmer?.id || o.farmer_id || ''}_${productId}`];
     return r && r.num_ratings > 0 ? r.avg_rating : -1; // unrated sinks below any rated seller
   };
+  // Photo first — a photo-less offer is the last preference whatever its rating.
   return [...offers].sort((a, b) => {
+    const photo = photoFirst(a, b);
+    if (photo !== 0) return photo;
     const diff = ratingOf(b) - ratingOf(a);
     return diff !== 0 ? diff : offerRank(a) - offerRank(b);
   });
@@ -213,7 +231,7 @@ export function filterProducts(
 ): Product[] {
   const search = f.search.trim().toLowerCase();
   const city = f.city.trim().toLowerCase();
-  return products.filter((p) => {
+  const shown = products.filter((p) => {
     // Only list a product a seller has actually confirmed for selling today.
     // offersByProduct is built from the confirmed + active listings feed, so an
     // empty list here means no farmer/retailer has this product live — hide it,
@@ -233,6 +251,11 @@ export function filterProducts(
       return false;
     return true;
   });
+  // A product only photo-less sellers offer today sinks to the end of the daily
+  // list — the last preference. Stable, so the catalogue's own order holds within
+  // each group.
+  const anyPhoto = (p: Product) => (offersByProduct[p.id] || []).some(offerHasPhoto);
+  return [...shown].sort((a, b) => (anyPhoto(b) ? 1 : 0) - (anyPhoto(a) ? 1 : 0));
 }
 
 export interface CartBill {

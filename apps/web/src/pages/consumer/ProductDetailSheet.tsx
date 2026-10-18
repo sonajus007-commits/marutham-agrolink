@@ -9,6 +9,7 @@ import {
   unitAllowsDecimal,
   fmtMoney,
   fmtKm,
+  photoFirst,
   deliveryTier,
   FREE_DELIVERY_MIN,
   DELIVERY_FLAT,
@@ -60,7 +61,10 @@ export function ProductDetailSheet({
   const canSortNearest = hasPin && offers.some((o) => o.distance_km != null);
   const sortedOffers =
     canSortNearest && sortBy === 'nearest'
-      ? [...byRating].sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
+      ? [...byRating].sort(
+          // Photo offers stay first (a photo-less one is the last preference), then nearest.
+          (a, b) => photoFirst(a, b) || (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity),
+        )
       : byRating;
   const selectedOffer =
     sortedOffers.find((o) => (o.id ?? '') === selectedId) ?? sortedOffers[0] ?? null;

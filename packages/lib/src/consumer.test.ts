@@ -372,3 +372,47 @@ describe('consumerMonthlySeries', () => {
     expect(s.every((m) => m.orders === 0 && m.spent === 0)).toBe(true);
   });
 });
+
+describe('photo-less offers are the last preference', () => {
+  const withPhoto = (over: Partial<Offer> = {}): Offer => ({
+    farmer_price: 20,
+    consumer_price: 2100,
+    images: ['https://x/today.jpg'],
+    farmer: { id: 'p' },
+    ...over,
+  });
+  const noPhoto = (over: Partial<Offer> = {}): Offer => ({
+    farmer_price: 10,
+    consumer_price: 1050,
+    images: [],
+    farmer: { id: 'n' },
+    ...over,
+  });
+
+  it('bestOffer prefers a photo offer even when a photo-less one is cheaper', () => {
+    expect(bestOffer([noPhoto(), withPhoto()])?.farmer?.id).toBe('p');
+    // …and falls back to photo-less only when nobody has a photo
+    expect(bestOffer([noPhoto()])?.farmer?.id).toBe('n');
+  });
+
+  it('offersByRating puts photo offers first, whatever the rating', () => {
+    const ratings: Record<string, Rating> = { n_p1: { avg_rating: 5, num_ratings: 9 } };
+    const sorted = offersByRating([noPhoto(), withPhoto()], ratings, 'p1');
+    expect(sorted.map((o) => o.farmer?.id)).toEqual(['p', 'n']);
+  });
+
+  it('filterProducts sends products with only photo-less sellers to the end', () => {
+    const f = {
+      group: 'All',
+      cat: 'All',
+      sub: 'All',
+      seller: 'All' as const,
+      city: '',
+      search: '',
+    };
+    const a = product({ id: 'a', name: 'A' });
+    const b = product({ id: 'b', name: 'B' });
+    const out = filterProducts([a, b], { a: [noPhoto()], b: [withPhoto()] }, f);
+    expect(out.map((p) => p.id)).toEqual(['b', 'a']);
+  });
+});

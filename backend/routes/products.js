@@ -4,6 +4,7 @@ const { requireAuth, optionalAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 const { syncPrices, getLastSync } = require('../utils/priceSync');
 const { publicFarmer } = require('../utils/publicShape');
+const { hasPhoto, photoFirst } = require('../utils/listings');
 
 const router = express.Router();
 
@@ -181,7 +182,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
     .from('farmer_listings')
     .select(`
       id, farmer_price, qty_available, listed, confirmed,
-      time_available, cutoff_ts, bulk_qty, bulk_disc_pct,
+      time_available, cutoff_ts, bulk_qty, bulk_disc_pct, images,
       farmer:users ( id, fname, lname, village_town, district )
     `)
     .eq('product_id', req.params.id)
@@ -204,10 +205,14 @@ router.get('/:id', optionalAuth, async (req, res) => {
 
   const ratingByFarmer = new Map((ratings || []).map(r => [r.farmer_id, r]));
 
-  const enrichedListings = (listings || []).map(l => {
+  // Offers with today's photo first — a photo-less offer is the last preference.
+  // The photos themselves are read only for that ordering and not sent: this
+  // response never carried them, and `has_photo` is all the page needs.
+  const enrichedListings = [...(listings || [])].sort(photoFirst).map(({ images, ...l }) => {
     const r = ratingByFarmer.get(l.farmer?.id);
     return {
       ...l,
+      has_photo: hasPhoto({ images }),
       farmer: publicFarmer(l.farmer, req.user),
       farmer_avg_rating: r && r.num_ratings > 0
         ? (r.sum_stars / r.num_ratings).toFixed(1)

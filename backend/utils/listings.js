@@ -46,15 +46,37 @@ const DAILY_RESET = Object.freeze({ confirmed: false, listed: false, qty_availab
 /**
  * Why a listing cannot be confirmed for today's market, or null when it can.
  * `row` is the listing as it will be AFTER the update (existing merged with body).
+ * Today's photo is OPTIONAL — a farmer cannot always take one — but an offer
+ * without it ranks LAST for customers (see hasPhoto / photoFirst).
  */
 function confirmProblem(row) {
   if (!(Number(row.qty_available) > 0)) {
     return 'Enter today\'s available quantity before confirming.';
   }
-  if (!Array.isArray(row.images) || row.images.length === 0) {
-    return 'Add today\'s photo of the produce before confirming.';
-  }
   return null;
 }
 
-module.exports = { validateImages, MAX_IMAGES, MAX_IMAGE_CHARS, DAILY_RESET, confirmProblem };
+/** Does this listing carry today's photo? */
+function hasPhoto(listing) {
+  return Array.isArray(listing?.images) && listing.images.some(Boolean);
+}
+
+/**
+ * Comparator prefix for consumer-facing offer lists: offers WITH today's photo
+ * first. A buyer is less confident purchasing produce they cannot see, so a
+ * photo-less offer is shown as the last preference. 0 when both match, so a
+ * stable sort keeps the caller's own order (reliability) within each group.
+ */
+function photoFirst(a, b) {
+  return (hasPhoto(b) ? 1 : 0) - (hasPhoto(a) ? 1 : 0);
+}
+
+module.exports = {
+  validateImages,
+  MAX_IMAGES,
+  MAX_IMAGE_CHARS,
+  DAILY_RESET,
+  confirmProblem,
+  hasPhoto,
+  photoFirst,
+};

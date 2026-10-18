@@ -1356,6 +1356,19 @@
   border-color: var(--warning-strong);
   background: var(--warning-bg);
 }
+/* No photo: allowed, but the product is listed last for customers — say so. */
+.fm-supply__nophoto {
+  margin: 6px 0 0;
+  max-width: 260px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--warning-fg);
+}
+.fm-supply__actions .fm-supply__nophoto {
+  max-width: none;
+  margin: 0 0 8px;
+  font-size: 12px;
+}
 .fm-supply__actions {
   margin-top: 12px;
 }

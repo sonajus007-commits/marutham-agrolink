@@ -5,7 +5,7 @@ const { can } = require('../middleware/permissions');
 const { validateBody, z } = require('../middleware/validate');
 const { getFeeForSeller } = require('../utils/fees');
 const { reliabilityScore } = require('../utils/reliability');
-const { validateImages, confirmProblem } = require('../utils/listings');
+const { validateImages, confirmProblem, photoFirst } = require('../utils/listings');
 const { priceBandCheck, priceBandMessage } = require('../utils/priceGuard');
 const notify = require('../utils/notify');
 const { distanceKm } = require('../utils/deliveryFee');
@@ -122,7 +122,7 @@ router.get('/', async (req, res) => {
       .from('farmer_listings')
       .select(`
         id, farmer_price, qty_available, listed, confirmed,
-        time_available, cutoff_ts, bulk_qty, bulk_disc_pct, qty_type, qty_value,
+        time_available, cutoff_ts, bulk_qty, bulk_disc_pct, qty_type, qty_value, images,
         farmer:users ( id, fname, lname, village_town, district, seller_type, status, orders_fulfilled, orders_cancelled ),
         product:products ( id, code, name, unit, platform_fee_pct )
       `)
@@ -149,7 +149,8 @@ router.get('/', async (req, res) => {
         const { status: _s, orders_fulfilled: _f, orders_cancelled: _c, ...farmerPublic } = l.farmer;
         return { ...l, farmer: farmerPublic, fee_pct: feePct, consumer_price: consumerPrice, seller_reliability: reliability };
       })
-      .sort((a, b) => b.seller_reliability - a.seller_reliability);
+      // Photo first (a photo-less offer is the last preference), then reliability.
+      .sort((a, b) => photoFirst(a, b) || b.seller_reliability - a.seller_reliability);
 
     return res.json({ listings: enriched });
   }
@@ -216,7 +217,8 @@ router.get('/', async (req, res) => {
         }
         return { ...l, fee_pct: feePct, consumer_price: consumerPrice, seller_reliability: reliability, distance_km: km };
       })
-      .sort((a, b) => b.seller_reliability - a.seller_reliability);
+      // Photo first (a photo-less offer is the last preference), then reliability.
+      .sort((a, b) => photoFirst(a, b) || b.seller_reliability - a.seller_reliability);
 
     // Group by product_id so the consumer can look up offers per product quickly. The
     // group inherits the sorted order, so each product's most reliable seller leads.

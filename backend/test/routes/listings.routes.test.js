@@ -190,7 +190,7 @@ describe('POST /listings — create validation', () => {
 // The daily supply cycle: the overnight reset clears stock and photos, so a
 // confirmation must bring today's of both. Locked here so the second confirm path
 // (the product card's flag-only PATCH) cannot publish yesterday's offer.
-describe('PATCH /listings/:id — confirming needs today\'s stock and photo', () => {
+describe('PATCH /listings/:id — confirming needs today\'s stock (photo optional)', () => {
   let app, mute;
   beforeEach(() => { mute = muteConsoleError(); });
   afterEach(async () => { mute.restore(); if (app) await app.close(); });
@@ -211,12 +211,13 @@ describe('PATCH /listings/:id — confirming needs today\'s stock and photo', ()
     assert.equal(supa.calls.filter(c => c.op === 'update').length, 0);
   });
 
-  test('fresh stock but no photo is refused', async () => {
+  // The photo is optional — a farmer cannot always take one. A photo-less offer is
+  // ranked last for customers instead (see the ordering test below).
+  test('fresh stock without a photo still confirms', async () => {
     const supa = owned({ qty_available: 0, images: [] });
     app = await mountRoute('listings', { supabase: supa, user: FARMER });
     const res = await app.patch('/listing-1', { confirmed: true, listed: true, qty_available: 20 });
-    assert.equal(res.status, 400);
-    assert.match(res.body.error, /photo/i);
+    assert.equal(res.status, 200);
   });
 
   test('fresh stock with today\'s photo confirms', async () => {
@@ -231,5 +232,25 @@ describe('PATCH /listings/:id — confirming needs today\'s stock and photo', ()
     app = await mountRoute('listings', { supabase: supa, user: FARMER });
     const res = await app.patch('/listing-1', { confirmed: false });
     assert.equal(res.status, 200);
+  });
+});
+
+describe('GET /listings?product — offers with a photo come first', () => {
+  let app, mute;
+  beforeEach(() => { mute = muteConsoleError(); });
+  afterEach(async () => { mute.restore(); if (app) await app.close(); });
+
+  test('a photo-less offer is the last preference, even from the more reliable seller', async () => {
+    const seller = (id, fulfilled) => ({ id, status: 'active', seller_type: 'Farmer', orders_fulfilled: fulfilled, orders_cancelled: 0 });
+    const supa = fakeSupabase({
+      'farmer_listings:select': { data: [
+        { id: 'no-photo', farmer_price: 2000, images: [], farmer: seller('f1', 50) },
+        { id: 'photo', farmer_price: 2000, images: ['https://x/today.jpg'], farmer: { ...seller('f2', 1), orders_cancelled: 1 } },
+      ] },
+    });
+    app = await mountRoute('listings', { supabase: supa, user: { id: 'c1', role: 'consumer' } });
+    const res = await app.get('/?product=p1');
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body.listings.map((l) => l.id), ['photo', 'no-photo']);
   });
 });
