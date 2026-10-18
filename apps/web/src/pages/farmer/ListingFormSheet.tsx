@@ -180,30 +180,27 @@ export function ListingFormSheet({
       {preview ? (
         <div className="price-preview">
           <strong>
-            {t('farmer.form.customerPays', 'Customer pays {{amount}}', {
-              amount: fmtMoney(preview.consumerPrice),
+            {t('farmer.form.platformCharges', 'Platform charges {{amount}}', {
+              amount: fmtMoney(preview.fee),
             })}
           </strong>{' '}
-          / {unit}
-          <span className="price-preview__break">
-            {t('farmer.form.priceBreak', 'your {{amount}} + {{pct}}% platform fee', {
-              amount: fmtMoney(preview.farmerPrice),
-              pct: preview.feePct,
-            })}
-            {handling > 0
-              ? ` + ${t('farmer.form.plusHandling', '{{amount}} handling', { amount: fmtMoney(handling) })}`
-              : ''}
-          </span>
+          / {unit} ({preview.feePct}%)
+          {handling > 0 ? (
+            <span className="price-preview__break">
+              +{' '}
+              {t('farmer.form.plusHandling', '{{amount}} handling', { amount: fmtMoney(handling) })}
+            </span>
+          ) : null}
           {bulk ? (
             <span className="price-preview__bulk">
               {t(
                 'farmer.form.bulkPreview',
-                'Bulk {{qty}}+ {{unit}}: you get {{yours}} → customer pays {{theirs}}',
+                'Bulk {{qty}}+ {{unit}}: you get {{yours}} · platform charges {{fee}}',
                 {
                   qty: bulk.bulkQty,
                   unit,
                   yours: fmtMoney(bulk.farmerPrice),
-                  theirs: fmtMoney(bulk.consumerPrice),
+                  fee: fmtMoney(bulk.fee),
                 },
               )}
             </span>

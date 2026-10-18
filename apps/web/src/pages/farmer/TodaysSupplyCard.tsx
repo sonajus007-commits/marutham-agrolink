@@ -241,7 +241,7 @@ export function TodaysSupplyCard({
                   <th>{t('farmer.supply.colProduct', 'Products')}</th>
                   <th>{t('farmer.supply.colQty', 'Available Quantity')}</th>
                   <th>{t('farmer.supply.colPrice', 'My Selling Price')}</th>
-                  <th>{t('farmer.supply.colCustomer', 'Customer Pays')}</th>
+                  <th>{t('farmer.supply.colPlatform', 'Platform Charges')}</th>
                   <th>{t('farmer.supply.colCutoff', 'Order Cut-off Time')}</th>
                   <th>{t('farmer.supply.colPhotos', 'Images')}</th>
                 </tr>
@@ -254,10 +254,12 @@ export function TodaysSupplyCard({
                   const unit = l.product?.unit || '';
                   const stale = listingState(l) === 'cutoff_passed';
                   const priceNum = Number(row.price);
-                  const customerPays =
-                    priceNum > 0
-                      ? fmtMoney(projectConsumerPrice(priceNum, user?.seller_type).consumerPrice)
-                      : '—';
+                  // Sellers see only the platform's cut, never the customer's total.
+                  const fee =
+                    priceNum > 0 ? projectConsumerPrice(priceNum, user?.seller_type) : null;
+                  const platformCharges = fee
+                    ? `${fmtMoney(fee.fee)}${unit ? ` / ${unit}` : ''} (${fee.feePct}%)`
+                    : '—';
                   const photoCount = l.images?.length || 0;
                   return (
                     <tr key={l.id} className={row.checked ? 'is-on' : ''}>
@@ -323,10 +325,13 @@ export function TodaysSupplyCard({
 
                       <td
                         className="fm-supply__cell fm-supply__cell--pays fm-supply__pays"
-                        data-label={t('farmer.supply.colCustomer', 'Customer Pays')}
-                        title={t('farmer.supply.paysHint', 'Your price + platform fee')}
+                        data-label={t('farmer.supply.colPlatform', 'Platform Charges')}
+                        title={t(
+                          'farmer.supply.platformHint',
+                          'Platform fee per unit on your price',
+                        )}
                       >
-                        {customerPays}
+                        {platformCharges}
                       </td>
 
                       <td
