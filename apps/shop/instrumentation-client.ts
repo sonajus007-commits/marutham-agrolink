@@ -1,5 +1,5 @@
-// Sentry for the shop in the browser. Uses a NEXT_PUBLIC_ var because it is inlined
-// into client bundles; no-op unless it is set.
+// Sentry for the shop in the browser; Next loads this file before hydration. Uses a
+// NEXT_PUBLIC_ var because it is inlined into client bundles; no-op unless it is set.
 import * as Sentry from '@sentry/nextjs';
 
 if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
@@ -10,3 +10,6 @@ if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
     tracesSampleRate: Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? 0.1),
   });
 }
+
+// Lets Sentry trace client-side navigations between shop pages.
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

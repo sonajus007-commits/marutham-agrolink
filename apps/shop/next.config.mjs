@@ -1,4 +1,4 @@
-import { withSentryConfig } from '@sentry/nextjs';
+import { withSentryConfig } from '@sentry/nextjs/config';
 import withSerwistInit from '@serwist/next';
 
 // Turns the marketplace into an installable, offline-capable PWA. Serwist compiles
@@ -69,6 +69,7 @@ const nextConfig = {
 export default withSerwist(
   withSentryConfig(nextConfig, {
     silent: !process.env.CI, // quiet locally; let CI surface any plugin output
-    disableLogger: true, // drop Sentry's own debug logging from the client bundle
+    // drop Sentry's own debug logging from the client bundle
+    bundleSizeOptimizations: { excludeDebugStatements: true },
   }),
 );

@@ -12,7 +12,7 @@ import { LANG_HEADER, isTaPath, stripLocale, TA_PREFIX } from '@/lib/locale';
  *            sees that redirect and always reads English at the bare path. */
 const YEAR = 60 * 60 * 24 * 365;
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
   if (isTaPath(pathname)) {

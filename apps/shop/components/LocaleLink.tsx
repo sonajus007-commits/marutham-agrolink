@@ -3,11 +3,11 @@
 /* Links that stay in the page's language.
  *
  * A Tamil page that links to "/products" sends a crawler (no cookie) to the
- * English page, and costs a visitor a redirect through middleware. So every
+ * English page, and costs a visitor a redirect through proxy.ts. So every
  * in-site link goes through here: on a /ta page it points at the /ta twin.
  *
  * The language comes from the root layout (which read it from the URL via
- * middleware), not from usePathname — the server render is what a crawler
+ * proxy.ts), not from usePathname — the server render is what a crawler
  * reads, and it must already carry the /ta hrefs. */
 
 import { createContext, useContext, type ComponentProps, type ReactNode } from 'react';

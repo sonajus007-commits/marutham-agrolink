@@ -6,13 +6,13 @@ import type { Lang } from '@/lib/dict';
  * languages — and Google crawls without cookies, so it only ever saw English and
  * the Tamil copy could never rank. Now English is the bare path and Tamil is the
  * same path under /ta, each page names both versions (hreflang), and the sitemap
- * lists both. middleware.ts maps /ta/* onto the same page files.
+ * lists both. proxy.ts maps /ta/* onto the same page files.
  *
  * Pure and client-safe: the toggle and the mobile nav use these too. */
 
 export const TA_PREFIX = '/ta';
 
-/** Request header middleware.ts sets to the URL's language; getLang() reads it. */
+/** Request header proxy.ts sets to the URL's language; getLang() reads it. */
 export const LANG_HEADER = 'x-ma-lang';
 
 /** True for /ta and anything under /ta/. */

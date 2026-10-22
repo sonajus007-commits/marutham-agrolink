@@ -1,4 +1,4 @@
-// Sentry for the shop's edge runtime (middleware / edge routes). No-op unless
+// Sentry for the shop's edge runtime (edge routes). No-op unless
 // SENTRY_DSN is set.
 import * as Sentry from '@sentry/nextjs';
 

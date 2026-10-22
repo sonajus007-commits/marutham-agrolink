@@ -5,7 +5,7 @@ import { localePath, stripLocale } from '@/lib/locale';
 
 /* Language is part of the URL (/ta/... is Tamil, the bare path English — see
  * lib/locale.ts), so switching language means going to the other address. The
- * cookie is written FIRST: middleware sends a Tamil-cookie visitor on a bare path
+ * cookie is written FIRST: proxy.ts sends a Tamil-cookie visitor on a bare path
  * to /ta, so switching to English must clear that before the navigation lands.
  * A full load, not router.push, so no cached render of the old language is reused.
  *

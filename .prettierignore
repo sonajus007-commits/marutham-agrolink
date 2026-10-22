@@ -16,3 +16,5 @@ index.html
 # aligned route mounts). Prettier would flatten it. Same scoping as ESLint;
 # format it separately if/when that style is retired.
 backend
+# Written by Next itself (dev and build write different variants) — not hand-formatted.
+**/next-env.d.ts
