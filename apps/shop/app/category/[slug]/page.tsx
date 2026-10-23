@@ -16,15 +16,12 @@ import { ProductCard } from '@/components/ProductCard';
  * live list; an unknown slug 404s. Products come one bounded page at a time from
  * the same catalogue API. */
 export const revalidate = 300;
+// No generateStaticParams: getLang() reads a request header, so a pre-rendered
+// (static/ISR) path 500s with DYNAMIC_SERVER_USAGE. Every slug renders on demand.
 
 const PAGE_SIZE = 20;
 
 type SP = { sort?: string; page?: string };
-
-export async function generateStaticParams() {
-  const categories = await getCategories();
-  return categories.map((c) => ({ slug: categorySlug(c.name) }));
-}
 
 /** Resolve a slug to the exact category name, or null. */
 async function resolveCategory(slug: string): Promise<string | null> {

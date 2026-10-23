@@ -7,13 +7,7 @@ import { langAlternates, localePath, ogLocale } from '@/lib/locale';
 import { getLang } from '@/lib/lang';
 import { DICT } from '@/lib/dict';
 import { LANDING } from '@/lib/landing';
-import {
-  recentStories,
-  getStory,
-  sampleLabel,
-  farmerFace,
-  type FarmerStory,
-} from '@/lib/farmerStories';
+import { getStory, sampleLabel, farmerFace, type FarmerStory } from '@/lib/farmerStories';
 import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
 
 /* /farmer/[slug] — one farmer.
@@ -23,11 +17,8 @@ import { SiteHeader, SiteFooter } from '@/components/sections/Chrome';
  * "Sample" marking; a sample one does. Real growers only ever appear here with
  * consent (public_profile = true). */
 export const revalidate = 300;
-
-// Pre-render the sample slugs (none while samples are off); real farmer ids (uuids) render on demand.
-export function generateStaticParams() {
-  return recentStories().map((s) => ({ slug: s.id }));
-}
+// No generateStaticParams: getLang() reads a request header, so a pre-rendered
+// (static/ISR) path 500s with DYNAMIC_SERVER_USAGE. Every slug renders on demand.
 
 type Resolved =
   { kind: 'real'; farmer: PublicFarmer } | { kind: 'sample'; story: FarmerStory } | null;

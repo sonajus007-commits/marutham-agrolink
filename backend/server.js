@@ -282,7 +282,11 @@ function isShopPath(pathname) {
     // Fresh Today grid + category rail and on ProductCard. Same story as /brand/:
     // without this line they 404 through the front door and every card falls back
     // to its emoji, so the storefront looks empty of photography.
-    pathname.startsWith('/produce/')
+    pathname.startsWith('/produce/') ||
+    // Optional section background photos (apps/shop/public/landscapes, see
+    // lib/landscapeBg.ts). Same story as /produce/: a photo dropped there would
+    // 404 through the front door and the section would silently stay plain.
+    pathname.startsWith('/landscapes/')
   );
 }
 
