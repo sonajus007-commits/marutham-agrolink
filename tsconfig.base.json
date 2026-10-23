@@ -1,8 +1,11 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    // ES2022 matches what Vite 8 builds for by default (Baseline Widely Available
+    // browsers) and the Capacitor webview. Vitest 2's types used to pull ES2022 in
+    // implicitly, which is how `.at()` in tests type-checked against an ES2020 lib.
+    "target": "ES2022",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
