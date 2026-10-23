@@ -21,7 +21,7 @@
     "db:verify-rebuild": "node db/migrate.js --verify-rebuild"
   },
   "dependencies": {
-    "@sentry/node": "^8.40.0",
+    "@sentry/node": "^11.8.0",
     "@supabase/supabase-js": "^2.109.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",

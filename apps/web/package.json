@@ -37,7 +37,7 @@
     "@marutham/lib": "workspace:*",
     "@marutham/tokens": "workspace:*",
     "@marutham/ui": "workspace:*",
-    "@sentry/react": "^8.40.0",
+    "@sentry/react": "^11.8.0",
     "@tanstack/react-query": "^5.104.5",
     "@tanstack/react-table": "^8.21.3",
     "date-fns": "^4.4.0",
