@@ -10,9 +10,9 @@
  * placeholder does no harm.
  *
  * Keep the SDK version here in step with the `firebase` package in package.json
- * (currently 12.16.0). */
-importScripts('https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging-compat.js');
+ * (currently 13.1.0). */
+importScripts('https://www.gstatic.com/firebasejs/13.1.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/13.1.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
   apiKey: 'REPLACE_ME',
