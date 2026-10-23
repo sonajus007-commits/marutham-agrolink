@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as echarts from 'echarts';
 import type { EChartsOption } from 'echarts';
 import ReactECharts from 'echarts-for-react';
+import { ECHARTS_THEME } from './echartsTheme';
 import { semantic, colors } from '@marutham/tokens';
 import { geoDistrictName, districtTone, fmtMoney, type DistrictPerf } from '@marutham/lib';
 
@@ -118,6 +119,7 @@ export function TnDistrictMap({
   return (
     <ReactECharts
       option={option}
+      theme={ECHARTS_THEME}
       style={{ height, width: '100%' }}
       notMerge
       lazyUpdate
