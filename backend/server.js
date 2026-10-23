@@ -1,7 +1,7 @@
 // Sentry FIRST — before express/routes load, so its instrumentation can patch them.
 // A no-op unless SENTRY_DSN is set (see instrument.js).
 const { Sentry, enabled: sentryEnabled } = require('./instrument');
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 const path    = require('path');
 const express = require('express');
 const cors    = require('cors');
@@ -49,6 +49,13 @@ app.use(cors({ origin: allowedOrigins, credentials: true }));
 // photos (migration 060). Per-field caps still bound each image; the rate limiter
 // bounds request volume. Anything larger is a 413 before it reaches a handler.
 app.use(express.json({ limit: '1mb' }));
+// Express 5 leaves req.body undefined when a request carries no JSON body (4 set {}).
+// ~140 handlers destructure req.body, including body-less DELETEs, so keep the old
+// contract here rather than letting each of them throw a TypeError → 500.
+app.use((req, _res, next) => {
+  if (req.body === undefined) req.body = {};
+  next();
+});
 
 // Format all API responses:
 //   • Timestamps: UTC (DB) → IST UTC+5:30 (user-facing)
@@ -150,7 +157,9 @@ const API_SEGMENTS = [
   'payouts', 'users', 'farmers', 'consumers', 'config', 'registrations',
   'subscription', 'locations', 'employees', 'me', 'hubs',
 ];
-app.use(`/:segment(${API_SEGMENTS.join('|')})`, (req, res, next) => {
+// One plain path per segment: Express 5's path matcher has no inline regex groups
+// (`/:segment(a|b)`); app.use takes the array and req.baseUrl is the same as before.
+app.use(API_SEGMENTS.map((s) => `/${s}`), (req, res, next) => {
   // The shop owns /products/* as PAGES. Only shout when the caller clearly wanted
   // the API: no browser navigation asks for JSON.
   if (req.accepts(['html', 'json']) === 'html') return next();
@@ -194,7 +203,8 @@ if (WEB_URL) {
   console.log(`[web] proxying /app/* → ${WEB_URL}`);
 } else {
   app.use('/app', express.static(appDist));
-  app.get('/app/*', (_req, res) => res.sendFile(path.join(appDist, 'index.html')));
+  // Express 5 wildcards are named; `{…}` keeps bare /app/ matching, as `/app/*` did.
+  app.get('/app/{*splat}', (_req, res) => res.sendFile(path.join(appDist, 'index.html')));
 }
 
 // ── Public marketplace (apps/shop, Next.js) — proxied at the site root ────────
@@ -341,10 +351,10 @@ if (sentryEnabled) Sentry.setupExpressErrorHandler(app);
 
 // ── Error-handling middleware ───────────────────────────────────────────────────
 // The 4-argument signature is what marks this as Express's error handler. It catches
-// anything a route passes to next(err), and any SYNCHRONOUS throw inside a handler, and
-// turns it into one JSON 500 instead of a default HTML stack trace. It does NOT catch a
-// throw from an ASYNC handler — Express 4 cannot — which is why the async routes that
-// await a thrower keep their own try/catch. This is the floor, not the whole story.
+// anything a route passes to next(err), any synchronous throw, and — since Express 5 —
+// a rejected promise from an async handler, and turns it into one JSON 500 instead of
+// a default HTML stack trace. Routes still keep their own try/catch where they need a
+// specific status or message; this is the floor, not the whole story.
 // eslint-disable-next-line no-unused-vars  (Express detects the handler by its arity)
 app.use((err, _req, res, _next) => {
   console.error('[unhandled route error]', err && err.stack ? err.stack : err);

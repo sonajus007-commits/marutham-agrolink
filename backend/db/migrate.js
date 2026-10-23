@@ -34,7 +34,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true });
 
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
 const SNAPSHOT = path.join(__dirname, 'schema.json');

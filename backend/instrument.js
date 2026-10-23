@@ -7,7 +7,7 @@
 // It is a NO-OP unless SENTRY_DSN is set: dev boxes, the test suite, and CI never
 // set it, so Sentry costs nothing and reaches no network there. A deployment opts in
 // purely by setting the env var — no code change.
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 const Sentry = require('@sentry/node');
 
 const enabled = Boolean(process.env.SENTRY_DSN);
