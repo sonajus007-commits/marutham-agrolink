@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { StatTile } from '@marutham/ui';
 
 const meta: Meta<typeof StatTile> = {

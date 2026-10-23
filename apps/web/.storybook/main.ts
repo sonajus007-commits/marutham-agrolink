@@ -8,11 +8,19 @@ import type { StorybookConfig } from '@storybook/react-vite';
 const config: StorybookConfig = {
   framework: { name: '@storybook/react-vite', options: {} },
   stories: ['../src/**/*.stories.@(ts|tsx|mdx)'],
-  addons: ['@storybook/addon-essentials', '@storybook/addon-a11y'],
+  addons: ['@storybook/addon-a11y'],
   viteFinal: async (cfg) => {
     // The app builds under base '/app/' so Express can serve the SPA there; Storybook
     // serves at the server root, so reset it or every asset URL 404s.
     cfg.base = '/';
+    // The app's PWA plugin rides in with the merged config and would build a service
+    // worker for the catalog too — precaching Storybook's own runtime, which is over
+    // workbox's size limit and fails the build. The catalog is not an installable app.
+    cfg.plugins = (cfg.plugins ?? [])
+      .flat()
+      .filter(
+        (p) => !(p && typeof p === 'object' && 'name' in p && /^vite-plugin-pwa/.test(p.name)),
+      );
     return cfg;
   },
 };

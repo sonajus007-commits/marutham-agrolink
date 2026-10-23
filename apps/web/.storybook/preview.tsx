@@ -1,4 +1,4 @@
-import type { Preview } from '@storybook/react';
+import type { Preview } from '@storybook/react-vite';
 // Load the exact token + Tailwind pipeline the app uses, so components render with
 // real colours, spacing and type. tokens.css rides in via tailwind.css; styles.css
 // carries the app's own base reset. Without these the catalog is unstyled markup.
