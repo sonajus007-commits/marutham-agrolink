@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "paths": {
       "@marutham/tokens": ["../../packages/tokens/src/index.ts"],

@@ -51,6 +51,9 @@ const securityHeaders = [
 const nextConfig = {
   // Workspace packages ship TypeScript source, not a build — Next must compile them.
   transpilePackages: ['@marutham/lib', '@marutham/tokens'],
+  // TypeScript 7 is the native compiler and ships no JS API, so the build's type
+  // check runs the `tsc` CLI instead of loading `typescript/lib/typescript.js`.
+  experimental: { useTypeScriptCli: true },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
