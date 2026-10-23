@@ -1,6 +1,6 @@
 # Mobile app (Android / iOS)
 
-The mobile app is the React portal (`apps/web`) wrapped natively with **Capacitor 7**.
+The mobile app is the React portal (`apps/web`) wrapped natively with **Capacitor 8**.
 The same web build runs in the browser (`/app`) and inside the native shell; there is
 no separate mobile codebase. This doc is the build/release runbook.
 
@@ -9,11 +9,11 @@ no separate mobile codebase. This doc is the build/release runbook.
 - **Version:** `versionName` 1.0.0 / `versionCode` 1 (bump both in
   `apps/web/android/app/build.gradle` for each release — Play requires a higher
   `versionCode` every upload).
-- **SDK:** min 23, target/compile 35.
+- **SDK:** min 24, target/compile 36 (Android Gradle Plugin 8.13, Gradle 8.14.3).
 
 ## Prerequisites
 
-- **JDK 21** — Capacitor 7 requires Java 21. With only JDK 17 the build dies on
+- **JDK 21** — Capacitor 8 (like 7) requires Java 21. With only JDK 17 the build dies on
   `:capacitor-filesystem:compileDebugJavaWithJavac` and never mentions the JDK. Set
   `JAVA_HOME` to a 21 before `./gradlew`.
 - Android SDK (`source ~/android-sdk/env.sh` on the dev box).
