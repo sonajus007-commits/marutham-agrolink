@@ -52,7 +52,7 @@ export async function initNative(): Promise<void> {
   });
 
   // The UI has mounted by now (main.tsx renders before this resolves), so drop the
-  // splash. launchAutoHide is off in capacitor.config.ts, so nothing else will.
+  // splash. launchAutoHide is off in capacitor.config.json, so nothing else will.
   await SplashScreen.hide();
 }
 

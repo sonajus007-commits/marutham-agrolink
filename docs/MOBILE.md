@@ -33,6 +33,23 @@ VITE_API_BASE_URL=https://YOUR_API_HOST/api pnpm --filter @marutham/web cap:sync
 `cap:sync` runs `CAPACITOR=1 vite build` (base `/`) then `cap sync` (copies `dist/`
 into `android/`).
 
+## `capacitor.config.json`
+
+The config is JSON, not `.ts`: the Capacitor CLI transpiles a `.ts` config with the
+`typescript` package's JS API, which TypeScript 7 no longer ships. A `.js` config
+does not work either — `apps/web` is ESM and the CLI `require`s it without
+unwrapping `default`. What its settings are for:
+
+- `server.androidScheme: "http"` + `android.allowMixedContent` — **dev only**. The
+  webview serves over `http://localhost` so calls to an `http://` LAN backend are
+  same-scheme (no mixed-content block); paired with `usesCleartextTraffic` in
+  `AndroidManifest.xml`. Revert to `https` for a store build.
+- `plugins.PushNotifications` — FCM-backed push; see
+  [Push notifications](#push-notifications-deferred).
+- `plugins.SplashScreen.launchAutoHide: false` — JS hides the splash once the app
+  has rendered (`initNative` in `src/native/index.ts`), so there is no fixed
+  duration: no white flash, and no splash lingering after the UI is ready.
+
 ## App icon & splash
 
 Branded from `apps/web/assets/logo.png` (+ `logo-dark.png`). To regenerate after a

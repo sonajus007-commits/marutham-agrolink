@@ -59,7 +59,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # Capacitor 7 requires JDK 21 — 17 fails deep in a plugin's compile task with
-      # an error that never names the JDK (see capacitor.config.ts).
+      # an error that never names the JDK (see docs/MOBILE.md).
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
