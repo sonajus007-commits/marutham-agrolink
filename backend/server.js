@@ -301,6 +301,10 @@ if (SHOP_URL) {
       target: SHOP_URL,
       changeOrigin: false, // the same-origin illusion is the whole point
       xfwd: true,
+      // Next 16's Turbopack dev client holds hydration until its HMR socket
+      // (/_next/hmr) answers. Without ws the upgrade hangs, the page never
+      // hydrates, and the header Sign in button silently does nothing.
+      ws: true,
       pathFilter: (pathname) => isShopPath(pathname),
       // A dead shop must not take the site down.
       //
