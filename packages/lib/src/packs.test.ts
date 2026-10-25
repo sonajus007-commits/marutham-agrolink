@@ -109,6 +109,17 @@ describe('composeDailyPack', () => {
     expect(tom.qty).toBe(0.5); // 300 g rounded up to packs of 250 g
   });
 
+  it('prefers an offer that supplies the pack amount over a minimum-order one', () => {
+    const offers = allFrom('f1');
+    // f1 is already in the pack (tomato), but its 750 g onion MOQ would nearly
+    // double a 5-member 400 g line — the exact-amount offer from f2 wins.
+    offers.oni = [O('f1', 40, { qty_type: 'MOQ', qty_value: 0.75 }), O('f2', 40)];
+    const pack = composeDailyPack(catalogue, offers, 5, 1);
+    const oni = pack.lines.find((l) => l.slot === 'onion')!;
+    expect(oni.offer.farmer?.id).toBe('f2');
+    expect(oni.qty).toBe(0.4);
+  });
+
   it('skips offers without enough stock', () => {
     const offers = allFrom('f1');
     offers.tom = [O('f1', 40, { qty_available: 0.1 }), O('f2', 45)];

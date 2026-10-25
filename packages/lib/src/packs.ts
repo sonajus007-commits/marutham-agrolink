@@ -244,7 +244,9 @@ function candidatesFor(slot: SlotDef, weekday: Weekday): string[] {
 }
 
 /** Rank usable offers: a farmer already in the pack first (fewer pickups), then
- *  today's photo, then nearest, then cheapest. */
+ *  today's photo, then nearest, then cheapest. The caller sorts by the qty each
+ *  offer forces BEFORE this, so a minimum-order offer never displaces one that
+ *  can supply the pack amount as is. */
 function rankOffers(a: Offer, b: Offer, chosen: Set<string>): number {
   const inA = chosen.has(a.farmer?.id || '') ? 1 : 0;
   const inB = chosen.has(b.farmer?.id || '') ? 1 : 0;
@@ -288,7 +290,7 @@ export function composeDailyPack(
           .filter((o) => farmers.has(o.farmer!.id!) || farmers.size < PACK_MAX_FARMERS)
           .map((o) => ({ o, qty: qtyForOffer(slot, members, product.unit!, o) }))
           .filter((x): x is { o: Offer; qty: number } => x.qty !== null)
-          .sort((x, y) => rankOffers(x.o, y.o, farmers));
+          .sort((x, y) => x.qty - y.qty || rankOffers(x.o, y.o, farmers));
         if (!usable.length) continue;
         const { o, qty } = usable[0];
         const price = offerConsumerPrice(o);
