@@ -44,6 +44,7 @@ import { FreshArrivals } from './FreshArrivals';
 import { MarketRates } from './MarketRates';
 import { ComingSoon } from './ComingSoon';
 import { BuyAgainModal } from './BuyAgainModal';
+import { DailyPackModal } from './DailyPackModal';
 import { TrackPickerModal } from './TrackPickerModal';
 import { FadeIn } from '../../components/FadeIn';
 import { ErrorState } from '../../components/ErrorState';
@@ -110,7 +111,7 @@ export function HomeTab({
   const [view, setView] = useState<TileView | null>(null);
 
   // Which Quick-Action popup is open (Buy Again / Track picker), or null.
-  const [qa, setQa] = useState<'again' | 'track' | null>(null);
+  const [qa, setQa] = useState<'again' | 'track' | 'pack' | null>(null);
 
   // Storefront search box (MOBILEVIEW header). Submitting hands the query to the
   // Shop tab, which is the surface built to filter and add to cart safely.
@@ -501,6 +502,20 @@ export function HomeTab({
         <QuickActions actions={quickActions} />
       </FadeIn>
 
+      <FadeIn delay={0.195}>
+        <button type="button" className="cons-qa__card cons-pack" onClick={() => setQa('pack')}>
+          <span className="cons-pack__icon" aria-hidden="true">
+            🧺
+          </span>
+          <span className="cons-qa__body">
+            <span className="cons-qa__title">{t('consumer.pack.title', 'Daily veg pack')}</span>
+            <span className="cons-qa__sub">
+              {t('consumer.pack.cta', 'Cooking veg for 2, 3 or 5 — one tap, from local farmers')}
+            </span>
+          </span>
+        </button>
+      </FadeIn>
+
       <FadeIn delay={0.2}>
         <MarketRates products={products} offersByProduct={offersByProduct} />
       </FadeIn>
@@ -537,6 +552,7 @@ export function HomeTab({
       />
 
       <BuyAgainModal open={qa === 'again'} onClose={() => setQa(null)} onGoToCart={onGoToCart} />
+      <DailyPackModal open={qa === 'pack'} onClose={() => setQa(null)} onGoToCart={onGoToCart} />
 
       <TrackPickerModal
         open={qa === 'track'}

@@ -2252,3 +2252,19 @@
     display: none;
   }
 }
+
+/* ── Daily veg pack entry ─────────────────────────────────────────────────── */
+.cons-pack {
+  margin: 0 0 14px;
+}
+.cons-pack__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--surface-muted);
+  font-size: 22px;
+}
