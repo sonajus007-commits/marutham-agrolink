@@ -4,8 +4,13 @@ const { requirePermission } = require('../middleware/permissions');
 
 const router = express.Router();
 
-const DISTRICT_ROLES = new Set(['District Manager', 'VCO', 'Delivery Agent', 'Hub Incharge']);
-const REGION_ROLES   = new Set(['Regional Manager']);
+const { userInGeo, scopeUsersQuery } = require('../utils/scope');
+
+// A list filter does nothing for a direct :id call, so these check the row too.
+async function guardGeo(req, res, next) {
+  if (await userInGeo(supabase, req.user, req.params.id)) return next();
+  return res.status(403).json({ error: 'This customer is outside your area.' });
+}
 
 // ── GET /consumers ────────────────────────────────────────────────────────────
 router.get('/', requirePermission('consumer_management','view'), async (req, res) => {
@@ -18,8 +23,7 @@ router.get('/', requirePermission('consumer_management','view'), async (req, res
       .eq('role', 'consumer')
       .order('created_at', { ascending: false });
 
-    if (DISTRICT_ROLES.has(u.admin_role)) q = q.eq('district', u.district);
-    else if (REGION_ROLES.has(u.admin_role)) q = q.eq('state', u.state);
+    q = scopeUsersQuery(q, u);
 
     const { data: consumers, error } = await q;
     if (error) return res.status(500).json({ error: error.message });
@@ -82,7 +86,7 @@ router.get('/', requirePermission('consumer_management','view'), async (req, res
 });
 
 // ── PATCH /consumers/:id/block ────────────────────────────────────────────────
-router.patch('/:id/block', requirePermission('consumer_management','edit'), async (req, res) => {
+router.patch('/:id/block', requirePermission('consumer_management','edit'), guardGeo, async (req, res) => {
   const { data, error } = await supabase
     .from('users')
     .update({ status: 'blocked', updated_at: new Date().toISOString() })
@@ -93,7 +97,7 @@ router.patch('/:id/block', requirePermission('consumer_management','edit'), asyn
 });
 
 // ── PATCH /consumers/:id/unblock ──────────────────────────────────────────────
-router.patch('/:id/unblock', requirePermission('consumer_management','edit'), async (req, res) => {
+router.patch('/:id/unblock', requirePermission('consumer_management','edit'), guardGeo, async (req, res) => {
   const { data, error } = await supabase
     .from('users')
     .update({ status: 'active', updated_at: new Date().toISOString() })
@@ -106,7 +110,7 @@ router.patch('/:id/unblock', requirePermission('consumer_management','edit'), as
 // ── GET /consumers/:id/frequent ───────────────────────────────────────────────
 // Products this consumer has ordered 2+ times, most-ordered first (top 6).
 // "Ordered N times" = number of distinct orders that contain the product.
-router.get('/:id/frequent', requirePermission('consumer_management','view'), async (req, res) => {
+router.get('/:id/frequent', requirePermission('consumer_management','view'), guardGeo, async (req, res) => {
   try {
     const consumerId = req.params.id;
 
@@ -148,7 +152,7 @@ router.get('/:id/frequent', requirePermission('consumer_management','view'), asy
 
 // ── GET /consumers/:id/activity ───────────────────────────────────────────────
 // Order + return history for the profile popup's stat-detail pane.
-router.get('/:id/activity', requirePermission('consumer_management','view'), async (req, res) => {
+router.get('/:id/activity', requirePermission('consumer_management','view'), guardGeo, async (req, res) => {
   try {
     const id = req.params.id;
 

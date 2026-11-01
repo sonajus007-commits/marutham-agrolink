@@ -4,15 +4,21 @@ const supabase = require('../db/supabase');
 const { requirePermission } = require('../middleware/permissions');
 const notify = require('../utils/notify');
 const { notify: notifyInApp } = require('../utils/notifications');
+const { userInGeo, scopeUsersQuery } = require('../utils/scope');
 
 const router = express.Router();
 
 // Seller onboarding queue: reviewing and approving a new seller's registration is
-// part of managing sellers. Managers hold seller_management 'manage' (which
-// includes edit) in their geo, so they keep approving registrations in their area;
-// Admin has full control. Gated on 'edit' — the in-handler geo filter below still
-// scopes each manager to their district/region.
+// part of managing sellers. District Managers and above hold seller_management
+// 'manage' (which includes edit) in their geo; Admin has full control. Hub staff and
+// VCOs hold 'view' and stay out (owner decision DEC-14). Every :id route below also
+// checks the seller's district, because a list filter does nothing for a direct call.
 router.use(requirePermission('seller_management', 'edit'));
+
+async function guardGeo(req, res, next) {
+  if (await userInGeo(supabase, req.user, req.params.id)) return next();
+  return res.status(403).json({ error: 'This seller is outside your area.' });
+}
 
 function generatePaymentRef() {
   return 'PAY-' + crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -30,13 +36,7 @@ router.get('/', async (req, res) => {
     .order('created_at', { ascending: false });
 
   // Scope by admin's district/region
-  if (req.user.admin_role === 'District Manager') {
-    query = query.eq('district', req.user.district);
-  } else if (req.user.admin_role === 'Regional Manager') {
-    query = query.eq('state', req.user.state);
-  } else if (req.user.admin_role === 'State Head') {
-    query = query.eq('state', req.user.state);
-  }
+  query = scopeUsersQuery(query, req.user);
 
   if (status !== 'all') {
     query = query.eq('approval_status', status);
@@ -49,7 +49,7 @@ router.get('/', async (req, res) => {
 });
 
 // ── GET /registrations/:id ─────────────────────────────────────────────────────
-router.get('/:id', async (req, res) => {
+router.get('/:id', guardGeo, async (req, res) => {
   const { data, error } = await supabase
     .from('users')
     .select('id, login_id, fname, lname, phone, email, role, seller_type, gender, district, state, village_town, city, taluk, pincode, house_no, street1, street2, landmark, approval_status, approved_by, approved_at, rejection_reason, subscription_amount, subscription_expires_at, subscription_plan, payment_reference, payment_confirmed_at, created_at, business_name, gst_number, business_type, aadhar, bank_name, bank_account, ifsc, alt_phone')
@@ -66,7 +66,7 @@ router.get('/:id', async (req, res) => {
 // log in but are restricted to the subscription payment screen until they pick a
 // plan and pay (plan fee + one-time ₹100 registration charge). No amount needed
 // here — the seller selects their plan themselves.
-router.post('/:id/approve', async (req, res) => {
+router.post('/:id/approve', guardGeo, async (req, res) => {
   const { data: applicant, error: fetchErr } = await supabase
     .from('users')
     .select('*')
@@ -123,7 +123,7 @@ router.post('/:id/approve', async (req, res) => {
 
 // ── POST /registrations/:id/reject ────────────────────────────────────────────
 // Body: { reason }
-router.post('/:id/reject', async (req, res) => {
+router.post('/:id/reject', guardGeo, async (req, res) => {
   const { reason } = req.body;
   if (!reason || !reason.trim()) {
     return res.status(400).json({ error: 'A rejection reason is required.' });
@@ -168,7 +168,7 @@ router.post('/:id/reject', async (req, res) => {
 
 // ── POST /registrations/:id/confirm-payment ───────────────────────────────────
 // Called by admin after verifying payment in bank statement
-router.post('/:id/confirm-payment', async (req, res) => {
+router.post('/:id/confirm-payment', guardGeo, async (req, res) => {
   const { data: applicant, error: fetchErr } = await supabase
     .from('users')
     .select('*')

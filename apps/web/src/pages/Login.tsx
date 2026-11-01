@@ -5,7 +5,7 @@ import { Button } from '@marutham/ui';
 import { api, ApiError } from '@marutham/api-client';
 import { useAuth, hasSessionExpiredNotice, clearSessionExpiredNotice } from '../auth/AuthContext';
 
-type Mode = 'password' | 'otp' | 'forgot';
+type Mode = 'password' | 'otp' | 'forgot' | 'change';
 
 export function Login() {
   const { t } = useTranslation();
@@ -57,16 +57,33 @@ export function Login() {
     }
   }
 
-  // A refused login can carry a password_action (must_reset / expired / locked): the
-  // account is barred by the 90-day password policy until the password is reset. Drop
-  // the user into the reset flow (Forgot password → OTP) with a message that says why.
-  // Returns true when it handled the error, false to fall back to the normal banner.
-  function toResetIfNeeded(err: unknown): boolean {
+  // A refused login can carry a password_action (must_reset / expired / locked). If the
+  // person just proved their password, they can choose a new one here and now, with no
+  // SMS. Coming from OTP login they have not, so they go to the reset flow. Returns true
+  // when it handled the error, false to fall back to the normal banner.
+  function toResetIfNeeded(err: unknown, knowsPassword = false): boolean {
     const action =
       err instanceof ApiError && err.payload && typeof err.payload === 'object'
         ? (err.payload as { password_action?: string }).password_action
         : undefined;
     if (!action) return false;
+    if (knowsPassword) {
+      setMode('change');
+      setNewPassword('');
+      setConfirm('');
+      setError('');
+      setOk(
+        action === 'expired'
+          ? t('login.chExpired', 'Your password has expired. Choose a new one to continue.')
+          : action === 'locked'
+            ? t(
+                'login.chLocked',
+                'Your account was locked after 90 days without a login. Choose a new password to continue.',
+              )
+            : t('login.chFirst', 'Choose your own password to continue.'),
+      );
+      return true;
+    }
     const msg =
       action === 'expired'
         ? t('login.pwExpired', 'Your password has expired. Request an OTP to set a new one.')
@@ -92,9 +109,27 @@ export function Login() {
     login(phone.trim(), password)
       .then(() => navigate('/', { replace: true }))
       .catch((err) => {
-        if (!toResetIfNeeded(err)) setError(err instanceof Error ? err.message : t('login.error'));
+        if (!toResetIfNeeded(err, true))
+          setError(err instanceof Error ? err.message : t('login.error'));
       })
       .finally(() => setBusy(false));
+  };
+
+  const onChangePassword = (e: FormEvent) => {
+    e.preventDefault();
+    void guard(async () => {
+      if (newPassword.length < 8) {
+        setError(t('login.chShort', 'Password must be at least 8 characters.'));
+        return;
+      }
+      if (newPassword !== confirm) {
+        setError(t('login.pwMismatch'));
+        return;
+      }
+      await api.setPassword(phone.trim(), password, newPassword);
+      await login(phone.trim(), newPassword);
+      navigate('/', { replace: true });
+    });
   };
 
   const onSendOtp = (e: FormEvent) => {
@@ -143,9 +178,11 @@ export function Login() {
   const title =
     mode === 'forgot'
       ? t('login.forgotTitle')
-      : mode === 'otp'
-        ? t('login.otpTitle')
-        : t('login.title');
+      : mode === 'change'
+        ? t('login.chTitle', 'Set a new password')
+        : mode === 'otp'
+          ? t('login.otpTitle')
+          : t('login.title');
 
   /* The tab strip is a real ARIA tablist, so it owes the pattern its keyboard
    * contract: Left/Right (and Home/End) move between tabs. Tab-key focus alone
@@ -177,7 +214,7 @@ export function Login() {
     onClick: () => switchMode(m),
   });
   const panelProps =
-    mode === 'forgot'
+    mode === 'forgot' || mode === 'change'
       ? {}
       : {
           id: panelId,
@@ -191,7 +228,7 @@ export function Login() {
         <h1>{title}</h1>
         <p className="sub">{t('brand')}</p>
 
-        {mode !== 'forgot' ? (
+        {mode !== 'forgot' && mode !== 'change' ? (
           <div
             className="auth-tabs"
             role="tablist"
@@ -249,6 +286,46 @@ export function Login() {
               </div>
             </form>
           </div>
+        ) : null}
+
+        {/* ── Set a new password (proved the current one a moment ago) ── */}
+        {mode === 'change' ? (
+          <form onSubmit={onChangePassword}>
+            <div className="field">
+              <label htmlFor="ch-new">{t('login.newPassword')}</label>
+              <input
+                id="ch-new"
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="ch-confirm">{t('login.confirmPassword')}</label>
+              <input
+                id="ch-confirm"
+                type="password"
+                autoComplete="new-password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" block disabled={busy}>
+              {busy ? t('login.resetting') : t('login.chSubmit', 'Save and sign in')}
+            </Button>
+            <div className="auth-links">
+              <button
+                type="button"
+                className="auth-link muted"
+                onClick={() => switchMode('password')}
+              >
+                {t('login.backToLogin')}
+              </button>
+            </div>
+          </form>
         ) : null}
 
         {/* ── OTP login ── */}
@@ -362,7 +439,7 @@ export function Login() {
         ) : null}
 
         {/* Sign-up — hidden mid-reset, where the only sane next step is back to sign-in. */}
-        {mode !== 'forgot' ? (
+        {mode !== 'forgot' && mode !== 'change' ? (
           <p className="auth-footer">
             {t('login.noAccount')}{' '}
             <Link className="auth-link" to="/register">

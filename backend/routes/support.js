@@ -1,9 +1,10 @@
 const express = require('express');
 const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
-const { can } = require('../middleware/permissions');
+const { can, scopeFor } = require('../middleware/permissions');
 const { validateBody, z } = require('../middleware/validate');
 const { notify } = require('../utils/notifications');
+const { COMPANY_WIDE_ROLES, scopeUsersQuery } = require('../utils/scope');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -11,7 +12,17 @@ router.use(requireAuth);
 // Working the queue is the Customer Complaints module (view to read, edit to act) —
 // held by Admin and every management/field role. A consumer or seller has no such
 // role, so they only ever see their own tickets.
-const isAgent = (req) => can(req.user, 'customer_complaints', 'view');
+// An 'assigned' grant (Delivery Agent) is not a queue: they raise and read their own.
+const isAgent = (req) =>
+  can(req.user, 'customer_complaints', 'view') && scopeFor(req.user, 'customer_complaints') !== 'assigned';
+
+// The people whose tickets a geo-scoped staffer may work; null = everyone.
+async function ticketRaisers(user) {
+  if (COMPANY_WIDE_ROLES.has(user.admin_role)) return null;
+  const { data, error } = await scopeUsersQuery(supabase.from('users').select('id'), user);
+  if (error) throw new Error(error.message);
+  return (data || []).map((u) => u.id);
+}
 
 const VALID_STATUS = ['open', 'in_progress', 'resolved'];
 
@@ -63,8 +74,16 @@ router.get('/', async (req, res) => {
 
   if (!staff) {
     q = q.eq('user_id', req.user.id);
-  } else if (VALID_STATUS.includes(req.query.status)) {
-    q = q.eq('status', req.query.status);
+  } else {
+    let raisers;
+    try {
+      raisers = await ticketRaisers(req.user);
+    } catch (e) {
+      console.error('GET /support scope failed:', e.message);
+      return res.status(500).json({ error: 'Could not load support tickets.' });
+    }
+    if (raisers) q = q.in('user_id', raisers);
+    if (VALID_STATUS.includes(req.query.status)) q = q.eq('status', req.query.status);
   }
 
   const { data, error } = await q;
@@ -87,7 +106,7 @@ const updateSchema = z
 
 // ── PATCH /support/:id ── staff work a ticket (status / note / claim it) ──────────
 router.patch('/:id', validateBody(updateSchema), async (req, res) => {
-  if (!can(req.user, 'customer_complaints', 'edit')) {
+  if (!can(req.user, 'customer_complaints', 'edit') || !isAgent(req)) {
     return res.status(403).json({ error: 'Customer complaints permission required.' });
   }
 
@@ -98,6 +117,15 @@ router.patch('/:id', validateBody(updateSchema), async (req, res) => {
     .maybeSingle();
   if (fErr) return res.status(500).json({ error: 'Could not load the ticket.' });
   if (!ticket) return res.status(404).json({ error: 'Ticket not found.' });
+  try {
+    const raisers = await ticketRaisers(req.user);
+    if (raisers && !raisers.includes(ticket.user_id)) {
+      return res.status(403).json({ error: 'This ticket is outside your area.' });
+    }
+  } catch (e) {
+    console.error('PATCH /support scope failed:', e.message);
+    return res.status(500).json({ error: 'Could not load the ticket.' });
+  }
 
   const updates = { updated_at: new Date().toISOString() };
   if (req.body.status !== undefined) updates.status = req.body.status;

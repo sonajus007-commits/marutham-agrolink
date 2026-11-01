@@ -247,6 +247,8 @@ function Body({
         ) : null}
       </div>
 
+      {editing ? <ResetPassword userId={user.id} /> : null}
+
       {/* Status controls (Activate / Suspend / Block) live in EDIT mode — the sheet
           opens read-only, and account actions appear once you choose to edit. */}
       {editing ? (
@@ -709,5 +711,62 @@ function Row({ label, value, mono = false }: { label: string; value: string; mon
       <span className="text-2xs uppercase tracking-wide text-fg-muted">{label}</span>
       <span className={`text-sm font-semibold text-fg ${mono ? 'tabular-nums' : ''}`}>{value}</span>
     </div>
+  );
+}
+
+/* The way back in for someone who forgot their password when no OTP can reach them.
+ * The admin sets a temporary password and hands it over in person; the person must
+ * choose their own at next sign-in. */
+function ResetPassword({ userId }: { userId: string }) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [temp, setTemp] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function reset() {
+    setBusy(true);
+    try {
+      const res = await api.resetUserPassword(userId, temp);
+      toast(res.message, 'ok');
+      setTemp('');
+    } catch (e) {
+      toast(
+        e instanceof Error
+          ? e.message
+          : t('admin.users.resetFailed', 'Could not reset the password'),
+        'er',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-2 rounded-base border border-border-subtle bg-surface-muted p-3">
+      <h3 className="text-sm font-bold text-primary">
+        {t('admin.users.resetTitle', 'Reset password')}
+      </h3>
+      <p className="text-2xs text-fg-muted">
+        {t(
+          'admin.users.resetHint',
+          'Set a temporary password and give it to them in person. They must choose their own at next sign-in.',
+        )}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          className={INPUT_CLASS}
+          style={{ flex: '1 1 180px', minWidth: 0 }}
+          type="text"
+          autoComplete="off"
+          aria-label={t('admin.users.resetLabel', 'Temporary password')}
+          placeholder={t('admin.users.resetLabel', 'Temporary password')}
+          value={temp}
+          onChange={(e) => setTemp(e.target.value)}
+        />
+        <Button variant="ghost" onClick={() => void reset()} disabled={busy || temp.length < 8}>
+          {t('admin.users.resetCta', 'Reset')}
+        </Button>
+      </div>
+    </section>
   );
 }

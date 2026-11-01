@@ -11,6 +11,7 @@ import {
   consumerMonthlySeries,
   FREE_DELIVERY_MIN,
   DELIVERY_FLAT,
+  mergeCartLines,
   type CartItem,
   type Product,
   type Offer,
@@ -414,5 +415,39 @@ describe('photo-less offers are the last preference', () => {
     const b = product({ id: 'b', name: 'B' });
     const out = filterProducts([a, b], { a: [noPhoto()], b: [withPhoto()] }, f);
     expect(out.map((p) => p.id)).toEqual(['b', 'a']);
+  });
+});
+
+describe('mergeCartLines', () => {
+  const line = (over: Partial<CartItem>): CartItem => ({
+    product_id: 'p1',
+    product_name: 'Tomato',
+    price: 20,
+    qty: 1,
+    ...over,
+  });
+
+  it('adds up lines that now name the same seller', () => {
+    const merged = mergeCartLines([
+      line({ farmer_id: 'f1', qty: 2 }),
+      line({ farmer_id: 'f1', qty: 3 }),
+    ]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].qty).toBe(5);
+  });
+
+  it('keeps different sellers and different products apart', () => {
+    const merged = mergeCartLines([
+      line({ farmer_id: 'f1' }),
+      line({ farmer_id: 'f2' }),
+      line({ farmer_id: 'f1', product_id: 'p2' }),
+    ]);
+    expect(merged).toHaveLength(3);
+  });
+
+  it('does not change the lines it was given', () => {
+    const first = line({ farmer_id: 'f1', qty: 2 });
+    mergeCartLines([first, line({ farmer_id: 'f1', qty: 3 })]);
+    expect(first.qty).toBe(2);
   });
 });

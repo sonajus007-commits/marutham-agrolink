@@ -26,6 +26,8 @@ const { computeAcceptDeadline } = require('../utils/acceptWindow');
 const { declineWholeParcel } = require('../utils/declineOrder');
 const { distanceKm, deliveryCharge, addressPin, sameText } = require('../utils/deliveryFee');
 
+const { orderInScope, regionDistricts, managedHubIds } = require('../utils/scope');
+
 const router = express.Router();
 router.use(requireAuth);
 
@@ -109,6 +111,60 @@ router.post('/delivery-quote', consumersOnly, validateBody(quoteSchema), async (
   res.json({ sellers: sellerGeo(data || [], target), has_pin: !!target.pin });
 });
 
+// Answers the refusal itself; true means carry on. A scope check that cannot be
+// answered refuses rather than waving the request through.
+async function allowOrder(req, res, order) {
+  try {
+    if (await orderInScope(supabase, req.user, order)) return true;
+    res.status(403).json({ error: 'This order is outside your area.' });
+  } catch (e) {
+    console.error(`Order ${order.id}: scope check failed:`, e.message);
+    res.status(500).json({ error: 'Could not verify your access to this order. Please try again.' });
+  }
+  return false;
+}
+
+// Take `item.qty` off a listing only if the quantity is still what we read. Retried a
+// few times, because another customer buying 1 of 50 should not fail this one.
+const STOCK_RETRIES = 4;
+async function takeStock(item) {
+  for (let attempt = 0; attempt < STOCK_RETRIES; attempt++) {
+    const { data: row, error: readErr } = await supabase
+      .from('farmer_listings')
+      .select('qty_available, listed')
+      .eq('farmer_id', item.farmer_id)
+      .eq('product_id', item.product_id)
+      .maybeSingle();
+    if (readErr) return { error: readErr.message };
+    const before = Number(row ? row.qty_available : 0);
+    if (!row || before < item.qty) return { ok: false };
+
+    const after = Math.max(0, before - item.qty);
+    const { data: landed, error: writeErr } = await supabase
+      .from('farmer_listings')
+      .update({ qty_available: after, ...(after <= 0 ? { listed: false } : {}) })
+      .eq('farmer_id', item.farmer_id)
+      .eq('product_id', item.product_id)
+      .eq('qty_available', row.qty_available)
+      .select('id');
+    if (writeErr) return { error: writeErr.message };
+    if (landed && landed.length) {
+      return {
+        ok: true,
+        reservation: {
+          farmer_id: item.farmer_id,
+          product_id: item.product_id,
+          name: item.name,
+          qtyBefore: before,
+          qtyAfter: after,
+          wasListed: row.listed === true && after <= 0,
+        },
+      };
+    }
+  }
+  return { ok: false };
+}
+
 // ── POST /orders  (consumer only) ────────────────────────────────────────────
 // Body: { items: [{product_id, farmer_id, qty}], pay_method, address? }
 router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), async (req, res) => {
@@ -140,7 +196,7 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
     // every fault was reported to the customer as a missing product.
     const { data: listing, error: listingErr } = await supabase
       .from('farmer_listings')
-      .select('farmer_price, qty_available, listed, confirmed, bulk_qty, bulk_disc_pct, cutoff_ts')
+      .select('farmer_price, qty_available, listed, confirmed, listing_status, bulk_qty, bulk_disc_pct, cutoff_ts')
       .eq('farmer_id', farmer_id)
       .eq('product_id', product_id)
       .maybeSingle();
@@ -157,6 +213,14 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
     }
     if (!listing.confirmed) {
       return res.status(400).json({ error: `Farmer has not confirmed availability for product ${product_id} for tomorrow.` });
+    }
+    // A saved cart can outlive the offer it was built from.
+    if (listing.listing_status && listing.listing_status !== 'active') {
+      return res.status(400).json({ error: `Farmer's listing for product ${product_id} is currently unavailable.` });
+    }
+    // The hourly reset can lag a cutoff by up to an hour.
+    if (listing.cutoff_ts && new Date(listing.cutoff_ts) < new Date()) {
+      return res.status(400).json({ error: `Orders have closed for product ${product_id} today.` });
     }
     if (listing.qty_available < qty) {
       return res.status(400).json({ error: `Insufficient stock for product ${product_id}. Available: ${listing.qty_available}.` });
@@ -180,7 +244,7 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
     // Fetch seller info (name + village for fulfilment + seller_type for fee)
     const { data: farmer, error: farmerErr } = await supabase
       .from('users')
-      .select('id, fname, lname, village_town, district, state, taluk, seller_type, shop_close_hour, farm_lat, farm_lng')
+      .select('id, fname, lname, village_town, district, state, taluk, seller_type, shop_close_hour, farm_lat, farm_lng, status, subscription_expires_at')
       .eq('id', farmer_id)
       .maybeSingle();
 
@@ -189,6 +253,12 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
       return res.status(500).json({ error: 'Could not price your order. Please try again.' });
     }
     if (!farmer) return res.status(404).json({ error: `Farmer ${farmer_id} not found.` });
+    // Only a seller who can act on an order may receive one. A suspended seller could
+    // not accept it, and the auto-cancel would land on them and on the customer.
+    const lapsed = farmer.subscription_expires_at && new Date(farmer.subscription_expires_at) < new Date();
+    if ((farmer.status && farmer.status !== 'active') || lapsed) {
+      return res.status(400).json({ error: `${farmer.fname} is not taking orders right now. Please remove this item.` });
+    }
 
     // Fulfilment village for an UNSPLIT (single-seller) order. A multi-seller cart
     // does not have one — each seller's goods sit in their own village — so it is
@@ -315,6 +385,35 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
   } catch (err) {
     console.error('generateOrderCode error:', err);
     return res.status(500).json({ error: 'Could not generate order code. Ensure the code_counters migration has been applied.' });
+  }
+
+  // ── 3a. Reserve the stock, BEFORE the order exists ────────────────────────
+  // Two customers can pass the availability check above for the last kilo. Taking it
+  // here, with a write that only lands if the quantity is still what we read, means
+  // the loser is refused instead of the seller being handed an order they cannot fill.
+  const reserved = [];
+  const releaseStock = async () => {
+    for (const r of reserved) {
+      const { error: giveBackErr } = await supabase
+        .from('farmer_listings')
+        .update({ qty_available: r.qtyBefore, ...(r.wasListed ? { listed: true } : {}) })
+        .eq('farmer_id', r.farmer_id)
+        .eq('product_id', r.product_id);
+      if (giveBackErr) console.error(`STOCK NOT RELEASED for order ${code}:`, giveBackErr.message);
+    }
+  };
+  for (const item of resolvedItems) {
+    const taken = await takeStock(item);
+    if (taken.error) {
+      await releaseStock();
+      console.error('POST /orders stock reservation failed:', taken.error);
+      return res.status(500).json({ error: 'Could not reserve your items. Please try again.' });
+    }
+    if (!taken.ok) {
+      await releaseStock();
+      return res.status(409).json({ error: `${item.name} has just sold out. Please update your cart.` });
+    }
+    reserved.push(taken.reservation);
   }
 
   // One delivery confirmation code (soft OTP) for the whole order — the customer
@@ -445,6 +544,7 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
 
   if (orderErr) {
     console.error('POST /orders insert error:', orderErr);
+    await releaseStock();
     return res.status(500).json({ error: 'Could not place order.' });
   }
 
@@ -514,6 +614,7 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
     if (childErr) {
       console.error('POST /orders child insert error:', childErr);
       await rollback('child orders');
+      await releaseStock();
       return res.status(500).json({ error: 'Could not place order.' });
     }
     children = inserted;
@@ -533,6 +634,7 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
   if (itemsErr) {
     console.error('POST /orders items insert error:', itemsErr);
     await rollback('items');
+    await releaseStock();
     return res.status(500).json({ error: 'Could not save order items.' });
   }
 
@@ -575,59 +677,15 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
   const { error: historyErr } = await supabase.from('order_history').insert(historyRows);
   if (historyErr) console.error(`Order ${code}: first history entry failed:`, historyErr.message);
 
-  // ── 7. Reduce farmer listing quantities ──────────────────────────────────
-  // Unread, BOTH queries below failed open into an oversell: a failed read left
-  // `listing` null and the `if (listing)` guard skipped the decrement outright,
-  // while a failed update simply did nothing — and either way the route still
-  // answered "201 Order placed". Stock never dropped, the item was never
-  // auto-unlisted at zero, and the next customer bought the same goods.
-  //
-  // The order is committed by this point and cannot be unwound, so a failure here
-  // cannot fail the request. What it CAN do is stop being invisible.
-  const stockFailures = [];
-
-  for (const item of resolvedItems) {
-    const { data: listing, error: readErr } = await supabase
-      .from('farmer_listings')
-      .select('qty_available')
-      .eq('farmer_id', item.farmer_id)
-      .eq('product_id', item.product_id)
-      .single();
-
-    if (readErr || !listing) {
-      stockFailures.push(`${item.product_id}/${item.farmer_id} (read: ${readErr ? readErr.message : 'no listing'})`);
-      continue;
-    }
-
-    const newQty = Math.max(0, listing.qty_available - item.qty);
-    const stockUpdate = { qty_available: newQty };
-    // Auto-unlist when stock reaches zero so consumers can't order more
-    if (newQty <= 0) stockUpdate.listed = false;
-
-    const { error: writeErr } = await supabase
-      .from('farmer_listings')
-      .update(stockUpdate)
-      .eq('farmer_id', item.farmer_id)
-      .eq('product_id', item.product_id);
-
-    if (writeErr) {
-      stockFailures.push(`${item.product_id}/${item.farmer_id} (write: ${writeErr.message})`);
-    } else if (newQty <= 0) {
-      // Sold out AND auto-unlisted — the seller must restock/relist to keep selling,
-      // so tell them (in-app, best-effort).
-      notify(item.farmer_id, {
-        type: 'out_of_stock',
-        title: 'Sold out',
-        body: `${item.name} is out of stock and no longer listed. Update your stock to keep selling.`,
-        data: { product_id: item.product_id },
-      });
-    }
-  }
-
-  if (stockFailures.length) {
-    console.error(`OVERSELL RISK — order ${code} is placed but stock was NOT reduced for ` +
-                  `${stockFailures.length} item(s); they remain on sale at the old quantity: ` +
-                  stockFailures.join('; '));
+  // ── 7. Tell the seller about anything that just sold out ─────────────────
+  for (const r of reserved) {
+    if (r.qtyAfter > 0) continue;
+    notify(r.farmer_id, {
+      type: 'out_of_stock',
+      title: 'Sold out',
+      body: `${r.name} is out of stock and no longer listed. Update your stock to keep selling.`,
+      data: { product_id: r.product_id },
+    });
   }
 
   // ── 8. Notify (in-app, best-effort) — the buyer and every seller on the order ──
@@ -644,7 +702,7 @@ router.post('/', orderLimiter, consumersOnly, validateBody(createOrderSchema), a
     {
       type: 'new_order',
       title: 'New order received',
-      body: `You have a new order (${code}). Package it for pickup.`,
+      body: `You have a new order (${code}). Accept it before the deadline, then pack it.`,
       data: { order_id: order.id, code },
     },
   );
@@ -748,7 +806,7 @@ router.get('/', async (req, res) => {
      * parcels; management roles read money, and must see one row per customer
      * order or every split total counts twice. `?parts=1` lets a management role
      * drop into the parcel view to trace a split order's legs. */
-    const LOGISTICS_ROLES = ['VCO', 'Delivery Agent', 'Hub Incharge'];
+    const LOGISTICS_ROLES = ['VCO', 'Delivery Agent', 'Hub Incharge', 'Hub Manager'];
     const wantsParcels = LOGISTICS_ROLES.includes(role) || req.query.parts === '1';
 
     if (role === 'VCO') {
@@ -767,8 +825,24 @@ router.get('/', async (req, res) => {
       if (u.can_deliver) terms.push(`agent_id.eq.${u.id}`);
       query = terms.length > 1 ? query.or(terms.join(',')) : query.eq('village', vcoVillage);
 
-    } else if (role === 'District Manager' || role === 'Hub Incharge') {
-      query = query.eq('district', u.district_assign || u.district);
+    } else if (role === 'District Manager' || role === 'Hub Incharge' || role === 'Hub Manager') {
+      // A hub also works the parcels bound for it, which can start in another district.
+      let hubs = [];
+      try {
+        hubs = await managedHubIds(supabase, u);
+      } catch (e) {
+        console.error('GET /orders hub scope failed:', e.message);
+        return res.status(500).json({ error: 'Could not fetch orders.' });
+      }
+      if (role === 'Hub Manager' && hubs.length) {
+        const list = hubs.join(',');
+        query = query.or(`pickup_hub_id.in.(${list}),delivery_hub_id.in.(${list})`);
+      } else if (hubs.length && role === 'Hub Incharge') {
+        const dist = String(u.district_assign || u.district || '').replace(/"/g, '');
+        query = query.or(`district.eq."${dist}",delivery_hub_id.eq.${hubs[0]}`);
+      } else {
+        query = query.eq('district', u.district_assign || u.district);
+      }
       if (village) query = query.eq('village', village);
 
     } else if (role === 'Delivery Agent') {
@@ -784,7 +858,16 @@ router.get('/', async (req, res) => {
       );
 
     } else {
-      // Head Office / State Head / Regional Manager — all orders
+      // State, Zonal and Regional managers see their state; Head Office and the
+      // company-wide specialists see everything.
+      let region = null;
+      try {
+        region = await regionDistricts(supabase, u);
+      } catch (e) {
+        console.error('GET /orders region scope failed:', e.message);
+        return res.status(500).json({ error: 'Could not fetch orders.' });
+      }
+      if (region) query = query.in('district', region);
       if (district) query = query.eq('district', district);
     }
 
@@ -1022,6 +1105,8 @@ router.get('/:id', async (req, res) => {
   if (req.user.role === 'consumer' && order.consumer_id !== req.user.id) {
     return res.status(403).json({ error: 'You can only view your own orders.' });
   }
+  if (req.user.role !== 'consumer' && !(await allowOrder(req, res, order))) return;
+  const sellerView = req.user.role === 'farmer';
 
   // Consumer contact + address (for delivery display and for falling back when
   // the order didn't capture a delivery_address, e.g. pre-migration orders).
@@ -1131,6 +1216,39 @@ router.get('/:id', async (req, res) => {
     order.parent_code = parent ? parent.code : null;
   }
 
+  // One parcel of a split order is delivered, and returned, on its own, so each part
+  // carries its own return state and QR.
+  if (isSplitParent) {
+    const partIds = parts.map((p) => p.id);
+    const { data: partReturns, error: partRetErr } = await supabase
+      .from('returns')
+      .select('id, code, decision, collected, order_id')
+      .in('order_id', partIds.length ? partIds : ['00000000-0000-0000-0000-000000000000']);
+    if (partRetErr) {
+      console.error('GET /orders/:id part return lookup failed:', partRetErr.message);
+      return res.status(500).json({ error: 'Could not load the order. Please try again.' });
+    }
+    for (const part of parts) {
+      const r = (partReturns || []).find((x) => x.order_id === part.id);
+      part.return_id = r ? r.id : null;
+      part.return_code = r ? r.code : null;
+      part.return_status = r ? r.decision || 'pending' : null;
+      try {
+        part.qr_svg = await QRCode.toString(part.code, {
+          type: 'svg', margin: 1, width: 148,
+          color: { dark: '#0d1f16', light: '#ffffff' },
+        });
+      } catch (e) {
+        part.qr_svg = null;
+      }
+    }
+    // The parent reads as delivered when its last parcel lands. Orders finished before
+    // the rollup stored this date still show one.
+    if (order.status === 'Delivered' && !order.delivered_at) {
+      order.delivered_at = parts.map((p) => p.delivered_at).filter(Boolean).sort().pop() || null;
+    }
+  }
+
   // Fetch status timeline
   const { data: history, error: historyErr } = await supabase
     .from('order_history')
@@ -1194,6 +1312,21 @@ router.get('/:id', async (req, res) => {
 
   // `parts` only appears on a split order, so a client that predates splitting sees
   // the response shape it has always seen.
+  // A seller fulfils a parcel, not a customer relationship. They see their own lines,
+  // never the buyer's contact details or another seller's goods.
+  if (sellerView) {
+    delete order.consumer_phone;
+    delete order.delivery_address;
+    delete order.dest_lat;
+    delete order.dest_lng;
+    return res.json({
+      order,
+      items: (items || []).filter((i) => i.farmer_id === req.user.id),
+      declined_items: declined_items.filter((i) => i.farmer_id === req.user.id),
+      history,
+    });
+  }
+
   res.json({
     order,
     items,
@@ -1225,10 +1358,11 @@ router.get('/:id/invoice.pdf', async (req, res) => {
   }
   if (!order) return res.status(404).json({ error: 'Order not found.' });
 
-  // Consumers may only invoice their own orders; staff/admin may invoice any.
+  // Everyone invoices only what is in their own scope.
   if (req.user.role === 'consumer' && order.consumer_id !== req.user.id) {
     return res.status(403).json({ error: 'You can only view your own orders.' });
   }
+  if (req.user.role !== 'consumer' && !(await allowOrder(req, res, order))) return;
 
   // Phone + a registered-address fallback, exactly as GET /:id does, so the invoice
   // always carries a deliverable address even for orders placed before addresses
@@ -1326,6 +1460,7 @@ router.get('/:id/invoice', async (req, res) => {
   if (req.user.role === 'consumer' && order.consumer_id !== req.user.id) {
     return res.status(403).json({ error: 'You can only view your own orders.' });
   }
+  if (req.user.role !== 'consumer' && !(await allowOrder(req, res, order))) return;
 
   const paise = (v) => Number(v || 0) / 100;
   const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString('en-IN', {
@@ -1532,9 +1667,10 @@ router.post('/:id/cancel', async (req, res) => {
   if (u.role === 'farmer') {
     return res.status(403).json({ error: 'Farmers cannot cancel orders.' });
   }
-  // A staff cancellation is an Orders 'edit' (Admin, Hub Incharge, the assigned
-  // agent). A consumer cancels their own order below.
-  if (u.role === 'admin' && !can(u, 'orders', 'edit')) {
+  // A staff cancellation is an Orders 'edit' (Admin and hub staff). A Delivery Agent
+  // holds that cell for their own jobs, which is not the authority to cancel a customer's
+  // order: at the door they record a failed delivery. A consumer cancels their own below.
+  if (u.role === 'admin' && (!can(u, 'orders', 'edit') || u.admin_role === 'Delivery Agent')) {
     return res.status(403).json({ error: 'Orders edit permission required to cancel an order.' });
   }
 
@@ -1550,6 +1686,7 @@ router.post('/:id/cancel', async (req, res) => {
   if (u.role === 'consumer' && order.consumer_id !== u.id) {
     return res.status(403).json({ error: 'You can only cancel your own orders.' });
   }
+  if (u.role === 'admin' && !(await allowOrder(req, res, order))) return;
 
   if (order.cancelled) {
     return res.status(400).json({ error: 'Order is already cancelled.' });

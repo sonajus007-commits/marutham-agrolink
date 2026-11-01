@@ -14,6 +14,7 @@ import { api } from '@marutham/api-client';
 import {
   buildPipeline,
   canCancelOrder,
+  canOverrideOrderStatus,
   deriveOrderCharges,
   fmtDate,
   fmtMoney,
@@ -26,7 +27,6 @@ import {
   type OrderDetail,
   payMethodKey,
   payStatusKey,
-  can,
   displayStatus,
 } from '@marutham/lib';
 import { useToast } from '../../components/Toast';
@@ -96,6 +96,7 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [targetStatus, setTargetStatus] = useState('');
+  const [statusReason, setStatusReason] = useState('');
   const [settingStatus, setSettingStatus] = useState(false);
   const [showApply, setShowApply] = useState(false);
 
@@ -105,10 +106,10 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
   // What the pill SAYS (adds 'Partially Accepted'); statusLabel stays the raw value.
   const statusShown = displayStatus(o);
 
-  // Manual override: senior admins only, and never on a cancelled order (that
-  // lifecycle is terminal). Offer the statuses valid for THIS order's route,
+  // Manual override: Head Office and District Managers, and never on a cancelled order
+  // (that lifecycle is terminal). Offer the statuses valid for THIS order's route,
   // minus the one it is already at — matching the server's validation.
-  const canOverride = !isOrderCancelled(o) && can(user, 'delivery_assignment', 'assign');
+  const canOverride = !isOrderCancelled(o) && canOverrideOrderStatus(user);
   const isHub = (o.route || 'direct') === 'hub';
   const statusOptions = PIPELINE_STAGES.filter(
     (s) => (isHub || (s !== 'In Transit' && s !== 'At Hub')) && s !== o.status,
@@ -118,7 +119,7 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
     if (!targetStatus) return;
     setSettingStatus(true);
     try {
-      const res = await api.setOrderStatus(o.id, targetStatus);
+      const res = await api.setOrderStatus(o.id, targetStatus, statusReason.trim());
       toast(res.message || t('admin.orders.statusSet', 'Order status updated.'), 'ok');
       setShowApply(false);
       onChanged();
@@ -170,9 +171,19 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
           <p className="mb-2 text-2xs text-fg-muted">
             {t(
               'admin.orders.setStatusHint',
-              'Override the order stage — forward or back. Logged to the timeline.',
+              'Override the order stage — forward or back. This never records cash as paid. Logged to the timeline.',
             )}
           </p>
+          <label className="mb-2 block text-2xs font-bold uppercase tracking-wide text-fg-muted">
+            {t('admin.orders.statusReason', 'Reason (required)')}
+            <input
+              className={INPUT_CLASS}
+              value={statusReason}
+              maxLength={300}
+              onChange={(e) => setStatusReason(e.target.value)}
+              placeholder={t('admin.orders.statusReasonPh', 'What happened, and how you know')}
+            />
+          </label>
           <div className="flex items-center gap-2">
             <select
               className={INPUT_CLASS}
@@ -190,7 +201,7 @@ function Body({ data, onChanged }: { data: OrderDetail; onChanged: () => void })
             <Button
               variant="primary"
               onClick={() => setShowApply(true)}
-              disabled={!targetStatus || settingStatus}
+              disabled={!targetStatus || !statusReason.trim() || settingStatus}
             >
               {settingStatus ? '…' : t('admin.orders.apply', 'Apply')}
             </Button>

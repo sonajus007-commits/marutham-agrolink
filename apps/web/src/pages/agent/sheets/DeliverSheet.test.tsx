@@ -74,6 +74,7 @@ async function renderAndConfirm(orderId = 'o1') {
   const view = render(
     <DeliverSheet open orderId={orderId} onClose={vi.fn()} onChanged={onChanged} />,
   );
+  await user.type(await screen.findByRole('textbox', { name: /Delivery code/ }), '1234');
   await user.click(await screen.findByRole('button', { name: /Confirm Delivered/ }));
   return view;
 }
@@ -83,12 +84,12 @@ describe('DeliverSheet', () => {
     await renderAndConfirm();
 
     await waitFor(() => expect(deliverOffline).toHaveBeenCalled());
-    // 4th arg is the delivery OTP, 5th the proof photo — both undefined here.
+    // 4th arg is the delivery OTP, 5th the proof photo.
     expect(deliverOffline).toHaveBeenCalledWith(
       'o1',
       4,
       { lat: 10.5, lng: 78.8 },
-      undefined,
+      '1234',
       undefined,
     );
     expect(onChanged).toHaveBeenCalled();
@@ -101,8 +102,15 @@ describe('DeliverSheet', () => {
 
     // a missing fix must never block the delivery — it just travels without coords
     await waitFor(() =>
-      expect(deliverOffline).toHaveBeenCalledWith('o1', 4, undefined, undefined, undefined),
+      expect(deliverOffline).toHaveBeenCalledWith('o1', 4, undefined, '1234', undefined),
     );
+  });
+
+  it('cannot confirm with neither a code nor a proof photo', async () => {
+    render(<DeliverSheet open orderId="o1" onClose={vi.fn()} onChanged={onChanged} />);
+
+    expect(await screen.findByRole('button', { name: /Confirm Delivered/ })).toBeDisabled();
+    expect(screen.getByText(/Enter the delivery code or add a proof photo/)).toBeInTheDocument();
   });
 
   it('offline — reports the write as parked, not failed', async () => {
@@ -170,6 +178,6 @@ describe('DeliverSheet', () => {
     rerender(<DeliverSheet open orderId="o2" onClose={vi.fn()} onChanged={onChanged} />);
 
     const button = await screen.findByRole('button', { name: /Confirm Delivered/ });
-    await waitFor(() => expect(button).toBeEnabled());
+    await waitFor(() => expect(button).not.toHaveTextContent('Confirming'));
   });
 });

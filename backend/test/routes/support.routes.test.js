@@ -9,6 +9,7 @@ const { mountRoute } = require('../helpers/app');
 
 const CONSUMER = { id: 'c1', role: 'consumer', fname: 'Cust' };
 const STAFF = { id: 's1', role: 'admin', admin_role: 'District Manager', fname: 'DM' };
+const SUPPORT = { id: 's2', role: 'admin', admin_role: 'Support Agent', fname: 'Sup' };
 
 const ticket = (over = {}) => ({
   id: 't1',
@@ -57,12 +58,12 @@ test('GET /support — a consumer sees only their own tickets', async () => {
 
 test('GET /support?status — staff read the whole queue, filtered', async () => {
   const db = fakeSupabase({ 'support_tickets:select': { data: [ticket()] } });
-  app = await mountRoute('support', { supabase: db, user: STAFF });
+  app = await mountRoute('support', { supabase: db, user: SUPPORT });
   const res = await app.get('/?status=open');
 
   assert.equal(res.status, 200);
   const read = db.callsTo('support_tickets', 'select')[0];
-  // NOT scoped to a user_id — staff see everyone's; filtered by status instead.
+  // NOT scoped to a user_id — company-wide staff see everyone's, filtered by status.
   assert.ok(!read.filters.some((f) => f[1] === 'user_id'));
   assert.ok(read.filters.some((f) => f[0] === 'eq' && f[1] === 'status' && f[2] === 'open'));
 });
@@ -73,7 +74,7 @@ test('PATCH /support/:id — staff resolve a ticket and the raiser is notified',
     'support_tickets:update': { data: ticket({ status: 'resolved', admin_note: 'Refunded.' }) },
     'notifications:insert': { data: [] },
   });
-  app = await mountRoute('support', { supabase: db, user: STAFF });
+  app = await mountRoute('support', { supabase: db, user: SUPPORT });
   const res = await app.patch('/t1', { status: 'resolved', admin_note: 'Refunded.' });
 
   assert.equal(res.status, 200);

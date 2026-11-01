@@ -5,17 +5,22 @@ import {
   addressProblemKey,
   addressSummary,
   addressTitle,
+  bestOffer,
   buildAddress,
   defaultAddressIndex,
   fmtMoney,
+  mergeCartLines,
+  offerConsumerPrice,
   validateAddress,
   type AddressObject,
   type CartBill,
+  type CartItem,
   type Order,
   type SavedAddress,
 } from '@marutham/lib';
 import { useAuth } from '../../auth/AuthContext';
 import { useCart } from './CartContext';
+import { useConsumerData } from './ConsumerDataContext';
 import { useToast } from '../../components/Toast';
 import { AddressFields } from '../../components/AddressFields';
 import { PaymentSheet } from './PaymentSheet';
@@ -39,6 +44,7 @@ export function Checkout({
   const { user } = useAuth();
   const cart = useCart();
   const toast = useToast();
+  const { offersByProduct } = useConsumerData();
 
   const addrs = (user?.delivery_addresses as SavedAddress[]) || [];
   const defIdx = defaultAddressIndex(addrs);
@@ -88,28 +94,60 @@ export function Checkout({
     }
     setResolving(true);
     try {
-      // Resolve a farmer for every line (items added from the detail sheet already
-      // carry one; this backfills any that don't).
-      const items: PlaceOrderItem[] = [];
+      // Give every line a seller. Portal lines already have one. A public-shop line has
+      // only a reference price, so it takes the best offer near the buyer, else any
+      // live offer, and that offer's real price. The line is rewritten, so the bill the
+      // customer sees before paying is the one the server will charge.
+      const lines: CartItem[] = [];
+      let repriced = false;
       for (const i of cart.items) {
-        let farmerId = i.farmer_id || null;
-        if (!farmerId) {
-          const res = await api.getListings({ product: i.product_id });
-          farmerId = (res.listings || []).find((l) => l.listed)?.farmer_id || null;
+        if (i.farmer_id) {
+          lines.push(i);
+          continue;
         }
-        if (!farmerId) {
+        const offer =
+          bestOffer(offersByProduct[i.product_id] || []) ||
+          (await api.getListings({ product: i.product_id })).listings?.find((l) => l.listed);
+        const farmer = offer?.farmer;
+        const farmerId = farmer?.id || offer?.farmer_id || null;
+        if (!offer || !farmerId) {
           toast(
-            t(
-              'consumer.checkout.noFarmers',
-              'Some items have no available farmers. Please remove them.',
-            ),
+            t('consumer.checkout.noOffer', '{{name}} is not available today. Please remove it.', {
+              name: i.product_name,
+            }),
             'er',
           );
           setResolving(false);
           return;
         }
-        items.push({ product_id: i.product_id, farmer_id: farmerId, qty: i.qty });
+        const price = offerConsumerPrice(offer);
+        if (price !== i.price) repriced = true;
+        lines.push({
+          ...i,
+          price,
+          farmer_id: farmerId,
+          farmer_name: farmer
+            ? (farmer.fname || '') + (farmer.lname ? ' ' + farmer.lname : '')
+            : '',
+          listing_id: offer.id || null,
+          farmer_price_rs: parseFloat(String(offer.farmer_price)),
+        });
       }
+      const resolved = mergeCartLines(lines);
+      if (
+        resolved.some((l, idx) => l !== cart.items[idx]) ||
+        resolved.length !== cart.items.length
+      ) {
+        cart.replaceItems(resolved);
+      }
+      if (repriced) {
+        toast(t('consumer.checkout.repriced', 'Prices updated to today’s offers.'), 'nfo');
+      }
+      const items: PlaceOrderItem[] = resolved.map((l) => ({
+        product_id: l.product_id,
+        farmer_id: l.farmer_id as string,
+        qty: l.qty,
+      }));
 
       let address: Record<string, unknown> | null = null;
       if (choice === 'new') {

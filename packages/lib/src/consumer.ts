@@ -181,6 +181,23 @@ export function offersForSeller(offers: Offer[], seller: SellerFilter): Offer[] 
 
 /** Cheapest offer among the (seller-filtered) list, or null — preferring an offer
  *  with today's photo: a photo-less one is chosen only when no seller has a photo. */
+/**
+ * Merge cart lines that now name the same seller. A public-shop line has no seller
+ * until checkout picks one, and it can land on a product already in the cart from that
+ * seller. Two lines would price and reserve the same stock separately.
+ */
+export function mergeCartLines(lines: CartItem[]): CartItem[] {
+  const out: CartItem[] = [];
+  for (const line of lines) {
+    const same = out.find(
+      (l) => l.product_id === line.product_id && (l.farmer_id || null) === (line.farmer_id || null),
+    );
+    if (same) same.qty += line.qty;
+    else out.push({ ...line });
+  }
+  return out;
+}
+
 export function bestOffer(offers: Offer[], seller: SellerFilter = 'All'): Offer | null {
   const relevant = offersForSeller(offers, seller);
   if (relevant.length === 0) return null;

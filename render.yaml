@@ -47,5 +47,9 @@ services:
         sync: false
       - key: SMTP_FROM
         sync: false
+      - key: MSG91_AUTH_KEY
+        sync: false # SMS OTP. With no key, forgot-password says so and sign-in still works
+      - key: MSG91_OTP_TEMPLATE_ID
+        sync: false # the DLT-approved OTP template
       - key: ADMIN_EMAIL
         sync: false

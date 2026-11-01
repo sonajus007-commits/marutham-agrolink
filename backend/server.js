@@ -19,8 +19,10 @@ const app = express();
 // Behind a reverse proxy (the shop proxy, and whatever fronts the deploy), req.ip and
 // the rate limiter's key come from X-Forwarded-For. Trust a FIXED number of hops, not
 // `true`: trusting every hop lets a client forge X-Forwarded-For and sail past the
-// limiter. Default 1 (one proxy); override TRUST_PROXY_HOPS per deployment.
-app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1));
+// limiter. The default is 0: with no proxy in front, a forged header would otherwise
+// give every request a new identity. Hosts with a proxy set TRUST_PROXY_HOPS (Render
+// sets 1 in render.yaml).
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 0));
 
 // Security headers. CSP and COEP are deliberately OFF: this same server serves the
 // static frontend (home.html + /img) AND proxies the Next.js shop, and a strict CSP
@@ -434,51 +436,15 @@ function scheduleInactivityLock() {
 
 // ── Daily subscription expiry checker ─────────────────────────────────────────
 function scheduleSubscriptionChecks() {
-  const REMINDER_DAYS = [10, 5, 1];
-  const MS_PER_DAY    = 24 * 60 * 60 * 1000;
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  const { runSubscriptionSweep } = require('./utils/subscriptionSweep');
+  const { notify: notifyInApp } = require('./utils/notifications');
 
   async function runCheck() {
     try {
-      const now = new Date();
-
-      // Find all active farmers/retailers
-      const { data: users, error: usersErr } = await supabase
-        .from('users')
-        .select('id, fname, lname, email, login_id, role, status, subscription_expires_at')
-        .eq('role', 'farmer')
-        .in('status', ['active'])
-        .not('subscription_expires_at', 'is', null);
-
-      // Unread, a failed read looked exactly like "no seller has a subscription", and
-      // the whole nightly sweep quietly did nothing — night after night, with a clean
-      // log and nobody expiring.
-      if (usersErr) {
-        console.error('[SUBSCRIPTION] Expiry sweep ABORTED — could not read sellers:', usersErr.message);
-        return;
-      }
-      if (!users || users.length === 0) return;
-
-      for (const user of users) {
-        const expiry   = new Date(user.subscription_expires_at);
-        const diffMs   = expiry - now;
-        const diffDays = Math.ceil(diffMs / MS_PER_DAY);
-
-        if (diffDays <= 0) {
-          // Expired — block and notify. Unread, a failed update still printed
-          // "Blocked expired user" and still emailed them to say so, while the account
-          // stayed active. The log line was the only evidence anyone had, and it lied.
-          const { error: blockErr } = await supabase.from('users').update({ status: 'blocked' }).eq('id', user.id);
-          if (blockErr) {
-            console.error(`[SUBSCRIPTION] FAILED to block expired user ${user.login_id} — they remain ACTIVE:`, blockErr.message);
-          } else {
-            try { await notify.notifySubscriptionExpired(user); } catch(e) { console.error('Notify expired error:', e.message); }
-            console.log(`[SUBSCRIPTION] Blocked expired user ${user.login_id}`);
-          }
-        } else if (REMINDER_DAYS.includes(diffDays)) {
-          // Reminder day — send reminder
-          try { await notify.notifySubscriptionExpiring(user, diffDays); } catch(e) { console.error('Notify reminder error:', e.message); }
-          console.log(`[SUBSCRIPTION] Reminder sent to ${user.login_id} — ${diffDays} day(s) left`);
-        }
+      const r = await runSubscriptionSweep({ db: supabase, notifyEmail: notify, notifyInApp });
+      if (r.suspended || r.repaired) {
+        console.log(`[SUBSCRIPTION] Suspended ${r.suspended}, repaired ${r.repaired} seller(s).`);
       }
     } catch (err) {
       console.error('[SUBSCRIPTION] Daily check error:', err.message);

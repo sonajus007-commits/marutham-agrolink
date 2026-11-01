@@ -145,6 +145,8 @@ export interface OrderPart extends Order {
   items?: OrderItem[];
   /** Lines this parcel's seller declined (partial accept). */
   declined_items?: DeclinedOrderItem[];
+  /** This parcel's own QR, for the agent at the door. */
+  qr_svg?: string | null;
 }
 
 /** A line the seller declined while accepting the rest (migration 065). It is no
@@ -304,6 +306,19 @@ export function isOrderActive(o: Order): boolean {
 
 export function canCancelOrder(o: Order): boolean {
   return !isOrderCancelled(o) && CANCELLABLE_STATUSES.includes(o.status);
+}
+
+/** The customer may confirm a parcel themselves only when no cash changes hands: on
+ *  COD the agent confirms, because that confirmation records the money. */
+export function canConfirmReceipt(o: Order): boolean {
+  return (
+    !isOrderCancelled(o) && o.status === 'Out for Delivery' && o.pay_method !== 'Cash on Delivery'
+  );
+}
+
+/** Mirrors STATUS_OVERRIDE_ROLES in backend/utils/scope.js (owner decision DEC-13). */
+export function canOverrideOrderStatus(user?: { admin_role?: string | null } | null): boolean {
+  return user?.admin_role === 'Head Office' || user?.admin_role === 'District Manager';
 }
 
 /** Hours left in the return window; 0 once it has closed. */

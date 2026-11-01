@@ -233,13 +233,21 @@ function scopeFor(user, module) {
  * Route guard: requirePermission('orders','edit'). Runs requireAuth first (so
  * req.user.permissions is populated), then checks the action. Import requireAuth
  * lazily to avoid a circular require with middleware/auth.js.
+ *
+ * A 'self' or 'assigned' grant means "only your own rows", which a guard on a whole
+ * module cannot honour, so it never passes here. Those cells used to expand to
+ * view+edit and pass: a Delivery Agent could list every employee and edit one, and
+ * editing a designation changes the login role. Routes that serve someone's own
+ * record (GET /employees/me) use requireAuth and filter by req.user.id. Geographic
+ * limits are decided per row by utils/scope.
  */
 function requirePermission(module, action) {
   const { requireAuth } = require('./auth');
   return [
     requireAuth,
     (req, res, next) => {
-      if (can(req.user, module, action)) return next();
+      const scope = scopeFor(req.user, module);
+      if (can(req.user, module, action) && scope !== 'self' && scope !== 'assigned') return next();
       return res.status(403).json({
         error: `Access denied. You need '${action}' permission on ${module}.`,
         required: { module, action },

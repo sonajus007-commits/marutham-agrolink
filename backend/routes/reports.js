@@ -3,6 +3,7 @@ const supabase = require('../db/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { can } = require('../middleware/permissions');
 const { toCsv, rupees } = require('../utils/csv');
+const { reportDistricts } = require('../utils/scope');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -16,6 +17,23 @@ function requireExport(req, res, next) {
   next();
 }
 
+// A report covers the requester's area and no further. Resolved here so a ?district=
+// outside their area, or none at all, cannot widen it.
+async function resolveArea(req, res, next) {
+  try {
+    const allowed = await reportDistricts(supabase, req.user);
+    const asked = (req.query.district || '').trim();
+    if (allowed && asked && !allowed.some((d) => d.toLowerCase() === asked.toLowerCase())) {
+      return res.status(403).json({ error: 'That district is outside your area.' });
+    }
+    req.reportDistricts = asked ? [asked] : allowed;
+    next();
+  } catch (e) {
+    console.error('Report scope failed:', e.message);
+    res.status(500).json({ error: 'Could not work out your report area. Please try again.' });
+  }
+}
+
 // A CSV download response. res.send (not res.json) so the money/redact middleware
 // never touches the string, and the browser gets a real file.
 function sendCsv(res, filename, csv) {
@@ -26,16 +44,16 @@ function sendCsv(res, filename, csv) {
 
 // Optional ?from=YYYY-MM-DD & ?to=YYYY-MM-DD on created_at, and ?district=.
 function applyFilters(q, req) {
-  const { from, to, district } = req.query;
+  const { from, to } = req.query;
   if (from) q = q.gte('created_at', from);
   if (to) q = q.lte('created_at', to + 'T23:59:59.999Z');
-  if (district) q = q.eq('district', district);
+  if (req.reportDistricts) q = q.in('district', req.reportDistricts);
   return q;
 }
 
 // ── GET /reports/orders.csv ──────────────────────────────────────────────────────
 // Customer orders only (parent_order_id is null) so a multi-vendor order is one row.
-router.get('/orders.csv', requireExport, async (req, res) => {
+router.get('/orders.csv', requireExport, resolveArea, async (req, res) => {
   let q = supabase
     .from('orders')
     .select('code, consumer_name, district, status, pay_method, pay_status, item_total, delivery, total, created_at, delivered_at')
@@ -80,7 +98,7 @@ router.get('/orders.csv', requireExport, async (req, res) => {
 });
 
 // ── GET /reports/payouts.csv ──────────────────────────────────────────────────────
-router.get('/payouts.csv', requireExport, async (req, res) => {
+router.get('/payouts.csv', requireExport, resolveArea, async (req, res) => {
   const { from, to } = req.query;
   let q = supabase
     .from('payouts')
@@ -96,7 +114,7 @@ router.get('/payouts.csv', requireExport, async (req, res) => {
     return res.status(500).json({ error: 'Could not build the payouts report.' });
   }
 
-  const district = (req.query.district || '').trim().toLowerCase();
+  const area = req.reportDistricts && req.reportDistricts.map((d) => d.toLowerCase());
   const rows = (data || [])
     .map((p) => ({
       farmer: `${p.farmer?.fname || ''}${p.farmer?.lname ? ' ' + p.farmer.lname : ''}`.trim(),
@@ -107,7 +125,7 @@ router.get('/payouts.csv', requireExport, async (req, res) => {
       method: p.method,
       created: p.created_at,
     }))
-    .filter((r) => !district || r.district.toLowerCase() === district);
+    .filter((r) => !area || area.includes(r.district.toLowerCase()));
   const headers = [
     { key: 'farmer', label: 'Seller' },
     { key: 'district', label: 'District' },
@@ -121,8 +139,8 @@ router.get('/payouts.csv', requireExport, async (req, res) => {
 });
 
 // ── GET /reports/users.csv ────────────────────────────────────────────────────────
-router.get('/users.csv', requireExport, async (req, res) => {
-  const { role, district } = req.query;
+router.get('/users.csv', requireExport, resolveArea, async (req, res) => {
+  const { role } = req.query;
   let q = supabase
     .from('users')
     .select('login_id, fname, lname, role, seller_type, district, status, phone, created_at')
@@ -130,7 +148,7 @@ router.get('/users.csv', requireExport, async (req, res) => {
     .order('created_at', { ascending: false })
     .limit(50000);
   if (role) q = q.eq('role', role);
-  if (district) q = q.eq('district', district);
+  if (req.reportDistricts) q = q.in('district', req.reportDistricts);
 
   const { data, error } = await q;
   if (error) {

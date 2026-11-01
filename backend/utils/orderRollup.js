@@ -44,7 +44,7 @@ async function rollupToParent(parentId) {
 
   const { data: children, error: childErr } = await supabase
     .from('orders')
-    .select('id, split_seq, seller_id, status, stage, cancelled, pay_status, item_total, market_fee, saved')
+    .select('id, split_seq, seller_id, status, stage, cancelled, pay_status, item_total, market_fee, saved, delivered_at')
     .eq('parent_order_id', parentId);
 
   if (childErr) {

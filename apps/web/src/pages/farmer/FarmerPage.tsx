@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ComponentType, type SVGProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, LangToggle } from '@marutham/ui';
+import { Button, IconButton, LangToggle } from '@marutham/ui';
 import {
   HomeIcon,
   WalletIcon,
@@ -97,6 +97,15 @@ function FarmerInner() {
   }, [updateUser]);
 
   const onPaid = useCallback(() => setRenewing(false), []);
+
+  /* A suspended seller must pay before selling again, but must not lose work already
+   * accepted: if the gate hid the Orders tab, those orders would auto-cancel against
+   * their reliability. While any order needs them the gate can be set aside. */
+  const [gateDismissed, setGateDismissed] = useState(false);
+  const closeGate = useCallback(() => {
+    setRenewing(false);
+    setGateDismissed(true);
+  }, []);
 
   /* A tapped phone notification lands on the tab it is about: an order event opens
    * that order (Orders tab), a payout opens Earnings, stock/catalogue news opens
@@ -236,6 +245,17 @@ function FarmerInner() {
           </div>
 
           <div className="flex flex-1 flex-col gap-3 p-3.5">
+            {suspended && gateDismissed ? (
+              <div className="fm-note" role="status">
+                <p style={{ margin: '0 0 8px' }}>
+                  {t(
+                    'farmer.sub.finishOrders',
+                    'Your subscription has lapsed, so your products are off sale. Finish your open orders, then renew to sell again.',
+                  )}
+                </p>
+                <Button onClick={() => setRenewing(true)}>{t('farmer.sub.renew')}</Button>
+              </div>
+            ) : null}
             {tab === 'home' ? (
               <FarmerHomeTab
                 orders={orders}
@@ -289,9 +309,9 @@ function FarmerInner() {
 
       {/* A suspended seller gets the blocking gate; anyone else can open it to renew. */}
       <SubscriptionGate
-        open={suspended || renewing}
-        blocking={suspended}
-        onClose={() => setRenewing(false)}
+        open={(suspended && !gateDismissed) || renewing}
+        blocking={suspended && packCount === 0}
+        onClose={closeGate}
         onPaid={onPaid}
       />
     </div>

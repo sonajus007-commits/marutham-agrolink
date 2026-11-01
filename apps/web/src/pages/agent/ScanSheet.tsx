@@ -19,10 +19,14 @@ export function ScanSheet({
   open,
   onClose,
   onScanned,
+  onNeedsDeliver,
 }: {
   open: boolean;
   onClose: () => void;
   onScanned: () => void;
+  /** The parcel is at the door: a scan cannot close it, so open the Deliver screen,
+   *  which collects the code or proof photo and shows the cash to take. */
+  onNeedsDeliver?: (orderId: string) => void;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -89,6 +93,12 @@ export function ScanSheet({
       onScanned();
       onClose();
     } catch (e) {
+      const payload = (e as { payload?: { needs?: string; order_id?: string } } | null)?.payload;
+      if (payload?.needs === 'deliver' && payload.order_id && onNeedsDeliver) {
+        onClose();
+        onNeedsDeliver(payload.order_id);
+        return;
+      }
       toast(e instanceof Error ? e.message : t('agent.scan.failed', 'Scan failed'), 'er');
       setBusy(false);
       inputRef.current?.select();

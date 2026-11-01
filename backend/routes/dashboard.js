@@ -8,6 +8,14 @@ const platformConfig = require('../config/platform');
 const router = express.Router();
 router.use(requireAuth);
 
+// A multi-seller order is one parent row plus a child per seller, and each holds the
+// money, so adding up every row counts that order twice. Which side to keep depends on
+// the view. Company-wide, the parent is the one customer order. Inside a district the
+// parent is the wrong row, since it sits in the customer's district and not the seller's,
+// so use parcels: they carry their own money and sum exactly to the parent total.
+const oneRowPerOrder = (rows, geoScoped) =>
+  rows.filter((o) => (geoScoped ? o.route !== 'split' : !o.parent_order_id));
+
 // ── GET /dashboard  (any management role, role-tiered KPIs) ──────────────────
 router.get('/', async (req, res) => {
   if (!can(req.user, 'dashboard', 'view')) {
@@ -63,15 +71,20 @@ router.get('/', async (req, res) => {
   // ── Fetch orders in scope ─────────────────────────────────────────────────
   let ordersQuery = supabase
     .from('orders')
-    .select('id, total, market_fee, status, cancelled, district, village, created_at');
+    .select('id, total, market_fee, status, cancelled, district, village, created_at, route, parent_order_id');
 
   for (const [col, val] of Object.entries(orderFilter)) {
     ordersQuery = ordersQuery.eq(col, val);
   }
   if (stateDistricts) ordersQuery = ordersQuery.in('district', stateDistricts);
 
-  const { data: orders, error: ordersErr } = await ordersQuery;
+  const { data: orderRows, error: ordersErr } = await ordersQuery;
   if (ordersErr) return res.status(500).json({ error: 'Could not load dashboard data.' });
+
+  const geoScoped = Object.keys(orderFilter).length > 0 || !!stateDistricts;
+  const orders = oneRowPerOrder(orderRows, geoScoped);
+  // Lines and returns hang off the parcel, not the parent.
+  const parcelIds = orderRows.filter(o => o.route !== 'split').map(o => ({ id: o.id, cancelled: o.cancelled }));
 
   const activeOrders    = orders.filter(o => !o.cancelled);
   const deliveredOrders = orders.filter(o => o.status === 'Delivered');
@@ -112,8 +125,9 @@ router.get('/', async (req, res) => {
   // `revenue` is PAISE, like daily_trend[].revenue: neither is a MONEY_FIELDS
   // name, so the money middleware does not convert it. Clients divide by 100.
   let topProducts = [];
-  if (activeOrders.length > 0) {
-    const orderIds = activeOrders.map(o => o.id);
+  const liveParcelIds = parcelIds.filter(o => !o.cancelled).map(o => o.id);
+  if (liveParcelIds.length > 0) {
+    const orderIds = liveParcelIds;
     const { data: items, error: ie } = await supabase
       .from('order_items')
       .select('product_id, qty, price, product:products(name, unit)')
@@ -183,7 +197,7 @@ router.get('/', async (req, res) => {
   });
 
   // ── Returns in scope ──────────────────────────────────────────────────────
-  const orderIds = orders.map(o => o.id);
+  const orderIds = orderRows.map(o => o.id);
   let returnCount = 0;
   if (orderIds.length > 0) {
     const { count, error: returnCountErr } = await supabase
@@ -436,7 +450,7 @@ router.get('/executive', async (req, res) => {
   const [
     ordersR, itemsR, productsR, usersR, listingsR, payoutsR, returnsR,
   ] = await Promise.all([
-    supabase.from('orders').select('id, total, item_total, market_fee, handling, delivery, status, cancelled, pay_status, district, created_at, delivered_at, picked_up_at, eta_ts, consumer_id, refund_amt'),
+    supabase.from('orders').select('id, total, item_total, market_fee, handling, delivery, status, cancelled, pay_status, district, created_at, delivered_at, picked_up_at, eta_ts, consumer_id, refund_amt, route, parent_order_id'),
     supabase.from('order_items').select('order_id, product_id, qty, price, farmer_id, farmer_name, rated, rating_value'),
     supabase.from('products').select('id, category, product_group'),
     supabase.from('users').select('id, role, created_at, district, status, subscription_amount, subscription_expires_at').is('deleted_at', null),
@@ -456,10 +470,11 @@ router.get('/executive', async (req, res) => {
   // company view is byte-for-byte what it was before this feature.
   const noGeo    = districtSet == null;
   const products = productsR.data  || [];
-  const orders   = (ordersR.data || []).filter(o => inGeoDist(o.district));
+  const scopedRows = (ordersR.data || []).filter(o => inGeoDist(o.district));
+  const orders   = oneRowPerOrder(scopedRows, !noGeo);
   const users    = (usersR.data  || []).filter(x => inGeoDist(x.district));
   const payouts  = (payoutsR.data || []).filter(p => inGeoDist(p.farmer?.district));
-  const inScopeOrderIds = new Set(orders.map(o => o.id));
+  const inScopeOrderIds = new Set(scopedRows.map(o => o.id));
   const items    = noGeo ? (itemsR.data || [])
                          : (itemsR.data || []).filter(it => inScopeOrderIds.has(it.order_id));
   const returns  = noGeo ? (returnsR.data || [])
@@ -744,7 +759,7 @@ router.get('/operations', async (req, res) => {
 
   // ── Pull datasets ───────────────────────────────────────────────────────────
   const [ordersR, usersR, listingsR, payoutsR, returnsR, visitsR] = await Promise.all([
-    supabase.from('orders').select('id, total, status, cancelled, district, village, created_at, delivered_at, agent_id, agent_name'),
+    supabase.from('orders').select('id, total, status, cancelled, district, village, created_at, delivered_at, agent_id, agent_name, route, parent_order_id'),
     supabase.from('users').select('id, role, admin_role, fname, lname, phone, agent_vehicle, district, status, approval_status').is('deleted_at', null),
     supabase.from('farmer_listings').select('farmer_id, listed, confirmed, updated_at'),
     supabase.from('payouts').select('farmer_id, amount, status, created_at'),
@@ -761,9 +776,10 @@ router.get('/operations', async (req, res) => {
   const returns   = returnsR.data  || [];
   const allVisits = visitsR.data   || [];
 
-  const orders = allOrders.filter(o => inScopeDistrict(o.district));
+  const scopedRows = allOrders.filter(o => inScopeDistrict(o.district));
+  const orders = oneRowPerOrder(scopedRows, districtSet != null);
   const active = orders.filter(o => !o.cancelled);
-  const orderIdSet = new Set(orders.map(o => o.id));
+  const orderIdSet = new Set(scopedRows.map(o => o.id));
 
   const nowIst = istParts(Date.now());
   const isToday = ts => { if (!ts) return false; const p = istParts(ts); return p.y === nowIst.y && p.m === nowIst.m && p.day === nowIst.day; };
@@ -1358,7 +1374,7 @@ router.get('/finance', async (req, res) => {
   const nowIst  = istParts(Date.now());
   const monthStart = `${nowIst.y}-${String(nowIst.m + 1).padStart(2, '0')}-01`;
   const [ordersR, payoutsR, usersR, expR, subR] = await Promise.all([
-    supabase.from('orders').select('total, item_total, market_fee, handling, delivery, cancelled, pay_status, status, created_at'),
+    supabase.from('orders').select('total, item_total, market_fee, handling, delivery, cancelled, pay_status, status, created_at, parent_order_id'),
     supabase.from('payouts').select('amount, tds_amount, status, created_at, paid_at'),
     supabase.from('users').select('role, subscription_amount, subscription_expires_at').is('deleted_at', null),
     supabase.from('expenses').select('category, amount, gst_amount').gte('incurred_on', monthStart),
@@ -1368,7 +1384,7 @@ router.get('/finance', async (req, res) => {
     return res.status(500).json({ error: 'Could not load the finance dashboard.' });
   }
 
-  const orders  = ordersR.data  || [];
+  const orders  = oneRowPerOrder(ordersR.data || [], false);
   const payouts = payoutsR.data || [];
   const farmers = (usersR.data || []).filter(x => x.role === 'farmer');
   const active  = orders.filter(o => !o.cancelled);

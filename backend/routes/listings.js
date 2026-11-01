@@ -281,9 +281,15 @@ router.post('/', farmersOnly, validateBody(createListingSchema), async (req, res
   if (!product) return res.status(404).json({ error: 'Product not found.' });
   if (!product.available) return res.status(400).json({ error: 'This product is not currently active.' });
 
-  // Price sanity guard: block ₹0 and prices wildly off the market reference.
-  const priceErr = await priceGuardError(product_id, farmer_price, req.user.district);
-  if (priceErr) return res.status(400).json({ error: priceErr });
+  // A request carries no price yet: the seller is asking to sell this product, and sets
+  // the price once it is approved. This is how every listing starts, so the ₹0 floor
+  // cannot apply here. It stays unlisted so a ₹0 row can never reach a customer. A
+  // price that IS given still has to pass the guard.
+  const isRequest = Number(farmer_price) === 0;
+  if (!isRequest) {
+    const priceErr = await priceGuardError(product_id, farmer_price, req.user.district);
+    if (priceErr) return res.status(400).json({ error: priceErr });
+  }
 
   const { data, error } = await supabase
     .from('farmer_listings')
@@ -293,7 +299,7 @@ router.post('/', farmersOnly, validateBody(createListingSchema), async (req, res
       time_available, cutoff_ts, bulk_qty, bulk_disc_pct,
       qty_type, qty_value,
       ...(images !== undefined ? { images } : {}),
-      listed: req.body.listed !== undefined ? Boolean(req.body.listed) : true,
+      listed: isRequest ? false : (req.body.listed !== undefined ? Boolean(req.body.listed) : true),
       listing_status: 'pending',
     })
     .select()
@@ -321,7 +327,7 @@ router.patch('/:id', async (req, res) => {
   // it tells the farmer their own listing has vanished.
   const { data: existing, error: existingErr } = await supabase
     .from('farmer_listings')
-    .select('id, farmer_id, product_id, qty_available, images')
+    .select('id, farmer_id, product_id, qty_available, images, listing_status, farmer_price')
     .eq('id', req.params.id)
     .maybeSingle();
 
@@ -361,6 +367,12 @@ router.patch('/:id', async (req, res) => {
   // must carry today's stock and today's photo — both are cleared by the daily
   // reset (utils/listings DAILY_RESET). Checked against the row as it WILL be.
   if (updates.confirmed === true) {
+    if (existing.listing_status && existing.listing_status !== 'active') {
+      return res.status(400).json({ error: 'This product is not approved yet, so it cannot go on sale.' });
+    }
+    if (!(Number(updates.farmer_price ?? existing.farmer_price) > 0)) {
+      return res.status(400).json({ error: 'Set a selling price before confirming.' });
+    }
     const problem = confirmProblem({ ...existing, ...updates });
     if (problem) return res.status(400).json({ error: problem });
   }

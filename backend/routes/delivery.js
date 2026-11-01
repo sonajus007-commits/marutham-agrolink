@@ -24,6 +24,7 @@ const {
   fullName,
 } = require('../utils/agentAssignment');
 const platform = require('../config/platform');
+const { orderInScope, hubMayReceive, canOverrideStatus } = require('../utils/scope');
 const {
   declineWholeParcel, moveLinesOut, restoreLines, refundDeclinedLines,
 } = require('../utils/declineOrder');
@@ -110,9 +111,23 @@ const SPLIT_PARENT_MESSAGE =
   '(the one ending in -1, -2, …) — the whole order is not handled as one item.';
 
 // Who may do what. A Delivery Agent and a VCO are NOT hub staff.
-const SENIOR_ADMIN_ROLES = ['Head Office', 'State Head', 'Regional Manager', 'District Manager'];
+const SENIOR_ADMIN_ROLES = ['Head Office', 'State Head', 'Zonal Manager', 'Regional Manager', 'District Manager'];
 const isSeniorAdmin = (r) => SENIOR_ADMIN_ROLES.includes(r);
-const isHubStaff = (r) => r === 'Hub Incharge' || isSeniorAdmin(r);
+const isHubStaff = (r) => r === 'Hub Incharge' || r === 'Hub Manager' || isSeniorAdmin(r);
+
+// Answer 403 unless this user may act on this order; true when they may. A scope check
+// that cannot be answered refuses rather than waving the request through.
+async function refuseOutOfScope(req, res, order) {
+  try {
+    if (await orderInScope(supabase, req.user, order)) return false;
+  } catch (e) {
+    console.error(`Order ${order.id}: scope check failed:`, e.message);
+    res.status(500).json({ error: 'Could not verify your access to this order. Please try again.' });
+    return true;
+  }
+  res.status(403).json({ error: 'This order is outside your area.' });
+  return true;
+}
 
 // Before route is decided, use direct as the reference for stages 0-3
 function resolveRoute(order) {
@@ -421,6 +436,14 @@ const PROOF_MAX_CHARS = 300_000; // ~220 KB decoded — comfortably above a 640p
 // original single `proof_photo`, which older app builds still send.
 const MAX_PROOFS = 3;
 
+// A photo storeProof will actually keep. Checked up front at delivery, where a photo is
+// the only stand-in for the customer's code.
+const usablePhoto = (img) =>
+  typeof img === 'string' && img.startsWith('data:image/') && img.length <= PROOF_MAX_CHARS;
+const hasUsableProof = (body) =>
+  usablePhoto(body && body.proof_photo) ||
+  (Array.isArray(body && body.proof_photos) && body.proof_photos.some(usablePhoto));
+
 async function storeProof(order, kind, body, userId) {
   const sent = [];
   if (body && body.proof_photo != null && body.proof_photo !== '') sent.push(body.proof_photo);
@@ -688,6 +711,13 @@ router.post('/:id/confirm-received', async (req, res) => {
   if (order.consumer_id !== req.user.id) {
     return res.status(403).json({ error: 'You can only confirm your own orders.' });
   }
+  // Cash has to be counted by the agent. If the customer's tap could close a COD parcel,
+  // it would record money as paid that nobody collected.
+  if (order.pay_method === 'Cash on Delivery') {
+    return res.status(400).json({
+      error: 'Cash on Delivery orders are confirmed by the delivery agent when they collect the cash.',
+    });
+  }
   // Only from Out for Delivery: a customer cannot confirm a parcel that has not yet
   // left for them, and advanceStage from this stage lands on Delivered on both the
   // direct (4→5) and hub (6→7) maps.
@@ -811,6 +841,7 @@ router.post('/:id/scan', async (req, res) => {
 
   const order = await fetchActiveOrder(req.params.id, res);
   if (!order) return;
+  if (await refuseOutOfScope(req, res, order)) return;
 
   // A scan says "advance one stage from where this order is NOW" — the body never
   // states which transition was intended. That is safe while the tap and the write
@@ -885,6 +916,15 @@ router.post('/:id/scan', async (req, res) => {
           .map((l) => l.name)
           .join(', ')}). Open the order's Verify screen to weigh them.`,
         missing: unweighed.map((l) => l.id),
+      });
+    }
+
+    // Every line at zero means nothing was collected, so nothing may travel: the agent
+    // would take the full COD for an empty parcel. One short line stays allowed, and the
+    // seller is told. Rejecting at collection, with reasons, is tracked as VCO-03.
+    if ((lines || []).length && lines.every((l) => weighedQty(sentById.get(l.id)) === 0)) {
+      return res.status(400).json({
+        error: 'Every item weighs zero, so this parcel cannot be verified. If nothing can be collected, ask the hub to cancel the order.',
       });
     }
 
@@ -1007,16 +1047,22 @@ router.post('/:id/scan', async (req, res) => {
     // hub last-mile agent is still named later, at the hub.
     const leg = keepRoute === 'hub' ? 'collection' : 'agent';
     const c = LEG_COLS[leg];
+    if (!isAgent && adminRole !== 'VCO' && !isHubStaff(adminRole)) {
+      return res.status(403).json({ error: 'Only the VCO, a Delivery Agent or hub staff can dispatch an order.' });
+    }
     if (isAgent && order[c.id] && order[c.id] !== u.id) {
       return res.status(403).json({ error: `This order is assigned to ${order[c.name] || 'another Delivery Agent'}.` });
     }
     let claim = {};
     if (order[c.id]) {
       if (order[c.status] === 'pending') claim = acceptFields(leg);
-    } else if (isAgent || leg === 'agent') {
-      // Direct: whoever scans takes custody (the old behaviour). Hub: only a Delivery
-      // Agent becomes the carrier — a VCO dispatching a bulk load names nobody.
+    } else if (isAgent || (adminRole === 'VCO' && u.can_deliver)) {
+      // Whoever can carry it and scans it takes custody.
       claim = assignFields(leg, u, u.id);
+    } else if (leg === 'agent') {
+      // A direct parcel needs a named carrier: this tap used to quietly make a VCO with
+      // no delivery rights the delivery agent. A hub load may leave with nobody named.
+      return res.status(400).json({ error: 'Assign a delivery agent before this order leaves the village.' });
     }
     result = await advanceStage(order, `Agent ${req.user.fname}`, {
       ...claim,
@@ -1030,6 +1076,17 @@ router.post('/:id/scan', async (req, res) => {
   } else if (status === 'In Transit') {
     if (!isHubStaff(adminRole)) {
       return res.status(403).json({ error: 'Only the Hub Incharge or senior admins can receive orders at the hub.' });
+    }
+    // Custody belongs to the hub the parcel is bound for.
+    let mayReceive;
+    try {
+      mayReceive = await hubMayReceive(supabase, u, order);
+    } catch (e) {
+      console.error(`Order ${order.id}: hub check failed:`, e.message);
+      return res.status(500).json({ error: 'Could not verify your hub. Please try again.' });
+    }
+    if (!mayReceive) {
+      return res.status(403).json({ error: 'This parcel is bound for a different hub.' });
     }
     result = await advanceStage(order, `Hub ${req.user.fname}`);
     // The custody handover, on the record: who brought it in, who received it.
@@ -1071,32 +1128,50 @@ router.post('/:id/scan', async (req, res) => {
 
   // The agent confirms the round has started: Picked Up → Out for Delivery.
   } else if (status === 'Picked Up') {
+    if (order.agent_id !== u.id && !isHubStaff(adminRole) && !(isAgent && !order.agent_id)) {
+      return res.status(403).json({ error: 'Only the assigned Delivery Agent or hub staff can update this order.' });
+    }
     result = await advanceStage(order, `Agent ${req.user.fname}`);
 
   // Out for Delivery → Delivered. The only branch that reaches Delivered, so the
   // proof-of-delivery coordinates ride along here — and the soft delivery OTP.
   } else if (status === 'Out for Delivery') {
+    // Closing a parcel records the handover and, on COD, the cash. Only the person
+    // carrying it may do that, or hub staff on their behalf.
+    if (order.agent_id !== u.id && !isHubStaff(adminRole) && !(isAgent && !order.agent_id)) {
+      return res.status(403).json({ error: 'Only the assigned Delivery Agent or hub staff can deliver this order.' });
+    }
     const provided = (req.body.delivery_code == null ? '' : String(req.body.delivery_code)).trim();
     const expected = (order.delivery_code == null ? '' : String(order.delivery_code)).trim();
-    // SOFT gate (see migration 052): only a WRONG code stops the delivery — a real
-    // wrong-recipient signal. A BLANK code always proceeds, so no legitimate delivery
-    // is ever stuck for a missing/late code; it is just recorded as unverified.
     if (expected && provided && provided !== expected) {
       return res.status(400).json({
-        error: 'That delivery code does not match. Check it with the customer, or leave it blank to deliver without OTP.',
+        error: 'That delivery code does not match. Check it with the customer, or take a proof photo instead.',
+      });
+    }
+    // Owner decision DEC-08: every delivery proves itself, with the customer's code or
+    // a proof photo. `needs: 'deliver'` tells the scan box to open the Deliver screen,
+    // because a bare scan carries neither and skips the cash prompt. A photo is not
+    // blocked for want of GPS, which a village doorstep often cannot give; the timeline
+    // records that it is missing.
+    const codeOk = !!(expected && provided === expected);
+    if (expected && !codeOk && !hasUsableProof(req.body)) {
+      return res.status(400).json({
+        error: 'Enter the customer’s delivery code, or take a proof photo, to complete this delivery.',
+        needs: 'deliver',
+        order_id: order.id,
       });
     }
     result = await advanceStage(order, `Agent ${req.user.fname}`, {}, coords.coords);
     // Record HOW the delivery was confirmed, alongside the 'Delivered' row, so an
     // unverified close is visible in the timeline (mirrors the geofence note).
     if (!result.conflict && !result.error) {
-      const verified = !!(expected && provided && provided === expected);
+      const verified = codeOk;
       const { error: otpErr } = await supabase.from('order_history').insert({
         order_id: order.id,
         label: verified ? 'OTP verified' : 'Not OTP-verified',
         note: verified
           ? 'Delivery confirmed with the customer’s OTP.'
-          : 'Delivered without OTP confirmation — no code was entered.',
+          : `Delivered on a proof photo, without the customer’s code${coords.coords ? '.' : ' and with no location.'}`,
       });
       if (otpErr) console.error(`Order ${order.id}: delivery-OTP note failed:`, otpErr.message);
       // Optional proof-of-delivery photo (migration 060). Best-effort, never blocks.
@@ -1140,6 +1215,7 @@ router.post('/:id/delivery-failed', async (req, res) => {
 
   const order = await fetchActiveOrder(req.params.id, res);
   if (!order) return;
+  if (await refuseOutOfScope(req, res, order)) return;
 
   // A failure only makes sense during the delivery run — the parcel must be out with
   // an agent. Before that there is no attempt to fail.
@@ -1259,6 +1335,7 @@ router.get('/:id/proofs', async (req, res) => {
   if (u.role === 'consumer' && order.consumer_id !== u.id) {
     return res.status(403).json({ error: 'You can only view your own order.' });
   }
+  if (u.role !== 'consumer' && (await refuseOutOfScope(req, res, order))) return;
 
   const { data: proofs, error } = await supabase
     .from('order_proofs')
@@ -1275,12 +1352,12 @@ router.get('/:id/proofs', async (req, res) => {
 // ── PATCH /orders/:id/route  (Delivery Agent or Admin) ───────────────────────
 router.patch('/:id/route', async (req, res) => {
   const u = req.user;
-  const isAgent = u.role === 'admin' && u.admin_role === 'Delivery Agent';
-  // Rerouting hub↔direct is a Delivery Assignment edit — Admin + Hub Incharge.
-  const canReroute = can(u, 'delivery_assignment', 'edit');
+  // Rerouting hub↔direct is a Delivery Assignment edit by Admin or hub staff. A Delivery
+  // Agent holds that cell for their own jobs, which does not extend to rerouting one.
+  const canReroute = can(u, 'delivery_assignment', 'edit') && u.admin_role !== 'Delivery Agent';
 
-  if (!isAgent && !canReroute) {
-    return res.status(403).json({ error: 'Only the assigned agent, Hub Incharge or Admin can override the route.' });
+  if (!canReroute) {
+    return res.status(403).json({ error: 'Only the Hub Incharge or Admin can override the route.' });
   }
 
   const { route } = req.body;
@@ -1290,6 +1367,7 @@ router.patch('/:id/route', async (req, res) => {
 
   const order = await fetchActiveOrder(req.params.id, res);
   if (!order) return;
+  if (await refuseOutOfScope(req, res, order)) return;
 
   // Route can only be changed before Out for Delivery
   const currentStatus = order.status;
@@ -1336,12 +1414,17 @@ router.patch('/:id/route', async (req, res) => {
 
 // ── POST /orders/:id/advance  (Admin only — manual override) ──────────────────
 router.post('/:id/advance', async (req, res) => {
-  if (!can(req.user, 'delivery_tracking', 'edit')) {
-    return res.status(403).json({ error: 'Delivery tracking edit permission required to manually advance an order.' });
+  if (!canOverrideStatus(req.user)) {
+    return res.status(403).json({ error: 'Only Head Office or a District Manager can manually advance an order.' });
   }
 
   const order = await fetchActiveOrder(req.params.id, res);
   if (!order) return;
+  if (await refuseOutOfScope(req, res, order)) return;
+  // A delivery proves itself on /scan. This shortcut must not mark one done, or COD paid.
+  if (statusForStage(resolveRoute(order), order.stage + 1) === 'Delivered') {
+    return res.status(400).json({ error: 'Complete a delivery from the Deliver screen, not by advancing it.' });
+  }
 
   const { updated, error, conflict } = await advanceStage(
     order,
@@ -1360,18 +1443,20 @@ router.post('/:id/advance', async (req, res) => {
 // audited in the timeline, and it touches the delivery/pickup stamps to match the
 // target so the record stays internally consistent.
 router.post('/:id/status', async (req, res) => {
-  // Setting an order to ANY status is a senior dispatch correction — the Delivery
-  // Assignment 'assign' authority (Admin + Hub Incharge). Deliberately stronger than
-  // /advance: a Delivery Agent may step their own order forward, but not jump it to
-  // an arbitrary status.
-  if (!can(req.user, 'delivery_assignment', 'assign')) {
-    return res.status(403).json({ error: 'Delivery assignment permission required to manually set an order status.' });
+  // Setting an order to ANY status overrides the record of what physically happened,
+  // so it needs a named senior role and a stated reason (owner decision DEC-13). It
+  // used to ride on delivery_assignment 'assign', which a Hub Incharge holds in order
+  // to name agents.
+  if (!canOverrideStatus(req.user)) {
+    return res.status(403).json({ error: 'Only Head Office or a District Manager can manually set an order status.' });
   }
 
   const target = req.body?.status;
   if (!target || typeof target !== 'string') {
     return res.status(400).json({ error: 'A target status is required.' });
   }
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 300) : '';
+  if (!reason) return res.status(400).json({ error: 'Give a reason for changing this order by hand.' });
 
   // maybeSingle, not fetchActiveOrder: this tool must reach a Delivered order too
   // (the point is to correct/reverse one). A cancelled order stays off-limits —
@@ -1392,6 +1477,7 @@ router.post('/:id/status', async (req, res) => {
              'the overall order follows its parts.',
     });
   }
+  if (await refuseOutOfScope(req, res, order)) return;
 
   const route = resolveRoute(order);
   const map = STAGE_MAP[route] || STAGE_MAP.direct;
@@ -1409,15 +1495,24 @@ router.post('/:id/status', async (req, res) => {
   const delivering = target === 'Delivered';
   const wasDelivered = order.status === 'Delivered';
 
+  // Undoing a delivery would leave the seller's payout standing for goods that were
+  // never handed over. Finance has to clear it first.
+  if (wasDelivered && !delivering) {
+    const { data: paid, error: payErr } = await supabase
+      .from('payouts').select('id').eq('order_id', order.id).limit(1);
+    if (payErr) return res.status(500).json({ error: 'Could not check this order’s payout.' });
+    if (paid && paid.length) {
+      return res.status(409).json({ error: 'This order has a seller payout. Finance must clear it before the delivery is undone.' });
+    }
+  }
+
   const updates = {
     stage: newStage,
     status: target,
     updated_at: now,
-    // Landing ON delivered stamps the time; a COD order banks its cash, mirroring
-    // a real delivery scan. Money is only ever set forward here, never auto-reversed
-    // (see below) — reversing a payment is a finance action, not a status fix.
+    // Landing ON delivered stamps the time. Money is never touched here: an override
+    // records what someone says happened, and cash is reconciled separately.
     ...(delivering ? { delivered_at: now } : {}),
-    ...(delivering && order.pay_method === 'Cash on Delivery' ? { pay_status: 'paid' } : {}),
     ...(target === 'Picked Up' ? { picked_up_at: now } : {}),
     // Reversing OUT of delivered must not leave a stale delivery stamp/geo behind.
     ...(wasDelivered && !delivering
@@ -1437,7 +1532,7 @@ router.post('/:id/status', async (req, res) => {
   const { error: histErr } = await supabase.from('order_history').insert({
     order_id: order.id,
     label: target,
-    note: `Status set to "${target}" (from "${order.status}") by ${actor} — manual override.`,
+    note: `Status set to "${target}" (from "${order.status}") by ${actor} — manual override: ${reason}`,
   });
   if (histErr) console.error(`Order ${order.id}: manual status history entry failed:`, histErr.message);
 
@@ -1458,7 +1553,7 @@ router.post('/:id/assign', async (req, res) => {
   const { data: order, error: oe } = await supabase
     .from('orders')
     .select(
-      'id, code, status, consumer_name, district, village, delivery_village, delivery_address, route, ' +
+      'id, code, status, consumer_name, consumer_id, seller_id, district, village, delivery_village, delivery_address, route, ' +
         'verified_lat, verified_lng, delivery_hub_id, pickup_hub_id, ' +
         'agent_id, agent_name, agent_assign_status, collection_agent_id, collection_agent_name, collection_assign_status',
     )
@@ -1480,6 +1575,7 @@ router.post('/:id/assign', async (req, res) => {
   if (!vcoRepick && !can(req.user, 'delivery_assignment', 'assign')) {
     return res.status(403).json({ error: 'Delivery assignment permission required to assign agents.' });
   }
+  if (await refuseOutOfScope(req, res, order)) return;
 
   const r = await loadAssignableAgent(agent_id, order, leg, req.user);
   if (r.status) return res.status(r.status).json(r.body);
@@ -1944,6 +2040,7 @@ router.get('/:id/track', async (req, res) => {
   if (u.role === 'consumer' && order.consumer_id !== u.id) {
     return res.status(403).json({ error: 'You can only track your own orders.' });
   }
+  if (u.role !== 'consumer' && (await refuseOutOfScope(req, res, order))) return;
 
   const { data: history, error: historyErr } = await supabase
     .from('order_history')

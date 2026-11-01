@@ -6,6 +6,8 @@ const { groupPayouts } = require('../utils/payouts');
 const { computeTds } = require('../utils/tds');
 const platform = require('../config/platform');
 const { notify } = require('../utils/notifications');
+const { fetchAll, inChunks } = require('../utils/paging');
+const { managedHubIds } = require('../utils/scope');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -25,7 +27,7 @@ router.get('/', async (req, res) => {
     query = query.eq('farmer_id', req.user.id);
   } else if (req.user.role === 'admin' && can(req.user, 'settlement_sellers', 'view')) {
     // District-scoped admins see payouts for farmers in their district
-    if (['District Manager', 'Hub Incharge'].includes(req.user.admin_role)) {
+    if (['District Manager', 'Hub Incharge', 'Hub Manager'].includes(req.user.admin_role)) {
       const district = req.user.district_assign || req.user.district;
       // Filter via farmers in this district
       const { data: districtFarmers, error: districtFarmersErr } = await supabase
@@ -67,11 +69,15 @@ router.post('/run', async (req, res) => {
   }
 
   // Fetch delivered order items that haven't been paid out yet
-  const { data: deliveredOrders, error: deliveredErr } = await supabase
+  // Read in pages. PostgREST stops at 1,000 rows without saying so, and the rows it
+  // keeps are the ones already settled, so a plain read would one day report "all
+  // settled" while newer orders were never paid. Stable order, so no page skips a row.
+  const { data: deliveredOrders, error: deliveredErr } = await fetchAll(() => supabase
     .from('orders')
     .select('id')
     .eq('status', 'Delivered')
-    .eq('cancelled', false);
+    .eq('cancelled', false)
+    .order('id', { ascending: true }));
 
   // Unread, a failure here reported "No delivered orders to settle" — a settlement
   // run that silently did nothing and said so cheerfully.
@@ -94,10 +100,10 @@ router.post('/run', async (req, res) => {
   // would have caught it and nothing in the response that would have looked wrong.
   //
   // If we cannot establish what has already been paid, we do not pay.
-  const { data: existingPayouts, error: existingPayoutsErr } = await supabase
+  const { data: existingPayouts, error: existingPayoutsErr } = await inChunks(orderIds, (ids) => supabase
     .from('payouts')
     .select('order_id')
-    .in('order_id', orderIds);
+    .in('order_id', ids));
 
   if (existingPayoutsErr) {
     console.error('SETTLEMENT ABORTED — could not read existing payouts:', existingPayoutsErr.message);
@@ -112,10 +118,10 @@ router.post('/run', async (req, res) => {
   }
 
   // Fetch order items for unpaid orders, grouped by farmer
-  const { data: items, error: itemsErr } = await supabase
+  const { data: items, error: itemsErr } = await inChunks(unpaidOrderIds, (ids) => supabase
     .from('order_items')
     .select('order_id, farmer_id, farmer_price, qty')
-    .in('order_id', unpaidOrderIds);
+    .in('order_id', ids));
 
   // Every payout amount is computed from these rows. A partial read would settle
   // farmers for less than they are owed; an empty one settles nobody and says so.
@@ -156,11 +162,12 @@ router.post('/run', async (req, res) => {
     return new Date(Date.UTC(y, startMonth, 1)).toISOString();
   })();
 
-  const { data: fyPayouts, error: fyErr } = await supabase
+  const { data: fyPayouts, error: fyErr } = await inChunks(farmerIds, (ids) => supabase
     .from('payouts')
-    .select('farmer_id, amount')
-    .in('farmer_id', farmerIds)
-    .gte('created_at', fyStartIso);
+    .select('id, farmer_id, amount')
+    .in('farmer_id', ids)
+    .gte('created_at', fyStartIso)
+    .order('id', { ascending: true }));
   if (fyErr) {
     console.error('SETTLEMENT ABORTED — could not read FY payout history for TDS:', fyErr.message);
     return res.status(500).json({ error: 'Could not read settlement history for TDS. No payouts were created.' });

@@ -25,7 +25,7 @@ function healthyCheckout(overrides = {}) {
       farmer_price: 2000, qty_available: 36, listed: true, confirmed: true,
       bulk_qty: null, bulk_disc_pct: null,
     }] },
-    'farmer_listings:update': { data: [] },
+    'farmer_listings:update': { data: [{ id: 'listing-1' }] },
     'products:select': { data: [{
       id: PRODUCT_ID, code: 'TOM', name: 'Tomato', unit: 'kg',
       platform_fee_pct: 5, available: true, exotic: false,
@@ -164,38 +164,42 @@ describe('POST /orders', () => {
   // Before 466bbad, the stock read's error was discarded, `listing` came back
   // null, the `if (listing)` guard skipped the decrement — and the route still
   // answered 201. Stock never dropped and the next customer bought the same goods.
-  test('OVERSELL: a failed stock read must not pass silently', async () => {
+  test('OVERSELL: a failed stock read refuses the order', async () => {
+    let reads = 0;
     const supa = healthyCheckout();
-    // The pricing read succeeds; the later stock read (step 7) is the one that fails.
-    let call = 0;
     supa.on('farmer_listings', 'select', () => {
-      call += 1;
-      return call === 1
-        ? { data: [{ farmer_price: 2000, qty_available: 36, listed: true, confirmed: true, bulk_qty: null, bulk_disc_pct: null }] }
-        : { error: { message: 'connection reset' } };
+      reads += 1;
+      return reads === 1
+        ? { data: [{ farmer_price: 2000, qty_available: 36, listed: true, confirmed: true }] }
+        : { error: { message: 'timeout' } };
     });
     app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
 
     const res = await app.post('/', CART);
 
-    // The order IS placed — it is committed by then and cannot be unwound.
-    assert.equal(res.status, 201);
-    // But the failure must be LOUD, not invisible. This is the assertion that
-    // fails against the old code.
-    assert.ok(
-      mute.lines.some((l) => l.includes('OVERSELL RISK')),
-      'a failed stock read left no trace — this is exactly the silent oversell',
-    );
+    assert.equal(res.status, 500);
+    assert.equal(supa.callsTo('orders', 'insert').length, 0, 'no order without reserved stock');
   });
 
-  test('OVERSELL: a failed stock WRITE must not pass silently either', async () => {
+  test('OVERSELL: a failed stock WRITE refuses the order', async () => {
     const supa = healthyCheckout({ 'farmer_listings|update': { error: { message: 'deadlock detected' } } });
     app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
 
     const res = await app.post('/', CART);
 
-    assert.equal(res.status, 201);
-    assert.ok(mute.lines.some((l) => l.includes('OVERSELL RISK')), 'a failed stock write left no trace');
+    assert.equal(res.status, 500);
+    assert.equal(supa.callsTo('orders', 'insert').length, 0, 'no order without reserved stock');
+  });
+
+  test('OVERSELL: losing the race for the last stock is a clear refusal, not an order', async () => {
+    const supa = healthyCheckout({ 'farmer_listings|update': { data: [] } }); // the write matched no row
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+
+    const res = await app.post('/', CART);
+
+    assert.equal(res.status, 409);
+    assert.match(res.body.error, /sold out/);
+    assert.equal(supa.callsTo('orders', 'insert').length, 0);
   });
 
   test('a failed listing lookup is a 500, not "product not found"', async () => {
@@ -245,6 +249,16 @@ describe('POST /orders', () => {
     await app.post('/', CART);
     // If the decrement were not awaited, this would be empty by the time we got here.
     assert.equal(supa.callsTo('farmer_listings', 'update').length, 1);
+  });
+
+  test('a failed order insert gives the reserved stock back', async () => {
+    const supa = healthyCheckout({ 'orders|insert': { error: { message: 'boom' } } });
+    app = await mountRoute('orders', { supabase: supa, user: CONSUMER });
+    const res = await app.post('/', CART);
+
+    assert.equal(res.status, 500);
+    const updates = supa.callsTo('farmer_listings', 'update').map((c) => c.payload.qty_available);
+    assert.deepEqual(updates, [34, 36], 'taken, then returned');
   });
 });
 

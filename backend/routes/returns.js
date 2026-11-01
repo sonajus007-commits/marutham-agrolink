@@ -4,6 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { requirePermission, can } = require('../middleware/permissions');
 const { validateBody, z } = require('../middleware/validate');
 const { generateReturnCode } = require('../utils/codeGen');
+const { orderInScope, regionDistricts, managedHubIds } = require('../utils/scope');
 const {
   RETURN_WINDOW_HOURS,
   isWithinReturnWindow,
@@ -27,6 +28,18 @@ function decidersOnly(req, res, next) {
 const decideSchema = z.object({
   decision: z.enum(['accepted', 'rejected'], { message: 'decision must be "accepted" or "rejected".' }),
 });
+
+// A return belongs to its order's area. Answers the refusal itself; false means stop.
+async function returnInScope(req, res, ret) {
+  try {
+    if (!ret.order || (await orderInScope(supabase, req.user, ret.order))) return true;
+    res.status(403).json({ error: 'This return is outside your area.' });
+  } catch (e) {
+    console.error('Return scope check failed:', e.message);
+    res.status(500).json({ error: 'Could not verify your access to this return.' });
+  }
+  return false;
+}
 
 // ── POST /orders/:id/return  (consumer, within return window) ─────────────────
 // Body: { full_return?, lines: [{ order_item_id, qty?, reason }], photos?: [url] }
@@ -60,6 +73,11 @@ router.post('/:id/return', async (req, res) => {
   }
   if (order.cancelled) {
     return res.status(400).json({ error: 'Order is cancelled.' });
+  }
+  // A split order has no lines of its own: each seller's parcel is delivered, and
+  // returned, separately. The app raises the return against the parcel.
+  if (order.route === 'split') {
+    return res.status(400).json({ error: 'Return the items from each seller’s parcel in this order.' });
   }
 
   // Check return window
@@ -169,8 +187,18 @@ router.post('/:id/return', async (req, res) => {
 
 // ── GET /returns  (VCO/admin scoped) ─────────────────────────────────────────
 router.get('/', requirePermission('returns_refunds', 'view'), async (req, res) => {
-  const scoped = req.user.admin_role === 'VCO'
-    || ['District Manager', 'Hub Incharge'].includes(req.user.admin_role);
+  const role = req.user.admin_role;
+  let region = null;
+  let managed = [];
+  try {
+    region = await regionDistricts(supabase, req.user);
+    if (role === 'Hub Manager') managed = await managedHubIds(supabase, req.user);
+  } catch (e) {
+    console.error('GET /returns scope failed:', e.message);
+    return res.status(500).json({ error: 'Could not fetch returns.' });
+  }
+  const scoped = role === 'VCO' || !!region
+    || ['District Manager', 'Hub Incharge', 'Hub Manager'].includes(role);
 
   // Scoped roles filter on a joined order column. That filter only EXCLUDES
   // non-matching returns with an INNER join — a plain embed nulls the order but
@@ -178,7 +206,7 @@ router.get('/', requirePermission('returns_refunds', 'view'), async (req, res) =
   // order details blanked). Head Office / State / Regional are unscoped, so a
   // plain embed is fine and still surfaces a return whose order is missing.
   const orderEmbed = scoped
-    ? 'order:orders!inner ( id, code, consumer_name, village, district )'
+    ? 'order:orders!inner ( id, code, consumer_name, village, district, pickup_hub_id )'
     : 'order:orders ( id, code, consumer_name, village, district )';
 
   let query = supabase
@@ -192,10 +220,14 @@ router.get('/', requirePermission('returns_refunds', 'view'), async (req, res) =
   // VCO sees only returns from their village
   if (req.user.admin_role === 'VCO') {
     query = query.eq('order.village', req.user.village_town || req.user.vco_city);
-  } else if (['District Manager', 'Hub Incharge'].includes(req.user.admin_role)) {
+  } else if (role === 'Hub Manager' && managed.length) {
+    query = query.in('order.pickup_hub_id', managed);
+  } else if (['District Manager', 'Hub Incharge', 'Hub Manager'].includes(role)) {
     query = query.eq('order.district', req.user.district_assign || req.user.district);
+  } else if (region) {
+    query = query.in('order.district', region);
   }
-  // Head Office / State / Regional → all
+  // Head Office and other company-wide roles → all
 
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: 'Could not fetch returns.' });
@@ -209,7 +241,7 @@ router.patch('/:id/decide', decidersOnly, validateBody(decideSchema), async (req
 
   const { data: ret, error: retErr } = await supabase
     .from('returns')
-    .select('id, decision')
+    .select('id, decision, order:orders(*)')
     .eq('id', req.params.id)
     .maybeSingle();
 
@@ -219,6 +251,7 @@ router.patch('/:id/decide', decidersOnly, validateBody(decideSchema), async (req
   }
   if (!ret) return res.status(404).json({ error: 'Return not found.' });
   if (ret.decision) return res.status(400).json({ error: `Return has already been ${ret.decision}.` });
+  if (!(await returnInScope(req, res, ret))) return;
 
   const { data: updated, error } = await supabase
     .from('returns')
@@ -247,7 +280,7 @@ router.patch('/:id/collect', async (req, res) => {
   // a return they are looking at.
   const { data: ret, error: retErr } = await supabase
     .from('returns')
-    .select('*, order:orders(id, consumer_id, pay_method)')
+    .select('*, order:orders(*)')
     .eq('id', req.params.id)
     .maybeSingle();
 
@@ -256,6 +289,7 @@ router.patch('/:id/collect', async (req, res) => {
     return res.status(500).json({ error: 'Could not load that return. Please try again.' });
   }
   if (!ret) return res.status(404).json({ error: 'Return not found.' });
+  if (!(await returnInScope(req, res, ret))) return;
   if (ret.decision !== 'accepted') {
     return res.status(400).json({ error: 'Return must be accepted before marking as collected.' });
   }

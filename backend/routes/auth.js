@@ -12,6 +12,7 @@ const {
 } = require('../middleware/rateLimit');
 const { distCode, stateCode } = require('../utils/codeGen');
 const { geocodeAddress, geocodingEnabled } = require('../utils/geocode');
+const crypto = require('crypto');
 const notify = require('../utils/notify');
 
 const router = express.Router();
@@ -491,8 +492,33 @@ router.post('/login', loginLimiter, async (req, res) => {
 });
 
 // ── POST /auth/send-otp ───────────────────────────────────────────────────────
-// Sandbox: OTP is logged to console and returned in response (not in production).
-const otpStore = new Map(); // phone → { otp, expiresAt }
+// Sends the code by SMS when MSG91 is set up. Outside production with no SMS, the code
+// is logged and returned so development works. In production with no SMS the route says
+// so, because telling someone a code is on its way when none is coming strands them.
+const otpStore = new Map(); // phone → { otp, expiresAt, attempts }
+const OTP_MAX_ATTEMPTS = 5;
+
+// One check for sign-in and reset. Wrong guesses are counted against the code itself,
+// so they stop at OTP_MAX_ATTEMPTS whichever IP they come from, and a code that has
+// been guessed at too often is gone. A correct code is single-use.
+function consumeOtp(phone, otp) {
+  const record = otpStore.get(phone);
+  if (!record) return { error: 'No OTP was sent to this number. Request one first.' };
+  if (Date.now() > record.expiresAt) {
+    otpStore.delete(phone);
+    return { error: 'OTP has expired. Request a new one.' };
+  }
+  if (record.otp !== String(otp)) {
+    record.attempts = (record.attempts || 0) + 1;
+    if (record.attempts >= OTP_MAX_ATTEMPTS) {
+      otpStore.delete(phone);
+      return { error: 'Too many wrong attempts. Request a new OTP.', wrong: true };
+    }
+    return { error: 'Incorrect OTP.', wrong: true };
+  }
+  otpStore.delete(phone);
+  return { ok: true };
+}
 
 router.post('/send-otp', otpLimiter, async (req, res) => {
   const { phone } = req.body;
@@ -514,35 +540,35 @@ router.post('/send-otp', otpLimiter, async (req, res) => {
   if (user.deleted_at) return res.status(404).json({ error: 'No account found with this phone number.' });
   if (user.status === 'blocked') return res.status(403).json({ error: 'Account is blocked.' });
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore.set(phone, { otp, expiresAt: Date.now() + 10 * 60 * 1000 }); // 10-minute expiry
+  const otp = String(crypto.randomInt(100000, 1000000));
+  const delivered = await notify.sendOtpSms(phone, otp);
+  const sandbox = process.env.NODE_ENV !== 'production';
 
-  console.log(`[SANDBOX OTP] phone=${phone} otp=${otp}`);
+  if (!delivered && !sandbox) {
+    return res.status(503).json({
+      error: 'We cannot send SMS codes right now. Sign in with your password, or ask your manager or support to reset it.',
+    });
+  }
 
-  // In production: replace the log above with an SMS provider call (e.g. Twilio, MSG91).
+  otpStore.set(phone, { otp, expiresAt: Date.now() + 10 * 60 * 1000, attempts: 0 }); // 10-minute expiry
+  if (!delivered) console.log(`[SANDBOX OTP] phone=${phone} otp=${otp}`);
+
   res.json({
     message: 'OTP sent.',
-    ...(process.env.NODE_ENV !== 'production' && { otp }), // expose OTP in sandbox only
+    ...(!delivered && sandbox && { otp }), // the code is only ever returned in sandbox
   });
 });
 
 // ── POST /auth/verify-otp ─────────────────────────────────────────────────────
-router.post('/verify-otp', async (req, res) => {
+router.post('/verify-otp', resetLimiter, async (req, res) => {
   const { phone, otp } = req.body;
   if (!phone || !otp) return res.status(400).json({ error: 'phone and otp are required.' });
 
-  const record = otpStore.get(phone);
-  if (!record) return res.status(400).json({ error: 'No OTP was sent to this number. Call /auth/send-otp first.' });
-  if (Date.now() > record.expiresAt) {
-    otpStore.delete(phone);
-    return res.status(400).json({ error: 'OTP has expired. Request a new one.' });
+  const check = consumeOtp(phone, otp);
+  if (check.error) {
+    if (check.wrong) await logLogin(req, { login_id: phone, method: 'otp', outcome: 'otp_invalid' });
+    return res.status(400).json({ error: check.error });
   }
-  if (record.otp !== otp) {
-    await logLogin(req, { login_id: phone, method: 'otp', outcome: 'otp_invalid' });
-    return res.status(400).json({ error: 'Incorrect OTP.' });
-  }
-
-  otpStore.delete(phone);
 
   // maybeSingle, not single: `.single()` raises PGRST116 when it matches no rows,
   // so "account not found" and "the database is broken" arrive as the same error.
@@ -635,15 +661,8 @@ router.post('/reset-password', resetLimiter, async (req, res) => {
     return res.status(400).json({ error: 'Password must be at least 6 characters.' });
   }
 
-  const record = otpStore.get(phone);
-  if (!record) return res.status(400).json({ error: 'No OTP was sent to this number. Request one first.' });
-  if (Date.now() > record.expiresAt) {
-    otpStore.delete(phone);
-    return res.status(400).json({ error: 'OTP has expired. Request a new one.' });
-  }
-  if (record.otp !== otp) return res.status(400).json({ error: 'Incorrect OTP.' });
-
-  otpStore.delete(phone);
+  const check = consumeOtp(phone, otp);
+  if (check.error) return res.status(400).json({ error: check.error });
 
   const password_hash = await bcrypt.hash(new_password, 12);
   // The deleted_at filter belongs on the WRITE, not on a lookup above it. An OTP issued
@@ -679,15 +698,83 @@ router.post('/reset-password', resetLimiter, async (req, res) => {
   res.json({ message: 'Password reset successfully. You can now login.' });
 });
 
+// ── POST /auth/set-password ──────────────────────────────────────────────────
+// Body: { phone, current_password, new_password }. For someone who KNOWS their password
+// but cannot sign in because the password policy stopped them: a temporary password from
+// an admin, a 90-day expiry, or an inactivity lock. Proving the current password is the
+// same proof login asks for, so this needs no SMS. Without it, every new staffer and
+// every 90-day expiry depends on an OTP arriving. It refuses everyone else, so it can
+// never be used to get past a block or a pending approval.
+router.post('/set-password', loginLimiter, async (req, res) => {
+  const { phone, current_password, new_password } = req.body;
+  if (!phone || !current_password || !new_password) {
+    return res.status(400).json({ error: 'phone, current_password and new_password are required.' });
+  }
+  if (new_password.length < 8) {
+    return res.status(400).json({ error: 'The new password must be at least 8 characters.' });
+  }
+  if (new_password === current_password) {
+    return res.status(400).json({ error: 'Choose a password different from your current one.' });
+  }
+  if (!isValidIdentifier(phone)) {
+    return res.status(401).json({ error: 'Invalid phone number or password.' });
+  }
+
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .or(`phone.eq.${phone},login_id.eq.${phone},emp_id.eq.${phone}`)
+    .maybeSingle();
+  if (error || !user) return res.status(401).json({ error: 'Invalid phone number or password.' });
+
+  const passwordOk = await bcrypt.compare(current_password, user.password_hash);
+  if (!passwordOk) return res.status(401).json({ error: 'Invalid phone number or password.' });
+
+  const access = evaluateAccess(user);
+  if (access.ok) return res.status(409).json({ error: 'Your password does not need changing. Sign in as usual.' });
+  if (!access.body.password_action) return res.status(access.code).json(access.body);
+
+  const nowIso = new Date().toISOString();
+  const password_hash = await bcrypt.hash(new_password, 12);
+  const { error: upErr } = await supabase
+    .from('users')
+    .update({
+      password_hash,
+      password_changed_at: nowIso,
+      must_change_password: false,
+      login_locked_at: null,
+      login_lock_reason: null,
+      last_login_at: nowIso,
+      updated_at: nowIso,
+    })
+    .eq('id', user.id);
+  if (upErr) return res.status(500).json({ error: 'Could not update your password. Please try again.' });
+
+  res.json({ message: 'Password updated. You can now sign in.' });
+});
+
 // ── POST /auth/create-staff ───────────────────────────────────────────────────
 // Admin creates a VCO / Delivery Agent / District Manager / Hub Incharge / RM / SH account
 const MGMT_ROLES = ['Board of Director','CEO','Managing Director','CFO','CTO',
   'Technical Admin','HR Admin','HR Manager','Zonal Manager'];
+// Head-office specialists: every one has a designation that maps to it, so leaving
+// them out here refused their login at the last step.
+const SPECIALIST_ROLES = ['Finance Manager','Finance Executive','Support Executive','Support Agent','Category Manager'];
+const FIELD_LOGIN_ROLES = ['VCO','Delivery Agent','Hub Incharge','Hub Manager','District Manager'];
+const OWNER_LEVEL_ROLES = ['Head Office','Board of Director','CEO','Managing Director','CFO'];
+const HR_CREATABLE = [
+  ...FIELD_LOGIN_ROLES, 'Regional Manager', 'State Head', ...SPECIALIST_ROLES,
+  ...MGMT_ROLES.filter((r) => !OWNER_LEVEL_ROLES.includes(r)),
+];
 const CREATABLE_BY = {
-  'Head Office':      ['VCO','Delivery Agent','District Manager','Hub Incharge','Regional Manager','State Head','Head Office', ...MGMT_ROLES],
-  'State Head':       ['VCO','Delivery Agent','District Manager','Hub Incharge','Regional Manager'],
-  'Regional Manager': ['VCO','Delivery Agent','District Manager','Hub Incharge'],
-  'District Manager': ['VCO','Delivery Agent'],
+  'Head Office':      [...FIELD_LOGIN_ROLES, 'Regional Manager','State Head','Head Office', ...SPECIALIST_ROLES, ...MGMT_ROLES],
+  // HR owns the employee record, so it provisions the login too, except the accounts
+  // above it.
+  'HR Admin':         HR_CREATABLE,
+  'HR Manager':       HR_CREATABLE,
+  'State Head':       [...FIELD_LOGIN_ROLES, 'Regional Manager'],
+  'Regional Manager': FIELD_LOGIN_ROLES,
+  'District Manager': ['VCO','Delivery Agent','Hub Manager','Hub Incharge'],
 };
 
 router.post('/create-staff', requireAuth, async (req, res) => {
@@ -742,7 +829,11 @@ router.post('/create-staff', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'village_town is required for VCO and Delivery Agent.' });
   }
 
-  const allowed = CREATABLE_BY[req.user.admin_role] || [];
+  // The HR trust flag carries HR's authority for someone with another title.
+  const allowed = [
+    ...(CREATABLE_BY[req.user.admin_role] || []),
+    ...(req.user.is_hr_admin ? HR_CREATABLE : []),
+  ];
   if (!allowed.includes(admin_role)) {
     return res.status(403).json({ error: `Your role (${req.user.admin_role}) cannot create ${admin_role} accounts.` });
   }
@@ -854,15 +945,20 @@ router.patch('/me', requireAuth, async (req, res) => {
     'agent_vehicle',                                   // agent vehicle
     'service_villages',                                // Delivery Agent: villages they cover (text[])
     'service_areas',                                   // Delivery Agent: coverage grouped by taluk (JSONB)
-    'hub_id',                                          // Delivery Agent: the taluk hub responsible for them
     'delivery_addresses',                              // consumer address book (JSONB array)
     'farm_lat', 'farm_lng',                            // seller farm coordinates (best-effort GPS)
     'agent_lat', 'agent_lng',                          // Delivery Agent live coordinates (set with "ready")
     'shop_open_hour', 'shop_close_hour',               // Retailer: daily trading window (IST hours)
   ];
 
+  // For staff, these fields decide which orders and people they can reach, so they
+  // are set by admin or HR. Letting staff edit them would let anyone widen their own
+  // scope. Everyone else's address remains their own to edit.
+  const STAFF_MANAGED = new Set(['district', 'state', 'taluk', 'village_town', 'city']);
+
   const updates = {};
   for (const key of ALLOWED) {
+    if (req.user.role === 'admin' && STAFF_MANAGED.has(key)) continue;
     if (req.body[key] !== undefined) updates[key] = req.body[key];
   }
 
@@ -907,18 +1003,6 @@ router.patch('/me', requireAuth, async (req, res) => {
       areas.push({ taluk, villages });
     }
     updates.service_areas = areas;
-  }
-
-  // Delivery Agent hub — must be a real hub (an invalid id would be a Postgres FK
-  // 500, not a clean 400). null clears it.
-  if (updates.hub_id !== undefined && updates.hub_id !== null) {
-    const { data: hub, error: hubErr } = await supabase
-      .from('hubs').select('id').eq('id', updates.hub_id).maybeSingle();
-    if (hubErr) {
-      console.error('hub_id lookup failed:', hubErr.message);
-      return res.status(500).json({ error: 'Could not verify the selected hub.' });
-    }
-    if (!hub) return res.status(400).json({ error: 'That hub does not exist.' });
   }
 
   // Daily "ready for delivery" flag. `available` is a VIRTUAL boolean, never a

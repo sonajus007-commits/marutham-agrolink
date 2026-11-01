@@ -257,7 +257,7 @@ describe('a removed employee cannot sign in', () => {
       assert.equal(sent.status, 200, 'the OTP was issued while they were still live');
 
       const res = await app.post('/reset-password', {
-        phone: '9100000006', otp: '100000', new_password: 'brandnew1',
+        phone: '9100000006', otp: sent.body.otp, new_password: 'brandnew1',
       });
 
       assert.equal(res.status, 404, 'a write that matched no row is not a success');
@@ -502,9 +502,9 @@ describe('POST /auth/reset-password — unlocks the lifecycle', () => {
         'users:update': { data: [{ id: 'u1' }] },
       });
       app = await mountRoute('auth', { supabase: supa, user: null });
-      await app.post('/send-otp', { phone: '9100000099' });
+      const sent = await app.post('/send-otp', { phone: '9100000099' });
       const res = await app.post('/reset-password', {
-        phone: '9100000099', otp: '100000', new_password: 'brandnew1',
+        phone: '9100000099', otp: sent.body.otp, new_password: 'brandnew1',
       });
 
       assert.equal(res.status, 200, res.text);

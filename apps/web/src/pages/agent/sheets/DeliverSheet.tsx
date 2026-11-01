@@ -39,10 +39,9 @@ export function DeliverSheet({
   const [data, setData] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // The optional delivery OTP the customer reads out. Blank is fine — the delivery
-  // still goes through (recorded unverified); only a wrong code is refused server-side.
+  // The code the customer reads out, or a proof photo instead: every delivery proves
+  // itself one way or the other (owner decision DEC-08). The server enforces this.
   const [otp, setOtp] = useState('');
-  // Optional proof-of-delivery photo (migration 060). Never blocks the delivery.
   const [proofPhoto, setProofPhoto] = useState<string | null>(null);
   // The "couldn't deliver" branch — a reason picker that records a failed attempt
   // without advancing the order. Closed by default; opening it reveals the reasons.
@@ -174,6 +173,7 @@ export function DeliverSheet({
 
   const o = data?.order;
   const isCod = o?.pay_method === 'Cash on Delivery';
+  const hasProof = otp.trim().length === 4 || !!proofPhoto;
   const attempts = o?.delivery_attempts || 0;
   // i18n label for each canonical reason code.
   const reasonLabel = (r: DeliveryFailureReason) =>
@@ -271,7 +271,7 @@ export function DeliverSheet({
             <p style={{ margin: '2px 0 8px', fontSize: 13, color: 'var(--muted)' }}>
               {t(
                 'agent.deliver.otpHelp',
-                'Ask the customer for their delivery code. Optional — you can still deliver without it.',
+                'Ask the customer for their delivery code. If they cannot give it, take a proof photo below.',
               )}
             </p>
             <input
@@ -297,7 +297,10 @@ export function DeliverSheet({
           <div className="a-card">
             <h3>📷 {t('agent.deliver.proofTitle', 'Proof of delivery')}</h3>
             <p style={{ margin: '2px 0 10px', fontSize: 13, color: 'var(--muted)' }}>
-              {t('agent.deliver.proofHelp', 'Optional — a photo of the handed-over parcel.')}
+              {t(
+                'agent.deliver.proofHelp',
+                'A photo of the handed-over parcel. Needed when there is no delivery code.',
+              )}
             </p>
             <PhotoCapture
               value={proofPhoto}
@@ -395,7 +398,7 @@ export function DeliverSheet({
                   className="confirm-btn"
                   style={{ marginTop: 0, boxShadow: 'none' }}
                   onClick={confirm}
-                  disabled={busy}
+                  disabled={busy || !hasProof}
                 >
                   {busy
                     ? t('agent.deliver.busy', 'Confirming…')
@@ -403,6 +406,14 @@ export function DeliverSheet({
                       ? `✅ ${t('agent.deliver.ctaCod', 'Confirm Cash Collected & Delivered')}`
                       : `✅ ${t('agent.deliver.cta', 'Confirm Delivered')}`}
                 </button>
+                {!hasProof ? (
+                  <p
+                    role="status"
+                    style={{ margin: 0, fontSize: 12, color: 'var(--muted)', textAlign: 'center' }}
+                  >
+                    {t('agent.deliver.needProof', 'Enter the delivery code or add a proof photo.')}
+                  </p>
+                ) : null}
                 <button
                   type="button"
                   className="fail-toggle"

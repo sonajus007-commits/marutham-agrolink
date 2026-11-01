@@ -40,6 +40,28 @@ async function sendSMS(phone, message) {
   await fetch(`https://control.msg91.com/api/sendhttp.php?authkey=${key}&mobiles=91${phone}&message=${encodeURIComponent(message)}&sender=${sender}&route=4&country=91`);
 }
 
+// Sends a login OTP through MSG91's OTP API. Indian SMS rules need a DLT-approved
+// template, so both the key and MSG91_OTP_TEMPLATE_ID are required. Returns false when
+// SMS is not set up or the provider refused, so the caller can say so instead of
+// telling the person a code is on its way.
+async function sendOtpSms(phone, otp) {
+  const key = process.env.MSG91_AUTH_KEY;
+  const template = process.env.MSG91_OTP_TEMPLATE_ID;
+  if (!phone || !key || !template) return false;
+  const qs = new URLSearchParams({ template_id: template, mobile: `91${phone}`, otp });
+  try {
+    const res = await fetch(`https://control.msg91.com/api/v5/otp?${qs}`, {
+      method: 'POST',
+      headers: { authkey: key, 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) console.error(`[SMS] OTP send refused: HTTP ${res.status}`);
+    return res.ok;
+  } catch (e) {
+    console.error('[SMS] OTP send failed:', e.message);
+    return false;
+  }
+}
+
 function paymentDetailsBlock() {
   return `
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:16px 0">
@@ -246,9 +268,9 @@ async function notifySubscriptionExpiring(user, daysLeft) {
     await sendEmail(user.email, subject, `
       <p>Dear ${name},</p>
       <p>This is a ${daysLeft <= 1 ? '<strong>final reminder</strong>' : 'reminder'} that your Marutham Agrolink subscription will expire on <strong>${expDate}</strong> — in <strong>${daysLeft} day(s)</strong>.</p>
-      <p>Please contact the admin team to renew your subscription before the expiry date to avoid account lockout.</p>
+      <p>Sign in and open Earnings to renew before the expiry date.</p>
       <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:14px;margin:12px 0">
-        <strong>⚠️ Important:</strong> If your subscription expires, your account will be automatically locked and you will not be able to log in until it is renewed.
+        <strong>⚠️ Important:</strong> If your subscription expires, your products go off sale until you renew. You can still sign in, renew and finish open orders.
       </div>
       <p>Login ID: <strong>${user.login_id}</strong></p>
       <p>Regards,<br><strong>Marutham Agrolink Team</strong></p>
@@ -258,12 +280,12 @@ async function notifySubscriptionExpiring(user, daysLeft) {
 
 async function notifySubscriptionExpired(user) {
   const name    = [user.fname, user.lname].filter(Boolean).join(' ');
-  const subject = `Account Locked — Subscription Expired — ${user.login_id}`;
+  const subject = `Subscription Expired — ${user.login_id}`;
   if (user.email) {
     await sendEmail(user.email, subject, `
       <p>Dear ${name},</p>
-      <p>Your Marutham Agrolink subscription has <strong style="color:#dc2626">expired</strong> and your account has been locked.</p>
-      <p>Please contact the admin team immediately to renew your subscription and restore access.</p>
+      <p>Your Marutham Agrolink subscription has <strong style="color:#dc2626">expired</strong>, so your products are off sale.</p>
+      <p>Sign in to renew and start selling again. You can still finish any open orders.</p>
       <p>Login ID: <strong>${user.login_id}</strong></p>
       <p>Regards,<br><strong>Marutham Agrolink Team</strong></p>
     `);
@@ -380,6 +402,7 @@ async function notifyProductRejected(farmer, product, reason) {
 }
 
 module.exports = {
+  sendOtpSms,
   notifyRegistrationReceived,
   notifyApprovalWithPayment,
   notifyAccountActivated,

@@ -49,7 +49,7 @@ function twoSellerCheckout(overrides = {}) {
       farmer_price: 2000, qty_available: 36, listed: true, confirmed: true,
       bulk_qty: null, bulk_disc_pct: null,
     }] },
-    'farmer_listings:update': { data: [] },
+    'farmer_listings:update': { data: [{ id: 'listing-1' }] },
     'products:select': (ctx) => ({ data: [{
       id: filterValue(ctx, 'id') || P1, code: 'TOM', name: 'Tomato', unit: 'kg',
       platform_fee_pct: 5, available: true, exotic: false,

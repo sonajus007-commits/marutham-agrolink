@@ -14,6 +14,7 @@ import {
   addressLabelKey,
   buildPipeline,
   canCancelOrder,
+  canConfirmReceipt,
   canRequestReturn,
   deriveOrderCharges,
   fmtDate,
@@ -126,6 +127,19 @@ export function OrderDetailSheet({
     onClose();
   }, [onOrderChanged, onClose]);
 
+  // Keep the sheet open and re-read the order: confirming a parcel gives it a delivery
+  // date, which is what its return button needs. The list behind refreshes too.
+  const reloadDetail = useCallback(() => {
+    onOrderChanged();
+    if (!orderId) return;
+    api
+      .getOrder(orderId)
+      .then(setData)
+      .catch(() => {
+        /* the sheet keeps what it has; reopening it reads again */
+      });
+  }, [onOrderChanged, orderId]);
+
   return (
     <Sheet
       open={open}
@@ -144,7 +158,7 @@ export function OrderDetailSheet({
           data={data}
           track={track}
           onChanged={handleChanged}
-          onSilentRefresh={onOrderChanged}
+          onSilentRefresh={reloadDetail}
           onClose={onClose}
           onGoToCart={onGoToCart}
         />
@@ -231,7 +245,10 @@ function OrderDetailBody({
 
   // Confirm receipt is the ONE status action a customer owns: Out for Delivery →
   // Delivered. The server re-checks role, ownership and stage, so this is just UX.
-  const canConfirm = !isOrderCancelled(o) && effectiveStatus === 'Out for Delivery';
+  // A split order is confirmed parcel by parcel, each in its PartCard.
+  const canConfirm = !isSplit && canConfirmReceipt({ ...o, status: effectiveStatus });
+  // The code is for the agent at the door, so COD orders show it too.
+  const showOtp = !!otp && !isSplit && effectiveStatus === 'Out for Delivery';
   // The English value drives statusColor; only the spoken form is translated.
   const status = displayStatus(o, effectiveStatus);
   const hoursLeft = canRequestReturn(o) ? Math.ceil(returnWindowHoursLeft(o)) : 0;
@@ -399,33 +416,7 @@ function OrderDetailBody({
         ) : null}
       </div>
 
-      {otp && canConfirm ? (
-        <div
-          className="ord-card"
-          style={{ textAlign: 'center', marginBottom: 16 }}
-          role="group"
-          aria-label={t('consumer.order.otpTitle', 'Delivery code')}
-        >
-          <h3>🔐 {t('consumer.order.otpTitle', 'Delivery code')}</h3>
-          <p style={{ margin: '4px 0 10px', fontSize: 13, color: 'var(--muted)' }}>
-            {t(
-              'consumer.order.otpHelp',
-              'Share this code with the delivery agent to confirm your order.',
-            )}
-          </p>
-          <div
-            style={{
-              fontSize: 34,
-              fontWeight: 800,
-              letterSpacing: '0.35em',
-              fontVariantNumeric: 'tabular-nums',
-              color: 'var(--forest)',
-            }}
-          >
-            {otp}
-          </div>
-        </div>
-      ) : null}
+      {showOtp ? <DeliveryCode code={otp as string} /> : null}
 
       {canConfirm ? (
         <Button
@@ -441,35 +432,7 @@ function OrderDetailBody({
         </Button>
       ) : null}
 
-      {qr_svg ? (
-        <div className="ord-card" style={{ textAlign: 'center' }}>
-          <h3>📷 {t('consumer.order.qr', 'Order QR')}</h3>
-          <div
-            style={{
-              display: 'inline-block',
-              background: 'var(--surface)',
-              padding: 8,
-              borderRadius: 12,
-              lineHeight: 0,
-            }}
-            dangerouslySetInnerHTML={{ __html: qr_svg }}
-          />
-          <div
-            style={{
-              fontFamily: 'monospace',
-              fontSize: 13,
-              fontWeight: 800,
-              color: 'var(--forest)',
-              marginTop: 6,
-            }}
-          >
-            {o.code || ''}
-          </div>
-          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)', marginTop: 2 }}>
-            {t('consumer.order.qrHint', 'Show this to your delivery agent')}
-          </div>
-        </div>
-      ) : null}
+      {qr_svg && !isSplit ? <ParcelQr svg={qr_svg} code={o.code || ''} /> : null}
 
       <div className="ord-card">
         <h3>📋 {t('consumer.order.info', 'Order Info')}</h3>
@@ -525,6 +488,7 @@ function OrderDetailBody({
               )
             }
             onChanged={onSilentRefresh}
+            otp={otp}
           />
         ))
       ) : (
@@ -616,7 +580,7 @@ function OrderDetailBody({
         </Button>
       ) : null}
 
-      {o.return_id ? (
+      {isSplit ? null : o.return_id ? (
         <div
           className="ord-card"
           style={{ background: 'var(--warning-bg)', borderColor: 'var(--warning-bg)' }}
@@ -693,6 +657,71 @@ function OrderDetailBody({
  * They are already off the bill, so they are shown struck through and labelled —
  * the customer should see what is NOT coming, not just a shorter list.
  */
+/** The code the customer reads to the agent. One code covers every parcel of an order. */
+function DeliveryCode({ code }: { code: string }) {
+  const { t } = useTranslation();
+  return (
+    <div
+      className="ord-card"
+      style={{ textAlign: 'center', marginBottom: 16 }}
+      role="group"
+      aria-label={t('consumer.order.otpTitle', 'Delivery code')}
+    >
+      <h3>🔐 {t('consumer.order.otpTitle', 'Delivery code')}</h3>
+      <p style={{ margin: '4px 0 10px', fontSize: 13, color: 'var(--muted)' }}>
+        {t(
+          'consumer.order.otpHelp',
+          'Share this code with the delivery agent to confirm your order.',
+        )}
+      </p>
+      <div
+        style={{
+          fontSize: 34,
+          fontWeight: 800,
+          letterSpacing: '0.35em',
+          fontVariantNumeric: 'tabular-nums',
+          color: 'var(--forest)',
+        }}
+      >
+        {code}
+      </div>
+    </div>
+  );
+}
+
+function ParcelQr({ svg, code }: { svg: string; code: string }) {
+  const { t } = useTranslation();
+  return (
+    <div className="ord-card" style={{ textAlign: 'center' }}>
+      <h3>📷 {t('consumer.order.qr', 'Order QR')}</h3>
+      <div
+        style={{
+          display: 'inline-block',
+          background: 'var(--surface)',
+          padding: 8,
+          borderRadius: 12,
+          lineHeight: 0,
+        }}
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+      <div
+        style={{
+          fontFamily: 'monospace',
+          fontSize: 13,
+          fontWeight: 800,
+          color: 'var(--forest)',
+          marginTop: 6,
+        }}
+      >
+        {code}
+      </div>
+      <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--gray)', marginTop: 2 }}>
+        {t('consumer.order.qrHint', 'Show this to your delivery agent')}
+      </div>
+    </div>
+  );
+}
+
 function DeclinedLines({ rows }: { rows?: DeclinedOrderItem[] }) {
   const { t } = useTranslation();
   if (!rows || rows.length === 0) return null;
@@ -720,15 +749,22 @@ function PartCard({
   items,
   onRated,
   onChanged,
+  otp,
 }: {
   part: OrderPart;
   items: OrderItem[];
   onRated: (itemId: string, stars: number) => void;
-  /** A part was cancelled — the rest of the order carries on, so refresh in place. */
+  /** A part changed — the rest of the order carries on, so refresh in place. */
   onChanged: () => void;
+  /** The order's delivery code, shown while this parcel is at the door. */
+  otp?: string | null;
 }) {
   const { t } = useTranslation();
+  const toast = useToast();
   const [showCancel, setShowCancel] = useState(false);
+  const [showReturn, setShowReturn] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
 
   // Each parcel is its own order with its own agent and route, so it tracks itself:
   // poll this part's /track for the live agent dot and to keep its stepper honest as
@@ -736,8 +772,44 @@ function PartCard({
   // nothing left to track.
   const partTrack = useOrderTrack(part.id, isOrderActive(part));
   const liveStatus = partTrack?.order.status;
-  const partStatus = isOrderCancelled(part) ? 'Cancelled' : String(liveStatus ?? part.status ?? '');
+  const partStatus = isOrderCancelled(part)
+    ? 'Cancelled'
+    : confirmed
+      ? 'Delivered'
+      : String(liveStatus ?? part.status ?? '');
   const partDelivered = partStatus === 'Delivered';
+  const atDoor = partStatus === 'Out for Delivery';
+
+  // The agent delivered it while the sheet was open: read the parcel again so its
+  // delivery date, and with it the return button, appear without reopening.
+  useEffect(() => {
+    if (liveStatus === 'Delivered' && part.status !== 'Delivered') onChanged();
+  }, [liveStatus, part.status, onChanged]);
+
+  const mayConfirm = canConfirmReceipt({ ...part, status: partStatus });
+  const mayReturn = canRequestReturn({ ...part, status: partStatus });
+
+  async function confirmPart() {
+    setConfirming(true);
+    try {
+      await api.confirmReceived(part.id);
+      setConfirmed(true);
+      toast(
+        t('consumer.order.confirmedThanks', 'Delivery confirmed — you can now rate your items.'),
+        'ok',
+      );
+      onChanged();
+    } catch (e) {
+      toast(
+        e instanceof Error
+          ? e.message
+          : t('consumer.order.confirmFailed', 'Could not confirm delivery'),
+        'er',
+      );
+    } finally {
+      setConfirming(false);
+    }
+  }
   // Pill only (never the pipeline): a part the seller partly declined.
   const partLabel = displayStatus(part, partStatus);
 
@@ -796,6 +868,22 @@ function PartCard({
       ))}
       <DeclinedLines rows={part.declined_items} />
 
+      {atDoor && otp ? <DeliveryCode code={otp} /> : null}
+      {atDoor && part.qr_svg ? <ParcelQr svg={part.qr_svg} code={part.code || ''} /> : null}
+      {mayConfirm ? (
+        <Button
+          variant="primary"
+          block
+          onClick={confirmPart}
+          disabled={confirming}
+          style={{ margin: '8px 0' }}
+        >
+          {confirming
+            ? t('consumer.order.confirming', 'Confirming…')
+            : `✅ ${t('consumer.order.confirmReceived', 'Confirm Received')}`}
+        </Button>
+      ) : null}
+
       {/* A cancelled part keeps the figure it was cancelled at — that is what the
           refund was worked out from — but showing it here reads as money still
           owed. Worse, it can include the delivery fee, which moves to a part that
@@ -823,6 +911,44 @@ function PartCard({
           {t('consumer.order.cancelPart', 'Cancel this part')}
         </button>
       ) : null}
+
+      {part.return_id ? (
+        <div className="irow" style={{ marginTop: 8 }}>
+          <span className="ilbl">
+            ↩ {t('consumer.order.returnRequested', 'Return Requested')}
+            {part.return_code ? ` · ${part.return_code}` : ''}
+          </span>
+          <span className="ival">
+            {t(payStatusKey(part.return_status || 'pending'), part.return_status || 'pending')}
+          </span>
+        </div>
+      ) : mayReturn ? (
+        <button
+          className="cons-btn-outline-danger cons-btn-outline-danger--block"
+          style={{ marginTop: 10 }}
+          onClick={() => setShowReturn(true)}
+        >
+          ↩ {t('consumer.return.title', 'Request return / refund')}
+          <span
+            style={{ display: 'block', fontWeight: 400, fontSize: 'var(--fs-2xs)', marginTop: 2 }}
+          >
+            {t('consumer.order.returnWindow', '{{hours}}h left in the return window', {
+              hours: Math.ceil(returnWindowHoursLeft(part)),
+            })}
+          </span>
+        </button>
+      ) : null}
+
+      <ReturnRequestModal
+        order={part}
+        items={items}
+        open={showReturn}
+        onClose={() => setShowReturn(false)}
+        onSubmitted={() => {
+          setShowReturn(false);
+          onChanged();
+        }}
+      />
 
       <CancelOrderModal
         order={part}

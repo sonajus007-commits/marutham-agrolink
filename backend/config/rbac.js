@@ -165,7 +165,9 @@ const MATRIX = {
   user_management:            { bod:'view', adm:'full', th:'view', hr:'manage@employees', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', hmg:'none', vco:'none', da:'none' },
   role_permission_management: { bod:'view', adm:'full', th:'view', hr:'none', sh:'none', zm:'none', rm:'none', dm:'none', hub:'none', hmg:'none', vco:'none', da:'none' },
   farmer_management:          { bod:'view', adm:'full', th:'view', hr:'none', cat:'view', sh:'manage', zm:'manage', rm:'manage', dm:'manage', hub:'manage', hmg:'manage', vco:'createedit', da:'view' },
-  seller_management:          { bod:'view', adm:'full', th:'view', hr:'none', fin:'view', cat:'view', sh:'manage', zm:'manage', rm:'manage', dm:'manage', hub:'manage', hmg:'manage', vco:'createedit', da:'none' },
+  // Editing here is approving a seller's registration, so it stops at District Manager
+  // (owner decision DEC-14). Hub staff and VCOs can read a seller, not admit one.
+  seller_management:          { bod:'view', adm:'full', th:'view', hr:'none', fin:'view', cat:'view', sh:'manage', zm:'manage', rm:'manage', dm:'manage', hub:'view', hmg:'view', vco:'view', da:'none' },
   consumer_management:        { bod:'view', adm:'full', th:'view', hr:'none', sup:'support', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', hmg:'view', vco:'support', da:'none' },
   product_approval:           { bod:'view', adm:'full', th:'none', hr:'none', cat:'full', sh:'approve', zm:'approve', rm:'approve', dm:'approve', hub:'approve', hmg:'approve', vco:'create', da:'none' },
   inventory:                  { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', hmg:'manage', vco:'view', da:'view' },
@@ -174,7 +176,7 @@ const MATRIX = {
   // they edit hubs and assign Hub Managers / Incharges, but cannot create a new hub.
   hub_management:             { bod:'view', adm:'full', th:'none', hr:'none', sh:'manageNoCreate', zm:'manageNoCreate', rm:'manageNoCreate', dm:'manageNoCreate', hub:'view', hmg:'manageNoCreate', vco:'none', da:'none' },
   orders:                     { bod:'view', adm:'full', th:'none', hr:'none', fin:'view', sup:'view', cat:'view', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', hmg:'manage', vco:'create', da:'assigned' },
-  delivery_assignment:        { bod:'view', adm:'full', th:'none', hr:'none', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', hmg:'manage', vco:'none', da:'assigned' },
+  delivery_assignment:        { bod:'view', adm:'full', th:'none', hr:'none', sh:'assign', zm:'assign', rm:'assign', dm:'assign', hub:'manage', hmg:'manage', vco:'none', da:'assigned' },
   delivery_tracking:          { bod:'view', adm:'full', th:'none', hr:'none', sup:'view', sh:'view', zm:'view', rm:'view', dm:'view', hub:'manage', hmg:'manage', vco:'view', da:'update' },
   returns_refunds:            { bod:'view', adm:'full', th:'none', hr:'none', fin:'view', sup:'initiate', sh:'approve', zm:'approve', rm:'approve', dm:'approve', hub:'approve', hmg:'approve', vco:'initiate', da:'update' },
   payments:                   { bod:'view', adm:'full', th:'none', hr:'none', fin:'full', sh:'view', zm:'view', rm:'view', dm:'view', hub:'view', hmg:'view', vco:'view', da:'none' },

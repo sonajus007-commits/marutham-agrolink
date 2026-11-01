@@ -1,5 +1,6 @@
 const express = require('express');
 const supabase = require('../db/supabase');
+const bcrypt = require('bcryptjs');
 const { requirePermission, scopeFor } = require('../middleware/permissions');
 const notify = require('../utils/notify');
 const { validateStaffEmployment } = require('../utils/employeeValidation');
@@ -29,15 +30,19 @@ function scopeQuery(query, user) {
   return query;
 }
 
+// HR manages staff, but cannot take over the accounts above them: changing the phone
+// or password of a Head Office login would hand them that login.
+const PROTECTED_LOGINS = new Set(['Head Office', 'Board of Director', 'CEO', 'Managing Director', 'CFO']);
+
 // HR's user_management scope is 'employees': they may only act on STAFF logins
 // (role = 'admin'), never on consumers/sellers. Full-scope roles (Admin, Board,
 // Technical Head) pass unconditionally. Fail closed if the target can't be read.
 async function withinUserScope(user, targetId) {
   if (scopeFor(user, 'user_management') !== 'employees') return true;
   const { data, error } = await supabase
-    .from('users').select('role').eq('id', targetId).maybeSingle();
+    .from('users').select('role, admin_role').eq('id', targetId).maybeSingle();
   if (error || !data) return false;
-  return data.role === 'admin';
+  return data.role === 'admin' && !PROTECTED_LOGINS.has(data.admin_role);
 }
 
 // ── GET /users ────────────────────────────────────────────────────────────────
@@ -112,6 +117,50 @@ router.patch('/:id/status', requirePermission('user_management', 'edit'), async 
   }
   const result = await changeUserStatus(req.user.id, req.params.id, req.body.status, req.body.reason);
   res.status(result.code).json(result.body);
+});
+
+// ── POST /users/:id/reset-password ────────────────────────────────────────────
+// Body: { temp_password }. The recovery path when someone has forgotten their password
+// and no OTP can reach them. The person must choose their own at next sign-in. The
+// temporary password is never stored or sent by this server: the admin hands it over.
+router.post('/:id/reset-password', requirePermission('user_management', 'edit'), async (req, res) => {
+  const temp = typeof req.body.temp_password === 'string' ? req.body.temp_password : '';
+  if (temp.length < 8) {
+    return res.status(400).json({ error: 'The temporary password must be at least 8 characters.' });
+  }
+  if (req.params.id === req.user.id) {
+    return res.status(400).json({ error: 'Use Change Password for your own account.' });
+  }
+  if (!(await withinUserScope(req.user, req.params.id))) {
+    return res.status(403).json({ error: 'You may only reset staff accounts.' });
+  }
+
+  const nowIso = new Date().toISOString();
+  const password_hash = await bcrypt.hash(temp, 12);
+  const { data, error } = await supabase
+    .from('users')
+    .update({
+      password_hash,
+      must_change_password: true,
+      password_changed_at: nowIso,
+      login_locked_at: null,
+      login_lock_reason: null,
+      updated_at: nowIso,
+    })
+    .eq('id', req.params.id)
+    .is('deleted_at', null)
+    .select('id, status')
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: 'Could not reset the password.' });
+  if (!data) return res.status(404).json({ error: 'User not found.' });
+
+  // reads-ok: best-effort audit row; the reset above is already committed
+  await supabase.from('user_status_history').insert({
+    user_id: req.params.id, old_status: data.status, new_status: data.status,
+    reason: 'Password reset by an administrator', changed_by: req.user.id,
+  }).then(() => {}, () => {});
+
+  res.json({ message: 'Password reset. They must choose a new one at next sign-in.' });
 });
 
 // ── GET /users/:id/status-history ─────────────────────────────────────────────

@@ -2,6 +2,7 @@ const express = require('express');
 const supabase = require('../db/supabase');
 const { requirePermission } = require('../middleware/permissions');
 const { requireAuth } = require('../middleware/auth');
+const { userInGeo, scopeUsersQuery } = require('../utils/scope');
 
 const router = express.Router();
 
@@ -124,10 +125,7 @@ router.get('/', requirePermission('farmer_management','view'), async (req, res) 
       .eq('role', 'farmer')
       .order('fname', { ascending: true });
 
-    const districtRoles = new Set(['District Manager', 'VCO', 'Delivery Agent', 'Hub Incharge']);
-    const regionRoles   = new Set(['Regional Manager']);
-    if (districtRoles.has(u.admin_role)) farmerQuery = farmerQuery.eq('district', u.district);
-    else if (regionRoles.has(u.admin_role)) farmerQuery = farmerQuery.eq('state', u.state);
+    farmerQuery = scopeUsersQuery(farmerQuery, u);
     // State Head / Head Office see all farmers
 
     const { data: farmers, error: ferr } = await farmerQuery;
@@ -224,9 +222,15 @@ router.get('/', requirePermission('farmer_management','view'), async (req, res) 
   }
 });
 
+// A list filter does nothing for a direct :id call, so these check the row too.
+async function guardGeo(req, res, next) {
+  if (await userInGeo(supabase, req.user, req.params.id)) return next();
+  return res.status(403).json({ error: 'This seller is outside your area.' });
+}
+
 // ── GET /farmers/:id/activity ─────────────────────────────────────────────────
 // Revenue line-items, fulfilled orders, and reviews for the stat-detail pane.
-router.get('/:id/activity', requirePermission('farmer_management','view'), async (req, res) => {
+router.get('/:id/activity', requirePermission('farmer_management','view'), guardGeo, async (req, res) => {
   try {
     const id = req.params.id;
 
@@ -279,7 +283,7 @@ router.get('/:id/activity', requirePermission('farmer_management','view'), async
 });
 
 // ── PATCH /farmers/:id/block ──────────────────────────────────────────────────
-router.patch('/:id/block', requirePermission('farmer_management','edit'), async (req, res) => {
+router.patch('/:id/block', requirePermission('farmer_management','edit'), guardGeo, async (req, res) => {
   const { data, error } = await supabase
     .from('users')
     .update({ status: 'blocked', updated_at: new Date().toISOString() })
@@ -292,7 +296,7 @@ router.patch('/:id/block', requirePermission('farmer_management','edit'), async 
 });
 
 // ── PATCH /farmers/:id/unblock ────────────────────────────────────────────────
-router.patch('/:id/unblock', requirePermission('farmer_management','edit'), async (req, res) => {
+router.patch('/:id/unblock', requirePermission('farmer_management','edit'), guardGeo, async (req, res) => {
   const { data, error } = await supabase
     .from('users')
     .update({ status: 'active', updated_at: new Date().toISOString() })

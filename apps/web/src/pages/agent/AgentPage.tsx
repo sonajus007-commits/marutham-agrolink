@@ -365,7 +365,12 @@ function AgentPageInner() {
           className="agent-scanfab"
         />
       ) : null}
-      <ScanSheet open={scanOpen} onClose={() => setScanOpen(false)} onScanned={onScanned} />
+      <ScanSheet
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onScanned={onScanned}
+        onNeedsDeliver={(id) => setSheet({ kind: 'deliver', orderId: id })}
+      />
       <LogVisitSheet open={visitOpen} onClose={() => setVisitOpen(false)} onLogged={field.reload} />
 
       {/* Order-action sheets */}

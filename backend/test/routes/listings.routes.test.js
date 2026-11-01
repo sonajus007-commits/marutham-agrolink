@@ -203,7 +203,7 @@ describe('PATCH /listings/:id — confirming needs today\'s stock (photo optiona
   }
 
   test('a flag-only confirm on a reset listing (no stock) is refused', async () => {
-    const supa = owned({ qty_available: 0, images: [] });
+    const supa = owned({ farmer_price: 2000, qty_available: 0, images: [] });
     app = await mountRoute('listings', { supabase: supa, user: FARMER });
     const res = await app.patch('/listing-1', { confirmed: true });
     assert.equal(res.status, 400);
@@ -214,21 +214,21 @@ describe('PATCH /listings/:id — confirming needs today\'s stock (photo optiona
   // The photo is optional — a farmer cannot always take one. A photo-less offer is
   // ranked last for customers instead (see the ordering test below).
   test('fresh stock without a photo still confirms', async () => {
-    const supa = owned({ qty_available: 0, images: [] });
+    const supa = owned({ farmer_price: 2000, qty_available: 0, images: [] });
     app = await mountRoute('listings', { supabase: supa, user: FARMER });
     const res = await app.patch('/listing-1', { confirmed: true, listed: true, qty_available: 20 });
     assert.equal(res.status, 200);
   });
 
   test('fresh stock with today\'s photo confirms', async () => {
-    const supa = owned({ qty_available: 0, images: ['https://x/today.jpg'] });
+    const supa = owned({ farmer_price: 2000, qty_available: 0, images: ['https://x/today.jpg'] });
     app = await mountRoute('listings', { supabase: supa, user: FARMER });
     const res = await app.patch('/listing-1', { confirmed: true, listed: true, qty_available: 20 });
     assert.equal(res.status, 200);
   });
 
   test('un-confirming is never blocked', async () => {
-    const supa = owned({ qty_available: 0, images: [] });
+    const supa = owned({ farmer_price: 2000, qty_available: 0, images: [] });
     app = await mountRoute('listings', { supabase: supa, user: FARMER });
     const res = await app.patch('/listing-1', { confirmed: false });
     assert.equal(res.status, 200);

@@ -258,6 +258,15 @@ export const api = {
   register(payload: RegisterPayload): Promise<RegisterResponse> {
     return apiFetch<RegisterResponse>('POST', '/auth/register', payload, false);
   },
+  /** Replace a temporary, expired or locked password by proving the current one. Needs
+   *  no SMS, so a new staffer or a 90-day expiry never depends on an OTP arriving. */
+  setPassword(
+    phone: string,
+    current_password: string,
+    new_password: string,
+  ): Promise<{ message: string }> {
+    return apiFetch('POST', '/auth/set-password', { phone, current_password, new_password }, false);
+  },
   /** Send a one-time code to a registered phone (for OTP login or reset). */
   sendOtp(phone: string): Promise<OtpSendResponse> {
     return apiFetch<OtpSendResponse>('POST', '/auth/send-otp', { phone }, false);
@@ -537,10 +546,15 @@ export const api = {
   },
   /** Senior-admin manual override: set an order to ANY status on its route —
    *  forward, backward, or a jump (POST /orders/:id/status). Distinct from a scan
-   *  or /advance, which only step one stage forward. The server gates the role and
-   *  validates the status against the order's route. */
-  setOrderStatus(id: string, status: string): Promise<ScanResponse> {
-    return apiFetch<ScanResponse>('POST', '/orders/' + id + '/status', { status });
+   *  or /advance, which only step one stage forward. The server gates the role,
+   *  requires the reason and validates the status against the order's route. */
+  setOrderStatus(id: string, status: string, reason: string): Promise<ScanResponse> {
+    return apiFetch<ScanResponse>('POST', '/orders/' + id + '/status', { status, reason });
+  },
+  /** Admin recovery: set a temporary password. The person chooses their own at next
+   *  sign-in. */
+  resetUserPassword(id: string, temp_password: string): Promise<{ message: string }> {
+    return apiFetch('POST', '/users/' + id + '/reset-password', { temp_password });
   },
 
   // ── Consumer storefront ──

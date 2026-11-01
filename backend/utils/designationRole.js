@@ -21,6 +21,8 @@ const DESIGNATION_TO_ROLE = {
   'Delivery Associate':      'Delivery Agent',
   'Delivery Agent':          'Delivery Agent',
   'Hub Incharge':            'Hub Incharge',
+  'Hub Manager':             'Hub Manager',
+  'Zonal Manager':           'Zonal Manager',
   'District Manager':        'District Manager',
   'Regional Manager':        'Regional Manager',
   'State Head':              'State Head',

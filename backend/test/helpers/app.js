@@ -126,7 +126,8 @@ async function mountRoute(routeModule, { supabase, user = null }) {
     requirePermission: (module, action) => [
       attachUser,
       (req, res, next) => {
-        if (can(req.user, module, action)) return next();
+        const scope = scopeFor(req.user, module);
+        if (can(req.user, module, action) && scope !== 'self' && scope !== 'assigned') return next();
         return res.status(403).json({ error: `Access denied. Need '${action}' on ${module}.` });
       },
     ],

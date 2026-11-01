@@ -28,8 +28,10 @@ export const HUB_READY_STATUS = 'At Hub';
  * to a hub dispatch — a Delivery Agent or VCO is NOT hub staff. */
 export const HUB_STAFF_ROLES = [
   'Hub Incharge',
+  'Hub Manager',
   'Head Office',
   'State Head',
+  'Zonal Manager',
   'Regional Manager',
   'District Manager',
 ] as const;

@@ -41,6 +41,26 @@ export const resources = {
       'login.pwExpired': 'Your password has expired. Request an OTP to set a new one.',
       'login.pwLocked':
         'Your account was locked after 90 days without a login. Request an OTP to set a new password.',
+      'login.chTitle': 'Set a new password',
+      'login.chSubmit': 'Save and sign in',
+      'login.chFirst': 'Choose your own password to continue.',
+      'login.chExpired': 'Your password has expired. Choose a new one to continue.',
+      'login.chLocked':
+        'Your account was locked after 90 days without a login. Choose a new password to continue.',
+      'login.chShort': 'Password must be at least 8 characters.',
+      'consumer.checkout.noOffer': '{{name}} is not available today. Please remove it.',
+      'consumer.checkout.repriced': 'Prices updated to today’s offers.',
+      'agent.deliver.needProof': 'Enter the delivery code or add a proof photo.',
+      'farmer.sub.finishOrders':
+        'Your subscription has lapsed, so your products are off sale. Finish your open orders, then renew to sell again.',
+      'admin.orders.statusReason': 'Reason (required)',
+      'admin.orders.statusReasonPh': 'What happened, and how you know',
+      'admin.users.resetTitle': 'Reset password',
+      'admin.users.resetHint':
+        'Set a temporary password and give it to them in person. They must choose their own at next sign-in.',
+      'admin.users.resetLabel': 'Temporary password',
+      'admin.users.resetCta': 'Reset',
+      'admin.users.resetFailed': 'Could not reset the password',
       'login.noAccount': 'New here?',
       'login.createAccount': 'Create an account',
       // Registration (pre-login)
@@ -601,7 +621,7 @@ export const resources = {
       'agent.deliver.ctaCod': 'Confirm Cash Collected & Delivered',
       'agent.deliver.otpTitle': 'Delivery code',
       'agent.deliver.otpHelp':
-        'Ask the customer for their delivery code. Optional — you can still deliver without it.',
+        'Ask the customer for their delivery code. If they cannot give it, take a proof photo below.',
       'agent.deliver.done': 'Order delivered! 🎉',
       'agent.deliver.failed': 'Failed to confirm',
       'agent.deliver.call': 'Call Customer',
@@ -634,7 +654,8 @@ export const resources = {
       'agent.photo.alt': 'Attached photo',
       'agent.photo.remove': 'Remove photo',
       'agent.deliver.proofTitle': 'Proof of delivery',
-      'agent.deliver.proofHelp': 'Optional — a photo of the handed-over parcel.',
+      'agent.deliver.proofHelp':
+        'A photo of the handed-over parcel. Needed when there is no delivery code.',
       'agent.deliver.proofAdd': 'Add photo',
       // Agent: offline / pending-sync indicator (field roles lean on the queue)
       'agent.offline.offline': 'You’re offline.',
@@ -1984,7 +2005,7 @@ export const resources = {
       'admin.orders.reasonPlaceholder': 'Why is this order being cancelled?',
       'admin.orders.setStatus': 'Set Status Manually',
       'admin.orders.setStatusHint':
-        'Override the order stage — forward or back. Logged to the timeline.',
+        'Override the order stage — forward or back. This never records cash as paid. Logged to the timeline.',
       'admin.orders.chooseStatus': 'Choose status',
       'admin.orders.apply': 'Apply',
       'admin.orders.setStatusConfirm': 'Override order stage?',
@@ -2600,6 +2621,27 @@ export const resources = {
       'login.pwExpired': 'உங்கள் கடவுச்சொல் காலாவதியாகிவிட்டது. புதியதை அமைக்க OTP கோரவும்.',
       'login.pwLocked':
         '90 நாட்கள் உள்நுழையாததால் உங்கள் கணக்கு பூட்டப்பட்டது. புதிய கடவுச்சொல் அமைக்க OTP கோரவும்.',
+      'login.chTitle': 'புதிய கடவுச்சொல்லை அமைக்கவும்',
+      'login.chSubmit': 'சேமித்து உள்நுழைக',
+      'login.chFirst': 'தொடர உங்கள் சொந்த கடவுச்சொல்லைத் தேர்ந்தெடுக்கவும்.',
+      'login.chExpired': 'உங்கள் கடவுச்சொல் காலாவதியாகிவிட்டது. தொடர புதியதைத் தேர்ந்தெடுக்கவும்.',
+      'login.chLocked':
+        '90 நாட்கள் உள்நுழையாததால் உங்கள் கணக்கு பூட்டப்பட்டது. தொடர புதிய கடவுச்சொல்லைத் தேர்ந்தெடுக்கவும்.',
+      'login.chShort': 'கடவுச்சொல் குறைந்தது 8 எழுத்துகள் இருக்க வேண்டும்.',
+      'consumer.checkout.noOffer': '{{name}} இன்று கிடைக்கவில்லை. இதை நீக்கவும்.',
+      'consumer.checkout.repriced': 'விலைகள் இன்றைய சலுகைகளுக்கு புதுப்பிக்கப்பட்டன.',
+      'agent.deliver.needProof':
+        'டெலிவரி குறியீட்டை உள்ளிடவும் அல்லது சான்று புகைப்படத்தைச் சேர்க்கவும்.',
+      'farmer.sub.finishOrders':
+        'உங்கள் சந்தா காலாவதியானதால் உங்கள் பொருட்கள் விற்பனையில் இல்லை. நிலுவை ஆர்டர்களை முடித்து, பின்னர் புதுப்பித்து மீண்டும் விற்கவும்.',
+      'admin.orders.statusReason': 'காரணம் (அவசியம்)',
+      'admin.orders.statusReasonPh': 'என்ன நடந்தது, அது எப்படித் தெரியும்',
+      'admin.users.resetTitle': 'கடவுச்சொல்லை மீட்டமைக்கவும்',
+      'admin.users.resetHint':
+        'தற்காலிக கடவுச்சொல்லை அமைத்து நேரில் கொடுக்கவும். அடுத்த உள்நுழைவில் அவர்கள் தங்கள் சொந்த கடவுச்சொல்லைத் தேர்ந்தெடுக்க வேண்டும்.',
+      'admin.users.resetLabel': 'தற்காலிக கடவுச்சொல்',
+      'admin.users.resetCta': 'மீட்டமை',
+      'admin.users.resetFailed': 'கடவுச்சொல்லை மீட்டமைக்க முடியவில்லை',
       'login.noAccount': 'புதியவரா?',
       'login.createAccount': 'கணக்கை உருவாக்கு',
       // Registration (pre-login)
@@ -3173,7 +3215,7 @@ export const resources = {
       'agent.deliver.ctaCod': 'பணம் வாங்கியதையும் வழங்கியதையும் உறுதிப்படுத்து',
       'agent.deliver.otpTitle': 'டெலிவரி குறியீடு',
       'agent.deliver.otpHelp':
-        'வாடிக்கையாளரிடம் அவரது டெலிவரி குறியீட்டைக் கேளுங்கள். விருப்பமானது — இல்லாமலும் வழங்கலாம்.',
+        'வாடிக்கையாளரிடம் அவரது டெலிவரி குறியீட்டைக் கேளுங்கள். தர முடியாவிட்டால் கீழே சான்று புகைப்படம் எடுக்கவும்.',
       'agent.deliver.done': 'ஆர்டர் வழங்கப்பட்டது! 🎉',
       'agent.deliver.failed': 'உறுதிப்படுத்த முடியவில்லை',
       'agent.deliver.call': 'வாடிக்கையாளரை அழை',
@@ -3208,7 +3250,8 @@ export const resources = {
       'agent.photo.alt': 'இணைக்கப்பட்ட புகைப்படம்',
       'agent.photo.remove': 'புகைப்படத்தை நீக்கு',
       'agent.deliver.proofTitle': 'வழங்கல் சான்று',
-      'agent.deliver.proofHelp': 'விருப்பமானது — வழங்கிய பொருளின் புகைப்படம்.',
+      'agent.deliver.proofHelp':
+        'வழங்கிய பொருளின் புகைப்படம். டெலிவரி குறியீடு இல்லாதபோது அவசியம்.',
       'agent.deliver.proofAdd': 'புகைப்படம் சேர்',
       // Agent: offline / pending-sync indicator (field roles lean on the queue)
       'agent.offline.offline': 'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள்.',
@@ -4566,7 +4609,7 @@ export const resources = {
       'admin.orders.reasonPlaceholder': 'இந்த ஆர்டர் ஏன் ரத்துசெய்யப்படுகிறது?',
       'admin.orders.setStatus': 'நிலையை கைமுறையாக அமை',
       'admin.orders.setStatusHint':
-        'ஆர்டர் நிலையை மாற்று — முன் அல்லது பின். காலவரிசையில் பதிவாகும்.',
+        'ஆர்டர் நிலையை மாற்று — முன் அல்லது பின். இது பணம் பெறப்பட்டதாக பதிவு செய்யாது. காலவரிசையில் பதிவாகும்.',
       'admin.orders.chooseStatus': 'நிலையைத் தேர்வுசெய்',
       'admin.orders.apply': 'அமல்படுத்து',
       'admin.orders.setStatusConfirm': 'ஆர்டர் நிலையை மாற்றவா?',

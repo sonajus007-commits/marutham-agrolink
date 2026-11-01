@@ -160,15 +160,37 @@ test('a WRONG delivery code stops the delivery (400) and writes nothing', async 
   assert.equal(db.callsTo('orders', 'update').length, 0, 'a wrong code never advances the order');
 });
 
-test('a BLANK code never blocks — the delivery closes, recorded as not OTP-verified', async () => {
+test('no code and no photo: the delivery is refused and the client is sent to the Deliver screen', async () => {
   const db = dbFor(outForDelivery({ delivery_code: '4821' }));
   app = await mountRoute('delivery', { supabase: db, user: AGENT });
-  const res = await app.post('/o1/scan', {}); // no code to hand over
+  const res = await app.post('/o1/scan', {}); // what the scan box sends
 
-  assert.equal(res.status, 200, 'a missing code must never stop a real delivery');
+  assert.equal(res.status, 400);
+  assert.equal(res.body.needs, 'deliver');
+  assert.equal(res.body.order_id, 'o1');
+  assert.equal(db.callsTo('orders', 'update').length, 0, 'nothing is delivered, and no cash is booked');
+});
+
+test('a proof photo stands in for the code, and the timeline says so', async () => {
+  const db = dbFor(outForDelivery({ delivery_code: '4821' }));
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', { proof_photo: 'data:image/jpeg;base64,AAAA' });
+
+  assert.equal(res.status, 200);
   assert.equal(db.callsTo('orders', 'update')[0].payload.status, 'Delivered');
-  const notes = db.callsTo('order_history', 'insert').map((c) => c.payload.label);
-  assert.ok(notes.includes('Not OTP-verified'), 'an unverified close is visible in the timeline');
+  const history = db.callsTo('order_history', 'insert').map((c) => c.payload);
+  const note = history.find((h) => h.label === 'Not OTP-verified');
+  assert.ok(note, 'an unverified close is visible in the timeline');
+  assert.match(note.note, /no location/, 'a missing GPS fix is on the record');
+});
+
+test('a photo in the wrong shape does not count as proof', async () => {
+  const db = dbFor(outForDelivery({ delivery_code: '4821' }));
+  app = await mountRoute('delivery', { supabase: db, user: AGENT });
+  const res = await app.post('/o1/scan', { proof_photo: 'not-a-photo' });
+
+  assert.equal(res.status, 400);
+  assert.equal(db.callsTo('orders', 'update').length, 0);
 });
 
 test('a legacy order with no code delivers, recorded as not OTP-verified', async () => {
@@ -422,7 +444,6 @@ test('an agent cannot pick up an order assigned to a different agent', async () 
   const res = await app.post('/o1/scan', {});
 
   assert.equal(res.status, 403);
-  assert.match(res.body.error, /another Delivery Agent/);
   assert.equal(db.callsTo('orders', 'update').length, 0);
 });
 
@@ -696,7 +717,7 @@ function statusDb(order, updated = { id: 'o1' }) {
 test('a senior admin can jump an order forward to any status on its route', async () => {
   const db = statusDb(placed({ stage: 3, status: 'Packed' }));
   app = await mountRoute('delivery', { supabase: db, user: HO });
-  const res = await app.post('/o1/status', { status: 'Picked Up' });
+  const res = await app.post('/o1/status', { status: 'Picked Up', reason: 'Scanner was down' });
 
   assert.equal(res.status, 200);
   const update = db.callsTo('orders', 'update')[0].payload;
@@ -704,23 +725,23 @@ test('a senior admin can jump an order forward to any status on its route', asyn
   assert.equal(update.stage, 5); // a jump of two stages, which /advance could not do
 });
 
-test('moving to Delivered stamps delivered_at and banks a COD order', async () => {
+test('moving to Delivered stamps delivered_at and never books COD cash', async () => {
   const order = placed({ stage: 6, status: 'Out for Delivery', pay_method: 'Cash on Delivery' });
   const db = statusDb(order);
   app = await mountRoute('delivery', { supabase: db, user: HO });
-  const res = await app.post('/o1/status', { status: 'Delivered' });
+  const res = await app.post('/o1/status', { status: 'Delivered', reason: 'Agent phone died at the door' });
 
   assert.equal(res.status, 200);
   const update = db.callsTo('orders', 'update')[0].payload;
   assert.equal(update.status, 'Delivered');
   assert.ok(update.delivered_at, 'delivered_at is stamped');
-  assert.equal(update.pay_status, 'paid', 'a COD order is marked paid on delivery');
+  assert.equal(update.pay_status, undefined, 'an override records what someone said, not that cash arrived');
 });
 
 test('reversing out of Delivered clears the delivery stamp', async () => {
   const db = statusDb(placed({ stage: 7, status: 'Delivered' }));
   app = await mountRoute('delivery', { supabase: db, user: HO });
-  const res = await app.post('/o1/status', { status: 'Packed' });
+  const res = await app.post('/o1/status', { status: 'Packed', reason: 'Wrong scan' });
 
   assert.equal(res.status, 200);
   const update = db.callsTo('orders', 'update')[0].payload;
@@ -732,7 +753,7 @@ test('reversing out of Delivered clears the delivery stamp', async () => {
 test('a hub-only status is rejected for a direct-route order, and nothing is written', async () => {
   const db = statusDb(placed({ stage: 3, status: 'Packed' }));
   app = await mountRoute('delivery', { supabase: db, user: HO });
-  const res = await app.post('/o1/status', { status: 'At Hub' });
+  const res = await app.post('/o1/status', { status: 'At Hub', reason: 'Wrong scan' });
 
   assert.equal(res.status, 400);
   assert.match(res.body.error, /not a valid status/);
@@ -742,7 +763,7 @@ test('a hub-only status is rejected for a direct-route order, and nothing is wri
 test('setting the status the order is already at is a 400', async () => {
   const db = statusDb(placed({ stage: 3, status: 'Packed' }));
   app = await mountRoute('delivery', { supabase: db, user: HO });
-  const res = await app.post('/o1/status', { status: 'Packed' });
+  const res = await app.post('/o1/status', { status: 'Packed', reason: 'Wrong scan' });
 
   assert.equal(res.status, 400);
   assert.match(res.body.error, /already/);
@@ -752,7 +773,7 @@ test('setting the status the order is already at is a 400', async () => {
 test('a cancelled order cannot be moved by the override, and nothing is written', async () => {
   const db = statusDb(placed({ stage: 3, status: 'Packed', cancelled: true }));
   app = await mountRoute('delivery', { supabase: db, user: HO });
-  const res = await app.post('/o1/status', { status: 'Delivered' });
+  const res = await app.post('/o1/status', { status: 'Delivered', reason: 'Wrong scan' });
 
   assert.equal(res.status, 400);
   assert.match(res.body.error, /cancelled/);

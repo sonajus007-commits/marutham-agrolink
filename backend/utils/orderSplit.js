@@ -202,6 +202,10 @@ function recalcParent(children, original) {
       stage,
       cancelled: allCancelled,
       pay_status: rollupPayStatus(ordered),
+      // Done when the LAST parcel lands, so the order's own date reads true.
+      delivered_at: status === 'Delivered'
+        ? live.map((c) => c.delivered_at).filter(Boolean).sort().pop() || null
+        : null,
     },
     // Only the live children are re-totalled; a cancelled child keeps the figures it
     // was cancelled at, which is what the refund was calculated from.

@@ -46,6 +46,8 @@ interface CartState {
   updateQtyAt: (index: number, qty: number) => void;
   removeAt: (index: number) => void;
   clear: () => void;
+  /** Swap the whole cart: checkout fills in sellers on public-shop lines. */
+  replaceItems: (items: CartItem[]) => void;
   qtyOfProduct: (productId: string) => number;
 }
 
@@ -90,6 +92,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clear = useCallback(() => setItems([]), []);
+  const replaceItems = useCallback((next: CartItem[]) => setItems(next), []);
 
   const qtyOfProduct = useCallback(
     (productId: string) => items.find((i) => i.product_id === productId)?.qty || 0,
@@ -97,8 +100,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<CartState>(
-    () => ({ items, count: items.length, addItem, updateQtyAt, removeAt, clear, qtyOfProduct }),
-    [items, addItem, updateQtyAt, removeAt, clear, qtyOfProduct],
+    () => ({
+      items,
+      count: items.length,
+      addItem,
+      updateQtyAt,
+      removeAt,
+      clear,
+      replaceItems,
+      qtyOfProduct,
+    }),
+    [items, addItem, updateQtyAt, removeAt, clear, replaceItems, qtyOfProduct],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
