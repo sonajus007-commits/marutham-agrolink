@@ -3,9 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { ChartContainer, StatTile } from '@marutham/ui';
 import { api, type HubDashboardResponse, type HubFlowMetrics } from '@marutham/api-client';
 import { fmtMoney, fmtNum } from '@marutham/lib';
-import { chartPalette, colors } from '@marutham/tokens';
-import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
+import { statusBarOption } from '../../components/statusBarOption';
 import { PlaceholderSection } from '../../components/PlaceholderSection';
 import { CheckCircleDuo, ClockDuo, PackageDuo, TruckDuo, WalletDuo } from '../../components/icons';
 
@@ -44,38 +43,8 @@ export function HubDashboardPage() {
 
   const isDistrict = data?.scope.level === 'district';
 
-  // A single-series count-by-status bar, shared by the IN and OUT charts. ONE series
-  // → ONE colour; the bar length is the message, so colour is not spent re-encoding
-  // the axis label. (Same rationale as the Overview status chart.)
-  const statusOption = useCallback(
-    (breakdown: Record<string, number> | undefined): EChartsOption => {
-      const entries = Object.entries(breakdown ?? {});
-      return {
-        color: [chartPalette.light[0]],
-        tooltip: { trigger: 'item' },
-        grid: { left: 40, right: 16, top: 20, bottom: 28 },
-        xAxis: {
-          type: 'category',
-          data: entries.map(([s]) => s),
-          axisLabel: { interval: 0, fontSize: 10, fontWeight: 'bold' },
-          axisLine: { lineStyle: { color: colors.border } },
-        },
-        yAxis: { type: 'value', minInterval: 1, splitLine: { lineStyle: { color: colors.muted } } },
-        series: [
-          {
-            type: 'bar',
-            data: entries.map(([, n]) => n),
-            itemStyle: { borderRadius: [6, 6, 0, 0] },
-            label: { show: true, position: 'top', fontSize: 11, color: colors.gray },
-          },
-        ],
-      };
-    },
-    [],
-  );
-
-  const inStatusOption = useMemo(() => statusOption(data?.in_status), [statusOption, data]);
-  const outStatusOption = useMemo(() => statusOption(data?.out_status), [statusOption, data]);
+  const inStatusOption = useMemo(() => statusBarOption(data?.in_status), [data]);
+  const outStatusOption = useMemo(() => statusBarOption(data?.out_status), [data]);
   const inStatusEmpty = Object.keys(data?.in_status ?? {}).length === 0;
   const outStatusEmpty = Object.keys(data?.out_status ?? {}).length === 0;
 

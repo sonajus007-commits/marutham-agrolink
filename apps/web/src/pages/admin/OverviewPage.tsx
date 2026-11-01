@@ -7,6 +7,7 @@ import { fmtMoney, fmtMoneyInt } from '@marutham/lib';
 import { chartPalette, colors } from '@marutham/tokens';
 import type { EChartsOption } from 'echarts';
 import { EChart } from '../../components/EChart';
+import { statusBarOption } from '../../components/statusBarOption';
 import { useAdminGeo } from './AdminGeoContext';
 import { AdminGeoFilter } from './AdminGeoFilter';
 import { CartDuo, PackageDuo, TruckDuo, WalletDuo, WheatDuo } from '../../components/icons';
@@ -86,34 +87,10 @@ export function OverviewPage() {
     };
   }, [data, t]);
 
-  const statusOption = useMemo<EChartsOption>(() => {
-    const entries = Object.entries(data?.status_breakdown ?? {});
-    return {
-      // Order STATUS is one series of counts, not five identities — the bar length
-      // is the message. Colouring each status separately would spend the identity
-      // channel re-encoding what the axis label already says.
-      color: [chartPalette.light[0]],
-      tooltip: { trigger: 'item' },
-      grid: { left: 48, right: 16, top: 20, bottom: 28 },
-      xAxis: {
-        type: 'category',
-        data: entries.map(([s]) => s),
-        axisLabel: { interval: 0, fontSize: 10, fontWeight: 'bold' },
-        axisLine: { lineStyle: { color: colors.border } },
-      },
-      yAxis: { type: 'value', minInterval: 1, splitLine: { lineStyle: { color: colors.muted } } },
-      series: [
-        {
-          name: t('admin.overview.orders'),
-          type: 'bar',
-          data: entries.map(([, n]) => n),
-          itemStyle: { borderRadius: [6, 6, 0, 0] },
-          // The count sits above each bar, always visible.
-          label: { show: true, position: 'top', fontSize: 11, color: colors.gray },
-        },
-      ],
-    };
-  }, [data, t]);
+  const statusOption = useMemo(
+    () => statusBarOption(data?.status_breakdown, t('admin.overview.orders')),
+    [data, t],
+  );
 
   /* Top products — ranked magnitude, so horizontal bars read fastest (the labels
    * sit flat and the eye compares lengths against one baseline).
